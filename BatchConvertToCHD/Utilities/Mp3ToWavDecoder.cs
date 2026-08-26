@@ -43,7 +43,8 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
                 }
 
                 primaryError = new InvalidDataException("Media Foundation produced no audio samples for this file.");
-                onLog?.Invoke("MP3: Media Foundation decoding yielded no audio; falling back to the built-in MP3 decoder...");
+                onLog?.Invoke(
+                    "MP3: Media Foundation decoding yielded no audio; falling back to the built-in MP3 decoder...");
             }
             catch (Exception mfEx)
             {
@@ -56,7 +57,8 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
 
                 // Media Foundation is unavailable (Windows N / Server Core) or the codec is
                 // missing — fall back to NAudio's Mp3FileReader (ACM codec).
-                onLog?.Invoke($"MP3: Media Foundation decoding failed ({mfEx.Message}); falling back to the built-in MP3 decoder...");
+                onLog?.Invoke(
+                    $"MP3: Media Foundation decoding failed ({mfEx.Message}); falling back to the built-in MP3 decoder...");
             }
 
             try
@@ -68,7 +70,8 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
                     return;
                 }
 
-                throw new InvalidDataException("the built-in decoder also produced no audio samples - the file may be empty or use an unsupported format.");
+                throw new InvalidDataException(
+                    "the built-in decoder also produced no audio samples - the file may be empty or use an unsupported format.");
             }
             catch (OperationCanceledException)
             {

@@ -48,7 +48,8 @@ internal static class TrackBinCueBuilder
             var fileName = Path.GetFileNameWithoutExtension(path);
             var match = TrackNumberRegex.Match(fileName);
             if (!match.Success ||
-                !int.TryParse(match.Groups["num"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var number))
+                !int.TryParse(match.Groups["num"].Value, NumberStyles.None, CultureInfo.InvariantCulture,
+                    out var number))
             {
                 continue;
             }
@@ -113,10 +114,12 @@ internal static class TrackBinCueBuilder
     /// <param name="tracks">Track bins in order.</param>
     /// <param name="dataTrackMode">Cue mode for the data track.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<string> WriteCueAsync(IReadOnlyList<TrackBin> tracks, string dataTrackMode, CancellationToken token)
+    internal static async Task<string> WriteCueAsync(IReadOnlyList<TrackBin> tracks, string dataTrackMode,
+        CancellationToken token)
     {
         var cuePath = BinCueGenerator.GetAutoCuePath(tracks[0].Path);
-        await File.WriteAllTextAsync(cuePath, BuildCueContent(tracks, dataTrackMode), new UTF8Encoding(false), token).ConfigureAwait(false);
+        await File.WriteAllTextAsync(cuePath, BuildCueContent(tracks, dataTrackMode), new UTF8Encoding(false), token)
+            .ConfigureAwait(false);
 
         return cuePath;
     }

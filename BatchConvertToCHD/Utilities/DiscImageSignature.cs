@@ -17,7 +17,8 @@ internal static class DiscImageSignature
     private const int HeaderLength = 32;
 
     /// <summary>The 12-byte sync pattern that opens every raw CD sector.</summary>
-    private static readonly byte[] CdSyncMark = [0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
+    private static readonly byte[] CdSyncMark =
+        [0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
 
     /// <summary>
     /// Reads <paramref name="path"/> and reports what it appears to be.

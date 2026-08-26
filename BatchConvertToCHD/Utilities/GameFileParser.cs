@@ -22,7 +22,8 @@ internal static class GameFileParser
     /// <param name="onLog">Callback for logging messages.</param>
     /// <param name="token">Cancellation token to cancel the operation.</param>
     /// <returns>A list of file paths referenced by the CUE sheet.</returns>
-    internal static Task<List<string>> GetReferencedFilesFromCueAsync(string cuePath, Action<string> onLog, CancellationToken token)
+    internal static Task<List<string>> GetReferencedFilesFromCueAsync(string cuePath, Action<string> onLog,
+        CancellationToken token)
     {
         return ParseFileReferenceLinesAsync(cuePath, onLog, "CUE", token);
     }
@@ -34,7 +35,8 @@ internal static class GameFileParser
     /// <param name="onLog">Callback for logging messages.</param>
     /// <param name="token">Cancellation token to cancel the operation.</param>
     /// <returns>A list of file paths referenced by the GDI file.</returns>
-    internal static async Task<List<string>> GetReferencedFilesFromGdiAsync(string gdiPath, Action<string> onLog, CancellationToken token)
+    internal static async Task<List<string>> GetReferencedFilesFromGdiAsync(string gdiPath, Action<string> onLog,
+        CancellationToken token)
     {
         var referencedFiles = new List<string>();
         var gdiDir = Path.GetDirectoryName(gdiPath) ?? string.Empty;
@@ -100,7 +102,8 @@ internal static class GameFileParser
     /// <param name="onLog">Callback for logging messages.</param>
     /// <param name="token">Cancellation token to cancel the operation.</param>
     /// <returns>A list of file paths referenced by the TOC file.</returns>
-    internal static Task<List<string>> GetReferencedFilesFromTocAsync(string tocPath, Action<string> onLog, CancellationToken token)
+    internal static Task<List<string>> GetReferencedFilesFromTocAsync(string tocPath, Action<string> onLog,
+        CancellationToken token)
     {
         return ParseFileReferenceLinesAsync(tocPath, onLog, "TOC", token);
     }
@@ -117,7 +120,8 @@ internal static class GameFileParser
     /// UTF-8 BOM: the first token becomes "\uFEFFFILE" and the FILE directive is never parsed,
     /// which makes chdman report "couldn't find bin file []" even when every bin exists.
     /// </remarks>
-    internal static async Task<(string[] Lines, Encoding Encoding, bool HasBom)> ReadLinesWithDetectedEncodingAsync(string filePath, CancellationToken token)
+    internal static async Task<(string[] Lines, Encoding Encoding, bool HasBom)> ReadLinesWithDetectedEncodingAsync(
+        string filePath, CancellationToken token)
     {
         var bytes = await File.ReadAllBytesAsync(filePath, token).ConfigureAwait(false);
 
@@ -169,7 +173,8 @@ internal static class GameFileParser
             Encoding encoding;
             try
             {
-                encoding = Encoding.GetEncoding(codePage, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
+                encoding = Encoding.GetEncoding(codePage, EncoderFallback.ExceptionFallback,
+                    DecoderFallback.ExceptionFallback);
             }
             catch (Exception)
             {
@@ -195,7 +200,8 @@ internal static class GameFileParser
                     var trimmedLine = line.Trim();
                     if (TryGetFileNameFromFileLine(trimmedLine, out var fileName) && fileName is not null)
                     {
-                        if (onDiskFiles.Any(f => string.Equals(Path.GetFileName(f), fileName, StringComparison.OrdinalIgnoreCase)))
+                        if (onDiskFiles.Any(f =>
+                                string.Equals(Path.GetFileName(f), fileName, StringComparison.OrdinalIgnoreCase)))
                         {
                             score += 10;
                         }

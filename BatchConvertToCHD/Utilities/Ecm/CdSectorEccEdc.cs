@@ -151,7 +151,8 @@ internal static class CdSectorEccEdc
         }
     }
 
-    private static void ComputeEccBlock(Span<byte> sector, int sourceOffset, int majorCount, int minorCount, int majorMult, int minorInc, int destinationOffset)
+    private static void ComputeEccBlock(Span<byte> sector, int sourceOffset, int majorCount, int minorCount,
+        int majorMult, int minorInc, int destinationOffset)
     {
         var size = majorCount * minorCount;
 

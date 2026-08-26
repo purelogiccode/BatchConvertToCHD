@@ -96,7 +96,8 @@ internal static class MdsParser
         // sessions - and walking that many offsets would just read garbage.
         if (sessionCount is 0 or > MaxPlausibleSessions)
         {
-            throw new InvalidDataException($"Descriptor reports {sessionCount} sessions, so it is corrupt or truncated.");
+            throw new InvalidDataException(
+                $"Descriptor reports {sessionCount} sessions, so it is corrupt or truncated.");
         }
 
         var sessionBlockOffset = (long)BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(SessionBlockOffsetOffset));
@@ -164,7 +165,8 @@ internal static class MdsParser
             candidates =
             [
                 .. Directory.GetFiles(directory)
-                    .Where(static f => Path.GetExtension(f).Equals(FileExtensions.Mdf, StringComparison.OrdinalIgnoreCase))
+                    .Where(static f =>
+                        Path.GetExtension(f).Equals(FileExtensions.Mdf, StringComparison.OrdinalIgnoreCase))
             ];
         }
         catch (Exception)
@@ -190,7 +192,8 @@ internal static class MdsParser
         try
         {
             return Directory.GetFiles(directory)
-                .FirstOrDefault(f => Path.GetExtension(f).Equals(FileExtensions.SplitFirstAlcohol, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(f =>
+                    Path.GetExtension(f).Equals(FileExtensions.SplitFirstAlcohol, StringComparison.OrdinalIgnoreCase));
         }
         catch (Exception)
         {

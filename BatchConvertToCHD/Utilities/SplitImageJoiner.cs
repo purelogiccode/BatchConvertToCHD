@@ -67,15 +67,18 @@ internal static class SplitImageJoiner
     /// <param name="parts">Volumes in order.</param>
     /// <param name="destinationPath">File to create.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<long> JoinAsync(IReadOnlyList<string> parts, string destinationPath, CancellationToken token)
+    internal static async Task<long> JoinAsync(IReadOnlyList<string> parts, string destinationPath,
+        CancellationToken token)
     {
-        await using var output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, CopyBufferBytes, useAsync: true);
+        await using var output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None,
+            CopyBufferBytes, useAsync: true);
 
         foreach (var part in parts)
         {
             token.ThrowIfCancellationRequested();
 
-            await using var input = new FileStream(part, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, CopyBufferBytes, useAsync: true);
+            await using var input = new FileStream(part, FileMode.Open, FileAccess.Read, FileShare.ReadWrite,
+                CopyBufferBytes, useAsync: true);
             await input.CopyToAsync(output, CopyBufferBytes, token).ConfigureAwait(false);
         }
 

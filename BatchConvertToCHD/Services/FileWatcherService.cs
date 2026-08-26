@@ -114,9 +114,11 @@ internal sealed class FileWatcherService : IDisposable
                 return "The file path is outside the monitored input folder.";
 
             if (!Directory.Exists(WatchedFolder))
-                return "The input folder is no longer accessible (drive may have been disconnected or network share lost).";
+                return
+                    "The input folder is no longer accessible (drive may have been disconnected or network share lost).";
 
-            return "This file was not observed by the file watcher. It may have been removed before monitoring started or the input folder may be on a removable/external drive.";
+            return
+                "This file was not observed by the file watcher. It may have been removed before monitoring started or the input folder may be on a removable/external drive.";
         }
 
         return record.EventType switch

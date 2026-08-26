@@ -28,7 +28,8 @@ internal static class BinCueGenerator
     /// <summary>True when the cue file was auto-generated for a bin-only archive.</summary>
     internal static bool IsAutoCue(string cuePath)
     {
-        return Path.GetFileName(cuePath).EndsWith(AutoCueMarker + FileExtensions.Cue, StringComparison.OrdinalIgnoreCase);
+        return Path.GetFileName(cuePath)
+            .EndsWith(AutoCueMarker + FileExtensions.Cue, StringComparison.OrdinalIgnoreCase);
     }
 
     internal static string BuildCueContent(string binFileName, string mode)
@@ -80,7 +81,8 @@ internal static class BinCueGenerator
     /// <param name="token">Cancellation token.</param>
     internal static async Task RewriteCueAsync(string cuePath, string mode, CancellationToken token)
     {
-        var binFileName = await ReadReferencedBinNameAsync(cuePath, token).ConfigureAwait(false) ?? GetFallbackBinName(cuePath);
+        var binFileName = await ReadReferencedBinNameAsync(cuePath, token).ConfigureAwait(false) ??
+                          GetFallbackBinName(cuePath);
         await File.WriteAllTextAsync(cuePath, BuildCueContent(binFileName, mode), token).ConfigureAwait(false);
     }
 

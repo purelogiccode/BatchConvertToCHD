@@ -96,7 +96,8 @@ internal class BugReportService
     /// <param name="ex">The exception object, if available</param>
     /// <param name="token">The cancellation token to observe</param>
     /// <returns>A task representing the asynchronous operation</returns>
-    public virtual async Task<bool> SendBugReportAsync(string message, Exception? ex = null, CancellationToken token = default)
+    public virtual async Task<bool> SendBugReportAsync(string message, Exception? ex = null,
+        CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
 
@@ -153,7 +154,8 @@ internal class BugReportService
         sb.AppendLine("=== Environment Details ===");
         sb.AppendLine(CultureInfo.InvariantCulture, $"Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine(CultureInfo.InvariantCulture, $"Application Name: {_applicationName}");
-        sb.AppendLine(CultureInfo.InvariantCulture, $"Application Version: {Assembly.GetExecutingAssembly().GetName().Version}");
+        sb.AppendLine(CultureInfo.InvariantCulture,
+            $"Application Version: {Assembly.GetExecutingAssembly().GetName().Version}");
         sb.AppendLine(CultureInfo.InvariantCulture, $"OS Version: {Environment.OSVersion}");
         sb.AppendLine(CultureInfo.InvariantCulture, $"Architecture: {RuntimeInformation.ProcessArchitecture}");
         sb.AppendLine(CultureInfo.InvariantCulture, $"OS Architecture: {RuntimeInformation.OSArchitecture}");

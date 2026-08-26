@@ -455,8 +455,10 @@
                                 ToolTip="Status of required external tools">
                         <TextBlock Text="Dependencies:" Margin="0,0,5,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    ToolTip="External tools required for processing" />
+                        <TextBlock x:Name="StatusBarChdSharp" Text="CHDSharp" Foreground="{StaticResource SuccessTextBrush}" Margin="0,0,5,0"
+                                   ToolTip="Status of CHDSharp.exe (primary encoder)" />
                         <TextBlock x:Name="StatusBarChdman" Text="CHDMAN" Foreground="{StaticResource SuccessTextBrush}" Margin="0"
-                                   ToolTip="Status of chdman.exe" />
+                                   ToolTip="Status of chdman.exe (fallback encoder)" />
                     </StackPanel>
                 </Grid>
             </Border>

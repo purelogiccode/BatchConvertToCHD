@@ -41,7 +41,8 @@ internal static class IszDecoder
         {
             var buffer = new byte[IszHeader.Length];
             await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            var read = await stream.ReadAtLeastAsync(buffer, buffer.Length, throwOnEndOfStream: false, token).ConfigureAwait(false);
+            var read = await stream.ReadAtLeastAsync(buffer, buffer.Length, throwOnEndOfStream: false, token)
+                .ConfigureAwait(false);
 
             return IszHeader.TryRead(buffer.AsSpan(0, read));
         }
@@ -84,7 +85,8 @@ internal static class IszDecoder
     /// <param name="destinationPath">File to write the restored image to.</param>
     /// <param name="onLog">Log callback.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<IszDecodeResult> DecodeAsync(string iszPath, string destinationPath, Action<string> onLog, CancellationToken token)
+    internal static async Task<IszDecodeResult> DecodeAsync(string iszPath, string destinationPath,
+        Action<string> onLog, CancellationToken token)
     {
         IszHeader header;
         byte[] chunkTable;
@@ -126,7 +128,8 @@ internal static class IszDecoder
 
             if (segments.Count > 1)
             {
-                onLog($" The image is split across {segments.Count.ToString(CultureInfo.InvariantCulture)} segments; reading them in order.");
+                onLog(
+                    $" The image is split across {segments.Count.ToString(CultureInfo.InvariantCulture)} segments; reading them in order.");
             }
         }
         catch (OperationCanceledException)
@@ -140,7 +143,8 @@ internal static class IszDecoder
 
         try
         {
-            var written = await WriteImageAsync(header, chunkTable, regions, destinationPath, onLog, token).ConfigureAwait(false);
+            var written = await WriteImageAsync(header, chunkTable, regions, destinationPath, onLog, token)
+                .ConfigureAwait(false);
             var expected = header.ImageSizeBytes;
 
             if (written != expected)
@@ -169,7 +173,8 @@ internal static class IszDecoder
     /// Reads the segment definition table, which the spec places immediately after the header and
     /// terminates with a zero-size entry.
     /// </summary>
-    private static async Task<List<IszSegment>> ReadSegmentTableAsync(FileStream stream, IszHeader header, CancellationToken token)
+    private static async Task<List<IszSegment>> ReadSegmentTableAsync(FileStream stream, IszHeader header,
+        CancellationToken token)
     {
         var segments = new List<IszSegment>();
         var entry = new byte[IszSegment.EntryLength];
@@ -178,7 +183,8 @@ internal static class IszDecoder
 
         for (var index = 0; index <= MaxSegments; index++)
         {
-            var read = await stream.ReadAtLeastAsync(entry, entry.Length, throwOnEndOfStream: false, token).ConfigureAwait(false);
+            var read = await stream.ReadAtLeastAsync(entry, entry.Length, throwOnEndOfStream: false, token)
+                .ConfigureAwait(false);
             if (read < entry.Length)
             {
                 break;
@@ -212,7 +218,8 @@ internal static class IszDecoder
         var table = new byte[tableBytes];
 
         stream.Position = header.ChunkTableOffset;
-        var read = await stream.ReadAtLeastAsync(table, tableBytes, throwOnEndOfStream: false, token).ConfigureAwait(false);
+        var read = await stream.ReadAtLeastAsync(table, tableBytes, throwOnEndOfStream: false, token)
+            .ConfigureAwait(false);
         if (read < tableBytes)
         {
             throw new InvalidDataException(
@@ -227,7 +234,8 @@ internal static class IszDecoder
     /// straddle a segment boundary, so the data is treated as one logical stream made of a region
     /// per file rather than as separate per-segment sequences.
     /// </summary>
-    private static (List<DataRegion> Regions, string? Failure) BuildRegions(string iszPath, IszHeader header, List<IszSegment> segments, long firstSegmentLength)
+    private static (List<DataRegion> Regions, string? Failure) BuildRegions(string iszPath, IszHeader header,
+        List<IszSegment> segments, long firstSegmentLength)
     {
         if (segments.Count == 0)
         {
@@ -252,7 +260,8 @@ internal static class IszDecoder
                 var info = new FileInfo(path);
                 if (!info.Exists)
                 {
-                    return ([], $"the image is split across {segments.Count.ToString(CultureInfo.InvariantCulture)} segments and {Path.GetFileName(path)} is not in the same folder. Put every segment together and try again.");
+                    return ([],
+                        $"the image is split across {segments.Count.ToString(CultureInfo.InvariantCulture)} segments and {Path.GetFileName(path)} is not in the same folder. Put every segment together and try again.");
                 }
 
                 actualLength = info.Length;
@@ -303,12 +312,14 @@ internal static class IszDecoder
 
             if (segmentHeader is null)
             {
-                return $"segment {Path.GetFileName(segmentPath)} does not start with an ISZ header, so it is not part of this image.";
+                return
+                    $"segment {Path.GetFileName(segmentPath)} does not start with an ISZ header, so it is not part of this image.";
             }
 
             if (segmentHeader.VolumeSerialNumber != header.VolumeSerialNumber)
             {
-                return $"segment {Path.GetFileName(segmentPath)} belongs to a different ISZ image (volume serial number does not match). Collect the segments of one image together and try again.";
+                return
+                    $"segment {Path.GetFileName(segmentPath)} belongs to a different ISZ image (volume serial number does not match). Collect the segments of one image together and try again.";
             }
 
             return null;
@@ -323,7 +334,8 @@ internal static class IszDecoder
     /// Walks the chunk table, decompresses each chunk and writes the image out. Returns the bytes
     /// written, which the caller checks against the size the header declared.
     /// </summary>
-    private static async Task<long> WriteImageAsync(IszHeader header, byte[] chunkTable, List<DataRegion> regions, string destinationPath, Action<string> onLog, CancellationToken token)
+    private static async Task<long> WriteImageAsync(IszHeader header, byte[] chunkTable, List<DataRegion> regions,
+        string destinationPath, Action<string> onLog, CancellationToken token)
     {
         var chunkSize = (int)header.ChunkSize;
         var expected = header.ImageSizeBytes;
@@ -333,7 +345,8 @@ internal static class IszDecoder
         byte[]? zeros = null;
 
         await using var reader = new SequentialReader(regions);
-        await using var output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, FileBufferBytes, useAsync: true);
+        await using var output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None,
+            FileBufferBytes, useAsync: true);
 
         long written = 0;
         var nextProgressPercent = ProgressStepPercent;
@@ -373,7 +386,8 @@ internal static class IszDecoder
                 produced = type switch
                 {
                     IszChunkType.Stored => CopyStored(compressed, storedLength, plain),
-                    IszChunkType.ZLib => await InflateAsync(compressed, storedLength, plain, index, token).ConfigureAwait(false),
+                    IszChunkType.ZLib => await InflateAsync(compressed, storedLength, plain, index, token)
+                        .ConfigureAwait(false),
                     _ => await UnBzip2Async(compressed, storedLength, plain, index, token).ConfigureAwait(false)
                 };
 
@@ -399,7 +413,8 @@ internal static class IszDecoder
     /// Writes a decompressed chunk, stopping at the image size the header declared so a writer
     /// that padded its last chunk does not lengthen the image.
     /// </summary>
-    private static async Task WriteCappedAsync(FileStream output, byte[] buffer, int produced, long expected, long written, CancellationToken token)
+    private static async Task WriteCappedAsync(FileStream output, byte[] buffer, int produced, long expected,
+        long written, CancellationToken token)
     {
         var room = expected - written;
         var count = (int)Math.Min(produced, room);
@@ -416,7 +431,8 @@ internal static class IszDecoder
     /// <param name="chunkTable">The whole chunk table.</param>
     /// <param name="index">Zero-based chunk index.</param>
     /// <param name="pointerLength">Bytes per entry.</param>
-    internal static (IszChunkType Type, int StoredLength) ReadChunkEntry(byte[] chunkTable, int index, int pointerLength)
+    internal static (IszChunkType Type, int StoredLength) ReadChunkEntry(byte[] chunkTable, int index,
+        int pointerLength)
     {
         var offset = index * pointerLength;
 
@@ -440,7 +456,8 @@ internal static class IszDecoder
         return storedLength;
     }
 
-    private static async Task<int> InflateAsync(byte[] compressed, int storedLength, byte[] plain, uint index, CancellationToken token)
+    private static async Task<int> InflateAsync(byte[] compressed, int storedLength, byte[] plain, uint index,
+        CancellationToken token)
     {
         using var input = new MemoryStream(compressed, 0, storedLength, writable: false);
         await using var inflate = new ZLibStream(input, CompressionMode.Decompress);
@@ -448,10 +465,13 @@ internal static class IszDecoder
         return await FillAsync(inflate, plain, index, token).ConfigureAwait(false);
     }
 
-    private static async Task<int> UnBzip2Async(byte[] compressed, int storedLength, byte[] plain, uint index, CancellationToken token)
+    private static async Task<int> UnBzip2Async(byte[] compressed, int storedLength, byte[] plain, uint index,
+        CancellationToken token)
     {
         using var input = new MemoryStream(compressed, 0, storedLength, writable: false);
-        await using var bzip2 = await BZip2Stream.CreateAsync(input, SharpCompress.Compressors.CompressionMode.Decompress, decompressConcatenated: false, cancellationToken: token);
+        await using var bzip2 = await BZip2Stream.CreateAsync(input,
+            SharpCompress.Compressors.CompressionMode.Decompress, decompressConcatenated: false,
+            cancellationToken: token);
 
         return await FillAsync(bzip2, plain, index, token).ConfigureAwait(false);
     }
@@ -464,7 +484,8 @@ internal static class IszDecoder
     /// </summary>
     private static async Task<int> FillAsync(Stream source, byte[] plain, uint index, CancellationToken token)
     {
-        var produced = await source.ReadAtLeastAsync(plain, plain.Length, throwOnEndOfStream: false, token).ConfigureAwait(false);
+        var produced = await source.ReadAtLeastAsync(plain, plain.Length, throwOnEndOfStream: false, token)
+            .ConfigureAwait(false);
         if (produced < plain.Length)
         {
             return produced;
@@ -584,7 +605,8 @@ internal static class IszDecoder
                     continue;
                 }
 
-                _stream = new FileStream(region.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, FileBufferBytes, useAsync: true)
+                _stream = new FileStream(region.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite,
+                    FileBufferBytes, useAsync: true)
                 {
                     Position = region.Start
                 };

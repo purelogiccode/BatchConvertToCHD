@@ -15,7 +15,8 @@ internal partial class AboutWindow
         InitializeComponent();
 
         AppVersionTextBlock.Text = $"Version: {GetApplicationVersion()}";
-        DescriptionTextBlock.Text = "A utility for batch converting various disc image formats to CHD and for verifying the integrity of CHD files.";
+        DescriptionTextBlock.Text =
+            "A utility for batch converting various disc image formats to CHD and for verifying the integrity of CHD files.";
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)

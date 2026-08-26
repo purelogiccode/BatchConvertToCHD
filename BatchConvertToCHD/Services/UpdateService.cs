@@ -33,9 +33,11 @@ internal class UpdateService
     /// <param name="onLog">Callback for logging messages.</param>
     /// <param name="onStatusUpdate">Callback for status bar updates.</param>
     /// <param name="onBugReport">Callback for reporting errors.</param>
-    internal Task CheckForNewVersionAsync(Action<string> onLog, Action<string> onStatusUpdate, Func<string, Exception?, Task> onBugReport)
+    internal Task CheckForNewVersionAsync(Action<string> onLog, Action<string> onStatusUpdate,
+        Func<string, Exception?, Task> onBugReport)
     {
-        return CheckForNewVersionAsync(_httpClient, Assembly.GetExecutingAssembly().GetName().Version, onLog, onStatusUpdate, onBugReport);
+        return CheckForNewVersionAsync(_httpClient, Assembly.GetExecutingAssembly().GetName().Version, onLog,
+            onStatusUpdate, onBugReport);
     }
 
     /// <summary>
@@ -49,7 +51,8 @@ internal class UpdateService
     /// <param name="onLog">Callback for logging messages.</param>
     /// <param name="onStatusUpdate">Callback for status bar updates.</param>
     /// <param name="onBugReport">Callback for reporting errors.</param>
-    internal async Task CheckForNewVersionAsync(HttpClient httpClient, Version? currentVersion, Action<string> onLog, Action<string> onStatusUpdate, Func<string, Exception?, Task> onBugReport)
+    internal async Task CheckForNewVersionAsync(HttpClient httpClient, Version? currentVersion, Action<string> onLog,
+        Action<string> onStatusUpdate, Func<string, Exception?, Task> onBugReport)
     {
         try
         {
@@ -83,7 +86,8 @@ internal class UpdateService
                     throw;
                 }
 
-                if (response.StatusCode is System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.TooManyRequests)
+                if (response.StatusCode is System.Net.HttpStatusCode.Forbidden
+                    or System.Net.HttpStatusCode.TooManyRequests)
                 {
                     // Rate limits are per IP and shared by every api.github.com URL, so trying the
                     // fallback cannot help.
@@ -123,7 +127,8 @@ internal class UpdateService
 
                 var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 var latestRelease = JsonSerializer.Deserialize<GitHubRelease>(responseBody, JsonSerializerOptions);
-                if (latestRelease == null || latestRelease.Draft || latestRelease.Prerelease || string.IsNullOrWhiteSpace(latestRelease.TagName))
+                if (latestRelease == null || latestRelease.Draft || latestRelease.Prerelease ||
+                    string.IsNullOrWhiteSpace(latestRelease.TagName))
                 {
                     onLog("Latest release is invalid, draft, or prerelease. Skipping.");
                     return;
@@ -131,7 +136,8 @@ internal class UpdateService
 
                 var remoteVersionString = ParseVersionFromTag(latestRelease.TagName);
 
-                if (!TryNormalizeVersions(currentVersion, remoteVersionString, out var normalizedCurrent, out var normalizedRemote))
+                if (!TryNormalizeVersions(currentVersion, remoteVersionString, out var normalizedCurrent,
+                        out var normalizedRemote))
                 {
                     onLog($"Could not compare versions. Current: {currentVersion}, Remote: {remoteVersionString}");
                     return;
@@ -154,7 +160,8 @@ internal class UpdateService
                             {
                                 try
                                 {
-                                    Process.Start(new ProcessStartInfo(latestRelease.HtmlUrl) { UseShellExecute = true });
+                                    Process.Start(
+                                        new ProcessStartInfo(latestRelease.HtmlUrl) { UseShellExecute = true });
                                 }
                                 catch (Exception urlEx)
                                 {
@@ -216,7 +223,8 @@ internal class UpdateService
     /// If Build or Revision is -1 (undefined), defaults to 0 to avoid ArgumentOutOfRangeException.
     /// Returns false if either version cannot be parsed.
     /// </summary>
-    internal static bool TryNormalizeVersions(Version? current, string remoteTag, out Version? normalizedCurrent, out Version? normalizedRemote)
+    internal static bool TryNormalizeVersions(Version? current, string remoteTag, out Version? normalizedCurrent,
+        out Version? normalizedRemote)
     {
         normalizedCurrent = null;
         normalizedRemote = null;

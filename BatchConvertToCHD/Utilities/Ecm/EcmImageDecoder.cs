@@ -61,19 +61,22 @@ internal static class EcmImageDecoder
     /// <param name="destinationPath">File to write the restored image to.</param>
     /// <param name="onLog">Log callback.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static Task<EcmDecodeResult> DecodeAsync(string ecmPath, string destinationPath, Action<string> onLog, CancellationToken token)
+    internal static Task<EcmDecodeResult> DecodeAsync(string ecmPath, string destinationPath, Action<string> onLog,
+        CancellationToken token)
     {
         // The format is a byte-at-a-time state machine over the whole image, so it runs as one
         // blocking job off the UI thread rather than awaiting per read.
         return Task.Run(() => Decode(ecmPath, destinationPath, onLog, token), token);
     }
 
-    private static EcmDecodeResult Decode(string ecmPath, string destinationPath, Action<string> onLog, CancellationToken token)
+    private static EcmDecodeResult Decode(string ecmPath, string destinationPath, Action<string> onLog,
+        CancellationToken token)
     {
         try
         {
             using var input = new FileStream(ecmPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, BufferBytes);
-            using var output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, BufferBytes);
+            using var output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None,
+                BufferBytes);
 
             var header = new byte[Signature.Length];
             if (input.ReadAtLeast(header, header.Length, throwOnEndOfStream: false) < header.Length ||
@@ -116,7 +119,8 @@ internal static class EcmImageDecoder
 
                     // The block header masks its kind to two bits, so these four are the only values
                     // possible; both Mode 2 forms expand through the same routine.
-                    TypeMode2Form1 or TypeMode2Form2 => TryExpandMode2(input, output, sector, count, type == TypeMode2Form1, ref runningEdc, ref written),
+                    TypeMode2Form1 or TypeMode2Form2 => TryExpandMode2(input, output, sector, count,
+                        type == TypeMode2Form1, ref runningEdc, ref written),
                     _ => false
                 };
 
@@ -207,7 +211,8 @@ internal static class EcmImageDecoder
         return true;
     }
 
-    private static bool TryCopyLiteral(Stream input, Stream output, byte[] buffer, uint count, ref uint runningEdc, ref long written)
+    private static bool TryCopyLiteral(Stream input, Stream output, byte[] buffer, uint count, ref uint runningEdc,
+        ref long written)
     {
         var remaining = count;
 
@@ -228,7 +233,8 @@ internal static class EcmImageDecoder
         return true;
     }
 
-    private static bool TryExpandMode1(Stream input, Stream output, byte[] sector, uint count, ref uint runningEdc, ref long written)
+    private static bool TryExpandMode1(Stream input, Stream output, byte[] sector, uint count, ref uint runningEdc,
+        ref long written)
     {
         for (uint i = 0; i < count; i++)
         {
@@ -256,7 +262,8 @@ internal static class EcmImageDecoder
     /// header: a Mode 2 sector's parity is computed over a zeroed address precisely so that it stays
     /// valid in a 2336-byte-per-sector image, and the encoder relies on that.
     /// </summary>
-    private static bool TryExpandMode2(Stream input, Stream output, byte[] sector, uint count, bool form1, ref uint runningEdc, ref long written)
+    private static bool TryExpandMode2(Stream input, Stream output, byte[] sector, uint count, bool form1,
+        ref uint runningEdc, ref long written)
     {
         var storedLength = form1 ? 0x804 : 0x918;
 
@@ -296,11 +303,13 @@ internal static class EcmImageDecoder
 
     private static EcmDecodeResult TruncatedFailure()
     {
-        return EcmDecodeResult.Failed("the ECM file ends part way through a block, so it is truncated. Re-download it and try again.");
+        return EcmDecodeResult.Failed(
+            "the ECM file ends part way through a block, so it is truncated. Re-download it and try again.");
     }
 
     private static EcmDecodeResult CorruptFailure()
     {
-        return EcmDecodeResult.Failed("the ECM file describes an implausibly large block, so its structure is damaged.");
+        return EcmDecodeResult.Failed(
+            "the ECM file describes an implausibly large block, so its structure is damaged.");
     }
 }

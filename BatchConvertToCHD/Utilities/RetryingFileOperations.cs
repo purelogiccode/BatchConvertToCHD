@@ -35,7 +35,8 @@ internal static class RetryingFileOperations
     /// <param name="token">Cancellation token; cancelling aborts the retry loop.</param>
     /// <param name="onRetry">Called with the 0-based attempt number before each retry.</param>
     /// <param name="backoffMsProvider">Optional backoff override (used by tests).</param>
-    internal static async Task<bool> TryDeleteAsync(string path, CancellationToken token, Action<int>? onRetry = null, Func<int, int>? backoffMsProvider = null)
+    internal static async Task<bool> TryDeleteAsync(string path, CancellationToken token, Action<int>? onRetry = null,
+        Func<int, int>? backoffMsProvider = null)
     {
         var clearedReadOnly = false;
         for (var attempt = 0; attempt < MaxDeleteAttempts; attempt++)
@@ -95,7 +96,8 @@ internal static class RetryingFileOperations
     /// <param name="token">Cancellation token; cancelling aborts the retry loop.</param>
     /// <param name="onRetry">Called with the 0-based attempt number before each retry.</param>
     /// <param name="backoffMsProvider">Optional backoff override (used by tests).</param>
-    internal static async Task<bool> TryMoveAsync(string sourcePath, string destinationPath, CancellationToken token, Action<int>? onRetry = null, Func<int, int>? backoffMsProvider = null)
+    internal static async Task<bool> TryMoveAsync(string sourcePath, string destinationPath, CancellationToken token,
+        Action<int>? onRetry = null, Func<int, int>? backoffMsProvider = null)
     {
         for (var attempt = 0; attempt < MaxDeleteAttempts; attempt++)
         {

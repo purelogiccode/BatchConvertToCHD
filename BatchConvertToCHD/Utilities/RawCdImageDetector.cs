@@ -94,7 +94,8 @@ internal static class RawCdImageDetector
     /// <param name="trackMode">Cue track mode to declare, e.g. "MODE2/2352".</param>
     /// <param name="workDir">Existing directory the cue is written into.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<string?> TryWriteCueAsync(string imagePath, string trackMode, string workDir, CancellationToken token)
+    internal static async Task<string?> TryWriteCueAsync(string imagePath, string trackMode, string workDir,
+        CancellationToken token)
     {
         string relativeImagePath;
         try
@@ -113,7 +114,8 @@ internal static class RawCdImageDetector
         }
 
         var cuePath = Path.Combine(workDir, Path.GetFileNameWithoutExtension(imagePath) + FileExtensions.Cue);
-        await File.WriteAllTextAsync(cuePath, BinCueGenerator.BuildCueContent(relativeImagePath, trackMode), token).ConfigureAwait(false);
+        await File.WriteAllTextAsync(cuePath, BinCueGenerator.BuildCueContent(relativeImagePath, trackMode), token)
+            .ConfigureAwait(false);
 
         return cuePath;
     }

@@ -36,6 +36,9 @@ internal partial class MainWindow : IDisposable
     private readonly string _chdmanExePath;
     private readonly string _chdmanResolvedName;
     private readonly bool _isChdmanAvailable;
+    private readonly string _chdSharpExePath;
+    private readonly string _chdSharpResolvedName;
+    private readonly bool _isChdSharpAvailable;
     private readonly string _sevenZipExePath;
 
     // Statistics
@@ -110,8 +113,12 @@ internal partial class MainWindow : IDisposable
         // execute (natively or emulated), so a missing preferred binary falls back to the other
         // architecture's file instead of failing outright; on pure x64 there is nothing to fall
         // back to and the missing-dependency messaging stays accurate.
-        (_chdmanExePath, _chdmanResolvedName, _isChdmanAvailable) = ResolveToolExecutable(appDirectory, AppConfig.ChdmanExeCandidates);
-        (_sevenZipExePath, _, var isSevenZipAvailable) = ResolveToolExecutable(appDirectory, AppConfig.SevenZipExeCandidates);
+        (_chdmanExePath, _chdmanResolvedName, _isChdmanAvailable) =
+            ResolveToolExecutable(appDirectory, AppConfig.ChdmanExeCandidates);
+        (_chdSharpExePath, _chdSharpResolvedName, _isChdSharpAvailable) =
+            ResolveToolExecutable(appDirectory, AppConfig.ChdSharpExeCandidates);
+        (_sevenZipExePath, _, var isSevenZipAvailable) =
+            ResolveToolExecutable(appDirectory, AppConfig.SevenZipExeCandidates);
 
         // Initialize Services
         _updateService = new UpdateService(AppConfig.ApplicationName);
@@ -176,7 +183,8 @@ internal partial class MainWindow : IDisposable
 
             // Defer update check until window is responsive
             await Task.Delay(100, _cts.Token); // Allow UI to render first
-            SafeFireAndForget(_updateService.CheckForNewVersionAsync(LogMessage, UpdateStatusBarMessage, ReportBugAsync));
+            SafeFireAndForget(
+                _updateService.CheckForNewVersionAsync(LogMessage, UpdateStatusBarMessage, ReportBugAsync));
         }
         catch (Exception ex)
         {
@@ -229,7 +237,8 @@ internal partial class MainWindow : IDisposable
     /// machine can run. When nothing exists, the preferred name is returned so missing-dependency
     /// messages point at the file that should be there.
     /// </summary>
-    private static (string Path, string Name, bool Available) ResolveToolExecutable(string baseDirectory, IReadOnlyList<string> candidateNames)
+    private static (string Path, string Name, bool Available) ResolveToolExecutable(string baseDirectory,
+        IReadOnlyList<string> candidateNames)
     {
         foreach (var name in candidateNames)
         {
@@ -247,6 +256,11 @@ internal partial class MainWindow : IDisposable
     private void CheckDependenciesAndNotifyUser()
     {
         var missingDeps = new List<string>();
+        if (!_isChdSharpAvailable)
+        {
+            missingDeps.Add(_chdSharpResolvedName);
+        }
+
         if (!_isChdmanAvailable)
         {
             missingDeps.Add(_chdmanResolvedName);
@@ -258,7 +272,7 @@ internal partial class MainWindow : IDisposable
             var msg = $"CRITICAL ERROR: The following required component is missing:\n\n" +
                       $"{string.Join("\n", missingDeps)}\n\n" +
                       $"Please ensure it is placed in the application folder.\n" +
-                      $"Download it from: https://github.com/rtissera/chdman/releases\n\n" +
+                      $"Download chdman from: https://github.com/rtissera/chdman/releases\n\n" +
                       $"Conversion will NOT work without it.";
 
             LogError(" " + msg.Replace("\n", " "));
@@ -322,10 +336,18 @@ internal partial class MainWindow : IDisposable
         {
             try
             {
+                StatusBarChdSharp.Text = " CHDSharp ";
+                StatusBarChdSharp.Foreground = _isChdSharpAvailable
+                    ? (System.Windows.Media.Brush?)Application.Current.FindResource("SuccessTextBrush") ??
+                      System.Windows.Media.Brushes.Gray
+                    : (System.Windows.Media.Brush?)Application.Current.FindResource("FailedTextBrush") ??
+                      System.Windows.Media.Brushes.Gray;
                 StatusBarChdman.Text = " CHDMAN ";
                 StatusBarChdman.Foreground = _isChdmanAvailable
-                    ? (System.Windows.Media.Brush?)Application.Current.FindResource("SuccessTextBrush") ?? System.Windows.Media.Brushes.Gray
-                    : (System.Windows.Media.Brush?)Application.Current.FindResource("FailedTextBrush") ?? System.Windows.Media.Brushes.Gray;
+                    ? (System.Windows.Media.Brush?)Application.Current.FindResource("SuccessTextBrush") ??
+                      System.Windows.Media.Brushes.Gray
+                    : (System.Windows.Media.Brush?)Application.Current.FindResource("FailedTextBrush") ??
+                      System.Windows.Media.Brushes.Gray;
                 StatusBarMessage.Text = "Ready";
                 SpeedValue.Text = "0.0 MB/s";
             }
@@ -407,10 +429,12 @@ internal partial class MainWindow : IDisposable
                     // File is readable and can be executed
                 }
             }
-            catch (IOException ioEx) when (ioEx.Message.Contains("being used by another process", StringComparison.OrdinalIgnoreCase))
+            catch (IOException ioEx) when (ioEx.Message.Contains("being used by another process",
+                                               StringComparison.OrdinalIgnoreCase))
             {
                 LogError($" {exeName} cannot be opened - it is held with incompatible access by another process.");
-                LogMessage("       Close other instances of this application and any antivirus scan in progress, then try again.");
+                LogMessage(
+                    "       Close other instances of this application and any antivirus scan in progress, then try again.");
                 ShowError($"{exeName} is currently in use by another process.");
                 return false;
             }
@@ -485,9 +509,12 @@ internal partial class MainWindow : IDisposable
             // batch starts instead of failing each file with "produced no error output".
             if (process.ExitCode < 0)
             {
-                LogError($" chdman.exe terminated abnormally during the startup check (exit code {process.ExitCode}{DescribeChdmanCrash(process.ExitCode)}).");
-                LogWarning("       The bundled chdman.exe is likely incompatible with this computer's CPU or was damaged/quarantined by antivirus software.");
-                LogMessage("       Replace chdman.exe with a build that matches your CPU (e.g. an official MAME tools release) and add an antivirus exclusion for it.");
+                LogError(
+                    $" chdman.exe terminated abnormally during the startup check (exit code {process.ExitCode}{DescribeChdmanCrash(process.ExitCode)}).");
+                LogWarning(
+                    "       The bundled chdman.exe is likely incompatible with this computer's CPU or was damaged/quarantined by antivirus software.");
+                LogMessage(
+                    "       Replace chdman.exe with a build that matches your CPU (e.g. an official MAME tools release) and add an antivirus exclusion for it.");
                 ShowError($"chdman.exe crashed during the startup check (exit code {process.ExitCode}).\n\n" +
                           "The bundled build may be incompatible with this computer's CPU, or it was damaged/quarantined by antivirus software.\n" +
                           "Replace chdman.exe with a build that matches your CPU and check your antivirus settings.");
@@ -513,11 +540,13 @@ internal partial class MainWindow : IDisposable
 
             throw;
         }
-        catch (Win32Exception ex) when (ex.NativeErrorCode == 193 || ex.Message.Contains("not a valid application", StringComparison.Ordinal))
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 193 ||
+                                        ex.Message.Contains("not a valid application", StringComparison.Ordinal))
         {
             LogError(" The bundled chdman.exe is not compatible with this version of Windows.");
             LogMessage("       This typically occurs when running on older Windows versions (e.g., Windows 7).");
-            LogMessage("       It can also occur when files from the win-arm64 release are copied into a win-x64 installation (or vice versa) - keep the two releases separate.");
+            LogMessage(
+                "       It can also occur when files from the win-arm64 release are copied into a win-x64 installation (or vice versa) - keep the two releases separate.");
             LogMessage("       Please download a compatible version of chdman.exe from MAME releases.");
             ShowError("chdman.exe is not compatible with this OS.\n\n" +
                       "The bundled chdman.exe requires a newer Windows version, or it belongs to the other architecture release (win-x64 vs win-arm64).\n" +
@@ -527,8 +556,10 @@ internal partial class MainWindow : IDisposable
         catch (Win32Exception ex) when (ex.NativeErrorCode == 5)
         {
             LogError($" Access denied when trying to start {Path.GetFileName(chdmanPath)}.");
-            LogMessage("       This can be caused by antivirus blocking the executable or insufficient file permissions.");
-            ShowError($"Access denied to {Path.GetFileName(chdmanPath)}.\n\nPlease check your antivirus settings or file permissions.");
+            LogMessage(
+                "       This can be caused by antivirus blocking the executable or insufficient file permissions.");
+            ShowError(
+                $"Access denied to {Path.GetFileName(chdmanPath)}.\n\nPlease check your antivirus settings or file permissions.");
             return false;
         }
         catch (Exception ex)
@@ -562,9 +593,13 @@ internal partial class MainWindow : IDisposable
             sb.AppendLine("=== Environment Details ===");
             sb.AppendLine(CultureInfo.InvariantCulture, $"OS: {Environment.OSVersion}");
             sb.AppendLine(CultureInfo.InvariantCulture, $"User: {Environment.UserName}");
-            sb.AppendLine(CultureInfo.InvariantCulture, $"Process Architecture: {RuntimeInformation.ProcessArchitecture}");
+            sb.AppendLine(CultureInfo.InvariantCulture,
+                $"Process Architecture: {RuntimeInformation.ProcessArchitecture}");
             sb.AppendLine(CultureInfo.InvariantCulture, $"OS Architecture: {RuntimeInformation.OSArchitecture}");
-            sb.AppendLine(CultureInfo.InvariantCulture, $"chdman executable: {_chdmanResolvedName} ({(_isChdmanAvailable ? "found" : "NOT FOUND")})");
+            sb.AppendLine(CultureInfo.InvariantCulture,
+                $"chdman executable: {_chdmanResolvedName} ({(_isChdmanAvailable ? "found" : "NOT FOUND")})");
+            sb.AppendLine(CultureInfo.InvariantCulture,
+                $"CHDSharp executable: {_chdSharpResolvedName} ({(_isChdSharpAvailable ? "found" : "NOT FOUND")})");
             LogMessage(sb.ToString());
         }
         catch
@@ -576,9 +611,16 @@ internal partial class MainWindow : IDisposable
     private void DisplayConversionInstructionsInLog()
     {
         LogMessage($"Welcome to {AppConfig.ApplicationName}. (Conversion Mode)");
+        if (!_isChdSharpAvailable)
+        {
+            LogWarning(
+                " CHDSharp.exe not found! CHDSharp is the primary encoder. Place it in the application folder.");
+        }
+
         if (!_isChdmanAvailable)
         {
-            LogWarning(" chdman.exe not found! Download it from https://github.com/rtissera/chdman/releases and place it in the application folder.");
+            LogWarning(
+                " chdman.exe not found! chdman is used as a fallback encoder. Download it from https://github.com/rtissera/chdman/releases and place it in the application folder.");
         }
 
         LogMessage("--- Ready for Conversion ---");
@@ -693,7 +735,8 @@ internal partial class MainWindow : IDisposable
                     var excess = (LogViewer.Text.Length) - MaxLogLength / 2;
                     LogViewer.SelectionStart = 0;
                     LogViewer.SelectionLength = excess;
-                    LogViewer.SelectedText = $"[{DateTime.Now:HH:mm:ss.fff}] --- Log truncated to keep app responsive ---{Environment.NewLine}";
+                    LogViewer.SelectedText =
+                        $"[{DateTime.Now:HH:mm:ss.fff}] --- Log truncated to keep app responsive ---{Environment.NewLine}";
                 }
 
                 LogViewer.AppendText($"{timestampedMessage}{Environment.NewLine}");
@@ -756,8 +799,10 @@ internal partial class MainWindow : IDisposable
             await Application.Current.Dispatcher.InvokeAsync((Action)(() => LogViewer.Clear()));
             DisplayExtractionInstructionsInLog();
 
-            var inputFolder = PathUtils.ValidateAndNormalizePath(ExtractionInputFolderTextBox.Text, "CHD Files Folder", ShowError, LogMessage);
-            var outputFolder = PathUtils.ValidateAndNormalizePath(ExtractionOutputFolderTextBox.Text, "Output Folder", ShowError, LogMessage);
+            var inputFolder = PathUtils.ValidateAndNormalizePath(ExtractionInputFolderTextBox.Text, "CHD Files Folder",
+                ShowError, LogMessage);
+            var outputFolder = PathUtils.ValidateAndNormalizePath(ExtractionOutputFolderTextBox.Text, "Output Folder",
+                ShowError, LogMessage);
 
             if (inputFolder == null || outputFolder == null)
             {
@@ -776,7 +821,8 @@ internal partial class MainWindow : IDisposable
                 return;
             }
 
-            var selectedFiles = _extractionFiles.Where(static f => f.IsSelected).Select(static f => f.FullPath).ToArray();
+            var selectedFiles = _extractionFiles.Where(static f => f.IsSelected).Select(static f => f.FullPath)
+                .ToArray();
             if (selectedFiles.Length == 0)
             {
                 ShowError("No files selected for extraction.");
@@ -894,7 +940,8 @@ internal partial class MainWindow : IDisposable
             };
 
             var paths = Directory.GetFiles(inputFolder, "*.*", options)
-                .Where(static file => FileExtensions.AllSupportedInputExtensionsForConversionSet.Contains(Path.GetExtension(file)))
+                .Where(static file =>
+                    FileExtensions.AllSupportedInputExtensionsForConversionSet.Contains(Path.GetExtension(file)))
                 .ToList();
 
             // A raw image that a sibling descriptor already covers must not be offered as its own
@@ -1115,14 +1162,17 @@ internal partial class MainWindow : IDisposable
             await Application.Current.Dispatcher.InvokeAsync((Action)(() => LogViewer.Clear()));
             DisplayConversionInstructionsInLog();
 
-            if (!_isChdmanAvailable)
+            if (!_isChdSharpAvailable && !_isChdmanAvailable)
             {
-                ShowError($"{AppConfig.ChdmanExeName} is missing. Download it from https://github.com/rtissera/chdman/releases");
+                ShowError(
+                    $"Neither {AppConfig.ChdSharpExeName} nor {AppConfig.ChdmanExeName} was found. Place at least one encoder in the application folder.");
                 return;
             }
 
-            var inputFolder = PathUtils.ValidateAndNormalizePath(ConversionInputFolderTextBox.Text, "Source Files Folder", ShowError, LogMessage);
-            var outputFolder = PathUtils.ValidateAndNormalizePath(ConversionOutputFolderTextBox.Text, "Output CHD Folder", ShowError, LogMessage);
+            var inputFolder = PathUtils.ValidateAndNormalizePath(ConversionInputFolderTextBox.Text,
+                "Source Files Folder", ShowError, LogMessage);
+            var outputFolder = PathUtils.ValidateAndNormalizePath(ConversionOutputFolderTextBox.Text,
+                "Output CHD Folder", ShowError, LogMessage);
             if (inputFolder == null || outputFolder == null)
             {
                 return;
@@ -1134,7 +1184,8 @@ internal partial class MainWindow : IDisposable
             // name survives a failed run.
             if (PathUtils.IsSameOrInsideDirectory(inputFolder, outputFolder))
             {
-                LogMessage(" The output folder is inside the source folder, so CHDs will be written alongside the originals.");
+                LogMessage(
+                    " The output folder is inside the source folder, so CHDs will be written alongside the originals.");
             }
 
             RenewCancellationTokenSource();
@@ -1151,11 +1202,14 @@ internal partial class MainWindow : IDisposable
             var forceDvd = ForceCreateDvdCheckBox.IsChecked ?? false;
 
             var timeoutEnabled = EnableConversionTimeoutCheckBox.IsChecked ?? false;
-            var timeoutMinutes = timeoutEnabled && int.TryParse(ConversionTimeoutTextBox.Text, CultureInfo.InvariantCulture, out var mins) && mins > 0
+            var timeoutMinutes = timeoutEnabled &&
+                                 int.TryParse(ConversionTimeoutTextBox.Text, CultureInfo.InvariantCulture,
+                                     out var mins) && mins > 0
                 ? (int?)mins
                 : null;
 
-            var selectedFiles = _conversionFiles.Where(static f => f.IsSelected).Select(static f => f.FullPath).ToArray();
+            var selectedFiles = _conversionFiles.Where(static f => f.IsSelected).Select(static f => f.FullPath)
+                .ToArray();
             if (selectedFiles.Length == 0)
             {
                 ShowError("No files selected for conversion.");
@@ -1174,7 +1228,8 @@ internal partial class MainWindow : IDisposable
                 }
 
                 await PerformBatchConversionAsync(_chdmanExePath,
-                    inputFolder, outputFolder, deleteFiles, processSmallerFirst, forceCd, forceDvd, timeoutMinutes, selectedFiles, token);
+                    inputFolder, outputFolder, deleteFiles, processSmallerFirst, forceCd, forceDvd, timeoutMinutes,
+                    selectedFiles, token);
             }
             catch (OperationCanceledException)
             {
@@ -1203,7 +1258,8 @@ internal partial class MainWindow : IDisposable
             await Application.Current.Dispatcher.InvokeAsync((Action)(() => LogViewer.Clear()));
             DisplayVerificationInstructionsInLog();
 
-            var inputFolder = PathUtils.ValidateAndNormalizePath(VerificationInputFolderTextBox.Text, "CHD Files Folder", ShowError, LogMessage);
+            var inputFolder = PathUtils.ValidateAndNormalizePath(VerificationInputFolderTextBox.Text,
+                "CHD Files Folder", ShowError, LogMessage);
             if (inputFolder == null)
             {
                 return;
@@ -1223,7 +1279,8 @@ internal partial class MainWindow : IDisposable
             var successFolder = moveSuccess ? Path.Combine(inputFolder, "Success") : string.Empty;
             var failedFolder = moveFailed ? Path.Combine(inputFolder, "Failed") : string.Empty;
 
-            var selectedFiles = _verificationFiles.Where(static f => f.IsSelected).Select(static f => f.FullPath).ToArray();
+            var selectedFiles = _verificationFiles.Where(static f => f.IsSelected).Select(static f => f.FullPath)
+                .ToArray();
             if (selectedFiles.Length == 0)
             {
                 ShowError("No files selected for verification.");
@@ -1242,7 +1299,8 @@ internal partial class MainWindow : IDisposable
                 }
 
                 await PerformBatchVerificationAsync(
-                    inputFolder, includeSubfolders, moveSuccess, successFolder, moveFailed, failedFolder, selectedFiles, token);
+                    inputFolder, includeSubfolders, moveSuccess, successFolder, moveFailed, failedFolder, selectedFiles,
+                    token);
             }
             catch (OperationCanceledException)
             {
@@ -1378,7 +1436,9 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private async Task PerformBatchConversionAsync(string chdmanPath, string inputFolder, string outputFolder, bool deleteFiles, bool processSmallerFirst, bool forceCd, bool forceDvd, int? timeoutMinutes, string[] selectedFiles, CancellationToken token)
+    private async Task PerformBatchConversionAsync(string chdmanPath, string inputFolder, string outputFolder,
+        bool deleteFiles, bool processSmallerFirst, bool forceCd, bool forceDvd, int? timeoutMinutes,
+        string[] selectedFiles, CancellationToken token)
     {
         if (!await ValidateExecutableAccessAsync(chdmanPath, "chdman.exe")) return;
 
@@ -1423,9 +1483,11 @@ internal partial class MainWindow : IDisposable
         if (!IsOutputFolderWritable(outputFolder))
         {
             LogError($" The output folder is not writable: {outputFolder}");
-            LogMessage("       Choose a folder you have write access to (for example Documents or a data drive) and try again.");
+            LogMessage(
+                "       Choose a folder you have write access to (for example Documents or a data drive) and try again.");
             LogMessage("       Writing into folders like 'Program Files' requires administrator rights.");
-            ShowError($"The output folder is not writable:\n\n{outputFolder}\n\nChoose a folder you have write access to and try again.");
+            ShowError(
+                $"The output folder is not writable:\n\n{outputFolder}\n\nChoose a folder you have write access to and try again.");
             return;
         }
 
@@ -1441,7 +1503,8 @@ internal partial class MainWindow : IDisposable
             // Update text to show we are starting this file, but bar stays at 'processedCount'
             UpdateProgressDisplay(processedCount, _totalFilesProcessed, Path.GetFileName(file), "Converting");
 
-            var success = await ProcessSingleFileForConversionAsync(chdmanPath, file, inputFolder, outputFolder, deleteFiles, cores, forceCd, forceDvd, timeoutMinutes, token);
+            var success = await ProcessSingleFileForConversionAsync(chdmanPath, file, inputFolder, outputFolder,
+                deleteFiles, cores, forceCd, forceDvd, timeoutMinutes, token);
             if (success)
             {
                 Interlocked.Increment(ref _processedOkCount);
@@ -1459,7 +1522,8 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private async Task PerformBatchExtractionAsync(string inputFolder, string outputFolder, bool deleteOriginal, string[] selectedFiles, CancellationToken token)
+    private async Task PerformBatchExtractionAsync(string inputFolder, string outputFolder, bool deleteOriginal,
+        string[] selectedFiles, CancellationToken token)
     {
         _totalFilesProcessed = selectedFiles.Length;
         UpdateStatsDisplay();
@@ -1499,7 +1563,9 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private async Task<bool> ProcessSingleFileForConversionAsync(string chdmanPath, string inputFile, string inputFolder, string outputFolder, bool deleteOriginal, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, CancellationToken token)
+    private async Task<bool> ProcessSingleFileForConversionAsync(string chdmanPath, string inputFile,
+        string inputFolder, string outputFolder, bool deleteOriginal, int cores, bool forceCd, bool forceDvd,
+        int? timeoutMinutes, CancellationToken token)
     {
         inputFile = Path.GetFullPath(inputFile);
         var originalName = Path.GetFileName(inputFile);
@@ -1556,31 +1622,38 @@ internal partial class MainWindow : IDisposable
                 }
 
                 var resolvedSuccess = await ConvertToChdAsync(
-                    chdmanPath, resolved.PathToConvert, outputChd, cores, forceCd, resolved.ForceDvd || forceDvd, timeoutMinutes, token);
+                    chdmanPath, resolved.PathToConvert, outputChd, cores, forceCd, resolved.ForceDvd || forceDvd,
+                    timeoutMinutes, token);
 
-                return await HandleConversionResultAsync(resolvedSuccess, inputFile, originalName, ext, inputFolder, outputChd, deleteOriginal, token);
+                return await HandleConversionResultAsync(resolvedSuccess, inputFile, originalName, ext, inputFolder,
+                    outputChd, deleteOriginal, token);
             }
 
             string fileToProcess;
             if (ext.Equals(FileExtensions.Cso, StringComparison.OrdinalIgnoreCase))
             {
-                return await ProcessCsoFileForConversionAsync(inputFile, originalName, outputFolder, tempDirs, token, chdmanPath, outputChd, cores, forceCd, forceDvd, timeoutMinutes, deleteOriginal, inputFolder);
+                return await ProcessCsoFileForConversionAsync(inputFile, originalName, outputFolder, tempDirs, token,
+                    chdmanPath, outputChd, cores, forceCd, forceDvd, timeoutMinutes, deleteOriginal, inputFolder);
             }
             else if (FileExtensions.ArchiveExtensionsSet.Contains(ext))
             {
-                return await ProcessArchiveFileForConversionAsync(inputFile, inputFolder, outputFolder, tempDirs, token, chdmanPath, cores, forceCd, forceDvd, timeoutMinutes, deleteOriginal);
+                return await ProcessArchiveFileForConversionAsync(inputFile, inputFolder, outputFolder, tempDirs, token,
+                    chdmanPath, cores, forceCd, forceDvd, timeoutMinutes, deleteOriginal);
             }
             else if (ext.Equals(FileExtensions.Pbp, StringComparison.OrdinalIgnoreCase))
             {
-                return await ProcessPbpFileForConversionAsync(inputFile, originalName, inputFolder, outputFolder, tempDirs, token, chdmanPath, cores, forceCd, forceDvd, timeoutMinutes, deleteOriginal);
+                return await ProcessPbpFileForConversionAsync(inputFile, originalName, inputFolder, outputFolder,
+                    tempDirs, token, chdmanPath, cores, forceCd, forceDvd, timeoutMinutes, deleteOriginal);
             }
             else if (ext.Equals(FileExtensions.Ccd, StringComparison.OrdinalIgnoreCase))
             {
-                return await ProcessCcdFileForConversionAsync(inputFile, inputFolder, outputFolder, tempDirs, token, chdmanPath, cores, forceCd, forceDvd, timeoutMinutes, deleteOriginal);
+                return await ProcessCcdFileForConversionAsync(inputFile, inputFolder, outputFolder, tempDirs, token,
+                    chdmanPath, cores, forceCd, forceDvd, timeoutMinutes, deleteOriginal);
             }
             else if (ext.Equals(FileExtensions.Mds, StringComparison.OrdinalIgnoreCase))
             {
-                return await ProcessMdsFileForConversionAsync(inputFile, originalName, inputFolder, outputFolder, tempDirs, token, chdmanPath, cores, forceCd, forceDvd, timeoutMinutes, deleteOriginal);
+                return await ProcessMdsFileForConversionAsync(inputFile, originalName, inputFolder, outputFolder,
+                    tempDirs, token, chdmanPath, cores, forceCd, forceDvd, timeoutMinutes, deleteOriginal);
             }
             else
             {
@@ -1601,16 +1674,20 @@ internal partial class MainWindow : IDisposable
             var outputDir = Path.GetDirectoryName(outputChd) ?? outputFolder;
             if (!Directory.Exists(outputDir)) Directory.CreateDirectory(outputDir);
 
-            var success = await TryDirectConversionAsync(chdmanPath, fileToProcess, outputChd, cores, forceCd, forceDvd, timeoutMinutes, token, originalName);
+            var success = await TryDirectConversionAsync(chdmanPath, fileToProcess, outputChd, cores, forceCd, forceDvd,
+                timeoutMinutes, token, originalName);
 
             // Fallback: If direct conversion failed and we haven't already extracted to temp (i.e. it was a direct file attempt),
             // try copying to temp and converting there. This handles network path issues or file locking quirks.
-            if (!success && string.Equals(fileToProcess, inputFile, StringComparison.Ordinal) && !token.IsCancellationRequested)
+            if (!success && string.Equals(fileToProcess, inputFile, StringComparison.Ordinal) &&
+                !token.IsCancellationRequested)
             {
-                success = await TryRetryConversionViaTempCopyAsync(chdmanPath, inputFile, originalName, ext, outputFolder, outputChd, cores, forceCd, forceDvd, timeoutMinutes, tempDirs, token);
+                success = await TryRetryConversionViaTempCopyAsync(chdmanPath, inputFile, originalName, ext,
+                    outputFolder, outputChd, cores, forceCd, forceDvd, timeoutMinutes, tempDirs, token);
             }
 
-            return await HandleConversionResultAsync(success, inputFile, originalName, ext, inputFolder, outputChd, deleteOriginal, token);
+            return await HandleConversionResultAsync(success, inputFile, originalName, ext, inputFolder, outputChd,
+                deleteOriginal, token);
         }
         catch (OperationCanceledException)
         {
@@ -1668,7 +1745,8 @@ internal partial class MainWindow : IDisposable
     /// <param name="originalInputPath">The original input, used for log messages.</param>
     /// <param name="outputPath">Destination CHD path, which determines the drive checked.</param>
     /// <param name="token">Cancellation token.</param>
-    private async Task<bool> HasRoomForOutputAsync(string chdmanInputPath, string originalInputPath, string outputPath, CancellationToken token)
+    private async Task<bool> HasRoomForOutputAsync(string chdmanInputPath, string originalInputPath, string outputPath,
+        CancellationToken token)
     {
         long sourceBytes;
         try
@@ -1713,13 +1791,15 @@ internal partial class MainWindow : IDisposable
 
         if (freeBytes < MinimumOutputFreeBytes || freeBytes < (long)(sourceBytes * MinimumOutputSizeRatio))
         {
-            LogError($" Not enough disk space on {driveName} to convert {name}: {freeBytes / (1024.0 * 1024.0 * 1024.0):F1} GB free for a {sourceBytes / (1024.0 * 1024.0 * 1024.0):F1} GB source. Skipping before starting the conversion.");
+            LogError(
+                $" Not enough disk space on {driveName} to convert {name}: {freeBytes / (1024.0 * 1024.0 * 1024.0):F1} GB free for a {sourceBytes / (1024.0 * 1024.0 * 1024.0):F1} GB source. Skipping before starting the conversion.");
             return false;
         }
 
         if (freeBytes < sourceBytes)
         {
-            LogWarning($" {name}: only {freeBytes / (1024.0 * 1024.0 * 1024.0):F1} GB free on {driveName} for a {sourceBytes / (1024.0 * 1024.0 * 1024.0):F1} GB source. Proceeding, but the conversion will fail if it does not compress enough.");
+            LogWarning(
+                $" {name}: only {freeBytes / (1024.0 * 1024.0 * 1024.0):F1} GB free on {driveName} for a {sourceBytes / (1024.0 * 1024.0 * 1024.0):F1} GB source. Proceeding, but the conversion will fail if it does not compress enough.");
         }
 
         return true;
@@ -1736,8 +1816,10 @@ internal partial class MainWindow : IDisposable
         {
             var referenced = ext switch
             {
-                FileExtensions.Cue => await GameFileParser.GetReferencedFilesFromCueAsync(chdmanInputPath, static _ => { }, token),
-                FileExtensions.Gdi => await GameFileParser.GetReferencedFilesFromGdiAsync(chdmanInputPath, static _ => { }, token),
+                FileExtensions.Cue => await GameFileParser.GetReferencedFilesFromCueAsync(chdmanInputPath,
+                    static _ => { }, token),
+                FileExtensions.Gdi => await GameFileParser.GetReferencedFilesFromGdiAsync(chdmanInputPath,
+                    static _ => { }, token),
                 _ => await GameFileParser.GetReferencedFilesFromTocAsync(chdmanInputPath, static _ => { }, token)
             };
 
@@ -1793,12 +1875,14 @@ internal partial class MainWindow : IDisposable
     /// <param name="outputFolder">Conversion output folder, used to pick a temp location.</param>
     /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
     /// <param name="token">Cancellation token.</param>
-    private async Task<ResolvedInput?> TryResolveByContentAsync(string inputFile, string originalName, string outputFolder, List<string> tempDirs, CancellationToken token)
+    private async Task<ResolvedInput?> TryResolveByContentAsync(string inputFile, string originalName,
+        string outputFolder, List<string> tempDirs, CancellationToken token)
     {
         var ext = Path.GetExtension(inputFile);
 
         // Descriptors are text and have their own handlers; there is nothing to sniff.
-        if (ext is FileExtensions.Cue or FileExtensions.Gdi or FileExtensions.Toc or FileExtensions.Ccd or FileExtensions.Mds)
+        if (ext is FileExtensions.Cue or FileExtensions.Gdi or FileExtensions.Toc or FileExtensions.Ccd
+            or FileExtensions.Mds)
         {
             return null;
         }
@@ -1828,7 +1912,8 @@ internal partial class MainWindow : IDisposable
             case DiscImageKind.Isz:
                 return await ResolveIszAsync(inputFile, originalName, outputFolder, tempDirs, token);
             case DiscImageKind.Chd:
-                return ResolvedInput.Skip("this file is already a CHD. Copy it to the output folder rather than converting it.");
+                return ResolvedInput.Skip(
+                    "this file is already a CHD. Copy it to the output folder rather than converting it.");
         }
 
         if (!extensionClaimsArchive && !extensionClaimsIsz)
@@ -1841,7 +1926,8 @@ internal partial class MainWindow : IDisposable
         // files get renamed to it to mean "a disc image" without UltraISO ever being involved, and
         // chdman picks its verb from the extension and knows nothing about .isz.
         return await ResolveMislabelledContainerAsync(
-            inputFile, originalName, extensionClaimsIsz ? IszContainerDescription : "an archive", kind, tempDirs, token);
+            inputFile, originalName, extensionClaimsIsz ? IszContainerDescription : "an archive", kind, tempDirs,
+            token);
     }
 
     /// <summary>
@@ -1852,7 +1938,8 @@ internal partial class MainWindow : IDisposable
     /// <param name="outputFolder">Conversion output folder, used to pick a temp location.</param>
     /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
     /// <param name="token">Cancellation token.</param>
-    private async Task<ResolvedInput> ResolveSplitVolumeSetAsync(List<string> volumeSet, string originalName, string outputFolder, List<string> tempDirs, CancellationToken token)
+    private async Task<ResolvedInput> ResolveSplitVolumeSetAsync(List<string> volumeSet, string originalName,
+        string outputFolder, List<string> tempDirs, CancellationToken token)
     {
         var firstVolume = volumeSet[0];
 
@@ -1860,11 +1947,13 @@ internal partial class MainWindow : IDisposable
         var firstKind = DiscImageSignature.Detect(firstVolume);
         if (DiscImageSignature.IsArchive(firstKind))
         {
-            return ResolvedInput.Skip($"this is part 1 of a {volumeSet.Count}-part {DiscImageSignature.Describe(firstKind)}. Extract the set manually and convert the extracted image.");
+            return ResolvedInput.Skip(
+                $"this is part 1 of a {volumeSet.Count}-part {DiscImageSignature.Describe(firstKind)}. Extract the set manually and convert the extracted image.");
         }
 
         var totalBytes = SplitImageJoiner.GetTotalBytes(volumeSet);
-        LogMessage($" {originalName} is part 1 of a {volumeSet.Count}-part split image ({totalBytes:N0} bytes total); joining the parts.");
+        LogMessage(
+            $" {originalName} is part 1 of a {volumeSet.Count}-part split image ({totalBytes:N0} bytes total); joining the parts.");
 
         var tempDir = PathUtils.GetBestTempDirectory(firstVolume, outputFolder, TempDirPrefix, totalBytes);
         await Task.Run(() => Directory.CreateDirectory(tempDir), token);
@@ -1890,7 +1979,8 @@ internal partial class MainWindow : IDisposable
     /// <param name="outputFolder">Conversion output folder, used to pick a temp location.</param>
     /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
     /// <param name="token">Cancellation token.</param>
-    private async Task<ResolvedInput> ResolveEcmAsync(string inputFile, string originalName, string outputFolder, List<string> tempDirs, CancellationToken token)
+    private async Task<ResolvedInput> ResolveEcmAsync(string inputFile, string originalName, string outputFolder,
+        List<string> tempDirs, CancellationToken token)
     {
         // ECM typically halves an image, so allow for the decoded size being well above the input.
         long estimatedBytes;
@@ -1936,12 +2026,14 @@ internal partial class MainWindow : IDisposable
     /// <param name="outputFolder">Conversion output folder, used to pick a temp location.</param>
     /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
     /// <param name="token">Cancellation token.</param>
-    private async Task<ResolvedInput> ResolveIszAsync(string inputFile, string originalName, string outputFolder, List<string> tempDirs, CancellationToken token)
+    private async Task<ResolvedInput> ResolveIszAsync(string inputFile, string originalName, string outputFolder,
+        List<string> tempDirs, CancellationToken token)
     {
         var header = await IszDecoder.TryReadHeaderAsync(inputFile, token);
         if (header is null)
         {
-            return ResolvedInput.Skip("the file starts with an ISZ signature but its header could not be read, so it is damaged.");
+            return ResolvedInput.Skip(
+                "the file starts with an ISZ signature but its header could not be read, so it is damaged.");
         }
 
         var unusable = header.GetUnusableReason();
@@ -1957,7 +2049,8 @@ internal partial class MainWindow : IDisposable
         tempDirs.Add(tempDir);
 
         var decodedPath = Path.Combine(tempDir, IszDecoder.GetDecodedFileName(inputFile));
-        LogMessage($" {originalName} is a compressed ISZ image; decompressing it to {header.ImageSizeBytes / (1024.0 * 1024.0):F0} MB.");
+        LogMessage(
+            $" {originalName} is a compressed ISZ image; decompressing it to {header.ImageSizeBytes / (1024.0 * 1024.0):F0} MB.");
 
         var decoded = await IszDecoder.DecodeAsync(inputFile, decodedPath, LogMessage, token);
         if (!decoded.Success)
@@ -1986,7 +2079,8 @@ internal partial class MainWindow : IDisposable
     /// <param name="description">How to refer to the image in log messages.</param>
     /// <param name="misalignedReason">Skip reason when the size fits no known sector layout.</param>
     /// <param name="token">Cancellation token.</param>
-    private async Task<ResolvedInput> ClassifyRecoveredImageAsync(string imagePath, string workDir, string description, string misalignedReason, CancellationToken token)
+    private async Task<ResolvedInput> ClassifyRecoveredImageAsync(string imagePath, string workDir, string description,
+        string misalignedReason, CancellationToken token)
     {
         var trackMode = RawCdImageDetector.DetectTrackMode(imagePath);
         if (trackMode is not null)
@@ -2032,14 +2126,16 @@ internal partial class MainWindow : IDisposable
     /// <param name="trackMode">Cue track mode, e.g. "MODE2/2352".</param>
     /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
     /// <param name="token">Cancellation token.</param>
-    private async Task<string?> StageCueForImageAsync(string imagePath, string originalName, string trackMode, List<string> tempDirs, CancellationToken token)
+    private async Task<string?> StageCueForImageAsync(string imagePath, string originalName, string trackMode,
+        List<string> tempDirs, CancellationToken token)
     {
         // The cue has to be on the image's volume, not merely somewhere with space, because chdman
         // joins a cue's FILE entry to the cue's own directory and cannot follow an absolute path.
         var tempDir = await Task.Run(() => PathUtils.CreateTempDirectoryOnSameVolume(imagePath, TempDirPrefix), token);
         if (tempDir is null)
         {
-            LogWarning($" {originalName}: no writable location on the same volume for a generated cue; converting the image as-is.");
+            LogWarning(
+                $" {originalName}: no writable location on the same volume for a generated cue; converting the image as-is.");
             return null;
         }
 
@@ -2048,7 +2144,8 @@ internal partial class MainWindow : IDisposable
         var cuePath = await RawCdImageDetector.TryWriteCueAsync(imagePath, trackMode, tempDir, token);
         if (cuePath is null)
         {
-            LogWarning($" {originalName}: a generated cue could not reference the image relatively; converting the image as-is.");
+            LogWarning(
+                $" {originalName}: a generated cue could not reference the image relatively; converting the image as-is.");
         }
 
         return cuePath;
@@ -2063,7 +2160,8 @@ internal partial class MainWindow : IDisposable
     /// <param name="originalName">File name used in log messages.</param>
     /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
     /// <param name="token">Cancellation token.</param>
-    private async Task<string?> TryStageCueForRawImageAsync(string inputFile, string originalName, List<string> tempDirs, CancellationToken token)
+    private async Task<string?> TryStageCueForRawImageAsync(string inputFile, string originalName,
+        List<string> tempDirs, CancellationToken token)
     {
         var ext = Path.GetExtension(inputFile);
         if (!RawCdImageDetector.IsCandidateExtension(ext))
@@ -2080,7 +2178,8 @@ internal partial class MainWindow : IDisposable
         var trackMode = RawCdImageDetector.DetectTrackMode(inputFile);
         if (trackMode is not null)
         {
-            LogMessage($" {originalName} holds raw {RawCdImageDetector.RawSectorSize}-byte CD sectors ({trackMode}); generating a cue so it converts as a CD.");
+            LogMessage(
+                $" {originalName} holds raw {RawCdImageDetector.RawSectorSize}-byte CD sectors ({trackMode}); generating a cue so it converts as a CD.");
         }
         else if (ext.Equals(FileExtensions.Bin, StringComparison.OrdinalIgnoreCase))
         {
@@ -2089,7 +2188,8 @@ internal partial class MainWindow : IDisposable
             // alternate-mode retry settles it. Audio tracks cannot be recovered without a cue or
             // TOC, so a multi-track disc converted this way will be missing its CDDA.
             trackMode = BinCueGenerator.Mode2;
-            LogWarning($" {originalName} has no cue and no readable sector header; assuming a single {trackMode} data track. Any CDDA audio tracks cannot be recovered without a cue.");
+            LogWarning(
+                $" {originalName} has no cue and no readable sector header; assuming a single {trackMode} data track. Any CDDA audio tracks cannot be recovered without a cue.");
         }
         else
         {
@@ -2113,7 +2213,9 @@ internal partial class MainWindow : IDisposable
 
         // Maintain directory structure if searching subfolders
         var relativePath = PathUtils.GetSafeRelativePath(inputFolder, Path.GetDirectoryName(inputFile) ?? inputFolder);
-        var targetDir = string.Equals(relativePath, ".", StringComparison.Ordinal) ? outputFolder : Path.Combine(outputFolder, relativePath);
+        var targetDir = string.Equals(relativePath, ".", StringComparison.Ordinal)
+            ? outputFolder
+            : Path.Combine(outputFolder, relativePath);
 
         return Path.Combine(targetDir, PathUtils.SanitizeFileName(chdBase) + FileExtensions.Chd);
     }
@@ -2134,20 +2236,27 @@ internal partial class MainWindow : IDisposable
         foreach (var collision in collisions)
         {
             var inputNames = string.Join(", ", collision.Select(Path.GetFileName));
-            LogWarning($" {collision.Count()} inputs target the same output file {Path.GetFileName(collision.Key)}: {inputNames}. Only the last one converted will be kept.");
+            LogWarning(
+                $" {collision.Count()} inputs target the same output file {Path.GetFileName(collision.Key)}: {inputNames}. Only the last one converted will be kept.");
         }
     }
 
-    private static string ComputeOutputChdPathForExtractedFile(string extractedFilePath, string originalInputFile, string inputFolder, string outputFolder)
+    private static string ComputeOutputChdPathForExtractedFile(string extractedFilePath, string originalInputFile,
+        string inputFolder, string outputFolder)
     {
         // Use the original input file (e.g. the archive) to determine the relative path
-        var relativePath = PathUtils.GetSafeRelativePath(inputFolder, Path.GetDirectoryName(originalInputFile) ?? inputFolder);
-        var targetDir = string.Equals(relativePath, ".", StringComparison.Ordinal) ? outputFolder : Path.Combine(outputFolder, relativePath);
+        var relativePath =
+            PathUtils.GetSafeRelativePath(inputFolder, Path.GetDirectoryName(originalInputFile) ?? inputFolder);
+        var targetDir = string.Equals(relativePath, ".", StringComparison.Ordinal)
+            ? outputFolder
+            : Path.Combine(outputFolder, relativePath);
         var chdBase = Path.GetFileNameWithoutExtension(extractedFilePath);
         return Path.Combine(targetDir, PathUtils.SanitizeFileName(chdBase) + FileExtensions.Chd);
     }
 
-    private async Task<bool> ProcessCsoFileForConversionAsync(string inputFile, string originalName, string outputFolder, List<string> tempDirs, CancellationToken token, string chdmanPath, string outputChd, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, bool deleteOriginal, string inputFolder)
+    private async Task<bool> ProcessCsoFileForConversionAsync(string inputFile, string originalName,
+        string outputFolder, List<string> tempDirs, CancellationToken token, string chdmanPath, string outputChd,
+        int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, bool deleteOriginal, string inputFolder)
     {
         long csoSize = 0;
         try
@@ -2172,11 +2281,15 @@ internal partial class MainWindow : IDisposable
         var outputDir = Path.GetDirectoryName(outputChd) ?? outputFolder;
         if (!Directory.Exists(outputDir)) Directory.CreateDirectory(outputDir);
 
-        var success = await TryDirectConversionAsync(chdmanPath, fileToProcess, outputChd, cores, forceCd, forceDvd, timeoutMinutes, token, originalName);
-        return await HandleConversionResultAsync(success, inputFile, originalName, Path.GetExtension(inputFile), inputFolder, outputChd, deleteOriginal, token);
+        var success = await TryDirectConversionAsync(chdmanPath, fileToProcess, outputChd, cores, forceCd, forceDvd,
+            timeoutMinutes, token, originalName);
+        return await HandleConversionResultAsync(success, inputFile, originalName, Path.GetExtension(inputFile),
+            inputFolder, outputChd, deleteOriginal, token);
     }
 
-    private async Task<bool> ProcessArchiveFileForConversionAsync(string inputFile, string inputFolder, string outputFolder, List<string> tempDirs, CancellationToken token, string chdmanPath, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, bool deleteOriginal)
+    private async Task<bool> ProcessArchiveFileForConversionAsync(string inputFile, string inputFolder,
+        string outputFolder, List<string> tempDirs, CancellationToken token, string chdmanPath, int cores, bool forceCd,
+        bool forceDvd, int? timeoutMinutes, bool deleteOriginal)
     {
         long archiveSize = 0;
         try
@@ -2207,12 +2320,15 @@ internal partial class MainWindow : IDisposable
         foreach (var extractedFile in filesToConvert)
         {
             token.ThrowIfCancellationRequested();
-            var extractedFileOutputChd = ComputeOutputChdPathForExtractedFile(extractedFile, inputFile, inputFolder, outputFolder);
+            var extractedFileOutputChd =
+                ComputeOutputChdPathForExtractedFile(extractedFile, inputFile, inputFolder, outputFolder);
             if (BinCueGenerator.IsAutoCue(extractedFile))
             {
                 // Auto-generated cue ("Game.autocue.cue") should produce "Game.chd", not "Game.autocue.chd".
                 var outputDir = Path.GetDirectoryName(extractedFileOutputChd) ?? outputFolder;
-                extractedFileOutputChd = Path.Combine(outputDir, Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(extractedFile)) + FileExtensions.Chd);
+                extractedFileOutputChd = Path.Combine(outputDir,
+                    Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(extractedFile)) +
+                    FileExtensions.Chd);
             }
 
             // Archive extractions skip the regular dependency validation, so a cue whose bins are
@@ -2227,14 +2343,16 @@ internal partial class MainWindow : IDisposable
                     var missingNames = await GetMissingDependentFileNamesAsync(extractedExt, extractedFile, token);
                     if (missingNames.Count > 0)
                     {
-                        LogWarning($" {Path.GetFileName(extractedFile)} — referenced files are missing: {string.Join(", ", missingNames)}. Skipping (data files not found in the archive).");
+                        LogWarning(
+                            $" {Path.GetFileName(extractedFile)} — referenced files are missing: {string.Join(", ", missingNames)}. Skipping (data files not found in the archive).");
                         allSucceeded = false;
                         continue;
                     }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    LogWarning($" {Path.GetFileName(extractedFile)} — could not validate referenced files: {ex.Message}. Skipping.");
+                    LogWarning(
+                        $" {Path.GetFileName(extractedFile)} — could not validate referenced files: {ex.Message}. Skipping.");
                     allSucceeded = false;
                     continue;
                 }
@@ -2251,13 +2369,15 @@ internal partial class MainWindow : IDisposable
                 // chdman cannot read a .ccd, so a CloneCD set inside an archive has to go through
                 // CCDSharp exactly as a loose one does.
                 converted = await ConvertCcdViaCueAsync(
-                    chdmanPath, extractedFile, extractedFileOutputChd, tempDirs, outputFolder, cores, forceCd, forceDvd, timeoutMinutes, token);
+                    chdmanPath, extractedFile, extractedFileOutputChd, tempDirs, outputFolder, cores, forceCd, forceDvd,
+                    timeoutMinutes, token);
             }
             else if (extractedExt.Equals(FileExtensions.Mds, StringComparison.OrdinalIgnoreCase))
             {
                 // Same for an Alcohol set: the descriptor has to become a cue first.
                 converted = await ConvertMdsViaCueAsync(
-                    chdmanPath, extractedFile, extractedFileOutputChd, tempDirs, outputFolder, cores, forceCd, forceDvd, timeoutMinutes, token);
+                    chdmanPath, extractedFile, extractedFileOutputChd, tempDirs, outputFolder, cores, forceCd, forceDvd,
+                    timeoutMinutes, token);
             }
             else if (extractedExt.Equals(FileExtensions.Isz, StringComparison.OrdinalIgnoreCase))
             {
@@ -2265,11 +2385,13 @@ internal partial class MainWindow : IDisposable
                 // the same as a loose one, including the case where it is an ordinary image that was
                 // merely given the extension.
                 converted = await ConvertIszViaImageAsync(
-                    chdmanPath, extractedFile, extractedFileOutputChd, tempDirs, outputFolder, cores, forceCd, forceDvd, timeoutMinutes, token);
+                    chdmanPath, extractedFile, extractedFileOutputChd, tempDirs, outputFolder, cores, forceCd, forceDvd,
+                    timeoutMinutes, token);
             }
             else
             {
-                converted = await ConvertToChdAsync(chdmanPath, extractedFile, extractedFileOutputChd, cores, forceCd, forceDvd, timeoutMinutes, token);
+                converted = await ConvertToChdAsync(chdmanPath, extractedFile, extractedFileOutputChd, cores, forceCd,
+                    forceDvd, timeoutMinutes, token);
             }
 
             if (!converted && BinCueGenerator.IsAutoCue(extractedFile))
@@ -2280,7 +2402,8 @@ internal partial class MainWindow : IDisposable
                 var alternateMode = BinCueGenerator.GetAlternateMode(mode);
                 await BinCueGenerator.RewriteCueAsync(extractedFile, alternateMode, token);
                 LogMessage($"Auto-generated cue failed with {mode}; retrying with {alternateMode}...");
-                converted = await ConvertToChdAsync(chdmanPath, extractedFile, extractedFileOutputChd, cores, forceCd, forceDvd, timeoutMinutes, token);
+                converted = await ConvertToChdAsync(chdmanPath, extractedFile, extractedFileOutputChd, cores, forceCd,
+                    forceDvd, timeoutMinutes, token);
             }
 
             if (!converted)
@@ -2295,7 +2418,9 @@ internal partial class MainWindow : IDisposable
         return allSucceeded;
     }
 
-    private async Task<bool> ProcessPbpFileForConversionAsync(string inputFile, string originalName, string inputFolder, string outputFolder, List<string> tempDirs, CancellationToken token, string chdmanPath, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, bool deleteOriginal)
+    private async Task<bool> ProcessPbpFileForConversionAsync(string inputFile, string originalName, string inputFolder,
+        string outputFolder, List<string> tempDirs, CancellationToken token, string chdmanPath, int cores, bool forceCd,
+        bool forceDvd, int? timeoutMinutes, bool deleteOriginal)
     {
         long pbpSize = 0;
         try
@@ -2319,7 +2444,8 @@ internal partial class MainWindow : IDisposable
             // without raising a bug report either way.
             if (result.ErrorCode == PbpError.InvalidPsarHeader)
             {
-                LogMessage($" {originalName} does not contain a PlayStation disc image (PSP application, unsupported variant, or corrupt file) — skipping.");
+                LogMessage(
+                    $" {originalName} does not contain a PlayStation disc image (PSP application, unsupported variant, or corrupt file) — skipping.");
             }
             else
             {
@@ -2330,13 +2456,16 @@ internal partial class MainWindow : IDisposable
                 switch (result.ErrorCode)
                 {
                     case PbpError.TruncatedPsar:
-                        LogMessage("       The PlayStation data section has no readable tracks - the file is most likely truncated or incomplete. Re-download it.");
+                        LogMessage(
+                            "       The PlayStation data section has no readable tracks - the file is most likely truncated or incomplete. Re-download it.");
                         break;
                     case PbpError.CorruptFile or PbpError.DecompressionError or PbpError.InvalidSfo:
-                        LogMessage("       The file may be truncated or corrupt (re-download it), or it may not be a PSX PBP.");
+                        LogMessage(
+                            "       The file may be truncated or corrupt (re-download it), or it may not be a PSX PBP.");
                         break;
                     case PbpError.IoError:
-                        LogMessage("       The file could not be read - close any program using it and check the drive for errors.");
+                        LogMessage(
+                            "       The file could not be read - close any program using it and check the drive for errors.");
                         break;
                 }
             }
@@ -2355,7 +2484,8 @@ internal partial class MainWindow : IDisposable
             if (result.CueFilePaths.Count > 1)
                 LogMessage($"Converting disc: {Path.GetFileName(cueFile)}");
 
-            var converted = await ConvertToChdAsync(chdmanPath, cueFile, cueFileOutputChd, cores, forceCd, forceDvd, timeoutMinutes, token);
+            var converted = await ConvertToChdAsync(chdmanPath, cueFile, cueFileOutputChd, cores, forceCd, forceDvd,
+                timeoutMinutes, token);
             if (!converted)
             {
                 allSucceeded = false;
@@ -2368,7 +2498,9 @@ internal partial class MainWindow : IDisposable
         return allSucceeded;
     }
 
-    private async Task<bool> ProcessCcdFileForConversionAsync(string inputFile, string inputFolder, string outputFolder, List<string> tempDirs, CancellationToken token, string chdmanPath, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, bool deleteOriginal)
+    private async Task<bool> ProcessCcdFileForConversionAsync(string inputFile, string inputFolder, string outputFolder,
+        List<string> tempDirs, CancellationToken token, string chdmanPath, int cores, bool forceCd, bool forceDvd,
+        int? timeoutMinutes, bool deleteOriginal)
     {
         long imgSize = 0;
         DiscImage? parsedDisc = null;
@@ -2429,7 +2561,8 @@ internal partial class MainWindow : IDisposable
         {
             if (ex is FileNotFoundException)
             {
-                LogError($"CCDSharp: Conversion error - {ex.Message}. Ensure the .img file exists alongside the .ccd file with the same base name.");
+                LogError(
+                    $"CCDSharp: Conversion error - {ex.Message}. Ensure the .img file exists alongside the .ccd file with the same base name.");
             }
             else
             {
@@ -2457,7 +2590,9 @@ internal partial class MainWindow : IDisposable
     /// <param name="forceDvd">Force the createdvd verb.</param>
     /// <param name="timeoutMinutes">Per-file timeout, or null for none.</param>
     /// <param name="deleteOriginal">Delete the source files after a successful conversion.</param>
-    private async Task<bool> ProcessMdsFileForConversionAsync(string inputFile, string originalName, string inputFolder, string outputFolder, List<string> tempDirs, CancellationToken token, string chdmanPath, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, bool deleteOriginal)
+    private async Task<bool> ProcessMdsFileForConversionAsync(string inputFile, string originalName, string inputFolder,
+        string outputFolder, List<string> tempDirs, CancellationToken token, string chdmanPath, int cores, bool forceCd,
+        bool forceDvd, int? timeoutMinutes, bool deleteOriginal)
     {
         MdsDisc disc;
         try
@@ -2524,8 +2659,10 @@ internal partial class MainWindow : IDisposable
 
         // A 2048-byte-sector .mdf is an ISO in all but name, so it is converted as a DVD image.
         var success = prepared.DvdImagePath is not null
-            ? await ConvertToChdAsync(chdmanPath, prepared.DvdImagePath, outputChd, cores, false, true, timeoutMinutes, token)
-            : await ConvertToChdAsync(chdmanPath, prepared.CuePath!, outputChd, cores, forceCd, forceDvd, timeoutMinutes, token);
+            ? await ConvertToChdAsync(chdmanPath, prepared.DvdImagePath, outputChd, cores, false, true, timeoutMinutes,
+                token)
+            : await ConvertToChdAsync(chdmanPath, prepared.CuePath!, outputChd, cores, forceCd, forceDvd,
+                timeoutMinutes, token);
 
         if (!success)
         {
@@ -2567,7 +2704,9 @@ internal partial class MainWindow : IDisposable
     /// <param name="forceDvd">Force the DVD verb.</param>
     /// <param name="timeoutMinutes">Per-file timeout, or null for none.</param>
     /// <param name="token">Cancellation token.</param>
-    private async Task<bool> ConvertIszViaImageAsync(string chdmanPath, string iszPath, string outputChd, List<string> tempDirs, string outputFolder, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, CancellationToken token)
+    private async Task<bool> ConvertIszViaImageAsync(string chdmanPath, string iszPath, string outputChd,
+        List<string> tempDirs, string outputFolder, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes,
+        CancellationToken token)
     {
         var name = Path.GetFileName(iszPath);
 
@@ -2583,7 +2722,8 @@ internal partial class MainWindow : IDisposable
             return false;
         }
 
-        return await ConvertToChdAsync(chdmanPath, resolved.PathToConvert!, outputChd, cores, forceCd, resolved.ForceDvd || forceDvd, timeoutMinutes, token);
+        return await ConvertToChdAsync(chdmanPath, resolved.PathToConvert!, outputChd, cores, forceCd,
+            resolved.ForceDvd || forceDvd, timeoutMinutes, token);
     }
 
     /// <summary>How a .isz file is referred to when its content turns out not to be one.</summary>
@@ -2600,12 +2740,14 @@ internal partial class MainWindow : IDisposable
     /// <param name="kind">What the content was detected as.</param>
     /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
     /// <param name="token">Cancellation token.</param>
-    private async Task<ResolvedInput> ResolveMislabelledContainerAsync(string imagePath, string originalName, string claimed, DiscImageKind kind, List<string> tempDirs, CancellationToken token)
+    private async Task<ResolvedInput> ResolveMislabelledContainerAsync(string imagePath, string originalName,
+        string claimed, DiscImageKind kind, List<string> tempDirs, CancellationToken token)
     {
         var trackMode = RawCdImageDetector.DetectTrackMode(imagePath);
         if (trackMode is not null)
         {
-            LogMessage($" {originalName} is named as {claimed} but contains {DiscImageSignature.Describe(kind)} ({trackMode}); converting it as a CD.");
+            LogMessage(
+                $" {originalName} is named as {claimed} but contains {DiscImageSignature.Describe(kind)} ({trackMode}); converting it as a CD.");
             var cuePath = await StageCueForImageAsync(imagePath, originalName, trackMode, tempDirs, token);
 
             return cuePath is not null
@@ -2615,14 +2757,18 @@ internal partial class MainWindow : IDisposable
 
         if (IsCookedImageSize(imagePath))
         {
-            LogMessage($" {originalName} is named as {claimed} but contains a disc image; converting it as a DVD image.");
+            LogMessage(
+                $" {originalName} is named as {claimed} but contains a disc image; converting it as a DVD image.");
             return ResolvedInput.Convert(imagePath, true);
         }
 
-        return ResolvedInput.Skip($"the extension says {claimed} but the content is {DiscImageSignature.Describe(kind)}, and it is not a usable disc image. The download is probably incomplete.");
+        return ResolvedInput.Skip(
+            $"the extension says {claimed} but the content is {DiscImageSignature.Describe(kind)}, and it is not a usable disc image. The download is probably incomplete.");
     }
 
-    private async Task<bool> ConvertMdsViaCueAsync(string chdmanPath, string mdsPath, string outputChd, List<string> tempDirs, string outputFolder, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, CancellationToken token)
+    private async Task<bool> ConvertMdsViaCueAsync(string chdmanPath, string mdsPath, string outputChd,
+        List<string> tempDirs, string outputFolder, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes,
+        CancellationToken token)
     {
         MdsDisc disc;
         try
@@ -2672,8 +2818,10 @@ internal partial class MainWindow : IDisposable
         }
 
         return prepared.DvdImagePath is not null
-            ? await ConvertToChdAsync(chdmanPath, prepared.DvdImagePath, outputChd, cores, false, true, timeoutMinutes, token)
-            : await ConvertToChdAsync(chdmanPath, prepared.CuePath!, outputChd, cores, forceCd, forceDvd, timeoutMinutes, token);
+            ? await ConvertToChdAsync(chdmanPath, prepared.DvdImagePath, outputChd, cores, false, true, timeoutMinutes,
+                token)
+            : await ConvertToChdAsync(chdmanPath, prepared.CuePath!, outputChd, cores, forceCd, forceDvd,
+                timeoutMinutes, token);
     }
 
     /// <summary>
@@ -2690,7 +2838,9 @@ internal partial class MainWindow : IDisposable
     /// <param name="forceDvd">Force the createdvd verb.</param>
     /// <param name="timeoutMinutes">Per-file timeout, or null for none.</param>
     /// <param name="token">Cancellation token.</param>
-    private async Task<bool> ConvertCcdViaCueAsync(string chdmanPath, string ccdPath, string outputChd, List<string> tempDirs, string outputFolder, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, CancellationToken token)
+    private async Task<bool> ConvertCcdViaCueAsync(string chdmanPath, string ccdPath, string outputChd,
+        List<string> tempDirs, string outputFolder, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes,
+        CancellationToken token)
     {
         var tempDir = PathUtils.GetBestTempDirectory(ccdPath, outputFolder, TempDirPrefix);
         tempDirs.Add(tempDir);
@@ -2698,7 +2848,8 @@ internal partial class MainWindow : IDisposable
 
         try
         {
-            return await ConvertCcdInTempDirAsync(chdmanPath, ccdPath, outputChd, tempDir, cores, forceCd, forceDvd, timeoutMinutes, token);
+            return await ConvertCcdInTempDirAsync(chdmanPath, ccdPath, outputChd, tempDir, cores, forceCd, forceDvd,
+                timeoutMinutes, token);
         }
         catch (OperationCanceledException)
         {
@@ -2715,17 +2866,20 @@ internal partial class MainWindow : IDisposable
     /// Writes a cue for <paramref name="ccdPath"/> into <paramref name="tempDir"/> and converts it.
     /// The .img is referenced from the cue rather than copied, so no extra disc-sized write happens.
     /// </summary>
-    private async Task<bool> ConvertCcdInTempDirAsync(string chdmanPath, string ccdPath, string outputChd, string tempDir, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, CancellationToken token)
+    private async Task<bool> ConvertCcdInTempDirAsync(string chdmanPath, string ccdPath, string outputChd,
+        string tempDir, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, CancellationToken token)
     {
         LogMessage($"CCDSharp: Converting {Path.GetFileName(ccdPath)}");
 
         var tempCuePath = Path.Combine(tempDir, Path.GetFileNameWithoutExtension(ccdPath) + FileExtensions.Cue);
         await Task.Run(() => CcdConverter.ConvertToCueBin(ccdPath, tempCuePath), token);
 
-        return await ConvertToChdAsync(chdmanPath, tempCuePath, outputChd, cores, forceCd, forceDvd, timeoutMinutes, token);
+        return await ConvertToChdAsync(chdmanPath, tempCuePath, outputChd, cores, forceCd, forceDvd, timeoutMinutes,
+            token);
     }
 
-    private async Task<bool> ValidateDependentFilesAsync(string ext, string inputFile, string originalName, CancellationToken token)
+    private async Task<bool> ValidateDependentFilesAsync(string ext, string inputFile, string originalName,
+        CancellationToken token)
     {
         if (ext is not (FileExtensions.Cue or FileExtensions.Gdi or FileExtensions.Toc))
             return true;
@@ -2753,7 +2907,8 @@ internal partial class MainWindow : IDisposable
     /// resolved next to the descriptor. For cue files this uses the normalizer's resolution
     /// (exact → case-insensitive → zero-padding-tolerant), for gdi/toc a plain existence check.
     /// </summary>
-    private async Task<List<string>> GetMissingDependentFileNamesAsync(string ext, string filePath, CancellationToken token)
+    private async Task<List<string>> GetMissingDependentFileNamesAsync(string ext, string filePath,
+        CancellationToken token)
     {
         if (string.Equals(ext, FileExtensions.Cue, StringComparison.Ordinal))
         {
@@ -2778,7 +2933,8 @@ internal partial class MainWindow : IDisposable
         try
         {
             var normalization = await CueNormalizer.NormalizeAsync(cuePath, token).ConfigureAwait(false);
-            return normalization.References.Any(static r => string.Equals(r.TrackType, "MP3", StringComparison.Ordinal));
+            return normalization.References.Any(static r =>
+                string.Equals(r.TrackType, "MP3", StringComparison.Ordinal));
         }
         catch (OperationCanceledException)
         {
@@ -2790,11 +2946,13 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private async Task<bool> TryDirectConversionAsync(string chdmanPath, string fileToProcess, string outputChd, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, CancellationToken token, string originalName)
+    private async Task<bool> TryDirectConversionAsync(string chdmanPath, string fileToProcess, string outputChd,
+        int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, CancellationToken token, string originalName)
     {
         try
         {
-            return await ConvertToChdAsync(chdmanPath, fileToProcess, outputChd, cores, forceCd, forceDvd, timeoutMinutes, token);
+            return await ConvertToChdAsync(chdmanPath, fileToProcess, outputChd, cores, forceCd, forceDvd,
+                timeoutMinutes, token);
         }
         catch (Exception ex)
         {
@@ -2809,7 +2967,9 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private async Task<bool> TryRetryConversionViaTempCopyAsync(string chdmanPath, string inputFile, string originalName, string ext, string outputFolder, string outputChd, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, List<string> tempDirs, CancellationToken token)
+    private async Task<bool> TryRetryConversionViaTempCopyAsync(string chdmanPath, string inputFile,
+        string originalName, string ext, string outputFolder, string outputChd, int cores, bool forceCd, bool forceDvd,
+        int? timeoutMinutes, List<string> tempDirs, CancellationToken token)
     {
         LogMessage($"Direct conversion failed for {originalName}. Retrying via temporary directory copy...");
 
@@ -2822,21 +2982,26 @@ internal partial class MainWindow : IDisposable
                 switch (ext)
                 {
                     case FileExtensions.Cue:
-                        filesToCopy.AddRange(await GameFileParser.GetReferencedFilesFromCueAsync(inputFile, LogMessage, token));
+                        filesToCopy.AddRange(
+                            await GameFileParser.GetReferencedFilesFromCueAsync(inputFile, LogMessage, token));
                         break;
                     case FileExtensions.Gdi:
-                        filesToCopy.AddRange(await GameFileParser.GetReferencedFilesFromGdiAsync(inputFile, LogMessage, token));
+                        filesToCopy.AddRange(
+                            await GameFileParser.GetReferencedFilesFromGdiAsync(inputFile, LogMessage, token));
                         break;
                     default:
-                        filesToCopy.AddRange(await GameFileParser.GetReferencedFilesFromTocAsync(inputFile, LogMessage, token));
+                        filesToCopy.AddRange(
+                            await GameFileParser.GetReferencedFilesFromTocAsync(inputFile, LogMessage, token));
                         break;
                 }
 
-                var missingFiles = filesToCopy.Distinct(StringComparer.Ordinal).Where(static f => !File.Exists(f)).ToList();
+                var missingFiles = filesToCopy.Distinct(StringComparer.Ordinal).Where(static f => !File.Exists(f))
+                    .ToList();
                 if (missingFiles.Count > 0)
                 {
                     var missingNames = string.Join(", ", missingFiles.Select(Path.GetFileName));
-                    LogWarning($" Skipping temp retry for {originalName} because referenced files are missing: {missingNames}");
+                    LogWarning(
+                        $" Skipping temp retry for {originalName} because referenced files are missing: {missingNames}");
                     return false;
                 }
             }
@@ -2872,7 +3037,8 @@ internal partial class MainWindow : IDisposable
                     {
                         var availableGb = tempDrive.AvailableFreeSpace / (1024.0 * 1024.0 * 1024.0);
                         var neededGb = totalBytesNeeded / (1024.0 * 1024.0 * 1024.0);
-                        LogError($" Not enough disk space for temp copy of {originalName}. Need {neededGb:F1} GB but only {availableGb:F1} GB available on {tempDriveRoot.TrimEnd('\\')}.");
+                        LogError(
+                            $" Not enough disk space for temp copy of {originalName}. Need {neededGb:F1} GB but only {availableGb:F1} GB available on {tempDriveRoot.TrimEnd('\\')}.");
                         return false;
                     }
                 }
@@ -2908,14 +3074,16 @@ internal partial class MainWindow : IDisposable
                 await CopyFileWithRetryAsync(inputFile, tempInputFile, token);
             }
 
-            return await ConvertToChdAsync(chdmanPath, tempInputFile, outputChd, cores, forceCd, forceDvd, timeoutMinutes, token);
+            return await ConvertToChdAsync(chdmanPath, tempInputFile, outputChd, cores, forceCd, forceDvd,
+                timeoutMinutes, token);
         }
         catch (Exception ex)
         {
             if (IsCancellationException(ex)) throw;
 
             if (IsDiskSpaceException(ex))
-                LogError($" Not enough disk space to convert {originalName} (via temp). Free up disk space and try again.");
+                LogError(
+                    $" Not enough disk space to convert {originalName} (via temp). Free up disk space and try again.");
             else if (IsCorruptionException(ex) || IsCrcErrorException(ex))
                 LogError($" Source file appears to be corrupt: {originalName}");
             else
@@ -2925,7 +3093,8 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private async Task<bool> HandleConversionResultAsync(bool success, string inputFile, string originalName, string ext, string inputFolder, string outputChd, bool deleteOriginal, CancellationToken token)
+    private async Task<bool> HandleConversionResultAsync(bool success, string inputFile, string originalName,
+        string ext, string inputFolder, string outputChd, bool deleteOriginal, CancellationToken token)
     {
         if (success)
         {
@@ -2961,7 +3130,8 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private async Task PerformBatchVerificationAsync(string inputFolder, bool includeSub, bool moveSuccess, string successFolder, bool moveFailed, string failedFolder, string[] selectedFiles, CancellationToken token)
+    private async Task PerformBatchVerificationAsync(string inputFolder, bool includeSub, bool moveSuccess,
+        string successFolder, bool moveFailed, string failedFolder, string[] selectedFiles, CancellationToken token)
     {
         _totalFilesProcessed = selectedFiles.Length;
         UpdateStatsDisplay();
@@ -3026,7 +3196,8 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private static async Task MoveVerifiedFileAsync(string sourceFile, string targetFolder, string inputFolder, bool includeSub, CancellationToken token)
+    private static async Task MoveVerifiedFileAsync(string sourceFile, string targetFolder, string inputFolder,
+        bool includeSub, CancellationToken token)
     {
         try
         {
@@ -3034,8 +3205,11 @@ internal partial class MainWindow : IDisposable
             if (includeSub)
             {
                 // Maintain directory structure
-                var relativePath = PathUtils.GetSafeRelativePath(inputFolder, Path.GetDirectoryName(sourceFile) ?? inputFolder);
-                var targetSubDir = string.Equals(relativePath, ".", StringComparison.Ordinal) ? targetFolder : Path.Combine(targetFolder, relativePath);
+                var relativePath =
+                    PathUtils.GetSafeRelativePath(inputFolder, Path.GetDirectoryName(sourceFile) ?? inputFolder);
+                var targetSubDir = string.Equals(relativePath, ".", StringComparison.Ordinal)
+                    ? targetFolder
+                    : Path.Combine(targetFolder, relativePath);
                 if (!Directory.Exists(targetSubDir))
                 {
                     Directory.CreateDirectory(targetSubDir);
@@ -3073,13 +3247,16 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private async Task<bool> ExtractChdAsync(string chdmanPath, string chdFile, string inputFolder, string outputFolder, bool deleteOriginal, CancellationToken token)
+    private async Task<bool> ExtractChdAsync(string chdmanPath, string chdFile, string inputFolder, string outputFolder,
+        bool deleteOriginal, CancellationToken token)
     {
         var fileName = Path.GetFileNameWithoutExtension(chdFile);
 
         // Maintain directory structure if searching subfolders
         var relativePath = PathUtils.GetSafeRelativePath(inputFolder, Path.GetDirectoryName(chdFile) ?? inputFolder);
-        var targetDir = string.Equals(relativePath, ".", StringComparison.Ordinal) ? outputFolder : Path.Combine(outputFolder, relativePath);
+        var targetDir = string.Equals(relativePath, ".", StringComparison.Ordinal)
+            ? outputFolder
+            : Path.Combine(outputFolder, relativePath);
         if (!Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
 
         // Get extraction type based on user-selected output format
@@ -3108,7 +3285,8 @@ internal partial class MainWindow : IDisposable
                 _ => FileExtensions.Cue
             };
 
-            if (string.Equals(extractCommand, "extractcd", StringComparison.Ordinal) && await IsGdiChdAsync(chdFile, token))
+            if (string.Equals(extractCommand, "extractcd", StringComparison.Ordinal) &&
+                await IsGdiChdAsync(chdFile, token))
             {
                 outputExt = FileExtensions.Gdi;
             }
@@ -3126,7 +3304,8 @@ internal partial class MainWindow : IDisposable
             Directory.CreateDirectory(isolatedDir);
             outputFile = Path.Combine(isolatedDir, fileName + outputExt);
 
-            LogMessage($" {fileName}{outputExt} already exists here; extracting into \"{Path.GetFileName(isolatedDir)}\" so the existing file is kept.");
+            LogMessage(
+                $" {fileName}{outputExt} already exists here; extracting into \"{Path.GetFileName(isolatedDir)}\" so the existing file is kept.");
         }
 
         var success = false;
@@ -3169,11 +3348,13 @@ internal partial class MainWindow : IDisposable
         {
             if (IsDiskSpaceException(ex))
             {
-                LogError($" Not enough disk space to extract '{Path.GetFileName(chdFile)}'. Free up disk space on the output drive and try again.");
+                LogError(
+                    $" Not enough disk space to extract '{Path.GetFileName(chdFile)}'. Free up disk space on the output drive and try again.");
             }
             else
             {
-                LogError($" Failed to extract '{Path.GetFileName(chdFile)}': {GetChdExtractionErrorMessage(ex.Message)}");
+                LogError(
+                    $" Failed to extract '{Path.GetFileName(chdFile)}': {GetChdExtractionErrorMessage(ex.Message)}");
 
                 // CHDSharp could not decode this CHD (corrupt file, A/V laserdisc CHD, or a
                 // library limitation). Fall back to chdman, which supports every CHD variant
@@ -3182,15 +3363,19 @@ internal partial class MainWindow : IDisposable
                 // maintainer wants extraction failures to reach the bug API.
                 try
                 {
-                    var chdmanExtracted = await TryExtractWithChdmanAsync(chdmanPath, chdFile, targetDir, fileName, extractCommand, outputExt, token).ConfigureAwait(false);
+                    var chdmanExtracted =
+                        await TryExtractWithChdmanAsync(chdmanPath, chdFile, targetDir, fileName, extractCommand,
+                            outputExt, token).ConfigureAwait(false);
                     if (chdmanExtracted)
                     {
-                        LogMessage($" Extracted '{Path.GetFileName(chdFile)}' using chdman fallback (built-in reader failed).");
+                        LogMessage(
+                            $" Extracted '{Path.GetFileName(chdFile)}' using chdman fallback (built-in reader failed).");
                         success = true;
                     }
                     else
                     {
-                        LogError($" chdman could not extract '{Path.GetFileName(chdFile)}' either. The file may be corrupt or use an unsupported codec.");
+                        LogError(
+                            $" chdman could not extract '{Path.GetFileName(chdFile)}' either. The file may be corrupt or use an unsupported codec.");
                     }
                 }
                 catch (OperationCanceledException)
@@ -3239,7 +3424,8 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private async Task ExtractChdTracksToDirectory(ChdFile chd, string chdFile, string targetDir, string baseFileName, CancellationToken token)
+    private async Task ExtractChdTracksToDirectory(ChdFile chd, string chdFile, string targetDir, string baseFileName,
+        CancellationToken token)
     {
         var tempExtractDir = Path.Combine(targetDir, "_extract_temp_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempExtractDir);
@@ -3266,7 +3452,8 @@ internal partial class MainWindow : IDisposable
                 destinationDir = PathUtils.ReserveFreeSubdirectory(targetDir, baseFileName);
                 Directory.CreateDirectory(destinationDir);
 
-                LogMessage($" Files named after this disc already exist here; extracting into \"{Path.GetFileName(destinationDir)}\" so they are kept.");
+                LogMessage(
+                    $" Files named after this disc already exist here; extracting into \"{Path.GetFileName(destinationDir)}\" so they are kept.");
             }
 
             // Move files from temp to the destination. Retry transient lock failures
@@ -3342,15 +3529,19 @@ internal partial class MainWindow : IDisposable
 
                 if (cleanedCount > 0)
                 {
-                    Log.Debug("Cleaned up {Count} leftover file(s) from failed extraction of {File}", cleanedCount, Path.GetFileName(chdFile));
+                    Log.Debug("Cleaned up {Count} leftover file(s) from failed extraction of {File}", cleanedCount,
+                        Path.GetFileName(chdFile));
                 }
 
                 try
                 {
-                    var remaining = Directory.Exists(tempExtractDir) ? Directory.GetFiles(tempExtractDir, "*.*", SearchOption.AllDirectories) : [];
+                    var remaining = Directory.Exists(tempExtractDir)
+                        ? Directory.GetFiles(tempExtractDir, "*.*", SearchOption.AllDirectories)
+                        : [];
                     if (remaining.Length > 0)
                     {
-                        LogWarning($" Partial extraction: {remaining.Length} file(s) remain in temp directory: {tempExtractDir}");
+                        LogWarning(
+                            $" Partial extraction: {remaining.Length} file(s) remain in temp directory: {tempExtractDir}");
                     }
                 }
                 catch
@@ -3453,7 +3644,8 @@ internal partial class MainWindow : IDisposable
     /// WAV, which chdman requires), so chdman sees a self-contained cue set.
     /// Returns (null, null) when the descriptor can be converted directly.
     /// </summary>
-    private async Task<(string? WorkCuePath, string? WorkDir)> PrepareCueWorkDirAsync(string cuePath, CancellationToken token)
+    private async Task<(string? WorkCuePath, string? WorkDir)> PrepareCueWorkDirAsync(string cuePath,
+        CancellationToken token)
     {
         CueWorkDirectoryResult work;
         try
@@ -3468,7 +3660,8 @@ internal partial class MainWindow : IDisposable
             // cue must not fall through to a direct chdman attempt ("Unhandled track type MP3").
             if (await CueHasMp3TracksAsync(cuePath, token))
             {
-                LogError($" MP3 audio track could not be decoded to WAV for {Path.GetFileName(cuePath)}: {ex.Message}. The MP3 track(s) may be corrupt or in an unsupported format.");
+                LogError(
+                    $" MP3 audio track could not be decoded to WAV for {Path.GetFileName(cuePath)}: {ex.Message}. The MP3 track(s) may be corrupt or in an unsupported format.");
             }
             else
             {
@@ -3480,7 +3673,8 @@ internal partial class MainWindow : IDisposable
 
         if (work.UnresolvedNames.Count > 0)
         {
-            LogWarning($" {Path.GetFileName(cuePath)} — cue references could not be resolved: {string.Join(", ", work.UnresolvedNames)}");
+            LogWarning(
+                $" {Path.GetFileName(cuePath)} — cue references could not be resolved: {string.Join(", ", work.UnresolvedNames)}");
             return (null, null);
         }
 
@@ -3492,11 +3686,126 @@ internal partial class MainWindow : IDisposable
         return (work.WorkCuePath, work.WorkDir);
     }
 
-    private async Task<bool> ConvertToChdAsync(string chdmanPath, string inputFile, string outputFile, int cores, bool forceCd, bool forceDvd, int? timeoutMinutes, CancellationToken token, int recursionDepth = 0)
+    /// <summary>
+    /// Runs an encoder process (CHDSharp or chdman) with the given arguments and waits for completion.
+    /// Returns true if the process exited successfully (exit code 0) and was not cancelled/timed out.
+    /// </summary>
+    private async Task<bool> RunEncoderProcessAsync(string exePath, string args, string toolLabel,
+        int? timeoutMinutes, CancellationToken token)
+    {
+        using var process = new Process();
+        process.StartInfo = new ProcessStartInfo
+        {
+            FileName = exePath,
+            Arguments = args,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            ErrorDialog = false
+        };
+
+        var errorBuffer = new StringBuilder();
+        process.OutputDataReceived += (_, a) =>
+        {
+            if (string.IsNullOrEmpty(a.Data)) return;
+
+            if (a.Data.Contains("Compression complete", StringComparison.Ordinal) ||
+                a.Data.Contains("final ratio", StringComparison.Ordinal))
+            {
+                LogMessage($"[{toolLabel} ✓] {a.Data}");
+            }
+            else if (!a.Data.Contains("% complete", StringComparison.Ordinal) &&
+                     !a.Data.Contains("Compressing", StringComparison.Ordinal) &&
+                     !a.Data.Contains("Output bytes", StringComparison.Ordinal) &&
+                     !a.Data.Contains("Compression ratio", StringComparison.Ordinal))
+            {
+                LogMessage($"[{toolLabel}] {a.Data}");
+            }
+        };
+
+        process.ErrorDataReceived += (_, a) =>
+        {
+            if (string.IsNullOrEmpty(a.Data)) return;
+
+            errorBuffer.AppendLine(a.Data);
+
+            if (a.Data.Contains("Compression complete", StringComparison.Ordinal) ||
+                a.Data.Contains("final ratio", StringComparison.Ordinal))
+            {
+                LogMessage($"[{toolLabel} ✓] {a.Data}");
+            }
+            else if (!a.Data.Contains("% complete", StringComparison.Ordinal) &&
+                     !a.Data.Contains("Compressing", StringComparison.Ordinal) &&
+                     !a.Data.Contains("Output bytes", StringComparison.Ordinal) &&
+                     !a.Data.Contains("Compression ratio", StringComparison.Ordinal))
+            {
+                LogMessage($"[{toolLabel}] {a.Data}");
+            }
+        };
+
+        try
+        {
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+        }
+        catch (Exception ex)
+        {
+            if (IsCancellationException(ex)) throw;
+            LogError($" Failed to start {toolLabel}: {ex.Message}");
+            return false;
+        }
+
+        try
+        {
+            token.ThrowIfCancellationRequested();
+
+            if (timeoutMinutes is > 0)
+            {
+                using var timeoutCts = new CancellationTokenSource();
+                timeoutCts.CancelAfter(TimeSpan.FromMinutes(timeoutMinutes.Value));
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token);
+
+                await process.WaitForExitAsync(linkedCts.Token);
+            }
+            else
+            {
+                await process.WaitForExitAsync(token);
+            }
+        }
+        catch (Exception ex) when (ex is OperationCanceledException)
+        {
+            if (token.IsCancellationRequested) throw;
+
+            if (timeoutMinutes != null)
+                LogMessage(
+                    $"TIMEOUT: {toolLabel} conversion exceeded {timeoutMinutes.Value} minute(s). Marking as failed.");
+
+            return false;
+        }
+        finally
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(true);
+                await Task.Run(() => process.WaitForExit(5000), CancellationToken.None);
+            }
+
+            process.CancelOutputRead();
+            process.CancelErrorRead();
+        }
+
+        return process.ExitCode == 0 && !token.IsCancellationRequested;
+    }
+
+    private async Task<bool> ConvertToChdAsync(string chdmanPath, string inputFile, string outputFile, int cores,
+        bool forceCd, bool forceDvd, int? timeoutMinutes, CancellationToken token, int recursionDepth = 0)
     {
         if (!File.Exists(chdmanPath))
         {
-            LogError($" chdman.exe not found at '{chdmanPath}'. Download it from https://github.com/rtissera/chdman/releases and place it in the application folder.");
+            LogError(
+                $" chdman.exe not found at '{chdmanPath}'. Download it from https://github.com/rtissera/chdman/releases and place it in the application folder.");
             return false;
         }
 
@@ -3507,7 +3816,8 @@ internal partial class MainWindow : IDisposable
         var companionCue = Path.ChangeExtension(inputFile, FileExtensions.Cue);
         if (inputFile.EndsWith(FileExtensions.Img, StringComparison.OrdinalIgnoreCase) && File.Exists(companionCue))
         {
-            LogMessage($" {Path.GetFileName(inputFile)} is described by {Path.GetFileName(companionCue)}; converting the cue instead.");
+            LogMessage(
+                $" {Path.GetFileName(inputFile)} is described by {Path.GetFileName(companionCue)}; converting the cue instead.");
             inputFile = companionCue;
         }
 
@@ -3533,7 +3843,8 @@ internal partial class MainWindow : IDisposable
         }
         else if (string.Equals(command, "createcd", StringComparison.Ordinal) && isCueDescriptor)
         {
-            var refs = await GameFileParser.GetReferencedFilesFromCueAsync(inputFile, static _ => { }, token).ConfigureAwait(false);
+            var refs = await GameFileParser.GetReferencedFilesFromCueAsync(inputFile, static _ => { }, token)
+                .ConfigureAwait(false);
             if (refs.Any(static r => r.EndsWith(FileExtensions.Raw, StringComparison.OrdinalIgnoreCase)))
             {
                 args += " -us 2352";
@@ -3545,6 +3856,7 @@ internal partial class MainWindow : IDisposable
         string? asciiOutputFile = null;
         var originalInputFile = inputFile;
         var originalOutputFile = outputFile;
+        var usedAsciiStaging = false;
 
         // Warn early about likely-corrupt disc images, but still let chdman try: some
         // legitimate images use non-standard sector layouts (e.g. 2448-byte sectors with
@@ -3554,7 +3866,8 @@ internal partial class MainWindow : IDisposable
             var sectorWarning = IsoSectorValidator.GetSectorSizeWarning(originalInputFile);
             if (sectorWarning is not null)
             {
-                LogWarning($" {Path.GetFileName(originalInputFile)}: {sectorWarning} Proceeding with conversion anyway.");
+                LogWarning(
+                    $" {Path.GetFileName(originalInputFile)}: {sectorWarning} Proceeding with conversion anyway.");
             }
         }
 
@@ -3598,20 +3911,23 @@ internal partial class MainWindow : IDisposable
             // which would reproduce the very failure this fallback exists to avoid.
             asciiTempDir = PathUtils.CreateAsciiSafeTempDirectory(TempDirPrefix);
             Directory.CreateDirectory(asciiTempDir);
+            usedAsciiStaging = true;
 
             // Only the input needs staging when its own path is unsafe; an input chdman can read
             // in place (e.g. an ASCII cue whose destination path is overlong) keeps resolving its
             // FILE entries against its original directory.
             if (pathNeedsAscii)
             {
-                asciiInputFile = Path.Combine(asciiTempDir, Guid.NewGuid().ToString("N") + Path.GetExtension(inputFile));
+                asciiInputFile =
+                    Path.Combine(asciiTempDir, Guid.NewGuid().ToString("N") + Path.GetExtension(inputFile));
                 File.Copy(inputFile, asciiInputFile);
                 inputFile = asciiInputFile;
             }
 
             asciiOutputFile = Path.Combine(asciiTempDir, Guid.NewGuid().ToString("N") + FileExtensions.Chd);
             outputFile = asciiOutputFile;
-            args = args.Replace($"\"{originalInputFile}\"", $"\"{inputFile}\"").Replace($"\"{originalOutputFile}\"", $"\"{outputFile}\"");
+            args = args.Replace($"\"{originalInputFile}\"", $"\"{inputFile}\"")
+                .Replace($"\"{originalOutputFile}\"", $"\"{outputFile}\"");
         }
         else if (asciiTempDir != null && pathNeedsAsciiOut)
         {
@@ -3635,7 +3951,8 @@ internal partial class MainWindow : IDisposable
 
                 asciiOutputFile = Path.Combine(
                     stagingDir,
-                    Path.GetFileNameWithoutExtension(originalOutputFile) + "." + Guid.NewGuid().ToString("N")[..8] + StagingExtension);
+                    Path.GetFileNameWithoutExtension(originalOutputFile) + "." + Guid.NewGuid().ToString("N")[..8] +
+                    StagingExtension);
                 outputFile = asciiOutputFile;
                 args = args.Replace($"\"{originalOutputFile}\"", $"\"{outputFile}\"");
             }
@@ -3647,6 +3964,102 @@ internal partial class MainWindow : IDisposable
             return false;
         }
 
+        // --- Primary encoder: CHDSharp ---
+        if (_isChdSharpAvailable && File.Exists(_chdSharpExePath))
+        {
+            LogMessage($"CHDSharp: {command} {Path.GetFileName(originalInputFile)}");
+
+            var chdSharpSuccess = await RunEncoderProcessAsync(_chdSharpExePath, args, "CHDSharp",
+                timeoutMinutes, token);
+
+            if (chdSharpSuccess)
+            {
+                // CHDSharp internally validates its output; trust the exit code.
+                if (asciiOutputFile != null)
+                {
+                    try
+                    {
+                        var targetDir = Path.GetDirectoryName(originalOutputFile);
+                        if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
+                            Directory.CreateDirectory(targetDir);
+                        if (File.Exists(originalOutputFile))
+                        {
+                            var deleted = await RetryingFileOperations.TryDeleteAsync(originalOutputFile, token)
+                                .ConfigureAwait(false);
+                            if (!deleted)
+                            {
+                                throw new IOException($"Could not delete existing destination '{originalOutputFile}'.");
+                            }
+                        }
+
+                        var moved = await RetryingFileOperations.TryMoveAsync(outputFile, originalOutputFile, token)
+                            .ConfigureAwait(false);
+                        if (!moved)
+                        {
+                            throw new IOException(
+                                $"Could not move temp output '{outputFile}' to '{originalOutputFile}'.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogError($" Failed to move CHDSharp output to destination: {ex.Message}");
+                        TryCleanupAsciiTemp();
+                        return false;
+                    }
+                }
+
+                TryCleanupAsciiTemp();
+                return true;
+            }
+
+            LogWarning($"CHDSharp failed for '{Path.GetFileName(originalInputFile)}'. Falling back to chdman...");
+            TryCleanupAsciiTemp();
+
+            // Re-create staging for chdman fallback
+            if (usedAsciiStaging)
+            {
+                asciiTempDir = PathUtils.CreateAsciiSafeTempDirectory(TempDirPrefix);
+                Directory.CreateDirectory(asciiTempDir);
+                if (pathNeedsAscii)
+                {
+                    asciiInputFile =
+                        Path.Combine(asciiTempDir, Guid.NewGuid().ToString("N") + Path.GetExtension(originalInputFile));
+                    File.Copy(originalInputFile, asciiInputFile);
+                    inputFile = asciiInputFile;
+                }
+
+                asciiOutputFile = Path.Combine(asciiTempDir, Guid.NewGuid().ToString("N") + FileExtensions.Chd);
+                outputFile = asciiOutputFile;
+            }
+            else
+            {
+                var stagingDir = Path.GetDirectoryName(originalOutputFile);
+                if (!string.IsNullOrEmpty(stagingDir))
+                {
+                    if (!Directory.Exists(stagingDir)) Directory.CreateDirectory(stagingDir);
+                    asciiOutputFile = Path.Combine(
+                        stagingDir,
+                        Path.GetFileNameWithoutExtension(originalOutputFile) + "." + Guid.NewGuid().ToString("N")[..8] +
+                        StagingExtension);
+                    outputFile = asciiOutputFile;
+                }
+            }
+
+            args = $"{command} -i \"{inputFile}\" -o \"{outputFile}\" -f -np {cores}";
+            if (isRaw)
+            {
+                args += " -us 2352";
+            }
+            else if (string.Equals(command, "createcd", StringComparison.Ordinal) && isCueDescriptor)
+            {
+                var refs = await GameFileParser.GetReferencedFilesFromCueAsync(inputFile, static _ => { }, token)
+                    .ConfigureAwait(false);
+                if (refs.Any(static r => r.EndsWith(FileExtensions.Raw, StringComparison.OrdinalIgnoreCase)))
+                    args += " -us 2352";
+            }
+        }
+
+        // --- Fallback encoder: chdman ---
         LogMessage($"CHDMAN: {command} {Path.GetFileName(originalInputFile)}");
 
         using var process = new Process();
@@ -3667,7 +4080,8 @@ internal partial class MainWindow : IDisposable
         {
             if (string.IsNullOrEmpty(a.Data)) return;
 
-            if (a.Data.Contains("Compression complete", StringComparison.Ordinal) || a.Data.Contains("final ratio", StringComparison.Ordinal))
+            if (a.Data.Contains("Compression complete", StringComparison.Ordinal) ||
+                a.Data.Contains("final ratio", StringComparison.Ordinal))
             {
                 LogMessage($"[CHDMAN ✓] {a.Data}");
             }
@@ -3686,7 +4100,8 @@ internal partial class MainWindow : IDisposable
 
             errorBuffer.AppendLine(a.Data);
 
-            if (a.Data.Contains("Compression complete", StringComparison.Ordinal) || a.Data.Contains("final ratio", StringComparison.Ordinal))
+            if (a.Data.Contains("Compression complete", StringComparison.Ordinal) ||
+                a.Data.Contains("final ratio", StringComparison.Ordinal))
             {
                 LogMessage($"[CHDMAN ✓] {a.Data}");
             }
@@ -3758,7 +4173,9 @@ internal partial class MainWindow : IDisposable
                 throw;
             }
 
-            if (timeoutMinutes != null) LogMessage($"TIMEOUT: Conversion of '{Path.GetFileName(inputFile)}' exceeded {timeoutMinutes.Value} minute(s). Marking as failed.");
+            if (timeoutMinutes != null)
+                LogMessage(
+                    $"TIMEOUT: Conversion of '{Path.GetFileName(inputFile)}' exceeded {timeoutMinutes.Value} minute(s). Marking as failed.");
             cleanupAfterProcessKill = true;
             return false;
         }
@@ -3802,8 +4219,10 @@ internal partial class MainWindow : IDisposable
                     }
                     else
                     {
-                        LogMessage($" Retrying with createdvd (unrecognized track type) for {Path.GetFileName(originalInputFile)}...");
-                        return await ConvertToChdAsync(chdmanPath, originalInputFile, originalOutputFile, cores, false, true, timeoutMinutes, token, recursionDepth + 1);
+                        LogMessage(
+                            $" Retrying with createdvd (unrecognized track type) for {Path.GetFileName(originalInputFile)}...");
+                        return await ConvertToChdAsync(chdmanPath, originalInputFile, originalOutputFile, cores, false,
+                            true, timeoutMinutes, token, recursionDepth + 1);
                     }
                 }
 
@@ -3814,7 +4233,8 @@ internal partial class MainWindow : IDisposable
                         var outputSize = new FileInfo(outputFile).Length;
                         if (outputSize > 0)
                         {
-                            LogMessage($" chdman exited with code {exitCode} but produced a valid output file ({outputSize} bytes). Treating as success.");
+                            LogMessage(
+                                $" chdman exited with code {exitCode} but produced a valid output file ({outputSize} bytes). Treating as success.");
                             success = true;
                         }
                     }
@@ -3836,17 +4256,20 @@ internal partial class MainWindow : IDisposable
                             Directory.CreateDirectory(targetDir);
                         if (File.Exists(originalOutputFile))
                         {
-                            var deleted = await RetryingFileOperations.TryDeleteAsync(originalOutputFile, token).ConfigureAwait(false);
+                            var deleted = await RetryingFileOperations.TryDeleteAsync(originalOutputFile, token)
+                                .ConfigureAwait(false);
                             if (!deleted)
                             {
                                 throw new IOException($"Could not delete existing destination '{originalOutputFile}'.");
                             }
                         }
 
-                        var moved = await RetryingFileOperations.TryMoveAsync(outputFile, originalOutputFile, token).ConfigureAwait(false);
+                        var moved = await RetryingFileOperations.TryMoveAsync(outputFile, originalOutputFile, token)
+                            .ConfigureAwait(false);
                         if (!moved)
                         {
-                            throw new IOException($"Could not move temp output '{outputFile}' to '{originalOutputFile}'.");
+                            throw new IOException(
+                                $"Could not move temp output '{outputFile}' to '{originalOutputFile}'.");
                         }
                     }
                     catch (Exception ex)
@@ -3891,7 +4314,8 @@ internal partial class MainWindow : IDisposable
 
                         if (!isSectorAligned)
                         {
-                            LogError($" Failed to convert '{Path.GetFileName(originalInputFile)}': file size ({fileSize:N0} bytes) is not divisible by any standard sector size (2048/2324/2336/2352). The file may be corrupt or truncated.");
+                            LogError(
+                                $" Failed to convert '{Path.GetFileName(originalInputFile)}': file size ({fileSize:N0} bytes) is not divisible by any standard sector size (2048/2324/2336/2352). The file may be corrupt or truncated.");
                             return false;
                         }
                     }
@@ -3904,8 +4328,22 @@ internal partial class MainWindow : IDisposable
 
             if (IsDiskSpaceError(errorTextFinal))
             {
-                LogError($" Conversion of '{Path.GetFileName(originalInputFile)}' failed due to insufficient disk space.");
+                LogError(
+                    $" Conversion of '{Path.GetFileName(originalInputFile)}' failed due to insufficient disk space.");
                 LogMessage("       Free up disk space on the output drive and try again.");
+            }
+            else if (IsIoError(errorTextFinal))
+            {
+                LogError(
+                    $" Conversion of '{Path.GetFileName(originalInputFile)}' failed due to an I/O error. The source file may be on a failing disk, a disconnected network drive, or the file may be corrupt.");
+                LogMessage("       Try copying the source file to a local drive and converting again.");
+            }
+            else if (IsPermissionError(errorTextFinal))
+            {
+                LogError(
+                    $" Conversion of '{Path.GetFileName(originalInputFile)}' failed due to a permission error. The output folder may be write-protected or require administrator rights.");
+                LogMessage(
+                    "       Choose a different output folder (e.g. Documents or a data drive) or run as administrator.");
             }
             else if (errorTextFinal.Length > 0)
             {
@@ -3915,7 +4353,14 @@ internal partial class MainWindow : IDisposable
                 if (errorLine.Contains("couldn't find bin file", StringComparison.OrdinalIgnoreCase) ||
                     errorLine.Contains("Unknown error", StringComparison.OrdinalIgnoreCase))
                 {
-                    LogWarning($"       Files found in input directory ({Path.GetDirectoryName(originalInputFile) ?? "?"}): {GetDirectoryDiagnostics(originalInputFile)}");
+                    LogWarning(
+                        $"       Files found in input directory ({Path.GetDirectoryName(originalInputFile) ?? "?"}): {GetDirectoryDiagnostics(originalInputFile)}");
+                }
+
+                if (errorLine.Contains("Unknown error", StringComparison.OrdinalIgnoreCase))
+                {
+                    LogMessage(
+                        "       'Unknown error' from chdman typically indicates a corrupt source file, an unsupported disc format, or an I/O issue. Try converting the file from a local drive.");
                 }
             }
             else if (exitCode < 0)
@@ -3924,13 +4369,17 @@ internal partial class MainWindow : IDisposable
                 // before it could print anything. The most common cause is a CPU missing the
                 // SIMD instruction sets (SSE4.2/AVX) that recent MAME-based builds compile in;
                 // antivirus quarantine damage produces the same class of crash.
-                LogError($" Failed to convert '{Path.GetFileName(originalInputFile)}': chdman terminated abnormally (exit code {exitCode}{DescribeChdmanCrash(exitCode)}).");
-                LogWarning("       The bundled chdman.exe may be incompatible with this computer's CPU or was damaged/quarantined by antivirus software.");
-                LogMessage("       Replace chdman.exe with a build that matches your CPU (e.g. an official MAME tools release) and add an antivirus exclusion for it.");
+                LogError(
+                    $" Failed to convert '{Path.GetFileName(originalInputFile)}': chdman terminated abnormally (exit code {exitCode}{DescribeChdmanCrash(exitCode)}).");
+                LogWarning(
+                    "       The bundled chdman.exe may be incompatible with this computer's CPU or was damaged/quarantined by antivirus software.");
+                LogMessage(
+                    "       Replace chdman.exe with a build that matches your CPU (e.g. an official MAME tools release) and add an antivirus exclusion for it.");
             }
             else
             {
-                LogError($" Failed to convert '{Path.GetFileName(originalInputFile)}': chdman exited with code {exitCode} but produced no error output. The file may be corrupted or in an unsupported format.");
+                LogError(
+                    $" Failed to convert '{Path.GetFileName(originalInputFile)}': chdman exited with code {exitCode} but produced no error output. The file may be corrupted or in an unsupported format.");
             }
 
             return false;
@@ -4068,7 +4517,8 @@ internal partial class MainWindow : IDisposable
     /// <c>extractld</c> (AVI, MAME 0.285+); if that command is unavailable, <c>extractraw</c>
     /// (raw dump) is tried. Returns true when chdman produced the output file(s).
     /// </summary>
-    private async Task<bool> TryExtractWithChdmanAsync(string chdmanPath, string chdFile, string targetDir, string fileName, string extractCommand, string outputExt, CancellationToken token)
+    private async Task<bool> TryExtractWithChdmanAsync(string chdmanPath, string chdFile, string targetDir,
+        string fileName, string extractCommand, string outputExt, CancellationToken token)
     {
         if (string.IsNullOrEmpty(chdmanPath) || !File.Exists(chdmanPath))
         {
@@ -4106,7 +4556,8 @@ internal partial class MainWindow : IDisposable
 
             try
             {
-                if (await RunChdmanExtractAsync(chdmanPath, BuildChdmanExtractArgs(command, chdFile, outputPath), token).ConfigureAwait(false))
+                if (await RunChdmanExtractAsync(chdmanPath, BuildChdmanExtractArgs(command, chdFile, outputPath), token)
+                        .ConfigureAwait(false))
                 {
                     if (string.Equals(command, "extractcd", StringComparison.Ordinal))
                     {
@@ -4225,7 +4676,8 @@ internal partial class MainWindow : IDisposable
             if (process.ExitCode == 0)
                 return true;
 
-            Log.Warning("chdman {Command} failed (exit {ExitCode}): {Output}", args.Split(' ')[0], process.ExitCode, errorBuffer.ToString().TrimEnd());
+            Log.Warning("chdman {Command} failed (exit {ExitCode}): {Output}", args.Split(' ')[0], process.ExitCode,
+                errorBuffer.ToString().TrimEnd());
             return false;
 
             void CaptureOutput(string? data)
@@ -4281,7 +4733,8 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private static async Task<PbpExtractionResult> ExtractPbpToCueBinAsync(string inputFile, string outputFolder, Action<string> onLog, CancellationToken token)
+    private static async Task<PbpExtractionResult> ExtractPbpToCueBinAsync(string inputFile, string outputFolder,
+        Action<string> onLog, CancellationToken token)
     {
         onLog($"PBPSharp: Extracting {Path.GetFileName(inputFile)}");
 
@@ -4291,7 +4744,8 @@ internal partial class MainWindow : IDisposable
             {
                 var error = PbpFile.Open(inputFile, out var pbpFile);
                 if (error != PbpError.None || pbpFile == null)
-                    return (Success: false, CuePaths: new List<string>(), Error: $"Failed to open PBP file: {error} (code {(int)error})", ErrorCode: error);
+                    return (Success: false, CuePaths: new List<string>(),
+                        Error: $"Failed to open PBP file: {error} (code {(int)error})", ErrorCode: error);
 
                 using (pbpFile)
                 {
@@ -4302,12 +4756,16 @@ internal partial class MainWindow : IDisposable
                         token.ThrowIfCancellationRequested();
 
                         var suffix = pbpFile.IsMultiDisc ? $" - Disc {t.Index}" : "";
-                        var binPath = Path.Combine(outputFolder, $"{Path.GetFileNameWithoutExtension(inputFile)}{suffix}.bin");
+                        var binPath = Path.Combine(outputFolder,
+                            $"{Path.GetFileNameWithoutExtension(inputFile)}{suffix}.bin");
                         var cuePath = Path.ChangeExtension(binPath, ".cue");
 
                         var extractError = t.ExtractToBinCue(binPath, cuePath, null, token);
                         if (extractError != PbpError.None)
-                            return (Success: false, CuePaths: new List<string>(), Error: $"Failed to extract disc {t.Index} of {pbpFile.Discs.Count}: {extractError} (code {(int)extractError})", ErrorCode: extractError);
+                            return (Success: false, CuePaths: new List<string>(),
+                                Error:
+                                $"Failed to extract disc {t.Index} of {pbpFile.Discs.Count}: {extractError} (code {(int)extractError})",
+                                ErrorCode: extractError);
 
                         cuePaths.Add(cuePath);
                     }
@@ -4319,7 +4777,8 @@ internal partial class MainWindow : IDisposable
             if (!extractionResult.Success)
             {
                 onLog($"PBPSharp: Extraction failed - {extractionResult.Error}");
-                return new PbpExtractionResult { Success = false, ErrorCode = extractionResult.ErrorCode, Error = extractionResult.Error };
+                return new PbpExtractionResult
+                    { Success = false, ErrorCode = extractionResult.ErrorCode, Error = extractionResult.Error };
             }
 
             onLog($"PBPSharp: Extracted {extractionResult.CuePaths.Count} disc(s)");
@@ -4437,7 +4896,8 @@ internal partial class MainWindow : IDisposable
 
     private void UpdateProcessingTimeDisplay()
     {
-        _ = Application.Current.Dispatcher.InvokeAsync(() => ProcessingTimeValue.Text = $@"{_operationTimer.Elapsed:hh\:mm\:ss}");
+        _ = Application.Current.Dispatcher.InvokeAsync(() =>
+            ProcessingTimeValue.Text = $@"{_operationTimer.Elapsed:hh\:mm\:ss}");
     }
 
     private void UpdateWriteSpeedDisplay(double speed)
@@ -4577,7 +5037,8 @@ internal partial class MainWindow : IDisposable
                 await Task.Run(() => File.Copy(source, dest, true), token);
                 return;
             }
-            catch (IOException ex) when (attempt < MaxFileOperationRetries - 1 && !IsDiskSpaceException(ex) && !IsCrcErrorException(ex))
+            catch (IOException ex) when (attempt < MaxFileOperationRetries - 1 && !IsDiskSpaceException(ex) &&
+                                         !IsCrcErrorException(ex))
             {
                 await Task.Delay(baseDelayMs * (1 << attempt), token);
             }
@@ -4655,6 +5116,25 @@ internal partial class MainWindow : IDisposable
                errorOutput.Contains("insufficient disk space", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsIoError(string? errorOutput)
+    {
+        if (string.IsNullOrEmpty(errorOutput)) return false;
+
+        return errorOutput.Contains("Input/output error", StringComparison.OrdinalIgnoreCase) ||
+               errorOutput.Contains("I/O error", StringComparison.OrdinalIgnoreCase) ||
+               errorOutput.Contains("read error", StringComparison.OrdinalIgnoreCase) ||
+               errorOutput.Contains("write error", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPermissionError(string? errorOutput)
+    {
+        if (string.IsNullOrEmpty(errorOutput)) return false;
+
+        return errorOutput.Contains("Permission denied", StringComparison.OrdinalIgnoreCase) ||
+               errorOutput.Contains("Access denied", StringComparison.OrdinalIgnoreCase) ||
+               errorOutput.Contains("UnauthorizedAccess", StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>
     /// Probes the output folder once by creating and deleting a uniquely named file. Returns false
     /// only on a definitive access denial; other probe failures (transient locks, network quirks)
@@ -4724,8 +5204,10 @@ internal partial class MainWindow : IDisposable
                 // CHD compression typically reduces size, but warn if available space < 50% of input
                 if (availableGb < totalInputGb * 0.5)
                 {
-                    LogMessage($" Output drive ({outputRoot.TrimEnd('\\')}) has {availableGb:F1} GB free, input files total {totalInputGb:F1} GB.");
-                    LogMessage("         CHD compression usually reduces file size, but you may run out of disk space.");
+                    LogMessage(
+                        $" Output drive ({outputRoot.TrimEnd('\\')}) has {availableGb:F1} GB free, input files total {totalInputGb:F1} GB.");
+                    LogMessage(
+                        "         CHD compression usually reduces file size, but you may run out of disk space.");
                 }
             }
             else
@@ -4733,8 +5215,10 @@ internal partial class MainWindow : IDisposable
                 // Extraction: output can be larger than CHD input
                 if (availableGb < totalInputGb)
                 {
-                    LogMessage($" Output drive ({outputRoot.TrimEnd('\\')}) has {availableGb:F1} GB free, CHD files total {totalInputGb:F1} GB.");
-                    LogMessage("         Extracted files are typically larger than CHD files. You may run out of disk space.");
+                    LogMessage(
+                        $" Output drive ({outputRoot.TrimEnd('\\')}) has {availableGb:F1} GB free, CHD files total {totalInputGb:F1} GB.");
+                    LogMessage(
+                        "         Extracted files are typically larger than CHD files. You may run out of disk space.");
                 }
             }
 
@@ -4742,7 +5226,8 @@ internal partial class MainWindow : IDisposable
             if (isConversion)
             {
                 var tempRoot = Path.GetPathRoot(Path.GetTempPath());
-                if (!string.IsNullOrEmpty(tempRoot) && !string.Equals(tempRoot, outputRoot, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(tempRoot) &&
+                    !string.Equals(tempRoot, outputRoot, StringComparison.OrdinalIgnoreCase))
                 {
                     var tempDrive = new DriveInfo(tempRoot);
                     if (tempDrive.IsReady)
@@ -4750,8 +5235,10 @@ internal partial class MainWindow : IDisposable
                         var tempFreeGb = tempDrive.AvailableFreeSpace / (1024.0 * 1024.0 * 1024.0);
                         if (tempFreeGb < totalInputGb)
                         {
-                            LogMessage($" Temp drive ({tempRoot.TrimEnd('\\')}) has {tempFreeGb:F1} GB free, input files total {totalInputGb:F1} GB.");
-                            LogMessage("         Temporary files are created during conversion. You may run out of disk space.");
+                            LogMessage(
+                                $" Temp drive ({tempRoot.TrimEnd('\\')}) has {tempFreeGb:F1} GB free, input files total {totalInputGb:F1} GB.");
+                            LogMessage(
+                                "         Temporary files are created during conversion. You may run out of disk space.");
                         }
                     }
                 }
@@ -4836,7 +5323,8 @@ internal partial class MainWindow : IDisposable
         try
         {
             // Don't delete the root input folder
-            if (string.Equals(Path.GetFullPath(subfolderPath), Path.GetFullPath(inputFolder), StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(Path.GetFullPath(subfolderPath), Path.GetFullPath(inputFolder),
+                    StringComparison.OrdinalIgnoreCase))
                 return;
 
             if (Directory.Exists(subfolderPath) && !Directory.EnumerateFileSystemEntries(subfolderPath).Any())
@@ -4874,7 +5362,8 @@ internal partial class MainWindow : IDisposable
         var verb = _wasCancelled ? "canceled" : "completed";
         LogMessage($"--- {op} {verb}. Total: {_totalFilesProcessed}, OK: {_processedOkCount}, Failed: {_failedCount}");
         UpdateStatusBarMessage($"{op} {verb}" + (_failedCount > 0 ? " with errors" : ""));
-        ShowMessageBox($"{op} {verb}.\nTotal: {_totalFilesProcessed}\nOK: {_processedOkCount}\nFailed: {_failedCount}", "Complete", MessageBoxButton.OK, _failedCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+        ShowMessageBox($"{op} {verb}.\nTotal: {_totalFilesProcessed}\nOK: {_processedOkCount}\nFailed: {_failedCount}",
+            "Complete", MessageBoxButton.OK, _failedCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
     }
 
     private void ShowMessageBox(string msg, string title, MessageBoxButton btns, MessageBoxImage icon)
@@ -4884,7 +5373,8 @@ internal partial class MainWindow : IDisposable
 
     private void ShowError(string msg)
     {
-        _ = Application.Current.Dispatcher.InvokeAsync(() => ShowMessageBox(msg, "Error", MessageBoxButton.OK, MessageBoxImage.Error));
+        _ = Application.Current.Dispatcher.InvokeAsync(() =>
+            ShowMessageBox(msg, "Error", MessageBoxButton.OK, MessageBoxImage.Error));
     }
 
     private static void SafeFireAndForget(Task task)
@@ -4937,7 +5427,8 @@ internal partial class MainWindow : IDisposable
     {
         try
         {
-            var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppConfig.ApplicationName);
+            var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                AppConfig.ApplicationName);
             Directory.CreateDirectory(appDataPath);
             Process.Start(new ProcessStartInfo
             {

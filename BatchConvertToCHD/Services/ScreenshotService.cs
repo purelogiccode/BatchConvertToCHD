@@ -115,7 +115,8 @@ internal class ScreenshotService
                                 "screenshots");
                             Directory.CreateDirectory(screenshotDir);
 
-                            var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-fff", CultureInfo.InvariantCulture);
+                            var timestamp =
+                                DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-fff", CultureInfo.InvariantCulture);
                             var filePath = Path.Combine(screenshotDir, $"screenshot_{timestamp}.png");
 
                             using var fileStream = new FileStream(filePath, FileMode.Create);

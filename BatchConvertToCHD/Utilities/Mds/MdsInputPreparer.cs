@@ -50,7 +50,8 @@ internal static class MdsInputPreparer
     /// <param name="workDir">Existing directory for generated files.</param>
     /// <param name="onLog">Optional logging callback.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<Result> PrepareAsync(MdsDisc disc, string workDir, Action<string>? onLog, CancellationToken token)
+    internal static async Task<Result> PrepareAsync(MdsDisc disc, string workDir, Action<string>? onLog,
+        CancellationToken token)
     {
         if (disc.MdfPath is null || !File.Exists(disc.MdfPath))
         {
@@ -63,41 +64,49 @@ internal static class MdsInputPreparer
         var volumeSet = SplitImageJoiner.TryGetVolumeSet(dataFilePath);
         if (volumeSet is not null)
         {
-            onLog?.Invoke($" {Path.GetFileName(dataFilePath)} is part 1 of a {volumeSet.Count}-part split image; joining the parts.");
+            onLog?.Invoke(
+                $" {Path.GetFileName(dataFilePath)} is part 1 of a {volumeSet.Count}-part split image; joining the parts.");
             dataFilePath = Path.Combine(workDir, Path.GetFileNameWithoutExtension(disc.MdsPath) + FileExtensions.Bin);
             await SplitImageJoiner.JoinAsync(volumeSet, dataFilePath, token).ConfigureAwait(false);
         }
 
         if (disc.IsDvdImage)
         {
-            onLog?.Invoke($" {Path.GetFileName(disc.MdsPath)} describes {MdsDisc.CookedSectorSize}-byte sectors, so the data file is a DVD image; converting it directly.");
+            onLog?.Invoke(
+                $" {Path.GetFileName(disc.MdsPath)} describes {MdsDisc.CookedSectorSize}-byte sectors, so the data file is a DVD image; converting it directly.");
             return Result.Dvd(dataFilePath);
         }
 
         if (!disc.AllTracksDescribable)
         {
             var unknown = disc.Tracks.Where(static t => t.CueTrackType is null).Select(static t => t.Description);
-            return Result.Failed($"the descriptor uses track modes this build cannot express in a cue ({string.Join(", ", unknown)})");
+            return Result.Failed(
+                $"the descriptor uses track modes this build cannot express in a cue ({string.Join(", ", unknown)})");
         }
 
         if (disc.NeedsSubchannelStrip)
         {
-            var strippedPath = Path.Combine(workDir, Path.GetFileNameWithoutExtension(dataFilePath) + ".stripped" + FileExtensions.Bin);
-            onLog?.Invoke($" {Path.GetFileName(dataFilePath)} stores {disc.SectorSize}-byte sectors; stripping subchannel data down to {MdsDisc.RawSectorSize} bytes so chdman can read it.");
+            var strippedPath = Path.Combine(workDir,
+                Path.GetFileNameWithoutExtension(dataFilePath) + ".stripped" + FileExtensions.Bin);
+            onLog?.Invoke(
+                $" {Path.GetFileName(dataFilePath)} stores {disc.SectorSize}-byte sectors; stripping subchannel data down to {MdsDisc.RawSectorSize} bytes so chdman can read it.");
 
-            var stripped = await StripSubchannelAsync(dataFilePath, strippedPath, disc.SectorSize, token).ConfigureAwait(false);
+            var stripped = await StripSubchannelAsync(dataFilePath, strippedPath, disc.SectorSize, token)
+                .ConfigureAwait(false);
             if (stripped is not null)
             {
                 return Result.Failed(stripped);
             }
 
-            var cuePath = await WriteCueAsync(disc, workDir, Path.GetFileName(strippedPath), token).ConfigureAwait(false);
+            var cuePath = await WriteCueAsync(disc, workDir, Path.GetFileName(strippedPath), token)
+                .ConfigureAwait(false);
             return Result.Cue(cuePath);
         }
 
         if (!disc.IsPlainRawCd)
         {
-            return Result.Failed($"the descriptor reports {disc.SectorSize} bytes per sector, which is neither a raw CD ({MdsDisc.RawSectorSize}), a subchannel-bearing CD ({MdsDisc.RawPlusSubchannelSize}) nor a DVD image ({MdsDisc.CookedSectorSize})");
+            return Result.Failed(
+                $"the descriptor reports {disc.SectorSize} bytes per sector, which is neither a raw CD ({MdsDisc.RawSectorSize}), a subchannel-bearing CD ({MdsDisc.RawPlusSubchannelSize}) nor a DVD image ({MdsDisc.CookedSectorSize})");
         }
 
         // Already 2352: reference the data file where it is rather than duplicating a whole disc.
@@ -105,7 +114,8 @@ internal static class MdsInputPreparer
         if (reference is null)
         {
             reference = Path.GetFileName(dataFilePath);
-            onLog?.Invoke($" {Path.GetFileName(dataFilePath)} cannot be referenced relatively from the work directory; copying it.");
+            onLog?.Invoke(
+                $" {Path.GetFileName(dataFilePath)} cannot be referenced relatively from the work directory; copying it.");
             await CopyAsync(dataFilePath, Path.Combine(workDir, reference), token).ConfigureAwait(false);
         }
 
@@ -122,7 +132,8 @@ internal static class MdsInputPreparer
     /// <param name="destinationPath">Where the 2352-byte image is written.</param>
     /// <param name="sectorSize">Bytes per sector in the source.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<string?> StripSubchannelAsync(string sourcePath, string destinationPath, int sectorSize, CancellationToken token)
+    internal static async Task<string?> StripSubchannelAsync(string sourcePath, string destinationPath, int sectorSize,
+        CancellationToken token)
     {
         if (sectorSize <= MdsDisc.RawSectorSize)
         {
@@ -132,20 +143,24 @@ internal static class MdsInputPreparer
         var length = new FileInfo(sourcePath).Length;
         if (length == 0 || length % sectorSize != 0)
         {
-            return $"{Path.GetFileName(sourcePath)} is {length:N0} bytes, which is not a whole number of {sectorSize}-byte sectors, so it is truncated or the descriptor is wrong";
+            return
+                $"{Path.GetFileName(sourcePath)} is {length:N0} bytes, which is not a whole number of {sectorSize}-byte sectors, so it is truncated or the descriptor is wrong";
         }
 
         var readBuffer = new byte[sectorSize * StripChunkSectors];
         var writeBuffer = new byte[MdsDisc.RawSectorSize * StripChunkSectors];
 
-        await using var input = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, readBuffer.Length, useAsync: true);
-        await using var output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, writeBuffer.Length, useAsync: true);
+        await using var input = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite,
+            readBuffer.Length, useAsync: true);
+        await using var output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None,
+            writeBuffer.Length, useAsync: true);
 
         while (true)
         {
             token.ThrowIfCancellationRequested();
 
-            var read = await input.ReadAtLeastAsync(readBuffer, readBuffer.Length, throwOnEndOfStream: false, token).ConfigureAwait(false);
+            var read = await input.ReadAtLeastAsync(readBuffer, readBuffer.Length, throwOnEndOfStream: false, token)
+                .ConfigureAwait(false);
             if (read == 0)
             {
                 break;
@@ -158,7 +173,8 @@ internal static class MdsInputPreparer
                     .CopyTo(writeBuffer.AsSpan(sector * MdsDisc.RawSectorSize));
             }
 
-            await output.WriteAsync(writeBuffer.AsMemory(0, sectors * MdsDisc.RawSectorSize), token).ConfigureAwait(false);
+            await output.WriteAsync(writeBuffer.AsMemory(0, sectors * MdsDisc.RawSectorSize), token)
+                .ConfigureAwait(false);
 
             if (read < readBuffer.Length)
             {
@@ -176,7 +192,8 @@ internal static class MdsInputPreparer
     /// <param name="workDir">Directory the cue is written into.</param>
     /// <param name="dataFileReference">FILE entry to record, relative to <paramref name="workDir"/>.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<string> WriteCueAsync(MdsDisc disc, string workDir, string dataFileReference, CancellationToken token)
+    internal static async Task<string> WriteCueAsync(MdsDisc disc, string workDir, string dataFileReference,
+        CancellationToken token)
     {
         var builder = new StringBuilder();
         builder.Append("FILE \"").Append(dataFileReference).Append("\" BINARY\r\n");
@@ -237,8 +254,10 @@ internal static class MdsInputPreparer
 
     private static async Task CopyAsync(string sourcePath, string destinationPath, CancellationToken token)
     {
-        await using var input = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 1024 * 1024, useAsync: true);
-        await using var output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024, useAsync: true);
+        await using var input = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite,
+            1024 * 1024, useAsync: true);
+        await using var output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None,
+            1024 * 1024, useAsync: true);
         await input.CopyToAsync(output, token).ConfigureAwait(false);
     }
 }

@@ -11,7 +11,13 @@ namespace BatchConvertToCHD.Utilities;
 /// <param name="TrackType">BINARY / WAVE / MP3 / AIFF / MOTOROLA / AUDIO, or null when the line has no type token.</param>
 /// <param name="WasNameCorrected">True when the on-disk name differs from the cue only by zero-padding (e.g. "(Track 02)" vs "(Track 2)") and was corrected via <see cref="ResolvedName"/>.</param>
 /// <param name="CueDirectory">Directory holding the cue. <see cref="ResolvedName"/> is relative to it, so it is the anchor for <see cref="ResolvedFullPath"/>.</param>
-internal sealed record CueFileReference(string ReferencedName, string? ResolvedName, string FullPath, string? TrackType, bool WasNameCorrected = false, string? CueDirectory = null)
+internal sealed record CueFileReference(
+    string ReferencedName,
+    string? ResolvedName,
+    string FullPath,
+    string? TrackType,
+    bool WasNameCorrected = false,
+    string? CueDirectory = null)
 {
     /// <summary>True when a file with this name (possibly case- or padding-resolved) was found for the cue.</summary>
     public bool IsResolved => ResolvedName is not null;

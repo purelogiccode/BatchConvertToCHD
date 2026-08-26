@@ -478,4 +478,519 @@ public class PbpFileTests : IDisposable
 
         return sfoBytes;
     }
+
+    // --- Synthetic PBP tests using PbpTestFileBuilder ---
+
+    [Fact]
+    public void OpenSyntheticSingleDiscCompressedReturnsSuccess()
+    {
+        var path = Path.Combine(_tempDir, $"synth_compressed_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithTitle("Synthetic Game")
+            .WithDiscId("SLUS00001")
+            .WithBlockCount(2)
+            .WithCompressedBlocks(true)
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void OpenSyntheticSingleDiscUncompressedReturnsSuccess()
+    {
+        var path = Path.Combine(_tempDir, $"synth_uncompressed_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithBlockCount(2)
+            .WithCompressedBlocks(false)
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpSfoMetadataIsParsed()
+    {
+        var path = Path.Combine(_tempDir, $"synth_sfo_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithTitle("My Test Game")
+            .WithDiscId("SCUS94163")
+            .WithCategory("ME")
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        Assert.Equal("My Test Game", pbp.Title);
+        Assert.Equal("SCUS94163", pbp.DiscId);
+        Assert.Equal("ME", pbp.Category);
+        Assert.NotEmpty(pbp.SfoData.Entries);
+        Assert.Equal("My Test Game", pbp.SfoData.GetString("TITLE"));
+        Assert.Equal("SCUS94163", pbp.SfoData.GetString("DISC_ID"));
+        Assert.Equal(1u, pbp.SfoData.GetUInt32("BOOTABLE"));
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpHeaderIsValid()
+    {
+        var path = Path.Combine(_tempDir, $"synth_header_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+        Assert.True(pbp.Header.IsValid);
+        Assert.Equal(0x50425000u, PbpHeader.MagicValue);
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpIsSingleDisc()
+    {
+        var path = Path.Combine(_tempDir, $"synth_single_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+        Assert.Single(pbp.Discs);
+        Assert.False(pbp.IsMultiDisc);
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpDiscHasTocEntries()
+    {
+        var path = Path.Combine(_tempDir, $"synth_toc_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        var disc = pbp.Discs[0];
+        Assert.NotEmpty(disc.Toc);
+        Assert.True(disc.Toc[0].TrackNo > 0);
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpDiscHasPositiveBlockCount()
+    {
+        var path = Path.Combine(_tempDir, $"synth_blocks_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().WithBlockCount(3).BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        Assert.Equal(3, pbp.Discs[0].BlockCount);
+        Assert.True(pbp.Discs[0].IsoSize > 0);
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpReadBlockReturnsData()
+    {
+        var path = Path.Combine(_tempDir, $"synth_readblock_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().WithBlockCount(2).BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        var disc = pbp.Discs[0];
+        var buffer = new byte[16 * PbpDiscInfo.IsoBlockSize];
+        disc.ReadBlock(0, buffer, out var bytesRead);
+        Assert.True(bytesRead > 0);
+
+        // Verify the ISO size is encoded at bytes 104-107
+        var sectorCount = BitConverter.ToUInt32(buffer, 104);
+        Assert.True(sectorCount > 0);
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpReadBlockOutOfRangeThrows()
+    {
+        var path = Path.Combine(_tempDir, $"synth_oob_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().WithBlockCount(2).BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        var buffer = new byte[16 * PbpDiscInfo.IsoBlockSize];
+        Assert.Throws<ArgumentOutOfRangeException>(() => pbp.Discs[0].ReadBlock(999, buffer, out _));
+        Assert.Throws<ArgumentOutOfRangeException>(() => pbp.Discs[0].ReadBlock(-1, buffer, out _));
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpExtractToProducesCorrectSize()
+    {
+        var path = Path.Combine(_tempDir, $"synth_extract_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().WithBlockCount(2).BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        var disc = pbp.Discs[0];
+        var expectedSize = disc.IsoSize;
+
+        using var outputStream = new MemoryStream();
+        disc.ExtractTo(outputStream);
+
+        Assert.Equal(expectedSize, (uint)outputStream.Length);
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpExtractToReportsProgress()
+    {
+        var path = Path.Combine(_tempDir, $"synth_progress_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().WithBlockCount(3).BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        var progressValues = new List<uint>();
+        using var outputStream = new MemoryStream();
+        pbp.Discs[0].ExtractTo(outputStream, p => progressValues.Add(p));
+
+        Assert.NotEmpty(progressValues);
+        // Progress should be monotonically increasing
+        for (var i = 1; i < progressValues.Count; i++)
+            Assert.True(progressValues[i] >= progressValues[i - 1]);
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpExtractToRespectsCancellation()
+    {
+        var path = Path.Combine(_tempDir, $"synth_cancel_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().WithBlockCount(5).BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        using var cts = new CancellationTokenSource();
+        cts.Cancel(); // pre-cancel
+
+        using var outputStream = new MemoryStream();
+        Assert.Throws<OperationCanceledException>(() => pbp.Discs[0].ExtractTo(outputStream, null, cts.Token));
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpExtractToBinCueReturnsSuccess()
+    {
+        var path = Path.Combine(_tempDir, $"synth_bincue_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().WithBlockCount(2).BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        var binPath = Path.Combine(_tempDir, $"synth_{Guid.NewGuid():N}.bin");
+        var cuePath = Path.ChangeExtension(binPath, ".cue");
+
+        error = pbp.Discs[0].ExtractToBinCue(binPath, cuePath);
+        Assert.Equal(PbpError.None, error);
+        Assert.True(File.Exists(binPath));
+        Assert.True(File.Exists(cuePath));
+
+        var binSize = new FileInfo(binPath).Length;
+        Assert.True(binSize > 0);
+
+        var cueContent = File.ReadAllText(cuePath);
+        Assert.Contains("FILE", cueContent, StringComparison.Ordinal);
+        Assert.Contains("TRACK", cueContent, StringComparison.Ordinal);
+        Assert.Contains("INDEX", cueContent, StringComparison.Ordinal);
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpExtractToBinCueGeneratesValidCue()
+    {
+        var path = Path.Combine(_tempDir, $"synth_cue_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().WithBlockCount(2).BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        var disc = pbp.Discs[0];
+        var generatedCue = CueSheetWriter.GenerateCueSheet("test.bin", disc.Toc);
+
+        Assert.Contains("FILE \"test.bin\" BINARY", generatedCue, StringComparison.Ordinal);
+        Assert.Contains("TRACK 01 MODE2/2352", generatedCue, StringComparison.Ordinal);
+        Assert.Contains("INDEX 01", generatedCue, StringComparison.Ordinal);
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void OpenSyntheticPbpFromStreamReturnsSuccess()
+    {
+        var bytes = new PbpTestFileBuilder().Build();
+        using var stream = new MemoryStream(bytes);
+
+        var error = PbpFile.Open(stream, false, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+        Assert.Equal("Test Game", pbp.Title);
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void OpenSyntheticPbpFromStreamWithOwnershipDisposesStream()
+    {
+        var bytes = new PbpTestFileBuilder().Build();
+        var stream = new MemoryStream(bytes);
+
+        var error = PbpFile.Open(stream, true, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        pbp.Dispose();
+
+        // Stream should be disposed after PbpFile disposal
+        Assert.Throws<ObjectDisposedException>(() => stream.ReadByte());
+    }
+
+    [Fact]
+    public void OpenSyntheticPbpFromStreamWithoutOwnershipDoesNotDisposeStream()
+    {
+        var bytes = new PbpTestFileBuilder().Build();
+        var stream = new MemoryStream(bytes);
+
+        var error = PbpFile.Open(stream, false, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        pbp.Dispose();
+
+        // Stream should still be usable
+        Assert.Equal(0, stream.Position); // can still seek
+    }
+
+    [Fact]
+    public void OpenNonSeekableStreamReturnsIoError()
+    {
+        var bytes = new PbpTestFileBuilder().Build();
+        using var stream = new NonSeekableStream(bytes);
+
+        var error = PbpFile.Open(stream, false, out var pbp);
+        Assert.Equal(PbpError.IoError, error);
+        Assert.Null(pbp);
+    }
+
+    [Fact]
+    public void OpenNonReadableStreamReturnsIoError()
+    {
+        var bytes = new PbpTestFileBuilder().Build();
+        using var ms = new MemoryStream(bytes);
+        using var stream = new WriteOnlyStream(ms);
+
+        var error = PbpFile.Open(stream, false, out var pbp);
+        Assert.Equal(PbpError.IoError, error);
+        Assert.Null(pbp);
+    }
+
+    [Fact]
+    public void SyntheticMultiDiscPbpReturnsSuccess()
+    {
+        var path = Path.Combine(_tempDir, $"synth_multidisc_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .AsMultiDisc(0x200000, 0x400000)
+            .WithBlockCount(2)
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+        Assert.True(pbp.IsMultiDisc);
+        Assert.Equal(2, pbp.Discs.Count);
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticMultiDiscPbpDiscIdsAreCorrect()
+    {
+        var path = Path.Combine(_tempDir, $"synth_multidisc_id_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithDiscId("SLUS00001")
+            .AsMultiDisc(0x200000, 0x400000)
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        foreach (var disc in pbp.Discs)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(disc.DiscId));
+            Assert.NotEmpty(disc.Toc);
+        }
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticMultiDiscPbpExtractToProducesData()
+    {
+        var path = Path.Combine(_tempDir, $"synth_multidisc_extract_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .AsMultiDisc(0x200000, 0x400000)
+            .WithBlockCount(2)
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        foreach (var disc in pbp.Discs)
+        {
+            using var outputStream = new MemoryStream();
+            disc.ExtractTo(outputStream);
+            Assert.True(outputStream.Length > 0);
+            Assert.Equal(disc.IsoSize, (uint)outputStream.Length);
+        }
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpDisposeMultipleTimesDoesNotThrow()
+    {
+        var path = Path.Combine(_tempDir, $"synth_dispose_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        pbp.Dispose();
+        var exception = Record.Exception(() => pbp.Dispose());
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void SyntheticPbpExtractedDataIsConsistent()
+    {
+        var path = Path.Combine(_tempDir, $"synth_consistent_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().WithBlockCount(2).BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        var disc = pbp.Discs[0];
+
+        // Extract twice and compare
+        using var stream1 = new MemoryStream();
+        disc.ExtractTo(stream1);
+
+        // Reset and extract again (need to re-read blocks)
+        using var stream2 = new MemoryStream();
+        disc.ExtractTo(stream2);
+
+        Assert.Equal(stream1.Length, stream2.Length);
+        Assert.True(stream1.ToArray().SequenceEqual(stream2.ToArray()));
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpSingleBlockExtraction()
+    {
+        var path = Path.Combine(_tempDir, $"synth_singleblock_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().WithBlockCount(1).BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        var disc = pbp.Discs[0];
+        Assert.Equal(1, disc.BlockCount);
+
+        using var outputStream = new MemoryStream();
+        disc.ExtractTo(outputStream);
+        Assert.Equal(disc.IsoSize, (uint)outputStream.Length);
+
+        pbp.Dispose();
+    }
+
+    [Fact]
+    public void SyntheticPbpLargeBlockCount()
+    {
+        var path = Path.Combine(_tempDir, $"synth_large_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().WithBlockCount(10).BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        var disc = pbp.Discs[0];
+        Assert.Equal(10, disc.BlockCount);
+
+        using var outputStream = new MemoryStream();
+        disc.ExtractTo(outputStream);
+        Assert.Equal(disc.IsoSize, (uint)outputStream.Length);
+
+        pbp.Dispose();
+    }
+
+    /// <summary>
+    /// A stream that is not seekable, used to test PbpFile.Open rejection.
+    /// </summary>
+    private sealed class NonSeekableStream : MemoryStream
+    {
+        public NonSeekableStream(byte[] buffer) : base(buffer) { }
+        public override bool CanSeek => false;
+    }
+
+    /// <summary>
+    /// A stream that is not readable, used to test PbpFile.Open rejection.
+    /// </summary>
+    private sealed class WriteOnlyStream : Stream
+    {
+        private readonly Stream _inner;
+        public WriteOnlyStream(Stream inner) => _inner = inner;
+        public override bool CanRead => false;
+        public override bool CanSeek => _inner.CanSeek;
+        public override bool CanWrite => true;
+        public override long Length => _inner.Length;
+        public override long Position { get => _inner.Position; set => _inner.Position = value; }
+        public override void Flush() => _inner.Flush();
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
+        public override void SetLength(long value) => _inner.SetLength(value);
+        public override void Write(byte[] buffer, int offset, int count) => _inner.Write(buffer, offset, count);
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) _inner.Dispose();
+            base.Dispose(disposing);
+        }
+    }
 }

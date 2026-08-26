@@ -25,7 +25,8 @@ internal static class CueWorkDirectory
     /// <param name="onLog">Optional logging callback.</param>
     /// <param name="token">Cancellation token.</param>
     internal static async Task<CueWorkDirectoryResult> PrepareAsync(
-        string cuePath, string tempDirPrefix, IMp3Decoder? mp3Decoder = null, Action<string>? onLog = null, CancellationToken token = default)
+        string cuePath, string tempDirPrefix, IMp3Decoder? mp3Decoder = null, Action<string>? onLog = null,
+        CancellationToken token = default)
     {
         var result = await CueNormalizer.NormalizeAsync(cuePath, token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
@@ -36,7 +37,9 @@ internal static class CueWorkDirectory
         }
 
         var isUtf8 = string.Equals(result.SourceEncoding.WebName, "utf-8", StringComparison.OrdinalIgnoreCase);
-        var hasMp3Tracks = mp3Decoder is not null && result.References.Any(static r => string.Equals(r.TrackType, "MP3", StringComparison.Ordinal));
+        var hasMp3Tracks = mp3Decoder is not null &&
+                           result.References.Any(static r =>
+                               string.Equals(r.TrackType, "MP3", StringComparison.Ordinal));
         var namesNeedAscii = cuePath.Any(static c => c > 127) ||
                              result.References.Any(static r => r.ReferencedName.Any(static c => c > 127));
 
@@ -48,7 +51,8 @@ internal static class CueWorkDirectory
         var pathTooLong = cuePath.Length >= PathUtils.MaxChdmanPath ||
                           result.References.Any(r => r.ResolvedFullPath.Length >= PathUtils.MaxChdmanPath);
 
-        var needsWorkDir = !isUtf8 || result.HasBom || result.NeedsRewrite || result.ReferencesChanged || hasMp3Tracks || namesNeedAscii || pathTooLong;
+        var needsWorkDir = !isUtf8 || result.HasBom || result.NeedsRewrite || result.ReferencesChanged ||
+                           hasMp3Tracks || namesNeedAscii || pathTooLong;
         if (!needsWorkDir)
         {
             return new CueWorkDirectoryResult(null, null, []);
@@ -77,7 +81,8 @@ internal static class CueWorkDirectory
             // Assign a unique ASCII work name (trackNN.ext) to every referenced file.
             // MP3 tracks are decoded to trackNN.wav so chdman can consume them.
             var workNames = new Dictionary<string, string>(StringComparer.Ordinal); // FullPath -> work name
-            var workTypes = new Dictionary<string, string>(StringComparer.Ordinal); // FullPath -> replacement track type
+            var workTypes =
+                new Dictionary<string, string>(StringComparer.Ordinal); // FullPath -> replacement track type
             var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (var i = 0; i < result.References.Count; i++)
             {
@@ -111,11 +116,14 @@ internal static class CueWorkDirectory
                 onLog?.Invoke($"Preparing {Path.GetFileName(reference.ResolvedFullPath)} for conversion...");
                 if (mp3Decoder is not null && string.Equals(reference.TrackType, "MP3", StringComparison.Ordinal))
                 {
-                    await mp3Decoder.DecodeAsync(reference.ResolvedFullPath, Path.Combine(workDir, workName), onLog, token).ConfigureAwait(false);
+                    await mp3Decoder
+                        .DecodeAsync(reference.ResolvedFullPath, Path.Combine(workDir, workName), onLog, token)
+                        .ConfigureAwait(false);
                 }
                 else
                 {
-                    await CopyWithRetryAsync(reference.ResolvedFullPath, Path.Combine(workDir, workName), token).ConfigureAwait(false);
+                    await CopyWithRetryAsync(reference.ResolvedFullPath, Path.Combine(workDir, workName), token)
+                        .ConfigureAwait(false);
                 }
             }
 
@@ -160,12 +168,14 @@ internal static class CueWorkDirectory
     /// Returns null when any bin cannot be referenced relatively (e.g. it is on another drive),
     /// in which case the caller must fall back to the copy-based path.
     /// </summary>
-    internal static async Task<string?> TryWriteInPlaceWorkCueAsync(string cuePath, string workDir, CancellationToken token)
+    internal static async Task<string?> TryWriteInPlaceWorkCueAsync(string cuePath, string workDir,
+        CancellationToken token)
     {
         var normalized = await CueNormalizer.NormalizeAsync(cuePath, token, TransformRelative).ConfigureAwait(false);
         try
         {
-            if (normalized.UnresolvedNames.Count > 0 || normalized.References.Any(r => Path.IsPathRooted(Path.GetRelativePath(workDir, r.ResolvedFullPath))))
+            if (normalized.UnresolvedNames.Count > 0 || normalized.References.Any(r =>
+                    Path.IsPathRooted(Path.GetRelativePath(workDir, r.ResolvedFullPath))))
             {
                 return null;
             }

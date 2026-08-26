@@ -45,7 +45,8 @@ internal static class IsoSectorValidator
 
         if (fileSize > 0 && StandardSectorSizes.All(sectorSize => fileSize % sectorSize != 0))
         {
-            return $"file size ({fileSize:N0} bytes) is not divisible by any standard sector size (2048/2324/2336/2352/2368/2448). The file may be corrupt or truncated.";
+            return
+                $"file size ({fileSize:N0} bytes) is not divisible by any standard sector size (2048/2324/2336/2352/2368/2448). The file may be corrupt or truncated.";
         }
 
         return null;

@@ -37,10 +37,12 @@ public partial class App
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
         // Initialize services
-        SharedBugReportService = new BugReportService(AppConfig.BugReportApiUrl, AppConfig.BugReportApiKey, AppConfig.ApplicationName);
+        SharedBugReportService = new BugReportService(AppConfig.BugReportApiUrl, AppConfig.BugReportApiKey,
+            AppConfig.ApplicationName);
         _bugReportService = SharedBugReportService;
 
-        _statsService = new StatsService(AppConfig.ApplicationStatsApiUrl, AppConfig.ApplicationStatsApiKey, AppConfig.ApplicationName);
+        _statsService = new StatsService(AppConfig.ApplicationStatsApiUrl, AppConfig.ApplicationStatsApiKey,
+            AppConfig.ApplicationName);
 
         ConfigureSerilog();
 
@@ -55,7 +57,8 @@ public partial class App
 
     private void ConfigureSerilog()
     {
-        var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppConfig.ApplicationName, "logs");
+        var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            AppConfig.ApplicationName, "logs");
         Directory.CreateDirectory(logDir);
 
         Log.Logger = new LoggerConfiguration()
@@ -79,7 +82,8 @@ public partial class App
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        _singleInstanceMutex = new Mutex(false, $"Global\\{AppConfig.ApplicationName}_SingleInstance", out var createdNew);
+        _singleInstanceMutex =
+            new Mutex(false, $"Global\\{AppConfig.ApplicationName}_SingleInstance", out var createdNew);
         try
         {
             _singleInstanceMutex.WaitOne();
@@ -210,7 +214,8 @@ public partial class App
         {
             // Suppress WPF internal font rendering errors (UriFormatException from GlyphTypeface)
             // These are caused by system fonts with invalid paths and are not actionable by us
-            case UriFormatException uriEx when (uriEx.StackTrace?.Contains("GlyphTypeface", StringComparison.Ordinal) == true):
+            case UriFormatException uriEx
+                when (uriEx.StackTrace?.Contains("GlyphTypeface", StringComparison.Ordinal) == true):
             // Suppress WPF internal rendering OutOfMemoryException (DUCE.Channel.SyncFlush)
             // These occur during window resize/update when system memory is low and are not actionable
             case OutOfMemoryException { Source: "PresentationCore" } oomEx when
@@ -251,12 +256,14 @@ public partial class App
             if (string.Equals(source, "AppDomain.UnhandledException", StringComparison.Ordinal))
             {
                 // Block synchronously — the process is about to terminate.
-                Task.Run(() => _bugReportService?.SendBugReportAsync($"Unhandled Exception from {source}", exception)).GetAwaiter().GetResult();
+                Task.Run(() => _bugReportService?.SendBugReportAsync($"Unhandled Exception from {source}", exception))
+                    .GetAwaiter().GetResult();
             }
             else
             {
                 // Fire-and-forget for dispatcher/task exceptions — blocking would freeze the UI.
-                _ = Task.Run(() => _bugReportService?.SendBugReportAsync($"Unhandled Exception from {source}", exception));
+                _ = Task.Run(() =>
+                    _bugReportService?.SendBugReportAsync($"Unhandled Exception from {source}", exception));
             }
         }
         catch

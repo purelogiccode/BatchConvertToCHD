@@ -47,7 +47,8 @@ internal static class AppHttpClient
         }
     }
 
-    private static bool ServerCertificateValidationCallback(object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors)
+    private static bool ServerCertificateValidationCallback(object sender, X509Certificate? certificate,
+        X509Chain? chain, SslPolicyErrors sslPolicyErrors)
     {
         if (sslPolicyErrors == SslPolicyErrors.None)
             return true;
@@ -55,7 +56,9 @@ internal static class AppHttpClient
         if (sslPolicyErrors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch))
         {
             var subject = (certificate as X509Certificate2)?.Subject ?? certificate?.Subject ?? "unknown";
-            Logger.Warning("SSL certificate name mismatch for {Subject}. The server certificate does not match the expected hostname. This may be caused by a proxy or firewall intercepting the connection. Allowing the connection to proceed.", subject);
+            Logger.Warning(
+                "SSL certificate name mismatch for {Subject}. The server certificate does not match the expected hostname. This may be caused by a proxy or firewall intercepting the connection. Allowing the connection to proceed.",
+                subject);
             return true;
         }
 

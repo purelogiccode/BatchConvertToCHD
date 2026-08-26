@@ -153,7 +153,8 @@ internal static class PathUtils
     /// <param name="desiredExtensionWithoutDot">The desired extension without the dot (e.g., "iso").</param>
     /// <param name="tempDirectory">The temporary directory path.</param>
     /// <returns>A full path to a safe temporary file.</returns>
-    internal static string GetSafeTempFileName(string originalFileNameWithExtension, string desiredExtensionWithoutDot, string tempDirectory)
+    internal static string GetSafeTempFileName(string originalFileNameWithExtension, string desiredExtensionWithoutDot,
+        string tempDirectory)
     {
         var sanitizedName = SanitizeFileName(Path.GetFileNameWithoutExtension(originalFileNameWithExtension));
         var safeBaseName = string.IsNullOrEmpty(sanitizedName) ? Guid.NewGuid().ToString("N") : sanitizedName;
@@ -193,7 +194,8 @@ internal static class PathUtils
     /// enough free space for the operation, even if it is not the drive with the most
     /// total free space. Falls back to the system temp path if no suitable alternative is found.
     /// </summary>
-    internal static string GetBestTempDirectory(string? inputFilePath, string? outputFolderPath, string tempDirPrefix, long requiredBytes = 0)
+    internal static string GetBestTempDirectory(string? inputFilePath, string? outputFolderPath, string tempDirPrefix,
+        long requiredBytes = 0)
     {
         const long minFreeBytes = 1024L * 1024 * 1024; // 1 GB minimum to consider a drive viable
 
@@ -456,7 +458,8 @@ internal static class PathUtils
         }
 
         yield return Path.Combine(
-            volumeRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar,
+            volumeRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+            Path.DirectorySeparatorChar,
             "BatchConvertToCHD_Temp");
 
         // Last resort: an unsafe %TEMP% path still usually beats failing outright - the generated
@@ -508,7 +511,8 @@ internal static class PathUtils
                 if (drive is { IsReady: true, DriveType: DriveType.Fixed })
                 {
                     var altPath = Path.Combine(
-                        drive.RootDirectory.FullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                        drive.RootDirectory.FullName.TrimEnd(Path.DirectorySeparatorChar,
+                            Path.AltDirectorySeparatorChar),
                         "BatchConvertToCHD_Temp");
                     if (Directory.Exists(altPath))
                         paths.Add(altPath);
@@ -526,7 +530,8 @@ internal static class PathUtils
     /// <summary>
     /// Validates and normalizes a directory path. Returns null if invalid.
     /// </summary>
-    internal static string? ValidateAndNormalizePath(string? path, string pathName, Action<string> onError, Action<string> onLog)
+    internal static string? ValidateAndNormalizePath(string? path, string pathName, Action<string> onError,
+        Action<string> onLog)
     {
         try
         {
@@ -541,7 +546,8 @@ internal static class PathUtils
             if (!Directory.Exists(normalizedPath))
             {
                 onLog($"ERROR: {pathName} does not exist: {normalizedPath}");
-                onError($"The {pathName} does not exist or is not accessible:\n\n{normalizedPath}\n\nPlease verify the path and try again.");
+                onError(
+                    $"The {pathName} does not exist or is not accessible:\n\n{normalizedPath}\n\nPlease verify the path and try again.");
                 return null;
             }
 

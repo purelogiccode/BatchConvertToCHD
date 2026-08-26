@@ -31,6 +31,12 @@ internal static class AppConfig
     public static string ChdmanExeName => IsArm64 ? "chdman_arm64.exe" : "chdman.exe";
 
     /// <summary>
+    /// Gets the appropriate CHDSharp executable name based on the current architecture.
+    /// Returns "CHDSharp_arm64.exe" for ARM64 or "CHDSharp.exe" for other architectures.
+    /// </summary>
+    public static string ChdSharpExeName => IsArm64 ? "CHDSharp_arm64.exe" : "CHDSharp.exe";
+
+    /// <summary>
     /// Gets the appropriate 7-Zip executable name based on the current architecture.
     /// Returns "7za_arm64.exe" for ARM64 or "7za.exe" for other architectures.
     /// </summary>
@@ -44,6 +50,14 @@ internal static class AppConfig
     public static IReadOnlyList<string> ChdmanExeCandidates => IsArm64Os
         ? ["chdman_arm64.exe", "chdman.exe"]
         : ["chdman.exe"];
+
+    /// <summary>
+    /// Gets the CHDSharp executable names to probe, best first, following the same rules as
+    /// <see cref="ChdmanExeCandidates"/>.
+    /// </summary>
+    public static IReadOnlyList<string> ChdSharpExeCandidates => IsArm64Os
+        ? ["CHDSharp_arm64.exe", "CHDSharp.exe"]
+        : ["CHDSharp.exe"];
 
     /// <summary>
     /// Gets the 7-Zip executable names to probe, best first, following the same rules as
@@ -61,7 +75,8 @@ internal static class AppConfig
     /// <summary>
     /// The encrypted API key shared by both endpoints.
     /// </summary>
-    private const string EncryptedApiKey = "KgscVBE2WRpDUwYNJlp3eCtmAwl1V0NVX3UdW0BSRkFnW3d9d21FBHBXQABfdg1YAlIVEzMHJC9zaQJDJFRCVw0=";
+    private const string EncryptedApiKey =
+        "KgscVBE2WRpDUwYNJlp3eCtmAwl1V0NVX3UdW0BSRkFnW3d9d21FBHBXQABfdg1YAlIVEzMHJC9zaQJDJFRCVw0=";
 
     /// <summary>
     /// Gets the API key used to authenticate bug report submissions.
@@ -82,13 +97,15 @@ internal static class AppConfig
     /// The primary GitHub API URL for checking the latest application release.
     /// The repository is expected to move to the purelogiccode organization.
     /// </summary>
-    public const string PrimaryGitHubApiLatestReleaseUrl = "https://api.github.com/repos/purelogiccode/BatchConvertToCHD/releases/latest";
+    public const string PrimaryGitHubApiLatestReleaseUrl =
+        "https://api.github.com/repos/purelogiccode/BatchConvertToCHD/releases/latest";
 
     /// <summary>
     /// The fallback GitHub API URL used when the primary source cannot be reached - e.g. while
     /// the ownership transfer to purelogiccode is in flight, or if it has to be rolled back.
     /// </summary>
-    public const string FallbackGitHubApiLatestReleaseUrl = "https://api.github.com/repos/drpetersonfernandes/BatchConvertToCHD/releases/latest";
+    public const string FallbackGitHubApiLatestReleaseUrl =
+        "https://api.github.com/repos/drpetersonfernandes/BatchConvertToCHD/releases/latest";
 
     /// <summary>
     /// GitHub API latest-release URLs in preference order: the primary repository first, the

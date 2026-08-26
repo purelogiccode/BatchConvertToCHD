@@ -127,12 +127,14 @@ internal sealed record IszHeader(
     {
         if (IsEncrypted)
         {
-            return $"the ISZ image is encrypted ({EncryptionDescription}) and this tool cannot decrypt it. Open it in UltraISO with the password and save it as an ISO first.";
+            return
+                $"the ISZ image is encrypted ({EncryptionDescription}) and this tool cannot decrypt it. Open it in UltraISO with the password and save it as an ISO first.";
         }
 
         if (SectorSize <= 0 || TotalSectors == 0)
         {
-            return $"the ISZ header declares {TotalSectors.ToString("N0", CultureInfo.InvariantCulture)} sectors of {SectorSize.ToString(CultureInfo.InvariantCulture)} bytes, which describes no image. The file header is damaged.";
+            return
+                $"the ISZ header declares {TotalSectors.ToString("N0", CultureInfo.InvariantCulture)} sectors of {SectorSize.ToString(CultureInfo.InvariantCulture)} bytes, which describes no image. The file header is damaged.";
         }
 
         if (ChunkCount == 0 || ChunkSize == 0)
@@ -142,12 +144,14 @@ internal sealed record IszHeader(
 
         if (ChunkSize > MaxChunkSize)
         {
-            return $"the ISZ header declares a chunk size of {ChunkSize.ToString("N0", CultureInfo.InvariantCulture)} bytes, which is far larger than any real image uses. The file header is damaged.";
+            return
+                $"the ISZ header declares a chunk size of {ChunkSize.ToString("N0", CultureInfo.InvariantCulture)} bytes, which is far larger than any real image uses. The file header is damaged.";
         }
 
         if (PointerLength is < 1 or > MaxPointerLength)
         {
-            return $"the ISZ chunk table uses {PointerLength.ToString(CultureInfo.InvariantCulture)}-byte entries, which this build cannot read.";
+            return
+                $"the ISZ chunk table uses {PointerLength.ToString(CultureInfo.InvariantCulture)}-byte entries, which this build cannot read.";
         }
 
         if (ChunkTableOffset == 0)

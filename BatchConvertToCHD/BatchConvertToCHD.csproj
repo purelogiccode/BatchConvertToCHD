@@ -1,74 +1,80 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
-    <ApplicationIcon>icon\chd.ico</ApplicationIcon>
-    <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
-    <AssemblyVersion>3.4.2</AssemblyVersion>
-    <FileVersion>3.4.2</FileVersion>
-    <IsPackable>false</IsPackable>
-    <NeutralLanguage>en</NeutralLanguage>
-    <DebugType>embedded</DebugType>
-    <DebugSymbols>true</DebugSymbols>
-    <Company>PureLogicCode.com</Company>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UseWPF>true</UseWPF>
+        <ApplicationIcon>icon\chd.ico</ApplicationIcon>
+        <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+        <AssemblyVersion>3.4.2</AssemblyVersion>
+        <FileVersion>3.4.2</FileVersion>
+        <IsPackable>false</IsPackable>
+        <NeutralLanguage>en</NeutralLanguage>
+        <DebugType>embedded</DebugType>
+        <DebugSymbols>true</DebugSymbols>
+        <Company>PureLogicCode.com</Company>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <Resource Include="images\about.png" />
-    <Resource Include="images\exit.png" />
-    <Resource Include="images\logo.png" />
-    <None Remove="icon\chd.ico" />
-    <Resource Include="icon\chd.ico" />
-    <None Update="7za.exe">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="7za_arm64.exe">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+    <ItemGroup>
+        <Resource Include="images\about.png" />
+        <Resource Include="images\exit.png" />
+        <Resource Include="images\logo.png" />
+        <None Remove="icon\chd.ico" />
+        <Resource Include="icon\chd.ico" />
+        <None Update="7za.exe">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="7za_arm64.exe">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="CHDSharp.exe">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="CHDSharp_arm64.exe">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Update="chdman.exe">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="chdman_arm64.exe">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+    <ItemGroup>
+        <None Update="chdman.exe">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="chdman_arm64.exe">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="CHDSharp" Version="1.2.0" />
-    <PackageReference Include="Meziantou.Analyzer" Version="3.0.177">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="NAudio" Version="3.0.1" />
-    <PackageReference Include="SharpCompress" Version="0.50.4" />
-    <PackageReference Include="WPF-UI" Version="4.3.0" />
-    <PackageReference Include="Serilog" Version="4.4.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-    <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="CHDSharp" Version="1.4.0" />
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.177">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="NAudio" Version="3.0.1" />
+        <PackageReference Include="SharpCompress" Version="0.50.4" />
+        <PackageReference Include="WPF-UI" Version="4.3.0" />
+        <PackageReference Include="Serilog" Version="4.4.0" />
+        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+        <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\CCDSharp\CCDSharp.csproj" />
-    <ProjectReference Include="..\CSOSharp\CSOSharp.csproj" />
-    <ProjectReference Include="..\PBPSharp\PBPSharp.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\CCDSharp\CCDSharp.csproj" />
+        <ProjectReference Include="..\CSOSharp\CSOSharp.csproj" />
+        <ProjectReference Include="..\PBPSharp\PBPSharp.csproj" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>BatchConvertToCHD.Tests</_Parameter1>
-    </AssemblyAttribute>
-  </ItemGroup>
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+            <_Parameter1>BatchConvertToCHD.Tests</_Parameter1>
+        </AssemblyAttribute>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Resource Remove="References\**" />
-    <ApplicationDefinition Remove="References\**" />
-  </ItemGroup>
+    <ItemGroup>
+        <Resource Remove="References\**" />
+        <ApplicationDefinition Remove="References\**" />
+    </ItemGroup>
 
 </Project>
