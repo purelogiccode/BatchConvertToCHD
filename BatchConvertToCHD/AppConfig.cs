@@ -100,11 +100,6 @@ internal static class AppConfig
     public const string PrimaryGitHubApiLatestReleaseUrl =
         "https://api.github.com/repos/purelogiccode/BatchConvertToCHD/releases/latest";
 
-    /// <summary>
-    /// GitHub API latest-release URLs in preference order. A single entry since the ownership
-    /// transfer completed; kept as a list so additional mirror sources can be appended later
-    /// without touching <see cref="UpdateService"/>.
-    /// </summary>
     public static IReadOnlyList<string> GitHubApiLatestReleaseUrls =>
         [PrimaryGitHubApiLatestReleaseUrl];
 
