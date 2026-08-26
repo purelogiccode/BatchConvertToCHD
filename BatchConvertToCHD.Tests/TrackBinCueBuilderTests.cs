@@ -92,7 +92,10 @@ public class TrackBinCueBuilderTests : IDisposable
     [Fact]
     public void DuplicateTrackNumbersAreRejected()
     {
-        var bins = WriteBins("Game (Track 1).bin", "Game (Track 1).BIN".Replace("Game", "Game", StringComparison.Ordinal));
+        var bins = WriteBins(
+            "Game (Track 1).bin",
+            "Game (Track 1).BIN".Replace("Game", "Game", StringComparison.Ordinal)
+        );
         Assert.Single(bins.Distinct(StringComparer.OrdinalIgnoreCase));
 
         // Build the ambiguous pair explicitly instead: same number, different files.
@@ -139,7 +142,11 @@ public class TrackBinCueBuilderTests : IDisposable
         var bins = WriteBins("Game (Track 1).bin", "Game (Track 2).bin");
         var set = TrackBinCueBuilder.TryGetTrackSet(bins);
 
-        var cuePath = await TrackBinCueBuilder.WriteCueAsync(set!, BinCueGenerator.Mode2, CancellationToken.None);
+        var cuePath = await TrackBinCueBuilder.WriteCueAsync(
+            set!,
+            BinCueGenerator.Mode2,
+            CancellationToken.None
+        );
 
         // The marker is what makes the archive path name the output after the game, not the cue.
         Assert.True(BinCueGenerator.IsAutoCue(cuePath));

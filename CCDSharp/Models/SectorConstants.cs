@@ -18,7 +18,21 @@ public static class SectorConstants
     /// <summary>
     /// Sync mark pattern: 12 bytes (00 FF FF FF FF FF FF FF FF FF FF 00).
     /// </summary>
-    public static readonly byte[] SyncMark = [0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
+    public static readonly byte[] SyncMark =
+    [
+        0x00,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0x00,
+    ];
 
     /// <summary>
     /// Offset of the mode byte within a raw sector (after 12-byte sync + 3-byte MSF header).

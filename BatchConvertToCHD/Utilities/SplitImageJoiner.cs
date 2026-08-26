@@ -67,18 +67,33 @@ internal static class SplitImageJoiner
     /// <param name="parts">Volumes in order.</param>
     /// <param name="destinationPath">File to create.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<long> JoinAsync(IReadOnlyList<string> parts, string destinationPath,
-        CancellationToken token)
+    internal static async Task<long> JoinAsync(
+        IReadOnlyList<string> parts,
+        string destinationPath,
+        CancellationToken token
+    )
     {
-        await using var output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None,
-            CopyBufferBytes, useAsync: true);
+        await using var output = new FileStream(
+            destinationPath,
+            FileMode.Create,
+            FileAccess.Write,
+            FileShare.None,
+            CopyBufferBytes,
+            useAsync: true
+        );
 
         foreach (var part in parts)
         {
             token.ThrowIfCancellationRequested();
 
-            await using var input = new FileStream(part, FileMode.Open, FileAccess.Read, FileShare.ReadWrite,
-                CopyBufferBytes, useAsync: true);
+            await using var input = new FileStream(
+                part,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite,
+                CopyBufferBytes,
+                useAsync: true
+            );
             await input.CopyToAsync(output, CopyBufferBytes, token).ConfigureAwait(false);
         }
 
@@ -117,7 +132,8 @@ internal static class SplitImageJoiner
         {
             // ".001" style: three decimal digits, first volume is 001.
             case ['.', _, _, _] and [_, '0', '0', '1']:
-                return static index => "." + (index + 1).ToString("000", CultureInfo.InvariantCulture);
+                return static index =>
+                    "." + (index + 1).ToString("000", CultureInfo.InvariantCulture);
             // ".i00" style used by Alcohol, first volume is i00.
             case ['.', 'i' or 'I', '0', '0']:
             {
@@ -149,8 +165,11 @@ internal static class SplitImageJoiner
 
         try
         {
-            return Directory.GetFiles(directory)
-                .FirstOrDefault(f => string.Equals(Path.GetFileName(f), fileName, StringComparison.OrdinalIgnoreCase));
+            return Directory
+                .GetFiles(directory)
+                .FirstOrDefault(f =>
+                    string.Equals(Path.GetFileName(f), fileName, StringComparison.OrdinalIgnoreCase)
+                );
         }
         catch (Exception)
         {

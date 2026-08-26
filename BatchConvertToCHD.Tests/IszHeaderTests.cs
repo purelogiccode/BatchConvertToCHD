@@ -23,7 +23,8 @@ public class IszHeaderTests
             dataOffset: 0x00009ABC,
             volumeSerial: 0xDEADBEEF,
             headerSize: 48,
-            version: 1);
+            version: 1
+        );
 
         var header = IszHeader.TryRead(bytes);
 
@@ -127,7 +128,11 @@ public class IszHeaderTests
         var header = IszHeader.TryRead(BuildValid(chunkTableOffset: 0));
 
         Assert.NotNull(header);
-        Assert.Contains("no chunk table", header.GetUnusableReason() ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains(
+            "no chunk table",
+            header.GetUnusableReason() ?? string.Empty,
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -146,7 +151,11 @@ public class IszHeaderTests
         var header = IszHeader.TryRead(BuildValid(chunkSize: 0x7F000000));
 
         Assert.NotNull(header);
-        Assert.Contains("chunk size", header.GetUnusableReason() ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains(
+            "chunk size",
+            header.GetUnusableReason() ?? string.Empty,
+            StringComparison.Ordinal
+        );
     }
 
     [Theory]
@@ -158,7 +167,11 @@ public class IszHeaderTests
         var header = IszHeader.TryRead(BuildValid(pointerLength: pointerLength));
 
         Assert.NotNull(header);
-        Assert.Contains("chunk table", header.GetUnusableReason() ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains(
+            "chunk table",
+            header.GetUnusableReason() ?? string.Empty,
+            StringComparison.Ordinal
+        );
     }
 
     private static byte[] BuildValid(
@@ -168,7 +181,8 @@ public class IszHeaderTests
         uint chunkSize = 65536,
         int pointerLength = 3,
         uint chunkTableOffset = 48,
-        uint segmentTableOffset = 0)
+        uint segmentTableOffset = 0
+    )
     {
         return IszImageBuilder.BuildHeader(
             sectorSize: sectorSize,
@@ -182,6 +196,7 @@ public class IszHeaderTests
             chunkTableOffset: chunkTableOffset,
             segmentTableOffset: segmentTableOffset,
             dataOffset: 96,
-            volumeSerial: IszImageBuilder.DefaultVolumeSerial);
+            volumeSerial: IszImageBuilder.DefaultVolumeSerial
+        );
     }
 }

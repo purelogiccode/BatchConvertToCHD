@@ -19,7 +19,8 @@ internal sealed record CueNormalizationResult(
     IReadOnlyList<string> UnresolvedNames,
     IReadOnlyList<string> CanonicalLines,
     bool NeedsRewrite,
-    bool ReferencesChanged = false)
+    bool ReferencesChanged = false
+)
 {
     /// <summary>Canonical cue content joined with CRLF (the format chdman reads reliably).</summary>
     public string CanonicalCueText => string.Join("\r\n", CanonicalLines) + "\r\n";

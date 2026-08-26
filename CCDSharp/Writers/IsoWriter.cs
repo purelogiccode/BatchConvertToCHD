@@ -15,7 +15,11 @@ public static class IsoWriter
     /// <param name="isoFilePath">Path for the output .iso file.</param>
     /// <param name="progress">Optional progress callback (bytesWritten, totalBytes).</param>
     /// <returns>The path to the .iso file created.</returns>
-    public static string Write(string imgFilePath, string isoFilePath, Action<long, long>? progress = null)
+    public static string Write(
+        string imgFilePath,
+        string isoFilePath,
+        Action<long, long>? progress = null
+    )
     {
         if (!File.Exists(imgFilePath))
             throw new FileNotFoundException("IMG data file not found.", imgFilePath);
@@ -23,7 +27,12 @@ public static class IsoWriter
         var totalBytes = new FileInfo(imgFilePath).Length;
         var totalSectors = totalBytes / SectorConstants.RawSectorSize;
 
-        using var input = new FileStream(imgFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var input = new FileStream(
+            imgFilePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read
+        );
         using var output = new FileStream(isoFilePath, FileMode.Create, FileAccess.Write);
 
         WriteSectors(input, output, totalSectors, progress);
@@ -38,7 +47,12 @@ public static class IsoWriter
     /// <param name="output">Stream to write 2048-byte user data sectors to.</param>
     /// <param name="totalSectors">Total number of sectors to process. If -1, reads until end of stream.</param>
     /// <param name="progress">Optional progress callback (bytesWritten, totalBytes).</param>
-    public static void WriteToStream(Stream input, Stream output, long totalSectors = -1, Action<long, long>? progress = null)
+    public static void WriteToStream(
+        Stream input,
+        Stream output,
+        long totalSectors = -1,
+        Action<long, long>? progress = null
+    )
     {
         WriteSectors(input, output, totalSectors, progress);
     }
@@ -50,7 +64,11 @@ public static class IsoWriter
     /// <param name="isoFilePath">Path for the output .iso file.</param>
     /// <param name="progress">Optional progress callback (bytesWritten, totalBytes).</param>
     /// <returns>The path to the .iso file created.</returns>
-    public static string Write(DiscImage disc, string isoFilePath, Action<long, long>? progress = null)
+    public static string Write(
+        DiscImage disc,
+        string isoFilePath,
+        Action<long, long>? progress = null
+    )
     {
         if (disc.ImgFilePath == null || !File.Exists(disc.ImgFilePath))
             throw new FileNotFoundException("IMG data file not found.", disc.ImgFilePath);
@@ -58,12 +76,19 @@ public static class IsoWriter
         // Find the first data track
         var dataTrack = disc.Tracks.FirstOrDefault(t => !t.IsAudio);
         if (dataTrack == null)
-            throw new InvalidOperationException("No data track found in the disc image. ISO extraction requires a data track.");
+            throw new InvalidOperationException(
+                "No data track found in the disc image. ISO extraction requires a data track."
+            );
 
         var imgLength = new FileInfo(disc.ImgFilePath).Length;
         var totalSectors = imgLength / SectorConstants.RawSectorSize;
 
-        using var input = new FileStream(disc.ImgFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var input = new FileStream(
+            disc.ImgFilePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read
+        );
         using var output = new FileStream(isoFilePath, FileMode.Create, FileAccess.Write);
 
         WriteSectors(input, output, totalSectors, progress);
@@ -71,7 +96,12 @@ public static class IsoWriter
         return isoFilePath;
     }
 
-    private static void WriteSectors(Stream input, Stream output, long totalSectors, Action<long, long>? progress)
+    private static void WriteSectors(
+        Stream input,
+        Stream output,
+        long totalSectors,
+        Action<long, long>? progress
+    )
     {
         var sectorBuffer = new byte[SectorConstants.RawSectorSize];
         var userDataBuffer = new byte[SectorConstants.UserDataSize];
@@ -88,7 +118,8 @@ public static class IsoWriter
 
             if (bytesRead < SectorConstants.RawSectorSize)
                 throw new InvalidOperationException(
-                    $"Incomplete sector at index {sectorIndex}: expected {SectorConstants.RawSectorSize} bytes, got {bytesRead}.");
+                    $"Incomplete sector at index {sectorIndex}: expected {SectorConstants.RawSectorSize} bytes, got {bytesRead}."
+                );
 
             var extracted = ExtractUserData(sectorBuffer, userDataBuffer);
             if (extracted > 0)
@@ -140,7 +171,7 @@ public static class IsoWriter
             1 => ExtractMode1(rawSector, output),
             // Mode 2: check subheader for Form 1 vs Form 2
             2 => ExtractMode2(rawSector, output),
-            _ => 0
+            _ => 0,
         };
     }
 
@@ -154,7 +185,13 @@ public static class IsoWriter
         // [2068..2075] Zero (8 bytes)
         // [2076..2247] ECC-P (172 bytes)
         // [2248..2351] ECC-Q (104 bytes)
-        Array.Copy(rawSector, SectorConstants.Mode1DataOffset, output, 0, SectorConstants.UserDataSize);
+        Array.Copy(
+            rawSector,
+            SectorConstants.Mode1DataOffset,
+            output,
+            0,
+            SectorConstants.UserDataSize
+        );
         return SectorConstants.UserDataSize;
     }
 
@@ -183,12 +220,24 @@ public static class IsoWriter
         {
             // Form 2: 2324 bytes of user data, but we can only write 2048 for ISO
             // Extract first 2048 bytes (ISO 9660 only uses Form 1 data)
-            Array.Copy(rawSector, SectorConstants.Mode2Form1DataOffset, output, 0, SectorConstants.UserDataSize);
+            Array.Copy(
+                rawSector,
+                SectorConstants.Mode2Form1DataOffset,
+                output,
+                0,
+                SectorConstants.UserDataSize
+            );
             return SectorConstants.UserDataSize;
         }
 
         // Form 1: 2048 bytes of user data at offset 24
-        Array.Copy(rawSector, SectorConstants.Mode2Form1DataOffset, output, 0, SectorConstants.UserDataSize);
+        Array.Copy(
+            rawSector,
+            SectorConstants.Mode2Form1DataOffset,
+            output,
+            0,
+            SectorConstants.UserDataSize
+        );
         return SectorConstants.UserDataSize;
     }
 

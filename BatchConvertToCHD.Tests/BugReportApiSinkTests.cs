@@ -12,7 +12,11 @@ public class BugReportApiSinkTests
         public string LastMessage { get; private set; } = string.Empty;
         public Exception? LastException { get; private set; }
 
-        public override Task<bool> SendBugReportAsync(string message, Exception? ex = null, CancellationToken token = default)
+        public override Task<bool> SendBugReportAsync(
+            string message,
+            Exception? ex = null,
+            CancellationToken token = default
+        )
         {
             CallCount++;
             LastMessage = message;
@@ -32,9 +36,7 @@ public class BugReportApiSinkTests
         var service = CreateTestService();
         var sink = new BugReportApiSink(service);
 
-        var logger = new LoggerConfiguration()
-            .WriteTo.Sink(sink)
-            .CreateLogger();
+        var logger = new LoggerConfiguration().WriteTo.Sink(sink).CreateLogger();
 
         logger.Debug("Debug message");
         logger.Verbose("Verbose message");
@@ -49,9 +51,7 @@ public class BugReportApiSinkTests
         var service = CreateTestService();
         var sink = new BugReportApiSink(service);
 
-        var logger = new LoggerConfiguration()
-            .WriteTo.Sink(sink)
-            .CreateLogger();
+        var logger = new LoggerConfiguration().WriteTo.Sink(sink).CreateLogger();
 
         logger.Warning("Warning message");
 
@@ -65,9 +65,7 @@ public class BugReportApiSinkTests
         var service = CreateTestService();
         var sink = new BugReportApiSink(service);
 
-        var logger = new LoggerConfiguration()
-            .WriteTo.Sink(sink)
-            .CreateLogger();
+        var logger = new LoggerConfiguration().WriteTo.Sink(sink).CreateLogger();
 
         logger.Error("Error message");
 
@@ -81,9 +79,7 @@ public class BugReportApiSinkTests
         var service = CreateTestService();
         var sink = new BugReportApiSink(service);
 
-        var logger = new LoggerConfiguration()
-            .WriteTo.Sink(sink)
-            .CreateLogger();
+        var logger = new LoggerConfiguration().WriteTo.Sink(sink).CreateLogger();
 
         logger.Fatal("Fatal message");
 
@@ -97,9 +93,7 @@ public class BugReportApiSinkTests
         var service = CreateTestService();
         var sink = new BugReportApiSink(service);
 
-        var logger = new LoggerConfiguration()
-            .WriteTo.Sink(sink)
-            .CreateLogger();
+        var logger = new LoggerConfiguration().WriteTo.Sink(sink).CreateLogger();
 
         var ex = new InvalidOperationException("Test exception");
         logger.Error(ex, "Error with exception");
@@ -116,9 +110,7 @@ public class BugReportApiSinkTests
         var service = CreateTestService();
         var sink = new BugReportApiSink(service);
 
-        var logger = new LoggerConfiguration()
-            .WriteTo.Sink(sink)
-            .CreateLogger();
+        var logger = new LoggerConfiguration().WriteTo.Sink(sink).CreateLogger();
 
         logger.Warning("First");
         logger.Error("Second");
@@ -135,9 +127,7 @@ public class BugReportApiSinkTests
         var service = CreateTestService();
         var sink = new BugReportApiSink(service);
 
-        var logger = new LoggerConfiguration()
-            .WriteTo.Sink(sink)
-            .CreateLogger();
+        var logger = new LoggerConfiguration().WriteTo.Sink(sink).CreateLogger();
 
         var ex = new ArgumentException("Arg error");
         logger.Warning(ex, "Warning with exception");

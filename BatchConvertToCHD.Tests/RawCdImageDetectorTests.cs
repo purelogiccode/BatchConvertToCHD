@@ -147,7 +147,12 @@ public class RawCdImageDetectorTests : IDisposable
         var workDir = Path.Combine(_tempDir, "work");
         Directory.CreateDirectory(workDir);
 
-        var cuePath = await RawCdImageDetector.TryWriteCueAsync(image, BinCueGenerator.Mode2, workDir, CancellationToken.None);
+        var cuePath = await RawCdImageDetector.TryWriteCueAsync(
+            image,
+            BinCueGenerator.Mode2,
+            workDir,
+            CancellationToken.None
+        );
 
         Assert.NotNull(cuePath);
         Assert.Equal(workDir, Path.GetDirectoryName(cuePath));
@@ -157,7 +162,11 @@ public class RawCdImageDetectorTests : IDisposable
         Assert.Contains("INDEX 01 00:00:00", content, StringComparison.Ordinal);
 
         // The FILE line must be relative, because chdman resolves it against the cue's own folder.
-        Assert.Contains("FILE \"..\\Herc's Adventure.iso\" BINARY", content, StringComparison.Ordinal);
+        Assert.Contains(
+            "FILE \"..\\Herc's Adventure.iso\" BINARY",
+            content,
+            StringComparison.Ordinal
+        );
 
         // The image is referenced, never duplicated.
         Assert.False(File.Exists(Path.Combine(workDir, "Herc's Adventure.iso")));
@@ -174,7 +183,12 @@ public class RawCdImageDetectorTests : IDisposable
         var workDir = Path.Combine(_tempDir, "work2");
         Directory.CreateDirectory(workDir);
 
-        var cuePath = await RawCdImageDetector.TryWriteCueAsync(image, BinCueGenerator.Mode2, workDir, CancellationToken.None);
+        var cuePath = await RawCdImageDetector.TryWriteCueAsync(
+            image,
+            BinCueGenerator.Mode2,
+            workDir,
+            CancellationToken.None
+        );
 
         Assert.Equal("WACKY_RACES.cue", Path.GetFileName(cuePath));
     }

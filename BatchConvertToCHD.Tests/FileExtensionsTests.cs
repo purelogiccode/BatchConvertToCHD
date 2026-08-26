@@ -25,9 +25,13 @@ public class FileExtensionsTests
     [InlineData(".chd", nameof(FileExtensions.Chd))]
     public void ConstantHasCorrectValue(string expected, string constantName)
     {
-        var actual = typeof(FileExtensions)
-            .GetField(constantName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
-            ?.GetValue(null) as string;
+        var actual =
+            typeof(FileExtensions)
+                .GetField(
+                    constantName,
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static
+                )
+                ?.GetValue(null) as string;
 
         Assert.Equal(expected, actual);
     }
@@ -46,7 +50,10 @@ public class FileExtensionsTests
     [Fact]
     public void ArchiveExtensionsSetMatchesArray()
     {
-        Assert.Equal(FileExtensions.ArchiveExtensions.Length, FileExtensions.ArchiveExtensionsSet.Count);
+        Assert.Equal(
+            FileExtensions.ArchiveExtensions.Length,
+            FileExtensions.ArchiveExtensionsSet.Count
+        );
         foreach (var ext in FileExtensions.ArchiveExtensions)
             Assert.Contains(ext, FileExtensions.ArchiveExtensionsSet);
     }
@@ -74,14 +81,28 @@ public class FileExtensionsTests
     [Fact]
     public void PrimaryTargetExtensionsArrayHasExpectedEntries()
     {
-        var expected = new[] { ".cue", ".iso", ".img", ".gdi", ".toc", ".raw", ".ccd", ".mds", ".isz" };
+        var expected = new[]
+        {
+            ".cue",
+            ".iso",
+            ".img",
+            ".gdi",
+            ".toc",
+            ".raw",
+            ".ccd",
+            ".mds",
+            ".isz",
+        };
         Assert.Equal(expected, FileExtensions.PrimaryTargetExtensions);
     }
 
     [Fact]
     public void PrimaryTargetExtensionsSetMatchesArray()
     {
-        Assert.Equal(FileExtensions.PrimaryTargetExtensions.Length, FileExtensions.PrimaryTargetExtensionsSet.Count);
+        Assert.Equal(
+            FileExtensions.PrimaryTargetExtensions.Length,
+            FileExtensions.PrimaryTargetExtensionsSet.Count
+        );
         foreach (var ext in FileExtensions.PrimaryTargetExtensions)
             Assert.Contains(ext, FileExtensions.PrimaryTargetExtensionsSet);
     }
@@ -116,14 +137,37 @@ public class FileExtensionsTests
     [Fact]
     public void AllSupportedInputExtensionsForConversionArrayHasExpectedEntries()
     {
-        var expected = new[] { ".cue", ".iso", ".img", ".gdi", ".toc", ".raw", ".ccd", ".bin", ".mds", ".ecm", ".isz", ".001", ".i00", ".zip", ".7z", ".rar", ".cso", ".pbp" };
+        var expected = new[]
+        {
+            ".cue",
+            ".iso",
+            ".img",
+            ".gdi",
+            ".toc",
+            ".raw",
+            ".ccd",
+            ".bin",
+            ".mds",
+            ".ecm",
+            ".isz",
+            ".001",
+            ".i00",
+            ".zip",
+            ".7z",
+            ".rar",
+            ".cso",
+            ".pbp",
+        };
         Assert.Equal(expected, FileExtensions.AllSupportedInputExtensionsForConversion);
     }
 
     [Fact]
     public void AllSupportedInputExtensionsForConversionSetMatchesArray()
     {
-        Assert.Equal(FileExtensions.AllSupportedInputExtensionsForConversion.Length, FileExtensions.AllSupportedInputExtensionsForConversionSet.Count);
+        Assert.Equal(
+            FileExtensions.AllSupportedInputExtensionsForConversion.Length,
+            FileExtensions.AllSupportedInputExtensionsForConversionSet.Count
+        );
         foreach (var ext in FileExtensions.AllSupportedInputExtensionsForConversion)
             Assert.Contains(ext, FileExtensions.AllSupportedInputExtensionsForConversionSet);
     }
@@ -168,9 +212,15 @@ public class FileExtensionsTests
     [InlineData(".chd", false)]
     [InlineData(".sub", false)]
     [InlineData("", false)]
-    public void AllSupportedInputExtensionsForConversionSetContainsExpectedValues(string ext, bool expected)
+    public void AllSupportedInputExtensionsForConversionSetContainsExpectedValues(
+        string ext,
+        bool expected
+    )
     {
-        Assert.Equal(expected, FileExtensions.AllSupportedInputExtensionsForConversionSet.Contains(ext));
+        Assert.Equal(
+            expected,
+            FileExtensions.AllSupportedInputExtensionsForConversionSet.Contains(ext)
+        );
     }
 
     #endregion
@@ -181,14 +231,22 @@ public class FileExtensionsTests
     public void ArchiveExtensionsAreSubsetOfAllSupported()
     {
         foreach (var ext in FileExtensions.ArchiveExtensions)
-            Assert.Contains(ext, FileExtensions.AllSupportedInputExtensionsForConversion, StringComparer.Ordinal);
+            Assert.Contains(
+                ext,
+                FileExtensions.AllSupportedInputExtensionsForConversion,
+                StringComparer.Ordinal
+            );
     }
 
     [Fact]
     public void PrimaryTargetExtensionsAreSubsetOfAllSupported()
     {
         foreach (var ext in FileExtensions.PrimaryTargetExtensions)
-            Assert.Contains(ext, FileExtensions.AllSupportedInputExtensionsForConversion, StringComparer.Ordinal);
+            Assert.Contains(
+                ext,
+                FileExtensions.AllSupportedInputExtensionsForConversion,
+                StringComparer.Ordinal
+            );
     }
 
     [Fact]

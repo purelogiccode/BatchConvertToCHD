@@ -14,8 +14,9 @@ internal sealed class FileWatcherService : IDisposable
     private const int MaxFileHistory = 1000;
     private const int BufferSize = 65536;
 
-    private readonly ConcurrentDictionary<string, FileEventRecord> _lastEventByFile
-        = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, FileEventRecord> _lastEventByFile = new(
+        StringComparer.OrdinalIgnoreCase
+    );
 
     private readonly ConcurrentQueue<string> _trackedKeys = new();
 
@@ -43,7 +44,7 @@ internal sealed class FileWatcherService : IDisposable
             {
                 IncludeSubdirectories = true,
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName,
-                InternalBufferSize = BufferSize
+                InternalBufferSize = BufferSize,
             };
 
             watcher.Deleted += OnDeleted;
@@ -123,27 +124,33 @@ internal sealed class FileWatcherService : IDisposable
 
         return record.EventType switch
         {
-            FileWatchEventType.Deleted =>
-                string.Format(CultureInfo.InvariantCulture,
-                    "This file was detected as deleted at {0:HH:mm:ss} (during batch processing). It may have been moved or removed by another process.",
-                    record.Timestamp),
+            FileWatchEventType.Deleted => string.Format(
+                CultureInfo.InvariantCulture,
+                "This file was detected as deleted at {0:HH:mm:ss} (during batch processing). It may have been moved or removed by another process.",
+                record.Timestamp
+            ),
 
-            FileWatchEventType.RenamedFrom =>
-                string.Format(CultureInfo.InvariantCulture,
-                    "This file was renamed to '{0}' at {1:HH:mm:ss} (during batch processing).",
-                    record.RelatedName ?? "(unknown)", record.Timestamp),
+            FileWatchEventType.RenamedFrom => string.Format(
+                CultureInfo.InvariantCulture,
+                "This file was renamed to '{0}' at {1:HH:mm:ss} (during batch processing).",
+                record.RelatedName ?? "(unknown)",
+                record.Timestamp
+            ),
 
-            FileWatchEventType.RenamedTo =>
-                string.Format(CultureInfo.InvariantCulture,
-                    "This file was renamed from '{0}' at {1:HH:mm:ss} (during batch processing).",
-                    record.RelatedName ?? "(unknown)", record.Timestamp),
+            FileWatchEventType.RenamedTo => string.Format(
+                CultureInfo.InvariantCulture,
+                "This file was renamed from '{0}' at {1:HH:mm:ss} (during batch processing).",
+                record.RelatedName ?? "(unknown)",
+                record.Timestamp
+            ),
 
-            FileWatchEventType.Created =>
-                string.Format(CultureInfo.InvariantCulture,
-                    "This file was seen created at {0:HH:mm:ss} but is no longer present.",
-                    record.Timestamp),
+            FileWatchEventType.Created => string.Format(
+                CultureInfo.InvariantCulture,
+                "This file was seen created at {0:HH:mm:ss} but is no longer present.",
+                record.Timestamp
+            ),
 
-            _ => null
+            _ => null,
         };
     }
 

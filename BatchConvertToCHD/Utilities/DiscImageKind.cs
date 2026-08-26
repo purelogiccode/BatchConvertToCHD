@@ -34,5 +34,5 @@ internal enum DiscImageKind
     Pbp,
 
     /// <summary>An existing CHD.</summary>
-    Chd
+    Chd,
 }

@@ -48,5 +48,5 @@ public enum CsoError
     /// <summary>
     /// The block size in the header is zero or invalid.
     /// </summary>
-    InvalidBlockSize
+    InvalidBlockSize,
 }

@@ -21,7 +21,7 @@ internal static class RetryingFileOperations
             2 => 2000,
             3 => 4000,
             4 => 6000,
-            _ => 8000
+            _ => 8000,
         };
     }
 
@@ -35,8 +35,12 @@ internal static class RetryingFileOperations
     /// <param name="token">Cancellation token; cancelling aborts the retry loop.</param>
     /// <param name="onRetry">Called with the 0-based attempt number before each retry.</param>
     /// <param name="backoffMsProvider">Optional backoff override (used by tests).</param>
-    internal static async Task<bool> TryDeleteAsync(string path, CancellationToken token, Action<int>? onRetry = null,
-        Func<int, int>? backoffMsProvider = null)
+    internal static async Task<bool> TryDeleteAsync(
+        string path,
+        CancellationToken token,
+        Action<int>? onRetry = null,
+        Func<int, int>? backoffMsProvider = null
+    )
     {
         var clearedReadOnly = false;
         for (var attempt = 0; attempt < MaxDeleteAttempts; attempt++)
@@ -96,8 +100,13 @@ internal static class RetryingFileOperations
     /// <param name="token">Cancellation token; cancelling aborts the retry loop.</param>
     /// <param name="onRetry">Called with the 0-based attempt number before each retry.</param>
     /// <param name="backoffMsProvider">Optional backoff override (used by tests).</param>
-    internal static async Task<bool> TryMoveAsync(string sourcePath, string destinationPath, CancellationToken token,
-        Action<int>? onRetry = null, Func<int, int>? backoffMsProvider = null)
+    internal static async Task<bool> TryMoveAsync(
+        string sourcePath,
+        string destinationPath,
+        CancellationToken token,
+        Action<int>? onRetry = null,
+        Func<int, int>? backoffMsProvider = null
+    )
     {
         for (var attempt = 0; attempt < MaxDeleteAttempts; attempt++)
         {
@@ -105,7 +114,8 @@ internal static class RetryingFileOperations
 
             try
             {
-                await Task.Run(() => File.Move(sourcePath, destinationPath), token).ConfigureAwait(false);
+                await Task.Run(() => File.Move(sourcePath, destinationPath), token)
+                    .ConfigureAwait(false);
                 return true;
             }
             catch (FileNotFoundException)
@@ -136,7 +146,11 @@ internal static class RetryingFileOperations
         return false;
     }
 
-    private static async Task DelayAsync(Func<int, int>? backoffMsProvider, int attempt, CancellationToken token)
+    private static async Task DelayAsync(
+        Func<int, int>? backoffMsProvider,
+        int attempt,
+        CancellationToken token
+    )
     {
         var delayMs = (backoffMsProvider ?? GetDeleteBackoffMs)(attempt);
         if (delayMs > 0)

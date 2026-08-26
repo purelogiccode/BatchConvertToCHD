@@ -14,7 +14,11 @@ public class EcmImageDecoderTests : IDisposable
     /// </summary>
     private const string ExpectedSha1 = "C79042C9DF371FDED431F72B43DCBEDC4DEAEF11";
 
-    private static readonly string FixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "ecm-sample.ecm");
+    private static readonly string FixturePath = Path.Combine(
+        AppContext.BaseDirectory,
+        "Fixtures",
+        "ecm-sample.ecm"
+    );
 
     private readonly string _tempDir;
 
@@ -52,7 +56,12 @@ public class EcmImageDecoderTests : IDisposable
         Assert.True(File.Exists(FixturePath), $"fixture missing at {FixturePath}");
 
         var outputPath = Path.Combine(_tempDir, "decoded.bin");
-        var result = await EcmImageDecoder.DecodeAsync(FixturePath, outputPath, _ => { }, CancellationToken.None);
+        var result = await EcmImageDecoder.DecodeAsync(
+            FixturePath,
+            outputPath,
+            _ => { },
+            CancellationToken.None
+        );
 
         Assert.True(result.Success, result.FailureReason);
 
@@ -97,10 +106,19 @@ public class EcmImageDecoderTests : IDisposable
         var path = Path.Combine(_tempDir, "notecm.ecm");
         await File.WriteAllBytesAsync(path, new byte[512]);
 
-        var result = await EcmImageDecoder.DecodeAsync(path, Path.Combine(_tempDir, "out.bin"), _ => { }, CancellationToken.None);
+        var result = await EcmImageDecoder.DecodeAsync(
+            path,
+            Path.Combine(_tempDir, "out.bin"),
+            _ => { },
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
-        Assert.Contains("not an ECM file", result.FailureReason ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains(
+            "not an ECM file",
+            result.FailureReason ?? string.Empty,
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -110,10 +128,19 @@ public class EcmImageDecoderTests : IDisposable
         var path = Path.Combine(_tempDir, "cut.ecm");
         await File.WriteAllBytesAsync(path, bytes.AsSpan(0, bytes.Length / 2).ToArray());
 
-        var result = await EcmImageDecoder.DecodeAsync(path, Path.Combine(_tempDir, "out.bin"), _ => { }, CancellationToken.None);
+        var result = await EcmImageDecoder.DecodeAsync(
+            path,
+            Path.Combine(_tempDir, "out.bin"),
+            _ => { },
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
-        Assert.Contains("truncated", result.FailureReason ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains(
+            "truncated",
+            result.FailureReason ?? string.Empty,
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -127,10 +154,19 @@ public class EcmImageDecoderTests : IDisposable
         var path = Path.Combine(_tempDir, "badedc.ecm");
         await File.WriteAllBytesAsync(path, bytes);
 
-        var result = await EcmImageDecoder.DecodeAsync(path, Path.Combine(_tempDir, "out.bin"), _ => { }, CancellationToken.None);
+        var result = await EcmImageDecoder.DecodeAsync(
+            path,
+            Path.Combine(_tempDir, "out.bin"),
+            _ => { },
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
-        Assert.Contains("checksum does not match", result.FailureReason ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains(
+            "checksum does not match",
+            result.FailureReason ?? string.Empty,
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -142,7 +178,12 @@ public class EcmImageDecoderTests : IDisposable
         var path = Path.Combine(_tempDir, "damaged.ecm");
         await File.WriteAllBytesAsync(path, bytes);
 
-        var result = await EcmImageDecoder.DecodeAsync(path, Path.Combine(_tempDir, "out.bin"), _ => { }, CancellationToken.None);
+        var result = await EcmImageDecoder.DecodeAsync(
+            path,
+            Path.Combine(_tempDir, "out.bin"),
+            _ => { },
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
         Assert.NotNull(result.FailureReason);
@@ -152,7 +193,11 @@ public class EcmImageDecoderTests : IDisposable
     public async Task AMissingFileIsReportedRatherThanThrown()
     {
         var result = await EcmImageDecoder.DecodeAsync(
-            Path.Combine(_tempDir, "nope.ecm"), Path.Combine(_tempDir, "out.bin"), _ => { }, CancellationToken.None);
+            Path.Combine(_tempDir, "nope.ecm"),
+            Path.Combine(_tempDir, "out.bin"),
+            _ => { },
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
         Assert.NotNull(result.FailureReason);
@@ -256,7 +301,7 @@ public class EcmImageDecoderTests : IDisposable
                 0 => count,
                 1 => count * 0x803,
                 2 => count * 0x804,
-                _ => count * 0x918
+                _ => count * 0x918,
             };
 
             offset += (int)stored;

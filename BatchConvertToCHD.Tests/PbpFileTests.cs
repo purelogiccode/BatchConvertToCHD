@@ -233,7 +233,11 @@ public class PbpFileTests : IDisposable
         }
     }
 
-    private static void WriteStandardPbpHeader(Stream ms, int sfoOffset = 0x28, int dataPsarOffset = 0x200)
+    private static void WriteStandardPbpHeader(
+        Stream ms,
+        int sfoOffset = 0x28,
+        int dataPsarOffset = 0x200
+    )
     {
         ms.Write(BitConverter.GetBytes(PbpHeader.MagicValue));
         ms.Write(BitConverter.GetBytes(1u)); // version
@@ -269,16 +273,7 @@ public class PbpFileTests : IDisposable
     [Fact]
     public void PbpHeaderConstructorSetsAllProperties()
     {
-        var header = new PbpHeader(
-            1,
-            0x28,
-            0x100,
-            0x200,
-            0x300,
-            0x400,
-            0x500,
-            0x600,
-            0x700);
+        var header = new PbpHeader(1, 0x28, 0x100, 0x200, 0x300, 0x400, 0x500, 0x600, 0x700);
 
         Assert.Equal(1u, header.Version);
         Assert.Equal(0x28, header.SfoOffset);
@@ -434,7 +429,7 @@ public class PbpFileTests : IDisposable
 
         var entries = new List<(string Key, ushort Format, byte[] Data)>
         {
-            ("TITLE", 0x0204, "Test Game"u8.ToArray())
+            ("TITLE", 0x0204, "Test Game"u8.ToArray()),
         };
 
         var entryCount = (uint)entries.Count;
@@ -502,10 +497,7 @@ public class PbpFileTests : IDisposable
     public void OpenSyntheticSingleDiscUncompressedReturnsSuccess()
     {
         var path = Path.Combine(_tempDir, $"synth_uncompressed_{Guid.NewGuid():N}.pbp");
-        new PbpTestFileBuilder()
-            .WithBlockCount(2)
-            .WithCompressedBlocks(false)
-            .BuildTo(path);
+        new PbpTestFileBuilder().WithBlockCount(2).WithCompressedBlocks(false).BuildTo(path);
 
         var error = PbpFile.Open(path, out var pbp);
         Assert.Equal(PbpError.None, error);
@@ -632,7 +624,9 @@ public class PbpFileTests : IDisposable
         Assert.NotNull(pbp);
 
         var buffer = new byte[16 * PbpDiscInfo.IsoBlockSize];
-        Assert.Throws<ArgumentOutOfRangeException>(() => pbp.Discs[0].ReadBlock(999, buffer, out _));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            pbp.Discs[0].ReadBlock(999, buffer, out _)
+        );
         Assert.Throws<ArgumentOutOfRangeException>(() => pbp.Discs[0].ReadBlock(-1, buffer, out _));
 
         pbp.Dispose();
@@ -695,7 +689,9 @@ public class PbpFileTests : IDisposable
         cts.Cancel(); // pre-cancel
 
         using var outputStream = new MemoryStream();
-        Assert.Throws<OperationCanceledException>(() => pbp.Discs[0].ExtractTo(outputStream, null, cts.Token));
+        Assert.Throws<OperationCanceledException>(() =>
+            pbp.Discs[0].ExtractTo(outputStream, null, cts.Token)
+        );
 
         pbp.Dispose();
     }
@@ -821,10 +817,7 @@ public class PbpFileTests : IDisposable
     public void SyntheticMultiDiscPbpReturnsSuccess()
     {
         var path = Path.Combine(_tempDir, $"synth_multidisc_{Guid.NewGuid():N}.pbp");
-        new PbpTestFileBuilder()
-            .AsMultiDisc(0x200000, 0x400000)
-            .WithBlockCount(2)
-            .BuildTo(path);
+        new PbpTestFileBuilder().AsMultiDisc(0x200000, 0x400000).WithBlockCount(2).BuildTo(path);
 
         var error = PbpFile.Open(path, out var pbp);
         Assert.Equal(PbpError.None, error);
@@ -860,10 +853,7 @@ public class PbpFileTests : IDisposable
     public void SyntheticMultiDiscPbpExtractToProducesData()
     {
         var path = Path.Combine(_tempDir, $"synth_multidisc_extract_{Guid.NewGuid():N}.pbp");
-        new PbpTestFileBuilder()
-            .AsMultiDisc(0x200000, 0x400000)
-            .WithBlockCount(2)
-            .BuildTo(path);
+        new PbpTestFileBuilder().AsMultiDisc(0x200000, 0x400000).WithBlockCount(2).BuildTo(path);
 
         var error = PbpFile.Open(path, out var pbp);
         Assert.Equal(PbpError.None, error);
@@ -966,7 +956,9 @@ public class PbpFileTests : IDisposable
     /// </summary>
     private sealed class NonSeekableStream : MemoryStream
     {
-        public NonSeekableStream(byte[] buffer) : base(buffer) { }
+        public NonSeekableStream(byte[] buffer)
+            : base(buffer) { }
+
         public override bool CanSeek => false;
     }
 
@@ -976,20 +968,35 @@ public class PbpFileTests : IDisposable
     private sealed class WriteOnlyStream : Stream
     {
         private readonly Stream _inner;
+
         public WriteOnlyStream(Stream inner) => _inner = inner;
+
         public override bool CanRead => false;
         public override bool CanSeek => _inner.CanSeek;
         public override bool CanWrite => true;
         public override long Length => _inner.Length;
-        public override long Position { get => _inner.Position; set => _inner.Position = value; }
+        public override long Position
+        {
+            get => _inner.Position;
+            set => _inner.Position = value;
+        }
+
         public override void Flush() => _inner.Flush();
-        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException();
+
         public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
+
         public override void SetLength(long value) => _inner.SetLength(value);
-        public override void Write(byte[] buffer, int offset, int count) => _inner.Write(buffer, offset, count);
+
+        public override void Write(byte[] buffer, int offset, int count) =>
+            _inner.Write(buffer, offset, count);
+
         protected override void Dispose(bool disposing)
         {
-            if (disposing) _inner.Dispose();
+            if (disposing)
+                _inner.Dispose();
             base.Dispose(disposing);
         }
     }

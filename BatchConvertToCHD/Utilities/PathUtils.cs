@@ -76,14 +76,21 @@ internal static class PathUtils
             Logger.Verbose(ex, "Failed to create a temp directory under the system temp path");
         }
 
-        foreach (var drive in DriveInfo.GetDrives()
-                     .Where(static d => d is { IsReady: true, DriveType: DriveType.Fixed })
-                     .OrderByDescending(static d => d.AvailableFreeSpace))
+        foreach (
+            var drive in DriveInfo
+                .GetDrives()
+                .Where(static d => d is { IsReady: true, DriveType: DriveType.Fixed })
+                .OrderByDescending(static d => d.AvailableFreeSpace)
+        )
         {
             var candidate = Path.Combine(
-                drive.RootDirectory.FullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                drive.RootDirectory.FullName.TrimEnd(
+                    Path.DirectorySeparatorChar,
+                    Path.AltDirectorySeparatorChar
+                ),
                 "BatchConvertToCHD_Temp",
-                $"{tempDirPrefix}{guid}");
+                $"{tempDirPrefix}{guid}"
+            );
             try
             {
                 Directory.CreateDirectory(candidate);
@@ -153,11 +160,18 @@ internal static class PathUtils
     /// <param name="desiredExtensionWithoutDot">The desired extension without the dot (e.g., "iso").</param>
     /// <param name="tempDirectory">The temporary directory path.</param>
     /// <returns>A full path to a safe temporary file.</returns>
-    internal static string GetSafeTempFileName(string originalFileNameWithExtension, string desiredExtensionWithoutDot,
-        string tempDirectory)
+    internal static string GetSafeTempFileName(
+        string originalFileNameWithExtension,
+        string desiredExtensionWithoutDot,
+        string tempDirectory
+    )
     {
-        var sanitizedName = SanitizeFileName(Path.GetFileNameWithoutExtension(originalFileNameWithExtension));
-        var safeBaseName = string.IsNullOrEmpty(sanitizedName) ? Guid.NewGuid().ToString("N") : sanitizedName;
+        var sanitizedName = SanitizeFileName(
+            Path.GetFileNameWithoutExtension(originalFileNameWithExtension)
+        );
+        var safeBaseName = string.IsNullOrEmpty(sanitizedName)
+            ? Guid.NewGuid().ToString("N")
+            : sanitizedName;
         var ext = desiredExtensionWithoutDot.TrimStart('.');
         return Path.Combine(tempDirectory, safeBaseName + "." + ext);
     }
@@ -194,8 +208,12 @@ internal static class PathUtils
     /// enough free space for the operation, even if it is not the drive with the most
     /// total free space. Falls back to the system temp path if no suitable alternative is found.
     /// </summary>
-    internal static string GetBestTempDirectory(string? inputFilePath, string? outputFolderPath, string tempDirPrefix,
-        long requiredBytes = 0)
+    internal static string GetBestTempDirectory(
+        string? inputFilePath,
+        string? outputFolderPath,
+        string tempDirPrefix,
+        long requiredBytes = 0
+    )
     {
         const long minFreeBytes = 1024L * 1024 * 1024; // 1 GB minimum to consider a drive viable
 
@@ -239,8 +257,11 @@ internal static class PathUtils
                         bestRoot = root;
                     }
 
-                    if (requiredBytes > 0 && drive.AvailableFreeSpace >= requiredBytes &&
-                        drive.AvailableFreeSpace > bestFreeMeetingRequirement)
+                    if (
+                        requiredBytes > 0
+                        && drive.AvailableFreeSpace >= requiredBytes
+                        && drive.AvailableFreeSpace > bestFreeMeetingRequirement
+                    )
                     {
                         bestFreeMeetingRequirement = drive.AvailableFreeSpace;
                         bestRootMeetingRequirement = root;
@@ -249,17 +270,25 @@ internal static class PathUtils
             }
             catch (Exception ex)
             {
-                Logger.Verbose(ex, "Failed to query drive {Root} during best-root enumeration", root);
+                Logger.Verbose(
+                    ex,
+                    "Failed to query drive {Root} during best-root enumeration",
+                    root
+                );
             }
         }
 
         var selectedRoot = bestRootMeetingRequirement ?? bestRoot;
-        var selectedFree = bestRootMeetingRequirement != null ? bestFreeMeetingRequirement : bestFree;
+        var selectedFree =
+            bestRootMeetingRequirement != null ? bestFreeMeetingRequirement : bestFree;
 
         if (selectedRoot != null && !IsRootDirectoryWritable(selectedRoot))
         {
             // Informational: the fallback is expected behavior, not an error condition.
-            Logger.Information("Selected temp root {Root} is not writable, falling back to system temp", selectedRoot);
+            Logger.Information(
+                "Selected temp root {Root} is not writable, falling back to system temp",
+                selectedRoot
+            );
             selectedRoot = null;
             selectedFree = 0;
         }
@@ -274,12 +303,17 @@ internal static class PathUtils
             // non-ASCII characters (e.g. "C:\Users\Kauê Chacon\...") or approach MAX_PATH, which
             // old chdman builds cannot open ("No such file or directory"); in that case use the
             // ASCII-safe drive-root folder instead.
-            basePath = string.Equals(selectedRoot, systemTempRoot, StringComparison.OrdinalIgnoreCase) &&
-                       IsChdmanSafePath(Path.GetTempPath())
-                ? Path.GetTempPath()
-                : Path.Combine(
-                    selectedRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
-                    "BatchConvertToCHD_Temp");
+            basePath =
+                string.Equals(selectedRoot, systemTempRoot, StringComparison.OrdinalIgnoreCase)
+                && IsChdmanSafePath(Path.GetTempPath())
+                    ? Path.GetTempPath()
+                    : Path.Combine(
+                        selectedRoot.TrimEnd(
+                            Path.DirectorySeparatorChar,
+                            Path.AltDirectorySeparatorChar
+                        ),
+                        "BatchConvertToCHD_Temp"
+                    );
         }
         else
         {
@@ -290,7 +324,8 @@ internal static class PathUtils
 
         void AddCandidateRoot(string? path)
         {
-            if (string.IsNullOrEmpty(path)) return;
+            if (string.IsNullOrEmpty(path))
+                return;
 
             try
             {
@@ -333,7 +368,10 @@ internal static class PathUtils
         // forever would be worse than falling back to a name that cannot collide.
         for (var suffix = 2; suffix <= 999; suffix++)
         {
-            candidate = Path.Combine(parentDirectory, $"{safeName} ({suffix.ToString(CultureInfo.InvariantCulture)})");
+            candidate = Path.Combine(
+                parentDirectory,
+                $"{safeName} ({suffix.ToString(CultureInfo.InvariantCulture)})"
+            );
             if (!Directory.Exists(candidate) && !File.Exists(candidate))
             {
                 return candidate;
@@ -372,7 +410,10 @@ internal static class PathUtils
                 return true;
             }
 
-            return candidateFull.StartsWith(rootFull + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+            return candidateFull.StartsWith(
+                rootFull + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase
+            );
         }
         catch (Exception ex)
         {
@@ -394,7 +435,10 @@ internal static class PathUtils
     /// </summary>
     /// <param name="referencePath">File whose volume the directory must be on.</param>
     /// <param name="tempDirPrefix">Prefix for the directory name.</param>
-    internal static string? CreateTempDirectoryOnSameVolume(string referencePath, string tempDirPrefix)
+    internal static string? CreateTempDirectoryOnSameVolume(
+        string referencePath,
+        string tempDirPrefix
+    )
     {
         string? volumeRoot;
         try
@@ -422,7 +466,11 @@ internal static class PathUtils
             }
             catch (Exception ex)
             {
-                Logger.Verbose(ex, "Failed to create a same-volume temp directory at {Path}", candidate);
+                Logger.Verbose(
+                    ex,
+                    "Failed to create a same-volume temp directory at {Path}",
+                    candidate
+                );
             }
         }
 
@@ -449,8 +497,9 @@ internal static class PathUtils
             Logger.Verbose(ex, "Failed to get the volume root of the system temp directory");
         }
 
-        var systemTempOnVolume = !string.IsNullOrEmpty(systemTempRoot) &&
-                                 string.Equals(systemTempRoot, volumeRoot, StringComparison.OrdinalIgnoreCase);
+        var systemTempOnVolume =
+            !string.IsNullOrEmpty(systemTempRoot)
+            && string.Equals(systemTempRoot, volumeRoot, StringComparison.OrdinalIgnoreCase);
 
         if (systemTempOnVolume && IsChdmanSafePath(systemTemp))
         {
@@ -458,9 +507,10 @@ internal static class PathUtils
         }
 
         yield return Path.Combine(
-            volumeRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
-            Path.DirectorySeparatorChar,
-            "BatchConvertToCHD_Temp");
+            volumeRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar,
+            "BatchConvertToCHD_Temp"
+        );
 
         // Last resort: an unsafe %TEMP% path still usually beats failing outright - the generated
         // cue may still convert if chdman tolerates the path, and the failure message will name it.
@@ -484,7 +534,8 @@ internal static class PathUtils
             Logger.Verbose(ex, "Failed to test write access for root {RootPath}", rootPath);
             try
             {
-                if (Directory.Exists(testDir)) Directory.Delete(testDir);
+                if (Directory.Exists(testDir))
+                    Directory.Delete(testDir);
             }
             catch
             {
@@ -511,9 +562,12 @@ internal static class PathUtils
                 if (drive is { IsReady: true, DriveType: DriveType.Fixed })
                 {
                     var altPath = Path.Combine(
-                        drive.RootDirectory.FullName.TrimEnd(Path.DirectorySeparatorChar,
-                            Path.AltDirectorySeparatorChar),
-                        "BatchConvertToCHD_Temp");
+                        drive.RootDirectory.FullName.TrimEnd(
+                            Path.DirectorySeparatorChar,
+                            Path.AltDirectorySeparatorChar
+                        ),
+                        "BatchConvertToCHD_Temp"
+                    );
                     if (Directory.Exists(altPath))
                         paths.Add(altPath);
                 }
@@ -530,8 +584,12 @@ internal static class PathUtils
     /// <summary>
     /// Validates and normalizes a directory path. Returns null if invalid.
     /// </summary>
-    internal static string? ValidateAndNormalizePath(string? path, string pathName, Action<string> onError,
-        Action<string> onLog)
+    internal static string? ValidateAndNormalizePath(
+        string? path,
+        string pathName,
+        Action<string> onError,
+        Action<string> onLog
+    )
     {
         try
         {
@@ -547,7 +605,8 @@ internal static class PathUtils
             {
                 onLog($"ERROR: {pathName} does not exist: {normalizedPath}");
                 onError(
-                    $"The {pathName} does not exist or is not accessible:\n\n{normalizedPath}\n\nPlease verify the path and try again.");
+                    $"The {pathName} does not exist or is not accessible:\n\n{normalizedPath}\n\nPlease verify the path and try again."
+                );
                 return null;
             }
 

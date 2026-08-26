@@ -7,7 +7,12 @@ namespace BatchConvertToCHD.Utilities.Mds;
 /// <param name="Tracks">Tracks in descriptor order, lead-in and lead-out entries removed.</param>
 /// <param name="MdsPath">Path of the .mds descriptor.</param>
 /// <param name="MdfPath">Path of the .mdf data file, or null when it could not be found.</param>
-internal sealed record MdsDisc(int SessionCount, IReadOnlyList<MdsTrack> Tracks, string MdsPath, string? MdfPath)
+internal sealed record MdsDisc(
+    int SessionCount,
+    IReadOnlyList<MdsTrack> Tracks,
+    string MdsPath,
+    string? MdfPath
+)
 {
     /// <summary>Raw CD sector size.</summary>
     internal const int RawSectorSize = 2352;
@@ -38,7 +43,8 @@ internal sealed record MdsDisc(int SessionCount, IReadOnlyList<MdsTrack> Tracks,
     internal bool IsPlainRawCd => SectorSize == RawSectorSize;
 
     /// <summary>True when every track's mode maps to something a cue can express.</summary>
-    internal bool AllTracksDescribable => Tracks.Count > 0 && Tracks.All(static t => t.CueTrackType is not null);
+    internal bool AllTracksDescribable =>
+        Tracks.Count > 0 && Tracks.All(static t => t.CueTrackType is not null);
 
     /// <summary>A one-line summary for the log.</summary>
     internal string Summary =>

@@ -24,7 +24,7 @@ nav_order: 3
 
 ## 2.2 Installation (End Users)
 
-1. Download the latest binary from the [Releases page](https://github.com/drpetersonfernandes/BatchConvertToCHD/releases).
+1. Download the latest binary from the [Releases page](https://github.com/purelogiccode/BatchConvertToCHD/releases).
 2. Extract the contents to a permanent folder (do **not** run from a temp/Downloads folder if you want update/self-containment to behave).
 3. **Important**: keep all `.exe` files (including ARM64 variants) in the same directory as `BatchConvertToCHD.exe` — `chdman.exe` and `7za.exe` are located relative to the app's base directory (`MainWindow.xaml.cs:96–101`).
 4. Launch `BatchConvertToCHD.exe`.
@@ -35,7 +35,7 @@ nav_order: 3
 
 ```bash
 # Clone
-git clone https://github.com/drpetersonfernandes/BatchConvertToCHD.git
+git clone https://github.com/purelogiccode/BatchConvertToCHD.git
 cd CSharp_BatchConvertToCHD
 
 # Build the whole solution

@@ -25,8 +25,12 @@ internal static class CueWorkDirectory
     /// <param name="onLog">Optional logging callback.</param>
     /// <param name="token">Cancellation token.</param>
     internal static async Task<CueWorkDirectoryResult> PrepareAsync(
-        string cuePath, string tempDirPrefix, IMp3Decoder? mp3Decoder = null, Action<string>? onLog = null,
-        CancellationToken token = default)
+        string cuePath,
+        string tempDirPrefix,
+        IMp3Decoder? mp3Decoder = null,
+        Action<string>? onLog = null,
+        CancellationToken token = default
+    )
     {
         var result = await CueNormalizer.NormalizeAsync(cuePath, token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
@@ -36,23 +40,37 @@ internal static class CueWorkDirectory
             return new CueWorkDirectoryResult(null, null, result.UnresolvedNames);
         }
 
-        var isUtf8 = string.Equals(result.SourceEncoding.WebName, "utf-8", StringComparison.OrdinalIgnoreCase);
-        var hasMp3Tracks = mp3Decoder is not null &&
-                           result.References.Any(static r =>
-                               string.Equals(r.TrackType, "MP3", StringComparison.Ordinal));
-        var namesNeedAscii = cuePath.Any(static c => c > 127) ||
-                             result.References.Any(static r => r.ReferencedName.Any(static c => c > 127));
+        var isUtf8 = string.Equals(
+            result.SourceEncoding.WebName,
+            "utf-8",
+            StringComparison.OrdinalIgnoreCase
+        );
+        var hasMp3Tracks =
+            mp3Decoder is not null
+            && result.References.Any(static r =>
+                string.Equals(r.TrackType, "MP3", StringComparison.Ordinal)
+            );
+        var namesNeedAscii =
+            cuePath.Any(static c => c > 127)
+            || result.References.Any(static r => r.ReferencedName.Any(static c => c > 127));
 
         // chdman's CRT file APIs are capped at MAX_PATH (260): a descriptor or referenced file at
         // or beyond that length fails with "No such file or directory" even though every file
         // exists. The copy-based work directory below gives chdman short ASCII names instead.
         // The in-place fast path is declined for these cues because its relative FILE references
         // rejoin into the same overlong paths.
-        var pathTooLong = cuePath.Length >= PathUtils.MaxChdmanPath ||
-                          result.References.Any(r => r.ResolvedFullPath.Length >= PathUtils.MaxChdmanPath);
+        var pathTooLong =
+            cuePath.Length >= PathUtils.MaxChdmanPath
+            || result.References.Any(r => r.ResolvedFullPath.Length >= PathUtils.MaxChdmanPath);
 
-        var needsWorkDir = !isUtf8 || result.HasBom || result.NeedsRewrite || result.ReferencesChanged ||
-                           hasMp3Tracks || namesNeedAscii || pathTooLong;
+        var needsWorkDir =
+            !isUtf8
+            || result.HasBom
+            || result.NeedsRewrite
+            || result.ReferencesChanged
+            || hasMp3Tracks
+            || namesNeedAscii
+            || pathTooLong;
         if (!needsWorkDir)
         {
             return new CueWorkDirectoryResult(null, null, []);
@@ -71,7 +89,8 @@ internal static class CueWorkDirectory
             // forces the copy-based fallback below.
             if (result.HasBom && !hasMp3Tracks && !namesNeedAscii && !pathTooLong)
             {
-                var inPlaceWorkCue = await TryWriteInPlaceWorkCueAsync(cuePath, workDir, token).ConfigureAwait(false);
+                var inPlaceWorkCue = await TryWriteInPlaceWorkCueAsync(cuePath, workDir, token)
+                    .ConfigureAwait(false);
                 if (inPlaceWorkCue is not null)
                 {
                     return new CueWorkDirectoryResult(inPlaceWorkCue, workDir, []);
@@ -88,7 +107,10 @@ internal static class CueWorkDirectory
             {
                 var reference = result.References[i];
                 string workName;
-                if (mp3Decoder is not null && string.Equals(reference.TrackType, "MP3", StringComparison.Ordinal))
+                if (
+                    mp3Decoder is not null
+                    && string.Equals(reference.TrackType, "MP3", StringComparison.Ordinal)
+                )
                 {
                     workName = $"track{i + 1:D2}.wav";
                     workTypes[reference.FullPath] = "WAVE";
@@ -103,7 +125,8 @@ internal static class CueWorkDirectory
                 var suffix = 1;
                 while (!usedNames.Add(workName))
                 {
-                    workName = $"{Path.GetFileNameWithoutExtension(baseName)}_{suffix++}{Path.GetExtension(baseName)}";
+                    workName =
+                        $"{Path.GetFileNameWithoutExtension(baseName)}_{suffix++}{Path.GetExtension(baseName)}";
                 }
 
                 workNames[reference.FullPath] = workName;
@@ -113,23 +136,41 @@ internal static class CueWorkDirectory
             foreach (var reference in result.References)
             {
                 var workName = workNames[reference.FullPath];
-                onLog?.Invoke($"Preparing {Path.GetFileName(reference.ResolvedFullPath)} for conversion...");
-                if (mp3Decoder is not null && string.Equals(reference.TrackType, "MP3", StringComparison.Ordinal))
+                onLog?.Invoke(
+                    $"Preparing {Path.GetFileName(reference.ResolvedFullPath)} for conversion..."
+                );
+                if (
+                    mp3Decoder is not null
+                    && string.Equals(reference.TrackType, "MP3", StringComparison.Ordinal)
+                )
                 {
                     await mp3Decoder
-                        .DecodeAsync(reference.ResolvedFullPath, Path.Combine(workDir, workName), onLog, token)
+                        .DecodeAsync(
+                            reference.ResolvedFullPath,
+                            Path.Combine(workDir, workName),
+                            onLog,
+                            token
+                        )
                         .ConfigureAwait(false);
                 }
                 else
                 {
-                    await CopyWithRetryAsync(reference.ResolvedFullPath, Path.Combine(workDir, workName), token)
+                    await CopyWithRetryAsync(
+                            reference.ResolvedFullPath,
+                            Path.Combine(workDir, workName),
+                            token
+                        )
                         .ConfigureAwait(false);
                 }
             }
 
-            var normalized = await CueNormalizer.NormalizeAsync(cuePath, token, Transform).ConfigureAwait(false);
+            var normalized = await CueNormalizer
+                .NormalizeAsync(cuePath, token, Transform)
+                .ConfigureAwait(false);
             var workCue = Path.Combine(workDir, "game.cue");
-            await CueNormalizer.WriteCanonicalCueAsync(workCue, normalized, token).ConfigureAwait(false);
+            await CueNormalizer
+                .WriteCanonicalCueAsync(workCue, normalized, token)
+                .ConfigureAwait(false);
             return new CueWorkDirectoryResult(workCue, workDir, []);
 
             // Rewrite the cue so its FILE lines reference the ASCII work names.
@@ -149,7 +190,8 @@ internal static class CueWorkDirectory
         {
             try
             {
-                if (Directory.Exists(workDir)) Directory.Delete(workDir, true);
+                if (Directory.Exists(workDir))
+                    Directory.Delete(workDir, true);
             }
             catch
             {
@@ -168,14 +210,23 @@ internal static class CueWorkDirectory
     /// Returns null when any bin cannot be referenced relatively (e.g. it is on another drive),
     /// in which case the caller must fall back to the copy-based path.
     /// </summary>
-    internal static async Task<string?> TryWriteInPlaceWorkCueAsync(string cuePath, string workDir,
-        CancellationToken token)
+    internal static async Task<string?> TryWriteInPlaceWorkCueAsync(
+        string cuePath,
+        string workDir,
+        CancellationToken token
+    )
     {
-        var normalized = await CueNormalizer.NormalizeAsync(cuePath, token, TransformRelative).ConfigureAwait(false);
+        var normalized = await CueNormalizer
+            .NormalizeAsync(cuePath, token, TransformRelative)
+            .ConfigureAwait(false);
         try
         {
-            if (normalized.UnresolvedNames.Count > 0 || normalized.References.Any(r =>
-                    Path.IsPathRooted(Path.GetRelativePath(workDir, r.ResolvedFullPath))))
+            if (
+                normalized.UnresolvedNames.Count > 0
+                || normalized.References.Any(r =>
+                    Path.IsPathRooted(Path.GetRelativePath(workDir, r.ResolvedFullPath))
+                )
+            )
             {
                 return null;
             }
@@ -188,7 +239,9 @@ internal static class CueWorkDirectory
         }
 
         var workCue = Path.Combine(workDir, "game.cue");
-        await CueNormalizer.WriteCanonicalCueAsync(workCue, normalized, token).ConfigureAwait(false);
+        await CueNormalizer
+            .WriteCanonicalCueAsync(workCue, normalized, token)
+            .ConfigureAwait(false);
         return workCue;
 
         // Rewrite the cue so its FILE lines reference each bin via a path relative to the
@@ -200,7 +253,11 @@ internal static class CueWorkDirectory
         }
     }
 
-    private static async Task CopyWithRetryAsync(string source, string dest, CancellationToken token)
+    private static async Task CopyWithRetryAsync(
+        string source,
+        string dest,
+        CancellationToken token
+    )
     {
         const int maxAttempts = 4;
         for (var attempt = 0; attempt < maxAttempts; attempt++)

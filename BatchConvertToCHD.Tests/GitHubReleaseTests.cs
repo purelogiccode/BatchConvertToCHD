@@ -5,7 +5,10 @@ namespace BatchConvertToCHD.Tests;
 
 public class GitHubReleaseTests
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
 
     [Fact]
     public void DefaultValuesAreEmpty()
@@ -29,7 +32,7 @@ public class GitHubReleaseTests
             Name = "Release 1.0.0",
             Body = "Release notes",
             Prerelease = true,
-            Draft = false
+            Draft = false,
         };
         Assert.Equal("v1.0.0", release.TagName);
         Assert.Equal("https://github.com/repo/releases/v1.0.0", release.HtmlUrl);
@@ -43,15 +46,15 @@ public class GitHubReleaseTests
     public void DeserializeValidReleaseJson()
     {
         const string json = """
-        {
-            "tag_name": "v2.0.0",
-            "html_url": "https://github.com/test/repo/releases/tag/v2.0.0",
-            "name": "Version 2.0.0",
-            "body": "Major update with new features",
-            "prerelease": false,
-            "draft": false
-        }
-        """;
+            {
+                "tag_name": "v2.0.0",
+                "html_url": "https://github.com/test/repo/releases/tag/v2.0.0",
+                "name": "Version 2.0.0",
+                "body": "Major update with new features",
+                "prerelease": false,
+                "draft": false
+            }
+            """;
 
         var options = JsonOptions;
         var release = JsonSerializer.Deserialize<GitHubRelease>(json, options);
@@ -69,15 +72,15 @@ public class GitHubReleaseTests
     public void DeserializePrereleaseJson()
     {
         const string json = """
-        {
-            "tag_name": "v3.0.0-beta",
-            "html_url": "https://github.com/test/repo/releases/tag/v3.0.0-beta",
-            "name": "Beta Release",
-            "body": "Pre-release testing",
-            "prerelease": true,
-            "draft": true
-        }
-        """;
+            {
+                "tag_name": "v3.0.0-beta",
+                "html_url": "https://github.com/test/repo/releases/tag/v3.0.0-beta",
+                "name": "Beta Release",
+                "body": "Pre-release testing",
+                "prerelease": true,
+                "draft": true
+            }
+            """;
 
         var options = JsonOptions;
         var release = JsonSerializer.Deserialize<GitHubRelease>(json, options);

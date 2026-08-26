@@ -45,7 +45,8 @@ internal static class IszImageBuilder
         int pointerLength,
         Func<int, int> flagForChunk,
         int passwordMode = 0,
-        uint? declaredSectors = null)
+        uint? declaredSectors = null
+    )
     {
         var chunks = BuildChunks(image, chunkSize, pointerLength, flagForChunk);
         var chunkTable = BuildChunkTable(chunks, pointerLength);
@@ -65,7 +66,8 @@ internal static class IszImageBuilder
             chunkTableOffset: HeaderLength,
             segmentTableOffset: 0,
             dataOffset: (uint)dataOffset,
-            volumeSerial: DefaultVolumeSerial);
+            volumeSerial: DefaultVolumeSerial
+        );
 
         using var file = new FileStream(path, FileMode.Create, FileAccess.Write);
         file.Write(header);
@@ -95,7 +97,8 @@ internal static class IszImageBuilder
         Func<int, int> flagForChunk,
         int splitAfterBytes,
         uint? secondSegmentVolumeSerial = null,
-        bool writeSecondSegment = true)
+        bool writeSecondSegment = true
+    )
     {
         var chunks = BuildChunks(image, chunkSize, pointerLength, flagForChunk);
         var chunkTable = BuildChunkTable(chunks, pointerLength);
@@ -132,8 +135,22 @@ internal static class IszImageBuilder
         var secondLength = HeaderLength + secondData.Length;
 
         var segmentTable = new byte[3 * SegmentEntryLength];
-        WriteSegmentEntry(segmentTable.AsSpan(0), firstLength, chunksStartingInFirst, 0, dataOffset, leftSize);
-        WriteSegmentEntry(segmentTable.AsSpan(SegmentEntryLength), secondLength, chunks.Count - chunksStartingInFirst, chunksStartingInFirst, HeaderLength, 0);
+        WriteSegmentEntry(
+            segmentTable.AsSpan(0),
+            firstLength,
+            chunksStartingInFirst,
+            0,
+            dataOffset,
+            leftSize
+        );
+        WriteSegmentEntry(
+            segmentTable.AsSpan(SegmentEntryLength),
+            secondLength,
+            chunks.Count - chunksStartingInFirst,
+            chunksStartingInFirst,
+            HeaderLength,
+            0
+        );
         // Third entry stays zeroed: the spec terminates the table with a zero-size entry.
 
         var firstHeader = BuildHeader(
@@ -148,7 +165,8 @@ internal static class IszImageBuilder
             chunkTableOffset: chunkTableOffset,
             segmentTableOffset: HeaderLength,
             dataOffset: (uint)dataOffset,
-            volumeSerial: DefaultVolumeSerial);
+            volumeSerial: DefaultVolumeSerial
+        );
 
         using (var file = new FileStream(firstPath, FileMode.Create, FileAccess.Write))
         {
@@ -175,9 +193,14 @@ internal static class IszImageBuilder
             chunkTableOffset: 0,
             segmentTableOffset: 0,
             dataOffset: HeaderLength,
-            volumeSerial: secondSegmentVolumeSerial ?? DefaultVolumeSerial);
+            volumeSerial: secondSegmentVolumeSerial ?? DefaultVolumeSerial
+        );
 
-        using var second = new FileStream(GetSecondSegmentPath(firstPath), FileMode.Create, FileAccess.Write);
+        using var second = new FileStream(
+            GetSecondSegmentPath(firstPath),
+            FileMode.Create,
+            FileAccess.Write
+        );
         second.Write(secondHeader);
         second.Write(secondData);
     }
@@ -207,7 +230,8 @@ internal static class IszImageBuilder
         uint dataOffset,
         uint volumeSerial,
         int headerSize = HeaderLength,
-        int version = 1)
+        int version = 1
+    )
     {
         var header = new byte[HeaderLength];
 
@@ -248,7 +272,13 @@ internal static class IszImageBuilder
             case AdiZlib:
             {
                 using var output = new MemoryStream();
-                using (var deflate = new ZLibStream(output, CompressionLevel.SmallestSize, leaveOpen: true))
+                using (
+                    var deflate = new ZLibStream(
+                        output,
+                        CompressionLevel.SmallestSize,
+                        leaveOpen: true
+                    )
+                )
                 {
                     deflate.Write(plain);
                 }
@@ -258,7 +288,14 @@ internal static class IszImageBuilder
             default:
             {
                 using var output = new MemoryStream();
-                using (var bzip2 = BZip2Stream.Create(output, SharpCompress.Compressors.CompressionMode.Compress, decompressConcatenated: false, leaveOpen: true))
+                using (
+                    var bzip2 = BZip2Stream.Create(
+                        output,
+                        SharpCompress.Compressors.CompressionMode.Compress,
+                        decompressConcatenated: false,
+                        leaveOpen: true
+                    )
+                )
                 {
                     bzip2.Write(plain);
                 }
@@ -268,7 +305,12 @@ internal static class IszImageBuilder
         }
     }
 
-    private static List<Chunk> BuildChunks(byte[] image, int chunkSize, int pointerLength, Func<int, int> flagForChunk)
+    private static List<Chunk> BuildChunks(
+        byte[] image,
+        int chunkSize,
+        int pointerLength,
+        Func<int, int> flagForChunk
+    )
     {
         var chunks = new List<Chunk>();
         var maxStored = (1 << (8 * pointerLength - 2)) - 1;
@@ -291,7 +333,9 @@ internal static class IszImageBuilder
 
             if (stored.Length > maxStored)
             {
-                throw new InvalidOperationException($"chunk {chunks.Count} stores {stored.Length} bytes, more than a {pointerLength}-byte pointer can express");
+                throw new InvalidOperationException(
+                    $"chunk {chunks.Count} stores {stored.Length} bytes, more than a {pointerLength}-byte pointer can express"
+                );
             }
 
             chunks.Add(new Chunk(flag, stored));
@@ -310,7 +354,8 @@ internal static class IszImageBuilder
 
             // The flag occupies the top two bits of the whole entry, so it lands in the top two bits
             // of the last byte of a little-endian value.
-            var entry = (uint)chunk.Stored.Length | ((ulong)(chunk.Flag >> 6) << (8 * pointerLength - 2));
+            var entry =
+                (uint)chunk.Stored.Length | ((ulong)(chunk.Flag >> 6) << (8 * pointerLength - 2));
 
             for (var b = 0; b < pointerLength; b++)
             {
@@ -321,7 +366,14 @@ internal static class IszImageBuilder
         return table;
     }
 
-    private static void WriteSegmentEntry(Span<byte> target, long size, int chunkCount, int firstChunkNumber, int chunkOffset, int leftSize)
+    private static void WriteSegmentEntry(
+        Span<byte> target,
+        long size,
+        int chunkCount,
+        int firstChunkNumber,
+        int chunkOffset,
+        int leftSize
+    )
     {
         BinaryPrimitives.WriteInt64LittleEndian(target, size);
         BinaryPrimitives.WriteInt32LittleEndian(target[8..], chunkCount);

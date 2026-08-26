@@ -8,7 +8,10 @@ public class RetryingFileOperationsTests : IDisposable
 
     public RetryingFileOperationsTests()
     {
-        _tempDir = Path.Combine(Path.GetTempPath(), $"RetryingFileOperationsTests_{Guid.NewGuid():N}");
+        _tempDir = Path.Combine(
+            Path.GetTempPath(),
+            $"RetryingFileOperationsTests_{Guid.NewGuid():N}"
+        );
         Directory.CreateDirectory(_tempDir);
     }
 
@@ -44,7 +47,10 @@ public class RetryingFileOperationsTests : IDisposable
     [Fact]
     public async Task TryDeleteAsyncMissingFileReturnsTrue()
     {
-        var deleted = await RetryingFileOperations.TryDeleteAsync(Path.Combine(_tempDir, "missing.bin"), CancellationToken.None);
+        var deleted = await RetryingFileOperations.TryDeleteAsync(
+            Path.Combine(_tempDir, "missing.bin"),
+            CancellationToken.None
+        );
 
         Assert.True(deleted);
     }
@@ -59,8 +65,10 @@ public class RetryingFileOperationsTests : IDisposable
         try
         {
             var deleted = await RetryingFileOperations.TryDeleteAsync(
-                path, CancellationToken.None,
-                backoffMsProvider: static _ => 1);
+                path,
+                CancellationToken.None,
+                backoffMsProvider: static _ => 1
+            );
 
             Assert.True(deleted);
             Assert.False(File.Exists(path));
@@ -82,11 +90,21 @@ public class RetryingFileOperationsTests : IDisposable
         var retries = 0;
 
         // Hold an exclusive lock for the whole call so every attempt fails.
-        await using var lockStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
+        await using var lockStream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.None
+        );
         var deleted = await RetryingFileOperations.TryDeleteAsync(
-            path, CancellationToken.None,
-            _ => { retries++; },
-            static _ => 1);
+            path,
+            CancellationToken.None,
+            _ =>
+            {
+                retries++;
+            },
+            static _ => 1
+        );
 
         Assert.False(deleted);
         Assert.Equal(RetryingFileOperations.MaxDeleteAttempts - 1, retries);
@@ -104,7 +122,8 @@ public class RetryingFileOperationsTests : IDisposable
         try
         {
             var deleted = await RetryingFileOperations.TryDeleteAsync(
-                path, CancellationToken.None,
+                path,
+                CancellationToken.None,
                 _ =>
                 {
                     attempts++;
@@ -114,7 +133,8 @@ public class RetryingFileOperationsTests : IDisposable
                         lockStream.Dispose();
                     }
                 },
-                static _ => 1);
+                static _ => 1
+            );
 
             Assert.True(deleted);
             Assert.False(File.Exists(path));
@@ -145,7 +165,8 @@ public class RetryingFileOperationsTests : IDisposable
         var moved = await RetryingFileOperations.TryMoveAsync(
             Path.Combine(_tempDir, "missing-src.bin"),
             Path.Combine(_tempDir, "missing-dst.bin"),
-            CancellationToken.None);
+            CancellationToken.None
+        );
 
         Assert.True(moved);
     }
@@ -158,9 +179,12 @@ public class RetryingFileOperationsTests : IDisposable
         await File.WriteAllTextAsync(source, "data");
 
         var moved = await RetryingFileOperations.TryMoveAsync(
-            source, dest, CancellationToken.None,
+            source,
+            dest,
+            CancellationToken.None,
             static _ => { },
-            static _ => 1);
+            static _ => 1
+        );
 
         Assert.False(moved);
         Assert.True(File.Exists(source), "source must remain in place when the move fails");
@@ -175,11 +199,22 @@ public class RetryingFileOperationsTests : IDisposable
         var retries = 0;
 
         // Hold an exclusive lock for the whole call so every attempt fails.
-        await using var lockStream = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.None);
+        await using var lockStream = new FileStream(
+            source,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.None
+        );
         var moved = await RetryingFileOperations.TryMoveAsync(
-            source, dest, CancellationToken.None,
-            _ => { retries++; },
-            static _ => 1);
+            source,
+            dest,
+            CancellationToken.None,
+            _ =>
+            {
+                retries++;
+            },
+            static _ => 1
+        );
 
         Assert.False(moved);
         Assert.Equal(RetryingFileOperations.MaxDeleteAttempts - 1, retries);
@@ -199,7 +234,9 @@ public class RetryingFileOperationsTests : IDisposable
         try
         {
             var moved = await RetryingFileOperations.TryMoveAsync(
-                source, dest, CancellationToken.None,
+                source,
+                dest,
+                CancellationToken.None,
                 _ =>
                 {
                     attempts++;
@@ -209,7 +246,8 @@ public class RetryingFileOperationsTests : IDisposable
                         lockStream.Dispose();
                     }
                 },
-                static _ => 1);
+                static _ => 1
+            );
 
             Assert.True(moved);
             Assert.False(File.Exists(source));

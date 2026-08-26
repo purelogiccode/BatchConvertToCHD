@@ -57,7 +57,9 @@ public class FileWatcherServiceTests : IDisposable
     [Fact]
     public void StartWatching_InvalidFolder_DoesNotThrowAndDoesNotWatch()
     {
-        var ex = Record.Exception(() => _service.StartWatching(@"Z:\NonExistent\Path\DoesNotExist"));
+        var ex = Record.Exception(() =>
+            _service.StartWatching(@"Z:\NonExistent\Path\DoesNotExist")
+        );
 
         Assert.Null(ex);
         Assert.False(_service.IsWatching);
@@ -287,11 +289,15 @@ public class FileWatcherServiceTests : IDisposable
     public void RecordEvent_StoresCorrectEventTypes()
     {
         var recordEventMethod = typeof(FileWatcherService).GetMethod(
-            "RecordEvent", BindingFlags.NonPublic | BindingFlags.Instance);
+            "RecordEvent",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(recordEventMethod);
 
         var dictField = typeof(FileWatcherService).GetField(
-            "_lastEventByFile", BindingFlags.NonPublic | BindingFlags.Instance);
+            "_lastEventByFile",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(dictField);
         var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
         Assert.NotNull(dict);
@@ -303,8 +309,14 @@ public class FileWatcherServiceTests : IDisposable
 
         recordEventMethod.Invoke(_service, [createdPath, FileWatchEventType.Created, null]);
         recordEventMethod.Invoke(_service, [deletedPath, FileWatchEventType.Deleted, null]);
-        recordEventMethod.Invoke(_service, [renamedFromPath, FileWatchEventType.RenamedFrom, "newname.bin"]);
-        recordEventMethod.Invoke(_service, [renamedToPath, FileWatchEventType.RenamedTo, "oldname.bin"]);
+        recordEventMethod.Invoke(
+            _service,
+            [renamedFromPath, FileWatchEventType.RenamedFrom, "newname.bin"]
+        );
+        recordEventMethod.Invoke(
+            _service,
+            [renamedToPath, FileWatchEventType.RenamedTo, "oldname.bin"]
+        );
 
         Assert.True(dict.TryGetValue(createdPath, out var cr));
         Assert.Equal(FileWatchEventType.Created, cr.EventType);
@@ -329,11 +341,15 @@ public class FileWatcherServiceTests : IDisposable
     public void RecordEvent_EvictsOldestEntriesWhenOverLimit()
     {
         var recordEventMethod = typeof(FileWatcherService).GetMethod(
-            "RecordEvent", BindingFlags.NonPublic | BindingFlags.Instance);
+            "RecordEvent",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(recordEventMethod);
 
         var dictField = typeof(FileWatcherService).GetField(
-            "_lastEventByFile", BindingFlags.NonPublic | BindingFlags.Instance);
+            "_lastEventByFile",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(dictField);
         var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
         Assert.NotNull(dict);
@@ -354,11 +370,15 @@ public class FileWatcherServiceTests : IDisposable
     public void RecordEvent_UnderLimit_KeepsAllEntries()
     {
         var recordEventMethod = typeof(FileWatcherService).GetMethod(
-            "RecordEvent", BindingFlags.NonPublic | BindingFlags.Instance);
+            "RecordEvent",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(recordEventMethod);
 
         var dictField = typeof(FileWatcherService).GetField(
-            "_lastEventByFile", BindingFlags.NonPublic | BindingFlags.Instance);
+            "_lastEventByFile",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(dictField);
         var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
         Assert.NotNull(dict);
@@ -380,11 +400,15 @@ public class FileWatcherServiceTests : IDisposable
     public void RecordEvent_UpdateExistingKey_ReusesQueueSlot()
     {
         var recordEventMethod = typeof(FileWatcherService).GetMethod(
-            "RecordEvent", BindingFlags.NonPublic | BindingFlags.Instance);
+            "RecordEvent",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(recordEventMethod);
 
         var dictField = typeof(FileWatcherService).GetField(
-            "_lastEventByFile", BindingFlags.NonPublic | BindingFlags.Instance);
+            "_lastEventByFile",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(dictField);
         var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
         Assert.NotNull(dict);
@@ -407,20 +431,29 @@ public class FileWatcherServiceTests : IDisposable
     public void OnError_BufferOverflow_ClearsHistory()
     {
         var recordEventMethod = typeof(FileWatcherService).GetMethod(
-            "RecordEvent", BindingFlags.NonPublic | BindingFlags.Instance);
+            "RecordEvent",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(recordEventMethod);
 
         var dictField = typeof(FileWatcherService).GetField(
-            "_lastEventByFile", BindingFlags.NonPublic | BindingFlags.Instance);
+            "_lastEventByFile",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(dictField);
         var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
         Assert.NotNull(dict);
 
-        recordEventMethod.Invoke(_service, [Path.Combine(_tempDir, "test.bin"), FileWatchEventType.Created, null]);
+        recordEventMethod.Invoke(
+            _service,
+            [Path.Combine(_tempDir, "test.bin"), FileWatchEventType.Created, null]
+        );
         Assert.NotEmpty(dict);
 
         var onErrorMethod = typeof(FileWatcherService).GetMethod(
-            "OnError", BindingFlags.NonPublic | BindingFlags.Instance);
+            "OnError",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(onErrorMethod);
 
         var overflowEx = new InternalBufferOverflowException("Buffer overflow");
@@ -434,11 +467,15 @@ public class FileWatcherServiceTests : IDisposable
     public void OnError_NonBufferOverflow_DoesNotClearHistory()
     {
         var recordEventMethod = typeof(FileWatcherService).GetMethod(
-            "RecordEvent", BindingFlags.NonPublic | BindingFlags.Instance);
+            "RecordEvent",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(recordEventMethod);
 
         var dictField = typeof(FileWatcherService).GetField(
-            "_lastEventByFile", BindingFlags.NonPublic | BindingFlags.Instance);
+            "_lastEventByFile",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(dictField);
         var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
         Assert.NotNull(dict);
@@ -448,7 +485,9 @@ public class FileWatcherServiceTests : IDisposable
         Assert.NotEmpty(dict);
 
         var onErrorMethod = typeof(FileWatcherService).GetMethod(
-            "OnError", BindingFlags.NonPublic | BindingFlags.Instance);
+            "OnError",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(onErrorMethod);
 
         var fileNotFoundEx = new FileNotFoundException("File not found");

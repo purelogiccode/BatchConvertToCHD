@@ -14,14 +14,24 @@ internal static class CueNormalizer
 {
     private static readonly Regex TrackNumberRegex = new(
         @"(?<prefix>.*\(Track\s+)(?<num>\d+)(?<suffix>\).*)",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.NonBacktracking);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.NonBacktracking
+    );
 
-    private static readonly string[] KnownTrackTypes = ["BINARY", "WAVE", "MP3", "AIFF", "MOTOROLA", "AUDIO"];
+    private static readonly string[] KnownTrackTypes =
+    [
+        "BINARY",
+        "WAVE",
+        "MP3",
+        "AIFF",
+        "MOTOROLA",
+        "AUDIO",
+    ];
 
     /// <summary>Extensions a cue's data track can legitimately be stored under.</summary>
-    private static readonly HashSet<string> DataFileExtensions =
-        new([FileExtensions.Bin, FileExtensions.Img, FileExtensions.Iso, FileExtensions.Raw],
-            StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<string> DataFileExtensions = new(
+        [FileExtensions.Bin, FileExtensions.Img, FileExtensions.Iso, FileExtensions.Raw],
+        StringComparer.OrdinalIgnoreCase
+    );
 
     /// <summary>
     /// Normalizes the cue at <paramref name="cuePath"/>.
@@ -30,10 +40,14 @@ internal static class CueNormalizer
     /// <param name="token">Cancellation token.</param>
     /// <param name="transform">Optional transform applied to each resolved FILE line.</param>
     internal static async Task<CueNormalizationResult> NormalizeAsync(
-        string cuePath, CancellationToken token, CueFileLineTransform? transform = null)
+        string cuePath,
+        CancellationToken token,
+        CueFileLineTransform? transform = null
+    )
     {
-        var (lines, encoding, hasBom) =
-            await GameFileParser.ReadLinesWithDetectedEncodingAsync(cuePath, token).ConfigureAwait(false);
+        var (lines, encoding, hasBom) = await GameFileParser
+            .ReadLinesWithDetectedEncodingAsync(cuePath, token)
+            .ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
 
         var directory = Path.GetDirectoryName(cuePath) ?? string.Empty;
@@ -50,9 +64,11 @@ internal static class CueNormalizer
         foreach (var line in lines)
         {
             var trimmedLine = line.Trim();
-            if (!trimmedLine.StartsWith("FILE ", StringComparison.OrdinalIgnoreCase) ||
-                !GameFileParser.TryGetFileNameFromFileLine(trimmedLine, out var referencedName) ||
-                referencedName is null)
+            if (
+                !trimmedLine.StartsWith("FILE ", StringComparison.OrdinalIgnoreCase)
+                || !GameFileParser.TryGetFileNameFromFileLine(trimmedLine, out var referencedName)
+                || referencedName is null
+            )
             {
                 canonicalLines.Add(line);
                 continue;
@@ -94,8 +110,15 @@ internal static class CueNormalizer
             canonicalLines.Add(canonicalLine);
         }
 
-        return new CueNormalizationResult(encoding, hasBom, references, unresolved, canonicalLines, needsRewrite,
-            referencesChanged);
+        return new CueNormalizationResult(
+            encoding,
+            hasBom,
+            references,
+            unresolved,
+            canonicalLines,
+            needsRewrite,
+            referencesChanged
+        );
     }
 
     /// <summary>
@@ -104,22 +127,38 @@ internal static class CueNormalizer
     /// <param name="outputPath">Destination file path for the canonical cue.</param>
     /// <param name="result">The normalization result whose canonical content is written.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task WriteCanonicalCueAsync(string outputPath, CueNormalizationResult result,
-        CancellationToken token)
+    internal static async Task WriteCanonicalCueAsync(
+        string outputPath,
+        CueNormalizationResult result,
+        CancellationToken token
+    )
     {
-        await File.WriteAllTextAsync(outputPath, result.CanonicalCueText, new UTF8Encoding(false), token)
+        await File.WriteAllTextAsync(
+                outputPath,
+                result.CanonicalCueText,
+                new UTF8Encoding(false),
+                token
+            )
             .ConfigureAwait(false);
     }
 
-    private static CueFileReference ResolveReference(string directory, string referencedName, string? trackType,
-        bool isSingleFileCue)
+    private static CueFileReference ResolveReference(
+        string directory,
+        string referencedName,
+        string? trackType,
+        bool isSingleFileCue
+    )
     {
         var fullPath = Path.Combine(directory, referencedName);
         var referencedFileName = Path.GetFileName(fullPath);
         var referencedDirectory = Path.GetDirectoryName(fullPath) ?? directory;
 
         // Strategy 1: the reference as written, resolved wherever it points.
-        var match = FindMatch(GetFiles(referencedDirectory), referencedFileName, out var wasNameCorrected);
+        var match = FindMatch(
+            GetFiles(referencedDirectory),
+            referencedFileName,
+            out var wasNameCorrected
+        );
 
         var cueDirectoryFiles = GetFiles(directory);
 
@@ -127,7 +166,10 @@ internal static class CueNormalizer
         // carried. Cues written elsewhere keep that machine's absolute path - real examples include
         // "C:\DOCUMENTS AND SETTINGS\BILL\DESKTOP\..." - which resolves nowhere here even though the
         // data file is sitting beside the cue.
-        if (match is null && !string.Equals(referencedDirectory, directory, StringComparison.OrdinalIgnoreCase))
+        if (
+            match is null
+            && !string.Equals(referencedDirectory, directory, StringComparison.OrdinalIgnoreCase)
+        )
         {
             match = FindMatch(cueDirectoryFiles, referencedFileName, out wasNameCorrected);
             if (match is not null)
@@ -162,7 +204,14 @@ internal static class CueNormalizer
 
         if (match is null)
         {
-            return new CueFileReference(referencedName, null, fullPath, trackType, false, directory);
+            return new CueFileReference(
+                referencedName,
+                null,
+                fullPath,
+                trackType,
+                false,
+                directory
+            );
         }
 
         // Anchor the record on the file that was actually found, so a redirected reference reports
@@ -173,7 +222,8 @@ internal static class CueNormalizer
             match,
             trackType,
             wasNameCorrected,
-            directory);
+            directory
+        );
     }
 
     private static int CountFileLines(string[] lines)
@@ -182,9 +232,11 @@ internal static class CueNormalizer
         foreach (var line in lines)
         {
             var trimmed = line.Trim();
-            if (trimmed.StartsWith("FILE ", StringComparison.OrdinalIgnoreCase) &&
-                GameFileParser.TryGetFileNameFromFileLine(trimmed, out var name) &&
-                name is not null)
+            if (
+                trimmed.StartsWith("FILE ", StringComparison.OrdinalIgnoreCase)
+                && GameFileParser.TryGetFileNameFromFileLine(trimmed, out var name)
+                && name is not null
+            )
             {
                 count++;
             }
@@ -217,9 +269,13 @@ internal static class CueNormalizer
             return null;
         }
 
-        var match = files.FirstOrDefault(f => string.Equals(Path.GetFileName(f), fileName, StringComparison.Ordinal))
-                    ?? files.FirstOrDefault(f =>
-                        string.Equals(Path.GetFileName(f), fileName, StringComparison.OrdinalIgnoreCase));
+        var match =
+            files.FirstOrDefault(f =>
+                string.Equals(Path.GetFileName(f), fileName, StringComparison.Ordinal)
+            )
+            ?? files.FirstOrDefault(f =>
+                string.Equals(Path.GetFileName(f), fileName, StringComparison.OrdinalIgnoreCase)
+            );
         if (match is not null)
         {
             return match;
@@ -244,8 +300,13 @@ internal static class CueNormalizer
         }
 
         return files.FirstOrDefault(f =>
-            DataFileExtensions.Contains(Path.GetExtension(f)) &&
-            string.Equals(Path.GetFileNameWithoutExtension(f), baseName, StringComparison.OrdinalIgnoreCase));
+            DataFileExtensions.Contains(Path.GetExtension(f))
+            && string.Equals(
+                Path.GetFileNameWithoutExtension(f),
+                baseName,
+                StringComparison.OrdinalIgnoreCase
+            )
+        );
     }
 
     private static bool IsBinaryTrack(string? trackType)
@@ -261,8 +322,14 @@ internal static class CueNormalizer
             return null;
         }
 
-        if (!int.TryParse(match.Groups["num"].Value, NumberStyles.None, CultureInfo.InvariantCulture,
-                out var trackNumber))
+        if (
+            !int.TryParse(
+                match.Groups["num"].Value,
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out var trackNumber
+            )
+        )
         {
             return null;
         }
@@ -271,14 +338,20 @@ internal static class CueNormalizer
         {
             trackNumber.ToString(CultureInfo.InvariantCulture),
             trackNumber.ToString("D2", CultureInfo.InvariantCulture),
-            trackNumber.ToString("D3", CultureInfo.InvariantCulture)
+            trackNumber.ToString("D3", CultureInfo.InvariantCulture),
         };
 
         foreach (var variant in variants)
         {
-            var candidateName = match.Groups["prefix"].Value + variant + match.Groups["suffix"].Value;
+            var candidateName =
+                match.Groups["prefix"].Value + variant + match.Groups["suffix"].Value;
             var found = files.FirstOrDefault(f =>
-                string.Equals(Path.GetFileName(f), candidateName, StringComparison.OrdinalIgnoreCase));
+                string.Equals(
+                    Path.GetFileName(f),
+                    candidateName,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            );
             if (found is not null)
             {
                 return found;

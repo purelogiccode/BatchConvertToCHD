@@ -14,7 +14,11 @@ internal class UpdateService
 {
     private readonly string _applicationName;
     private readonly HttpClient _httpClient;
-    private static readonly JsonSerializerOptions JsonSerializerOptions = new() { PropertyNameCaseInsensitive = true };
+
+    private static readonly JsonSerializerOptions JsonSerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
 
     internal UpdateService(string applicationName)
         : this(applicationName, AppHttpClient.Client)
@@ -33,26 +37,39 @@ internal class UpdateService
     /// <param name="onLog">Callback for logging messages.</param>
     /// <param name="onStatusUpdate">Callback for status bar updates.</param>
     /// <param name="onBugReport">Callback for reporting errors.</param>
-    internal Task CheckForNewVersionAsync(Action<string> onLog, Action<string> onStatusUpdate,
-        Func<string, Exception?, Task> onBugReport)
+    internal Task CheckForNewVersionAsync(
+        Action<string> onLog,
+        Action<string> onStatusUpdate,
+        Func<string, Exception?, Task> onBugReport
+    )
     {
-        return CheckForNewVersionAsync(_httpClient, Assembly.GetExecutingAssembly().GetName().Version, onLog,
-            onStatusUpdate, onBugReport);
+        return CheckForNewVersionAsync(
+            _httpClient,
+            Assembly.GetExecutingAssembly().GetName().Version,
+            onLog,
+            onStatusUpdate,
+            onBugReport
+        );
     }
 
     /// <summary>
     /// Internal overload for testing that accepts a custom <see cref="HttpClient"/> and version.
     /// Performs the actual update check against the GitHub API - trying each configured release
-    /// source in order (primary repository, then fallback) - compares versions, and prompts the
-    /// user to download if a newer version is available.
+    /// source in order - compares versions, and prompts the user to download if a newer version
+    /// is available.
     /// </summary>
     /// <param name="httpClient">The <see cref="HttpClient"/> to use for the request.</param>
     /// <param name="currentVersion">The current application version to compare against.</param>
     /// <param name="onLog">Callback for logging messages.</param>
     /// <param name="onStatusUpdate">Callback for status bar updates.</param>
     /// <param name="onBugReport">Callback for reporting errors.</param>
-    internal async Task CheckForNewVersionAsync(HttpClient httpClient, Version? currentVersion, Action<string> onLog,
-        Action<string> onStatusUpdate, Func<string, Exception?, Task> onBugReport)
+    internal async Task CheckForNewVersionAsync(
+        HttpClient httpClient,
+        Version? currentVersion,
+        Action<string> onLog,
+        Action<string> onStatusUpdate,
+        Func<string, Exception?, Task> onBugReport
+    )
     {
         try
         {
@@ -79,15 +96,20 @@ internal class UpdateService
                     // resolve differently (DNS, redirect, CDN edge).
                     if (!isLastSource)
                     {
-                        onLog($"Update source unreachable ({ex.Message}); trying the fallback source...");
+                        onLog(
+                            $"Update source unreachable ({ex.Message}); trying the fallback source..."
+                        );
                         continue;
                     }
 
                     throw;
                 }
 
-                if (response.StatusCode is System.Net.HttpStatusCode.Forbidden
-                    or System.Net.HttpStatusCode.TooManyRequests)
+                if (
+                    response.StatusCode
+                    is System.Net.HttpStatusCode.Forbidden
+                    or System.Net.HttpStatusCode.TooManyRequests
+                )
                 {
                     // Rate limits are per IP and shared by every api.github.com URL, so trying the
                     // fallback cannot help.
@@ -102,7 +124,9 @@ internal class UpdateService
 
                     if (statusCode is >= 500 and < 600 && !isLastSource)
                     {
-                        onLog($"Update source returned a server error ({statusCode}); trying the fallback source...");
+                        onLog(
+                            $"Update source returned a server error ({statusCode}); trying the fallback source..."
+                        );
                         continue;
                     }
 
@@ -111,7 +135,9 @@ internal class UpdateService
                         // Client errors such as 404 mean this repository has no reachable releases
                         // page (e.g. the ownership transfer has not completed yet), so fall through
                         // to the next source before giving up.
-                        onLog($"Update source unavailable ({statusCode} from {url}); trying the fallback source...");
+                        onLog(
+                            $"Update source unavailable ({statusCode} from {url}); trying the fallback source..."
+                        );
                         continue;
                     }
 
@@ -126,9 +152,16 @@ internal class UpdateService
                 }
 
                 var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                var latestRelease = JsonSerializer.Deserialize<GitHubRelease>(responseBody, JsonSerializerOptions);
-                if (latestRelease == null || latestRelease.Draft || latestRelease.Prerelease ||
-                    string.IsNullOrWhiteSpace(latestRelease.TagName))
+                var latestRelease = JsonSerializer.Deserialize<GitHubRelease>(
+                    responseBody,
+                    JsonSerializerOptions
+                );
+                if (
+                    latestRelease == null
+                    || latestRelease.Draft
+                    || latestRelease.Prerelease
+                    || string.IsNullOrWhiteSpace(latestRelease.TagName)
+                )
                 {
                     onLog("Latest release is invalid, draft, or prerelease. Skipping.");
                     return;
@@ -136,10 +169,18 @@ internal class UpdateService
 
                 var remoteVersionString = ParseVersionFromTag(latestRelease.TagName);
 
-                if (!TryNormalizeVersions(currentVersion, remoteVersionString, out var normalizedCurrent,
-                        out var normalizedRemote))
+                if (
+                    !TryNormalizeVersions(
+                        currentVersion,
+                        remoteVersionString,
+                        out var normalizedCurrent,
+                        out var normalizedRemote
+                    )
+                )
                 {
-                    onLog($"Could not compare versions. Current: {currentVersion}, Remote: {remoteVersionString}");
+                    onLog(
+                        $"Could not compare versions. Current: {currentVersion}, Remote: {remoteVersionString}"
+                    );
                     return;
                 }
 
@@ -154,14 +195,21 @@ internal class UpdateService
                         {
                             var result = MessageBox.Show(
                                 $"A new version ({remoteVersionString}) of {_applicationName} is available!\n\nWould you like to go to the download page?",
-                                "New Version Available", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                                "New Version Available",
+                                MessageBoxButton.YesNo,
+                                MessageBoxImage.Information
+                            );
 
                             if (result == MessageBoxResult.Yes)
                             {
                                 try
                                 {
                                     Process.Start(
-                                        new ProcessStartInfo(latestRelease.HtmlUrl) { UseShellExecute = true });
+                                        new ProcessStartInfo(latestRelease.HtmlUrl)
+                                        {
+                                            UseShellExecute = true,
+                                        }
+                                    );
                                 }
                                 catch (Exception urlEx)
                                 {
@@ -174,15 +222,21 @@ internal class UpdateService
                                     }
                                     catch (Exception clipboardEx)
                                     {
-                                        onLog($"Failed to copy URL to clipboard: {clipboardEx.Message}");
-                                        _ = onBugReport("Failed to copy URL to clipboard", clipboardEx);
+                                        onLog(
+                                            $"Failed to copy URL to clipboard: {clipboardEx.Message}"
+                                        );
+                                        _ = onBugReport(
+                                            "Failed to copy URL to clipboard",
+                                            clipboardEx
+                                        );
                                     }
 
                                     MessageBox.Show(
                                         $"Unable to open browser automatically. The update URL has been copied to your clipboard.\n\nURL: {latestRelease.HtmlUrl}\n\nPlease paste it into your browser manually.",
                                         "Browser Launch Failed",
                                         MessageBoxButton.OK,
-                                        MessageBoxImage.Information);
+                                        MessageBoxImage.Information
+                                    );
                                 }
                             }
                         });
@@ -223,8 +277,12 @@ internal class UpdateService
     /// If Build or Revision is -1 (undefined), defaults to 0 to avoid ArgumentOutOfRangeException.
     /// Returns false if either version cannot be parsed.
     /// </summary>
-    internal static bool TryNormalizeVersions(Version? current, string remoteTag, out Version? normalizedCurrent,
-        out Version? normalizedRemote)
+    internal static bool TryNormalizeVersions(
+        Version? current,
+        string remoteTag,
+        out Version? normalizedCurrent,
+        out Version? normalizedRemote
+    )
     {
         normalizedCurrent = null;
         normalizedRemote = null;
@@ -238,12 +296,14 @@ internal class UpdateService
             current.Major,
             current.Minor,
             current.Build < 0 ? 0 : current.Build,
-            current.Revision < 0 ? 0 : current.Revision);
+            current.Revision < 0 ? 0 : current.Revision
+        );
         normalizedRemote = new Version(
             remoteVersion.Major,
             remoteVersion.Minor,
             remoteVersion.Build < 0 ? 0 : remoteVersion.Build,
-            remoteVersion.Revision < 0 ? 0 : remoteVersion.Revision);
+            remoteVersion.Revision < 0 ? 0 : remoteVersion.Revision
+        );
 
         return true;
     }

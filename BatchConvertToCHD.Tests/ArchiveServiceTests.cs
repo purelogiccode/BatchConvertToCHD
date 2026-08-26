@@ -40,10 +40,20 @@ public class ArchiveServiceTests : IDisposable
         var tempDir = Path.Combine(_tempDir, "extract");
         var logs = new List<string>();
 
-        var result = await service.ExtractArchiveAsync(missingPath, tempDir, logs.Add, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            missingPath,
+            tempDir,
+            logs.Add,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
-        Assert.Contains(logs, static msg => msg.Contains("File not found", StringComparison.OrdinalIgnoreCase) && msg.Contains("missing", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            logs,
+            static msg =>
+                msg.Contains("File not found", StringComparison.OrdinalIgnoreCase)
+                && msg.Contains("missing", StringComparison.OrdinalIgnoreCase)
+        );
         Assert.Contains("File not found", result.ErrorMessage, StringComparison.Ordinal);
     }
 
@@ -55,7 +65,12 @@ public class ArchiveServiceTests : IDisposable
         File.WriteAllText(filePath, "dummy");
         var tempDir = Path.Combine(_tempDir, "extract");
 
-        var result = await service.ExtractArchiveAsync(filePath, tempDir, static _ => { }, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            filePath,
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
         Assert.Contains("Unsupported archive type", result.ErrorMessage, StringComparison.Ordinal);
@@ -78,7 +93,12 @@ public class ArchiveServiceTests : IDisposable
             }
         }
 
-        var result = await service.ExtractArchiveAsync(zipPath, tempDir, static _ => { }, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            zipPath,
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
 
         Assert.True(result.Success);
         Assert.Single(result.FilePaths);
@@ -102,10 +122,19 @@ public class ArchiveServiceTests : IDisposable
             }
         }
 
-        var result = await service.ExtractArchiveAsync(zipPath, tempDir, static _ => { }, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            zipPath,
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
-        Assert.Contains("No supported primary files found", result.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains(
+            "No supported primary files found",
+            result.ErrorMessage,
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -125,7 +154,12 @@ public class ArchiveServiceTests : IDisposable
             }
         }
 
-        var result = await service.ExtractArchiveAsync(zipPath, tempDir, static _ => { }, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            zipPath,
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
 
         Assert.True(result.Success);
         var cue = Assert.Single(result.FilePaths);
@@ -142,7 +176,13 @@ public class ArchiveServiceTests : IDisposable
         var service = new ArchiveService("7za.exe", false);
         var tempIso = Path.Combine(_tempDir, "out.iso");
 
-        var result = await service.ExtractCsoAsync("input.cso", tempIso, _tempDir, static _ => { }, CancellationToken.None);
+        var result = await service.ExtractCsoAsync(
+            "input.cso",
+            tempIso,
+            _tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
         Assert.Contains("CSOSharp", result.ErrorMessage, StringComparison.Ordinal);
@@ -171,7 +211,8 @@ public class ArchiveServiceTests : IDisposable
                 logs.Add,
                 ".7z",
                 static _ => throw new InvalidOperationException("Should not reach here"),
-                CancellationToken.None);
+                CancellationToken.None
+            );
         });
 
         Assert.NotNull(ex);
@@ -186,7 +227,12 @@ public class ArchiveServiceTests : IDisposable
         File.WriteAllText(sevenZPath, "not a valid 7z archive");
         var tempDir = Path.Combine(_tempDir, "extract");
 
-        var result = await service.ExtractArchiveAsync(sevenZPath, tempDir, static _ => { }, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            sevenZPath,
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
     }
@@ -199,7 +245,12 @@ public class ArchiveServiceTests : IDisposable
         File.WriteAllText(rarPath, "not a valid rar archive");
         var tempDir = Path.Combine(_tempDir, "extract");
 
-        var result = await service.ExtractArchiveAsync(rarPath, tempDir, static _ => { }, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            rarPath,
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
     }
@@ -228,7 +279,8 @@ public class ArchiveServiceTests : IDisposable
                     ThrowIndexOutOfRange();
                     return null!;
                 },
-                CancellationToken.None);
+                CancellationToken.None
+            );
         });
 
         Assert.NotNull(ex);
@@ -256,7 +308,8 @@ public class ArchiveServiceTests : IDisposable
                     ThrowNullReference();
                     return null!;
                 },
-                CancellationToken.None);
+                CancellationToken.None
+            );
         });
 
         Assert.NotNull(ex);
@@ -279,7 +332,8 @@ public class ArchiveServiceTests : IDisposable
                 logs.Add,
                 ".rar",
                 static _ => throw new InvalidFormatException("Multi-part rar file is incomplete."),
-                CancellationToken.None);
+                CancellationToken.None
+            );
         });
 
         Assert.NotNull(ex);
@@ -302,7 +356,8 @@ public class ArchiveServiceTests : IDisposable
                 logs.Add,
                 ".rar",
                 static _ => throw new InvalidDataException("archive is corrupt"),
-                CancellationToken.None);
+                CancellationToken.None
+            );
         });
 
         Assert.NotNull(ex);
@@ -325,7 +380,8 @@ public class ArchiveServiceTests : IDisposable
                 logs.Add,
                 ".rar",
                 static _ => throw new IncompleteArchiveException("archive is incomplete"),
-                CancellationToken.None);
+                CancellationToken.None
+            );
         });
 
         Assert.NotNull(ex);
@@ -348,7 +404,8 @@ public class ArchiveServiceTests : IDisposable
                 logs.Add,
                 ".rar",
                 static _ => throw new CryptographicException("archive is encrypted"),
-                CancellationToken.None);
+                CancellationToken.None
+            );
         });
 
         Assert.NotNull(ex);
@@ -371,7 +428,8 @@ public class ArchiveServiceTests : IDisposable
                 logs.Add,
                 ".rar",
                 static _ => throw new ArchiveOperationException("archive operation failed"),
-                CancellationToken.None);
+                CancellationToken.None
+            );
         });
 
         Assert.NotNull(ex);
@@ -394,7 +452,8 @@ public class ArchiveServiceTests : IDisposable
                 logs.Add,
                 ".rar",
                 static _ => throw new OperationCanceledException(),
-                CancellationToken.None);
+                CancellationToken.None
+            );
         });
 
         Assert.NotNull(ex);
@@ -423,7 +482,8 @@ public class ArchiveServiceTests : IDisposable
                     openCallCount++;
                     throw new InvalidOperationException("some transient error");
                 },
-                CancellationToken.None);
+                CancellationToken.None
+            );
         });
 
         Assert.NotNull(ex);
@@ -436,21 +496,53 @@ public class ArchiveServiceTests : IDisposable
     [Fact]
     public void IsMultiPartRarErrorDetectsMissingVolume()
     {
-        var ex = new InvalidFormatException("Multi-part rar file is incomplete.  Entry expects a new volume: Kessen [PAL]\\Kessen.iso");
+        var ex = new InvalidFormatException(
+            "Multi-part rar file is incomplete.  Entry expects a new volume: Kessen [PAL]\\Kessen.iso"
+        );
 
         Assert.True(ArchiveService.IsMultiPartRarError(ex));
-        Assert.False(ArchiveService.IsMultiPartRarError(new InvalidFormatException("unrelated error")));
-        Assert.False(ArchiveService.IsMultiPartRarError(new IOException("Multi-part rar file is incomplete.")));
+        Assert.False(
+            ArchiveService.IsMultiPartRarError(new InvalidFormatException("unrelated error"))
+        );
+        Assert.False(
+            ArchiveService.IsMultiPartRarError(
+                new IOException("Multi-part rar file is incomplete.")
+            )
+        );
     }
 
     [Fact]
     public void IsNetworkUnavailableErrorDetectsDisconnectedShares()
     {
-        Assert.True(ArchiveService.IsNetworkUnavailableError(new IOException(@"The network path was not found. : '\\HENRY-MEDIA\External-Archive\Roms\PS1\Persona 2.7z'.")));
-        Assert.True(ArchiveService.IsNetworkUnavailableError(new IOException("The specified network name is no longer available.")));
-        Assert.True(ArchiveService.IsNetworkUnavailableError(new IOException("The network location cannot be reached.")));
-        Assert.False(ArchiveService.IsNetworkUnavailableError(new IOException("Access to the path is denied.")));
-        Assert.False(ArchiveService.IsNetworkUnavailableError(new IOException("The process cannot access the file because it is being used by another process.")));
+        Assert.True(
+            ArchiveService.IsNetworkUnavailableError(
+                new IOException(
+                    @"The network path was not found. : '\\HENRY-MEDIA\External-Archive\Roms\PS1\Persona 2.7z'."
+                )
+            )
+        );
+        Assert.True(
+            ArchiveService.IsNetworkUnavailableError(
+                new IOException("The specified network name is no longer available.")
+            )
+        );
+        Assert.True(
+            ArchiveService.IsNetworkUnavailableError(
+                new IOException("The network location cannot be reached.")
+            )
+        );
+        Assert.False(
+            ArchiveService.IsNetworkUnavailableError(
+                new IOException("Access to the path is denied.")
+            )
+        );
+        Assert.False(
+            ArchiveService.IsNetworkUnavailableError(
+                new IOException(
+                    "The process cannot access the file because it is being used by another process."
+                )
+            )
+        );
     }
 
     [Fact]
@@ -462,15 +554,27 @@ public class ArchiveServiceTests : IDisposable
         File.WriteAllText(rarPath, "not a valid rar archive");
         var tempDir = Path.Combine(_tempDir, "extract");
 
-        var result = await service.ExtractArchiveAsync(rarPath, tempDir, static _ => { }, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            rarPath,
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
         // The error should be one of the known archive error messages
         Assert.True(
-            result.ErrorMessage.Contains("invalid or incomplete", StringComparison.OrdinalIgnoreCase) ||
-            result.ErrorMessage.Contains("corrupt", StringComparison.OrdinalIgnoreCase) ||
-            result.ErrorMessage.Contains("Error extracting archive", StringComparison.OrdinalIgnoreCase),
-            $"Expected a known error message but got: {result.ErrorMessage}");
+            result.ErrorMessage.Contains(
+                "invalid or incomplete",
+                StringComparison.OrdinalIgnoreCase
+            )
+                || result.ErrorMessage.Contains("corrupt", StringComparison.OrdinalIgnoreCase)
+                || result.ErrorMessage.Contains(
+                    "Error extracting archive",
+                    StringComparison.OrdinalIgnoreCase
+                ),
+            $"Expected a known error message but got: {result.ErrorMessage}"
+        );
     }
 
     [Fact]
@@ -491,12 +595,23 @@ public class ArchiveServiceTests : IDisposable
             }
         }
 
-        var result = await service.ExtractArchiveAsync(zipPath, tempDir, static _ => { }, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            zipPath,
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
 
         Assert.True(result.Success);
         Assert.Equal(2, result.FilePaths.Count);
-        Assert.Contains(result.FilePaths, static f => f.EndsWith("game1.iso", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(result.FilePaths, static f => f.EndsWith("game2.cue", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            result.FilePaths,
+            static f => f.EndsWith("game1.iso", StringComparison.OrdinalIgnoreCase)
+        );
+        Assert.Contains(
+            result.FilePaths,
+            static f => f.EndsWith("game2.cue", StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     [Fact]
@@ -514,7 +629,12 @@ public class ArchiveServiceTests : IDisposable
             stream.WriteByte(0x01);
         }
 
-        var result = await service.ExtractArchiveAsync(zipPath, tempDir, static _ => { }, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            zipPath,
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
 
         Assert.True(result.Success);
         Assert.Single(result.FilePaths);
@@ -541,7 +661,8 @@ public class ArchiveServiceTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            service.ExtractArchiveAsync(zipPath, tempDir, static _ => { }, cts.Token));
+            service.ExtractArchiveAsync(zipPath, tempDir, static _ => { }, cts.Token)
+        );
     }
 
     // --- Tests for 7za fallback logic ---
@@ -555,11 +676,19 @@ public class ArchiveServiceTests : IDisposable
         var tempDir = Path.Combine(_tempDir, "extract");
         var logs = new List<string>();
 
-        var result = await service.ExtractArchiveAsync(sevenZPath, tempDir, logs.Add, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            sevenZPath,
+            tempDir,
+            logs.Add,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
         // Should NOT log 7za fallback attempt since 7za is unavailable
-        Assert.DoesNotContain(logs, static msg => msg.Contains("7za.exe fallback", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            logs,
+            static msg => msg.Contains("7za.exe fallback", StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     [Fact]
@@ -573,11 +702,19 @@ public class ArchiveServiceTests : IDisposable
         var tempDir = Path.Combine(_tempDir, "extract");
         var logs = new List<string>();
 
-        var result = await service.ExtractArchiveAsync(sevenZPath, tempDir, logs.Add, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            sevenZPath,
+            tempDir,
+            logs.Add,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
         // Should log the 7za fallback attempt since 7za is marked as available
-        Assert.Contains(logs, static msg => msg.Contains("7za.exe fallback", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            logs,
+            static msg => msg.Contains("7za.exe fallback", StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     [Fact]
@@ -590,10 +727,18 @@ public class ArchiveServiceTests : IDisposable
 
         // Write a minimal valid 7z header (signature only - enough for SharpCompress to open but may have no entries)
         // For a proper integration test, a real 7z file is needed. Here we test that the error path works.
-        File.WriteAllBytes(sevenZPath, new byte[] { 0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, 0x00, 0x04 });
+        File.WriteAllBytes(
+            sevenZPath,
+            new byte[] { 0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, 0x00, 0x04 }
+        );
 
         var service = new ArchiveService("7za.exe", false);
-        var result = await service.ExtractArchiveAsync(sevenZPath, tempDir, static _ => { }, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            sevenZPath,
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
 
         // This will either succeed (if the minimal header is valid enough) or fail gracefully
         Assert.False(result.Success);
@@ -617,10 +762,18 @@ public class ArchiveServiceTests : IDisposable
         }
 
         var logs = new List<string>();
-        var result = await service.ExtractArchiveAsync(zipPath, tempDir, logs.Add, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            zipPath,
+            tempDir,
+            logs.Add,
+            CancellationToken.None
+        );
 
         Assert.True(result.Success);
-        Assert.Contains(logs, static msg => msg.Contains("Extracting", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            logs,
+            static msg => msg.Contains("Extracting", StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     [Fact]
@@ -639,12 +792,16 @@ public class ArchiveServiceTests : IDisposable
                 logs.Add,
                 ".rar",
                 static _ => throw new InvalidOperationException("Should not reach here"),
-                CancellationToken.None);
+                CancellationToken.None
+            );
         });
 
         Assert.NotNull(ex);
         Assert.IsType<DirectoryNotFoundException>(ex);
-        Assert.Contains(logs, static msg => msg.Contains("Skipping fallback", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            logs,
+            static msg => msg.Contains("Skipping fallback", StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     [Fact]
@@ -659,7 +816,8 @@ public class ArchiveServiceTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            service.ExtractCsoAsync(csoPath, tempIso, _tempDir, static _ => { }, cts.Token));
+            service.ExtractCsoAsync(csoPath, tempIso, _tempDir, static _ => { }, cts.Token)
+        );
     }
 
     [Fact]
@@ -678,12 +836,24 @@ public class ArchiveServiceTests : IDisposable
                 logs.Add,
                 ".rar",
                 static _ => throw new InvalidOperationException("transient error"),
-                CancellationToken.None);
+                CancellationToken.None
+            );
         });
 
         Assert.NotNull(ex);
-        Assert.Contains(logs, static msg => msg.Contains("Direct extraction failed", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(logs, static msg => msg.Contains("Attempting fallback with local copy", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            logs,
+            static msg =>
+                msg.Contains("Direct extraction failed", StringComparison.OrdinalIgnoreCase)
+        );
+        Assert.Contains(
+            logs,
+            static msg =>
+                msg.Contains(
+                    "Attempting fallback with local copy",
+                    StringComparison.OrdinalIgnoreCase
+                )
+        );
     }
 
     [Fact]
@@ -706,15 +876,23 @@ public class ArchiveServiceTests : IDisposable
                     ThrowIndexOutOfRange();
                     return null!;
                 },
-                CancellationToken.None);
+                CancellationToken.None
+            );
         });
 
         Assert.NotNull(ex);
         Assert.IsType<IndexOutOfRangeException>(ex);
         // The exception is re-thrown before the fallback copy happens
-        Assert.Contains(logs, static msg => msg.Contains("Direct extraction failed", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            logs,
+            static msg =>
+                msg.Contains("Direct extraction failed", StringComparison.OrdinalIgnoreCase)
+        );
         // No temp file should be created in the output directory (fallback copy didn't happen)
-        Assert.DoesNotContain(Directory.GetFiles(Path.GetTempPath(), "*.rar"), static f => File.GetCreationTime(f) > DateTime.UtcNow.AddMinutes(-1));
+        Assert.DoesNotContain(
+            Directory.GetFiles(Path.GetTempPath(), "*.rar"),
+            static f => File.GetCreationTime(f) > DateTime.UtcNow.AddMinutes(-1)
+        );
     }
 
     [Fact]
@@ -733,10 +911,18 @@ public class ArchiveServiceTests : IDisposable
         }
 
         var logs = new List<string>();
-        var result = await service.ExtractArchiveAsync(zipPath, tempDir, logs.Add, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            zipPath,
+            tempDir,
+            logs.Add,
+            CancellationToken.None
+        );
 
         Assert.True(result.Success);
-        Assert.Contains(logs, static msg => msg.Contains("Extracting", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            logs,
+            static msg => msg.Contains("Extracting", StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     // --- Tests for 7za.exe exit code 2 (corrupt/invalid archive) handling ---
@@ -751,14 +937,20 @@ public class ArchiveServiceTests : IDisposable
         var tempDir = Path.Combine(_tempDir, "extract");
         var logs = new List<string>();
 
-        var result = await service.ExtractArchiveAsync(corruptPath, tempDir, logs.Add, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            corruptPath,
+            tempDir,
+            logs.Add,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
         Assert.True(
-            result.ErrorMessage.Contains("corrupt", StringComparison.OrdinalIgnoreCase) ||
-            result.ErrorMessage.Contains("invalid", StringComparison.OrdinalIgnoreCase) ||
-            result.ErrorMessage.Contains("incomplete", StringComparison.OrdinalIgnoreCase),
-            $"Expected corrupt/invalid/incomplete message but got: {result.ErrorMessage}");
+            result.ErrorMessage.Contains("corrupt", StringComparison.OrdinalIgnoreCase)
+                || result.ErrorMessage.Contains("invalid", StringComparison.OrdinalIgnoreCase)
+                || result.ErrorMessage.Contains("incomplete", StringComparison.OrdinalIgnoreCase),
+            $"Expected corrupt/invalid/incomplete message but got: {result.ErrorMessage}"
+        );
     }
 
     [Fact]
@@ -771,11 +963,20 @@ public class ArchiveServiceTests : IDisposable
         var tempDir = Path.Combine(_tempDir, "extract");
         var logs = new List<string>();
 
-        var result = await service.ExtractArchiveAsync(corruptPath, tempDir, logs.Add, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            corruptPath,
+            tempDir,
+            logs.Add,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
         // Should NOT contain the generic "7za.exe extraction failed" message
-        Assert.DoesNotContain("7za.exe extraction failed", result.ErrorMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "7za.exe extraction failed",
+            result.ErrorMessage,
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -788,10 +989,18 @@ public class ArchiveServiceTests : IDisposable
         var tempDir = Path.Combine(_tempDir, "extract");
         var logs = new List<string>();
 
-        var result = await service.ExtractArchiveAsync(corruptPath, tempDir, logs.Add, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            corruptPath,
+            tempDir,
+            logs.Add,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
-        Assert.Contains(logs, static msg => msg.Contains("7za.exe fallback", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            logs,
+            static msg => msg.Contains("7za.exe fallback", StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     [Fact]
@@ -803,11 +1012,19 @@ public class ArchiveServiceTests : IDisposable
         var tempDir = Path.Combine(_tempDir, "extract");
         var logs = new List<string>();
 
-        var result = await service.ExtractArchiveAsync(corruptPath, tempDir, logs.Add, CancellationToken.None);
+        var result = await service.ExtractArchiveAsync(
+            corruptPath,
+            tempDir,
+            logs.Add,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
         // Should NOT attempt 7za fallback
-        Assert.DoesNotContain(logs, static msg => msg.Contains("7za.exe fallback", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            logs,
+            static msg => msg.Contains("7za.exe fallback", StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     private string CreateDummyFile(string fileName)

@@ -55,6 +55,6 @@ Legacy leftovers (`logs`, `Resources`, `Screenshot` folders; `maxcso.exe`, `psxp
 |----------|---------|
 | `https://www.purelogiccode.com/bugreport/api/send-bug-report` | Bug reports (POST, `X-API-KEY` header) |
 | `https://www.purelogiccode.com/ApplicationStats/stats` | Anonymous usage stats (POST, Bearer token) |
-| `https://api.github.com/repos/purelogiccode/BatchConvertToCHD/releases/latest` (primary) and `.../drpetersonfernandes/BatchConvertToCHD/releases/latest` (fallback) | Update checks (GET, User-Agent); the fallback is tried when the primary is unreachable |
+| `https://api.github.com/repos/purelogiccode/BatchConvertToCHD/releases/latest` | Update checks (GET, User-Agent) |
 
 All HTTP traffic goes through the shared `AppHttpClient` singleton (TLS 1.2/1.3, see [Services Reference](07-services-reference.md#71-apphttpclient)).

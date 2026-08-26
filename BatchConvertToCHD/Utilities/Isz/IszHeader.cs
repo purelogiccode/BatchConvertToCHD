@@ -41,7 +41,8 @@ internal sealed record IszHeader(
     int SegmentNumber,
     uint ChunkTableOffset,
     uint SegmentTableOffset,
-    uint DataOffset)
+    uint DataOffset
+)
 {
     /// <summary>The four bytes every ISZ file opens with.</summary>
     internal const string Signature = "IsZ!";
@@ -68,15 +69,18 @@ internal sealed record IszHeader(
     internal bool IsSegmented => SegmentTableOffset != 0;
 
     /// <summary>How the encryption in use should be described to the user.</summary>
-    internal string EncryptionDescription => PasswordMode switch
-    {
-        0 => "none",
-        1 => "password",
-        2 => "AES-128",
-        3 => "AES-192",
-        4 => "AES-256",
-        _ => "an unrecognised method (" + PasswordMode.ToString(CultureInfo.InvariantCulture) + ")"
-    };
+    internal string EncryptionDescription =>
+        PasswordMode switch
+        {
+            0 => "none",
+            1 => "password",
+            2 => "AES-128",
+            3 => "AES-192",
+            4 => "AES-256",
+            _ => "an unrecognised method ("
+                 + PasswordMode.ToString(CultureInfo.InvariantCulture)
+                 + ")",
+        };
 
     /// <summary>A one-line summary for the log.</summary>
     internal string Summary =>
@@ -86,8 +90,10 @@ internal sealed record IszHeader(
     /// <param name="header">Leading bytes of a file.</param>
     internal static bool HasSignature(ReadOnlySpan<byte> header)
     {
-        return header.Length >= Signature.Length &&
-               Encoding.ASCII.GetString(header[..Signature.Length]).Equals(Signature, StringComparison.Ordinal);
+        return header.Length >= Signature.Length
+               && Encoding
+                   .ASCII.GetString(header[..Signature.Length])
+                   .Equals(Signature, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -116,7 +122,8 @@ internal sealed record IszHeader(
             SegmentNumber: header[34],
             ChunkTableOffset: BinaryPrimitives.ReadUInt32LittleEndian(header[35..]),
             SegmentTableOffset: BinaryPrimitives.ReadUInt32LittleEndian(header[39..]),
-            DataOffset: BinaryPrimitives.ReadUInt32LittleEndian(header[43..]));
+            DataOffset: BinaryPrimitives.ReadUInt32LittleEndian(header[43..])
+        );
     }
 
     /// <summary>

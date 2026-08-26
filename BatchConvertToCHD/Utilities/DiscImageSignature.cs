@@ -18,7 +18,20 @@ internal static class DiscImageSignature
 
     /// <summary>The 12-byte sync pattern that opens every raw CD sector.</summary>
     private static readonly byte[] CdSyncMark =
-        [0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
+    [
+        0x00,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0x00,
+    ];
 
     /// <summary>
     /// Reads <paramref name="path"/> and reports what it appears to be.
@@ -30,7 +43,14 @@ internal static class DiscImageSignature
         {
             var header = new byte[HeaderLength];
             int read;
-            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (
+                var stream = new FileStream(
+                    path,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.ReadWrite
+                )
+            )
             {
                 read = stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false);
             }
@@ -50,7 +70,10 @@ internal static class DiscImageSignature
     /// <param name="header">Leading bytes of the file.</param>
     internal static DiscImageKind Classify(ReadOnlySpan<byte> header)
     {
-        if (header.Length >= CdSyncMark.Length && header[..CdSyncMark.Length].SequenceEqual(CdSyncMark))
+        if (
+            header.Length >= CdSyncMark.Length
+            && header[..CdSyncMark.Length].SequenceEqual(CdSyncMark)
+        )
         {
             return DiscImageKind.RawCd;
         }
@@ -68,11 +91,16 @@ internal static class DiscImageSignature
         switch (header.Length)
         {
             // Local file header, central directory, or a spanned/empty archive marker.
-            case >= 4 when header[0] == 0x50 && header[1] == 0x4B &&
-                           (header[2] is 0x03 or 0x05 or 0x07):
+            case >= 4
+                when header[0] == 0x50 && header[1] == 0x4B && (header[2] is 0x03 or 0x05 or 0x07):
                 return DiscImageKind.Zip;
-            case >= 6 when header[0] == 0x37 && header[1] == 0x7A &&
-                           header[2] == 0xBC && header[3] == 0xAF && header[4] == 0x27 && header[5] == 0x1C:
+            case >= 6
+                when header[0] == 0x37
+                     && header[1] == 0x7A
+                     && header[2] == 0xBC
+                     && header[3] == 0xAF
+                     && header[4] == 0x27
+                     && header[5] == 0x1C:
                 return DiscImageKind.SevenZip;
         }
 
@@ -81,7 +109,13 @@ internal static class DiscImageSignature
             return DiscImageKind.Isz;
         }
 
-        if (header.Length >= 4 && header[0] == 0x45 && header[1] == 0x43 && header[2] == 0x4D && header[3] == 0x00)
+        if (
+            header.Length >= 4
+            && header[0] == 0x45
+            && header[1] == 0x43
+            && header[2] == 0x4D
+            && header[3] == 0x00
+        )
         {
             return DiscImageKind.Ecm;
         }
@@ -91,7 +125,13 @@ internal static class DiscImageSignature
             return DiscImageKind.Cso;
         }
 
-        if (header.Length >= 4 && header[0] == 0x00 && header[1] == 0x50 && header[2] == 0x42 && header[3] == 0x50)
+        if (
+            header.Length >= 4
+            && header[0] == 0x00
+            && header[1] == 0x50
+            && header[2] == 0x42
+            && header[3] == 0x50
+        )
         {
             return DiscImageKind.Pbp;
         }
@@ -129,7 +169,7 @@ internal static class DiscImageSignature
             DiscImageKind.Cso => "a CISO/ZISO compressed image",
             DiscImageKind.Pbp => "a PlayStation EBOOT.PBP",
             DiscImageKind.Chd => "an existing CHD",
-            _ => "an unrecognised format"
+            _ => "an unrecognised format",
         };
     }
 
@@ -140,6 +180,8 @@ internal static class DiscImageSignature
             return false;
         }
 
-        return Encoding.ASCII.GetString(header[..signature.Length]).Equals(signature, StringComparison.Ordinal);
+        return Encoding
+            .ASCII.GetString(header[..signature.Length])
+            .Equals(signature, StringComparison.Ordinal);
     }
 }

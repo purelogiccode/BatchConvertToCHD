@@ -30,7 +30,11 @@ public static class CcdConverter
     /// <param name="outputCuePath">Path for the output .cue file.</param>
     /// <param name="copyBinFile">If true, copies the .img to a .bin file. If false, references the .img directly.</param>
     /// <returns>The path to the .cue file created.</returns>
-    public static string ConvertToCueBin(string ccdFilePath, string outputCuePath, bool copyBinFile = false)
+    public static string ConvertToCueBin(
+        string ccdFilePath,
+        string outputCuePath,
+        bool copyBinFile = false
+    )
     {
         var disc = CcdParser.Parse(ccdFilePath);
         return CueBinWriter.Write(disc, outputCuePath, copyBinFile);
@@ -45,7 +49,11 @@ public static class CcdConverter
     /// <param name="isoFilePath">Path for the output .iso file.</param>
     /// <param name="progress">Optional progress callback (bytesWritten, totalBytes).</param>
     /// <returns>The path to the .iso file created.</returns>
-    public static string ConvertToIso(string ccdFilePath, string isoFilePath, Action<long, long>? progress = null)
+    public static string ConvertToIso(
+        string ccdFilePath,
+        string isoFilePath,
+        Action<long, long>? progress = null
+    )
     {
         var disc = CcdParser.Parse(ccdFilePath);
         return IsoWriter.Write(disc, isoFilePath, progress);
@@ -76,7 +84,8 @@ public static class CcdConverter
         {
             using var reader = new StreamReader(filePath);
             var firstLine = reader.ReadLine();
-            return firstLine != null && firstLine.Trim().Equals("[CloneCD]", StringComparison.OrdinalIgnoreCase);
+            return firstLine != null
+                && firstLine.Trim().Equals("[CloneCD]", StringComparison.OrdinalIgnoreCase);
         }
         catch
         {
@@ -94,7 +103,7 @@ public static class CcdConverter
         var dataTracks = disc.Tracks.Count(t => !t.IsAudio);
         var audioTracks = disc.Tracks.Count(t => t.IsAudio);
 
-        return $"CloneCD v{disc.Version}: {disc.Tracks.Count} tracks ({dataTracks} data, {audioTracks} audio), " +
-               $"{disc.Sessions} session(s), Catalog: {(disc.Catalog ?? "none")}";
+        return $"CloneCD v{disc.Version}: {disc.Tracks.Count} tracks ({dataTracks} data, {audioTracks} audio), "
+            + $"{disc.Sessions} session(s), Catalog: {(disc.Catalog ?? "none")}";
     }
 }

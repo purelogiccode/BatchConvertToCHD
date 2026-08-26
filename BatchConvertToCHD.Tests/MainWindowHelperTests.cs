@@ -41,9 +41,12 @@ public class MainWindowHelperTests : IDisposable
         await MainWindow.StripUtf8BomIfPresentAsync(path, CancellationToken.None);
 
         var bytes = await File.ReadAllBytesAsync(path);
-        Assert.False(bytes is [0xEF, 0xBB, 0xBF, ..],
-            "BOM must be removed");
-        Assert.StartsWith("FILE \"track1.bin\" BINARY", System.Text.Encoding.UTF8.GetString(bytes), StringComparison.Ordinal);
+        Assert.False(bytes is [0xEF, 0xBB, 0xBF, ..], "BOM must be removed");
+        Assert.StartsWith(
+            "FILE \"track1.bin\" BINARY",
+            System.Text.Encoding.UTF8.GetString(bytes),
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -62,15 +65,19 @@ public class MainWindowHelperTests : IDisposable
     public async Task StripUtf8BomIfPresentAsync_MissingFileIsIgnored()
     {
         // Best-effort helper: must not throw for a missing file.
-        await MainWindow.StripUtf8BomIfPresentAsync(Path.Combine(_tempDir, "nope.cue"), CancellationToken.None);
+        await MainWindow.StripUtf8BomIfPresentAsync(
+            Path.Combine(_tempDir, "nope.cue"),
+            CancellationToken.None
+        );
     }
 
     [Fact]
     public void SelectChdmanErrorLine_SkipsProgressLinesAndReturnsLastRealError()
     {
-        const string errorText = "Compressing, 0.0% complete... (ratio=100.0%)\r\n" +
-                                 "Output bytes: 1234\r\n" +
-                                 "ERROR: couldn't find bin file [track1.bin]";
+        const string errorText =
+            "Compressing, 0.0% complete... (ratio=100.0%)\r\n"
+            + "Output bytes: 1234\r\n"
+            + "ERROR: couldn't find bin file [track1.bin]";
 
         var line = MainWindow.SelectChdmanErrorLine(errorText);
 
@@ -80,8 +87,8 @@ public class MainWindowHelperTests : IDisposable
     [Fact]
     public void SelectChdmanErrorLine_ProgressOnly_ReturnsLastLine()
     {
-        const string errorText = "Compressing, 10.0% complete... (ratio=95.0%)\n" +
-                                 "Converting, 20.0% complete...";
+        const string errorText =
+            "Compressing, 10.0% complete... (ratio=95.0%)\n" + "Converting, 20.0% complete...";
 
         var line = MainWindow.SelectChdmanErrorLine(errorText);
 
@@ -91,7 +98,9 @@ public class MainWindowHelperTests : IDisposable
     [Fact]
     public void SelectChdmanErrorLine_SingleErrorLineIsReturned()
     {
-        var line = MainWindow.SelectChdmanErrorLine("Unit size must be specified if no output parent CHD is supplied");
+        var line = MainWindow.SelectChdmanErrorLine(
+            "Unit size must be specified if no output parent CHD is supplied"
+        );
 
         Assert.Equal("Unit size must be specified if no output parent CHD is supplied", line);
     }
@@ -107,9 +116,10 @@ public class MainWindowHelperTests : IDisposable
     public void SelectChdmanErrorLine_SkipsFatalErrorSummaryAndReturnsRealCause()
     {
         // chdman prints the actual cause before its "Fatal error occurred: N" exit summary.
-        const string errorText = "Compressing, 0.0% complete... (ratio=100.0%)\r\n" +
-                                 "ERROR: Input file is not a valid CD image\r\n" +
-                                 "Fatal error occurred: 1";
+        const string errorText =
+            "Compressing, 0.0% complete... (ratio=100.0%)\r\n"
+            + "ERROR: Input file is not a valid CD image\r\n"
+            + "Fatal error occurred: 1";
 
         var line = MainWindow.SelectChdmanErrorLine(errorText);
 
@@ -119,19 +129,23 @@ public class MainWindowHelperTests : IDisposable
     [Fact]
     public void SelectChdmanErrorLine_FatalSummaryOnly_ReturnsDescriptiveMessage()
     {
-        const string errorText = "Compressing, 0.0% complete... (ratio=100.0%)\n" +
-                                 "Fatal error occurred: 1";
+        const string errorText =
+            "Compressing, 0.0% complete... (ratio=100.0%)\n" + "Fatal error occurred: 1";
 
         var line = MainWindow.SelectChdmanErrorLine(errorText);
 
-        Assert.Equal("chdman encountered an error. The file may be corrupted, in an unsupported format, or a required codec may be missing.", line);
+        Assert.Equal(
+            "chdman encountered an error. The file may be corrupted, in an unsupported format, or a required codec may be missing.",
+            line
+        );
     }
 
     [Fact]
     public void SelectChdmanErrorLine_DoesNotSkipUnhandledExceptionLine()
     {
         // chdman C++ runtime crash lines are real causes and must be kept.
-        const string errorText = "Unhandled exception: cannot create std::vector larger than max_size()";
+        const string errorText =
+            "Unhandled exception: cannot create std::vector larger than max_size()";
 
         var line = MainWindow.SelectChdmanErrorLine(errorText);
 
@@ -141,11 +155,17 @@ public class MainWindowHelperTests : IDisposable
     [Fact]
     public void GetChdExtractionErrorMessage_DecompressionFailure_AddsGuidance()
     {
-        var message = MainWindow.GetChdExtractionErrorMessage("Failed to read hunk 0: Chderrdecompressionerror");
+        var message = MainWindow.GetChdExtractionErrorMessage(
+            "Failed to read hunk 0: Chderrdecompressionerror"
+        );
 
         Assert.Contains("A/V (laserdisc)", message, StringComparison.Ordinal);
         Assert.Contains("Retrying with chdman", message, StringComparison.Ordinal);
-        Assert.StartsWith("Failed to read hunk 0: Chderrdecompressionerror", message, StringComparison.Ordinal);
+        Assert.StartsWith(
+            "Failed to read hunk 0: Chderrdecompressionerror",
+            message,
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -159,7 +179,11 @@ public class MainWindowHelperTests : IDisposable
     [Fact]
     public void BuildChdmanExtractArgs_ExtractCd_PinsBinAndForces()
     {
-        var args = MainWindow.BuildChdmanExtractArgs("extractcd", @"D:\roms\game.chd", @"D:\out\game.cue");
+        var args = MainWindow.BuildChdmanExtractArgs(
+            "extractcd",
+            @"D:\roms\game.chd",
+            @"D:\out\game.cue"
+        );
 
         Assert.Contains("extractcd -i \"D:\\roms\\game.chd\"", args, StringComparison.Ordinal);
         Assert.Contains("-o \"D:\\out\\game.cue\"", args, StringComparison.Ordinal);

@@ -9,4 +9,5 @@ namespace BatchConvertToCHD.Utilities;
 internal sealed record CueWorkDirectoryResult(
     string? WorkCuePath,
     string? WorkDir,
-    IReadOnlyList<string> UnresolvedNames);
+    IReadOnlyList<string> UnresolvedNames
+);

@@ -33,7 +33,10 @@ internal static class CueBinWriter
         // TRACK entries
         foreach (var track in disc.Tracks)
         {
-            sb.Append("  TRACK ").Append(track.Number.ToString("00", CultureInfo.InvariantCulture)).Append(' ').AppendLine(track.CueTrackType);
+            sb.Append("  TRACK ")
+                .Append(track.Number.ToString("00", CultureInfo.InvariantCulture))
+                .Append(' ')
+                .AppendLine(track.CueTrackType);
 
             // FLAGS if present
             if (!string.IsNullOrEmpty(track.Flags))
@@ -60,10 +63,14 @@ internal static class CueBinWriter
             // INDEX 02+ (sub-indexes)
             foreach (var kvp in track.Indexes.OrderBy(k => k.Key))
             {
-                if (kvp.Key <= 1) continue;
+                if (kvp.Key <= 1)
+                    continue;
 
                 var (m, s, f) = CcdParser.LbaToMsf(kvp.Value);
-                sb.Append("    INDEX ").Append(kvp.Key.ToString("00", CultureInfo.InvariantCulture)).Append(' ').AppendLine(CcdParser.FormatMsf(m, s, f));
+                sb.Append("    INDEX ")
+                    .Append(kvp.Key.ToString("00", CultureInfo.InvariantCulture))
+                    .Append(' ')
+                    .AppendLine(CcdParser.FormatMsf(m, s, f));
             }
         }
 

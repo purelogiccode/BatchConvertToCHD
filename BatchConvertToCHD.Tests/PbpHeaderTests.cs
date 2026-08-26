@@ -26,16 +26,7 @@ public class PbpHeaderTests
     [Fact]
     public void ConstructorSetsAllProperties()
     {
-        var header = new PbpHeader(
-            1,
-            0x28,
-            0x100,
-            0x200,
-            0x300,
-            0x400,
-            0x500,
-            0x600,
-            0x700);
+        var header = new PbpHeader(1, 0x28, 0x100, 0x200, 0x300, 0x400, 0x500, 0x600, 0x700);
 
         Assert.Equal(1u, header.Version);
         Assert.Equal(0x28, header.SfoOffset);

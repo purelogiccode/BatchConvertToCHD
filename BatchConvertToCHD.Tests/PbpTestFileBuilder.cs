@@ -27,13 +27,48 @@ internal sealed class PbpTestFileBuilder
     private List<int>? _multiDiscPositions;
     private byte[]? _customIsoBlock1Data;
 
-    public PbpTestFileBuilder WithTitle(string title) { _title = title; return this; }
-    public PbpTestFileBuilder WithDiscId(string discId) { _discId = discId; return this; }
-    public PbpTestFileBuilder WithCategory(string category) { _category = category; return this; }
-    public PbpTestFileBuilder WithBlockCount(int count) { _blockCount = count; return this; }
-    public PbpTestFileBuilder WithCompressedBlocks(bool compress) { _compressBlocks = compress; return this; }
-    public PbpTestFileBuilder AsMultiDisc(params int[] positions) { _multiDisc = true; _multiDiscPositions = positions?.ToList(); return this; }
-    public PbpTestFileBuilder WithCustomIsoBlock1Data(byte[] data) { _customIsoBlock1Data = data; return this; }
+    public PbpTestFileBuilder WithTitle(string title)
+    {
+        _title = title;
+        return this;
+    }
+
+    public PbpTestFileBuilder WithDiscId(string discId)
+    {
+        _discId = discId;
+        return this;
+    }
+
+    public PbpTestFileBuilder WithCategory(string category)
+    {
+        _category = category;
+        return this;
+    }
+
+    public PbpTestFileBuilder WithBlockCount(int count)
+    {
+        _blockCount = count;
+        return this;
+    }
+
+    public PbpTestFileBuilder WithCompressedBlocks(bool compress)
+    {
+        _compressBlocks = compress;
+        return this;
+    }
+
+    public PbpTestFileBuilder AsMultiDisc(params int[] positions)
+    {
+        _multiDisc = true;
+        _multiDiscPositions = positions?.ToList();
+        return this;
+    }
+
+    public PbpTestFileBuilder WithCustomIsoBlock1Data(byte[] data)
+    {
+        _customIsoBlock1Data = data;
+        return this;
+    }
 
     /// <summary>
     /// Builds the PBP file and writes it to the specified path.
@@ -146,7 +181,10 @@ internal sealed class PbpTestFileBuilder
         Span<byte> posBytes = stackalloc byte[20];
         for (var i = 0; i < 5; i++)
         {
-            BinaryPrimitives.WriteUInt32LittleEndian(posBytes[(i * 4)..], i < positions.Count ? (uint)positions[i] : 0u);
+            BinaryPrimitives.WriteUInt32LittleEndian(
+                posBytes[(i * 4)..],
+                i < positions.Count ? (uint)positions[i] : 0u
+            );
         }
 
         stream.Write(posBytes);
@@ -196,29 +234,49 @@ internal sealed class PbpTestFileBuilder
         stream.WriteByte(0x41); // track type (data)
         stream.WriteByte(0);
         stream.WriteByte(0xA0);
-        stream.WriteByte(0); stream.WriteByte(0); stream.WriteByte(1); // MSF = 00:00:01 (start track 1)
-        stream.WriteByte(0); stream.WriteByte(0); stream.WriteByte(0); stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(1); // MSF = 00:00:01 (start track 1)
+        stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(0);
 
         // A1 entry (end track)
         stream.WriteByte(0x41);
         stream.WriteByte(0);
         stream.WriteByte(0xA1);
-        stream.WriteByte(0); stream.WriteByte(0); stream.WriteByte(1); // end track 1
-        stream.WriteByte(0); stream.WriteByte(0); stream.WriteByte(0); stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(1); // end track 1
+        stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(0);
 
         // A2 entry (lead-out)
         stream.WriteByte(0x41);
         stream.WriteByte(0);
         stream.WriteByte(0xA2);
-        stream.WriteByte(0); stream.WriteByte(2); stream.WriteByte(0); // MSF = 00:02:00
-        stream.WriteByte(0); stream.WriteByte(0); stream.WriteByte(0); stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(2);
+        stream.WriteByte(0); // MSF = 00:02:00
+        stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(0);
 
         // Track 1
         stream.WriteByte(0x41); // data track
         stream.WriteByte(0);
         stream.WriteByte(0x01); // track 1
-        stream.WriteByte(0); stream.WriteByte(2); stream.WriteByte(0); // MSF = 00:02:00
-        stream.WriteByte(0); stream.WriteByte(0); stream.WriteByte(0); stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(2);
+        stream.WriteByte(0); // MSF = 00:02:00
+        stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(0);
+        stream.WriteByte(0);
     }
 
     private List<uint> WriteIsoIndex(Stream stream, int blockCount)
@@ -237,7 +295,10 @@ internal sealed class PbpTestFileBuilder
             // Write index entry (32 bytes)
             entry.Clear();
             BinaryPrimitives.WriteUInt32LittleEndian(entry[0..4], currentOffset);
-            BinaryPrimitives.WriteInt32LittleEndian(entry[4..8], _compressBlocks ? compressedLength : BlockSize);
+            BinaryPrimitives.WriteInt32LittleEndian(
+                entry[4..8],
+                _compressBlocks ? compressedLength : BlockSize
+            );
             stream.Write(entry);
 
             currentOffset += (uint)(_compressBlocks ? compressedLength : BlockSize);

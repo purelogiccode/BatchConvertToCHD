@@ -20,14 +20,30 @@ internal static class RawCdImageDetector
     /// <summary>
     /// The 12-byte sync pattern every raw CD sector opens with: 00 followed by ten FF and a 00.
     /// </summary>
-    private static readonly byte[] SyncMark = [0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
+    private static readonly byte[] SyncMark =
+    [
+        0x00,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0x00,
+    ];
 
     /// <summary>Offset of the mode byte: 12 bytes of sync plus a 3-byte MSF address.</summary>
     private const int ModeOffset = 15;
 
     /// <summary>Extensions worth sniffing, being the ones raw CD dumps get mislabelled with.</summary>
-    private static readonly HashSet<string> CandidateExtensions =
-        new([FileExtensions.Iso, FileExtensions.Img, FileExtensions.Bin], StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<string> CandidateExtensions = new(
+        [FileExtensions.Iso, FileExtensions.Img, FileExtensions.Bin],
+        StringComparer.OrdinalIgnoreCase
+    );
 
     /// <summary>True when <paramref name="extension"/> is one that raw CD dumps are found under.</summary>
     /// <param name="extension">File extension including the leading dot.</param>
@@ -55,8 +71,15 @@ internal static class RawCdImageDetector
             }
 
             var header = new byte[ModeOffset + 1];
-            using var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            if (stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false) < header.Length)
+            using var stream = new FileStream(
+                imagePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite
+            );
+            if (
+                stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false) < header.Length
+            )
             {
                 return null;
             }
@@ -72,7 +95,7 @@ internal static class RawCdImageDetector
             {
                 1 => BinCueGenerator.Mode1,
                 2 => BinCueGenerator.Mode2,
-                _ => null
+                _ => null,
             };
         }
         catch (Exception)
@@ -94,8 +117,12 @@ internal static class RawCdImageDetector
     /// <param name="trackMode">Cue track mode to declare, e.g. "MODE2/2352".</param>
     /// <param name="workDir">Existing directory the cue is written into.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<string?> TryWriteCueAsync(string imagePath, string trackMode, string workDir,
-        CancellationToken token)
+    internal static async Task<string?> TryWriteCueAsync(
+        string imagePath,
+        string trackMode,
+        string workDir,
+        CancellationToken token
+    )
     {
         string relativeImagePath;
         try
@@ -113,8 +140,15 @@ internal static class RawCdImageDetector
             return null;
         }
 
-        var cuePath = Path.Combine(workDir, Path.GetFileNameWithoutExtension(imagePath) + FileExtensions.Cue);
-        await File.WriteAllTextAsync(cuePath, BinCueGenerator.BuildCueContent(relativeImagePath, trackMode), token)
+        var cuePath = Path.Combine(
+            workDir,
+            Path.GetFileNameWithoutExtension(imagePath) + FileExtensions.Cue
+        );
+        await File.WriteAllTextAsync(
+                cuePath,
+                BinCueGenerator.BuildCueContent(relativeImagePath, trackMode),
+                token
+            )
             .ConfigureAwait(false);
 
         return cuePath;

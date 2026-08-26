@@ -10,7 +10,14 @@ public class CueSheetWriterTests
     {
         var toc = new List<TocEntry>
         {
-            new() { TrackType = TrackType.Data, TrackNo = 1, Minutes = 0, Seconds = 2, Frames = 0 }
+            new()
+            {
+                TrackType = TrackType.Data,
+                TrackNo = 1,
+                Minutes = 0,
+                Seconds = 2,
+                Frames = 0,
+            },
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
@@ -25,7 +32,14 @@ public class CueSheetWriterTests
     {
         var toc = new List<TocEntry>
         {
-            new() { TrackType = TrackType.Audio, TrackNo = 2, Minutes = 4, Seconds = 30, Frames = 25 }
+            new()
+            {
+                TrackType = TrackType.Audio,
+                TrackNo = 2,
+                Minutes = 4,
+                Seconds = 30,
+                Frames = 25,
+            },
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
@@ -41,9 +55,30 @@ public class CueSheetWriterTests
     {
         var toc = new List<TocEntry>
         {
-            new() { TrackType = TrackType.Data, TrackNo = 1, Minutes = 0, Seconds = 2, Frames = 0 },
-            new() { TrackType = TrackType.Audio, TrackNo = 2, Minutes = 4, Seconds = 30, Frames = 0 },
-            new() { TrackType = TrackType.Audio, TrackNo = 3, Minutes = 8, Seconds = 15, Frames = 50 }
+            new()
+            {
+                TrackType = TrackType.Data,
+                TrackNo = 1,
+                Minutes = 0,
+                Seconds = 2,
+                Frames = 0,
+            },
+            new()
+            {
+                TrackType = TrackType.Audio,
+                TrackNo = 2,
+                Minutes = 4,
+                Seconds = 30,
+                Frames = 0,
+            },
+            new()
+            {
+                TrackType = TrackType.Audio,
+                TrackNo = 3,
+                Minutes = 8,
+                Seconds = 15,
+                Frames = 50,
+            },
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("disc.bin", toc);
@@ -62,15 +97,28 @@ public class CueSheetWriterTests
     {
         var toc = new List<TocEntry>
         {
-            new() { TrackType = TrackType.Audio, TrackNo = 1, Minutes = 0, Seconds = 2, Frames = 0 }
+            new()
+            {
+                TrackType = TrackType.Audio,
+                TrackNo = 1,
+                Minutes = 0,
+                Seconds = 2,
+                Frames = 0,
+            },
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
 
         // Audio tracks should have INDEX 00 before INDEX 01
         var lines = cue.Split('\n');
-        var index00Line = Array.FindIndex(lines, l => l.Trim().StartsWith("INDEX 00", StringComparison.Ordinal));
-        var index01Line = Array.FindIndex(lines, l => l.Trim().StartsWith("INDEX 01", StringComparison.Ordinal));
+        var index00Line = Array.FindIndex(
+            lines,
+            l => l.Trim().StartsWith("INDEX 00", StringComparison.Ordinal)
+        );
+        var index01Line = Array.FindIndex(
+            lines,
+            l => l.Trim().StartsWith("INDEX 01", StringComparison.Ordinal)
+        );
         Assert.True(index00Line >= 0, "Audio track should have INDEX 00");
         Assert.True(index01Line > index00Line, "INDEX 01 should come after INDEX 00");
     }
@@ -80,7 +128,14 @@ public class CueSheetWriterTests
     {
         var toc = new List<TocEntry>
         {
-            new() { TrackType = TrackType.Data, TrackNo = 1, Minutes = 0, Seconds = 2, Frames = 0 }
+            new()
+            {
+                TrackType = TrackType.Data,
+                TrackNo = 1,
+                Minutes = 0,
+                Seconds = 2,
+                Frames = 0,
+            },
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
@@ -103,7 +158,14 @@ public class CueSheetWriterTests
     {
         var toc = new List<TocEntry>
         {
-            new() { TrackType = TrackType.Data, TrackNo = 1, Minutes = 0, Seconds = 2, Frames = 0 }
+            new()
+            {
+                TrackType = TrackType.Data,
+                TrackNo = 1,
+                Minutes = 0,
+                Seconds = 2,
+                Frames = 0,
+            },
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("My Game (USA).bin", toc);
@@ -115,7 +177,14 @@ public class CueSheetWriterTests
     {
         var toc = new List<TocEntry>
         {
-            new() { TrackType = TrackType.Data, TrackNo = 1, Minutes = 1, Seconds = 2, Frames = 3 }
+            new()
+            {
+                TrackType = TrackType.Data,
+                TrackNo = 1,
+                Minutes = 1,
+                Seconds = 2,
+                Frames = 3,
+            },
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
@@ -128,7 +197,14 @@ public class CueSheetWriterTests
         // 150 frames = 2 seconds
         var toc = new List<TocEntry>
         {
-            new() { TrackType = TrackType.Audio, TrackNo = 2, Minutes = 0, Seconds = 2, Frames = 0 }
+            new()
+            {
+                TrackType = TrackType.Audio,
+                TrackNo = 2,
+                Minutes = 0,
+                Seconds = 2,
+                Frames = 0,
+            },
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
@@ -145,7 +221,14 @@ public class CueSheetWriterTests
         // Track at 00:01:00 (75 frames), subtracting 150 would go negative
         var toc = new List<TocEntry>
         {
-            new() { TrackType = TrackType.Audio, TrackNo = 2, Minutes = 0, Seconds = 1, Frames = 0 }
+            new()
+            {
+                TrackType = TrackType.Audio,
+                TrackNo = 2,
+                Minutes = 0,
+                Seconds = 1,
+                Frames = 0,
+            },
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
@@ -159,7 +242,14 @@ public class CueSheetWriterTests
     {
         var toc = new List<TocEntry>
         {
-            new() { TrackType = TrackType.Data, TrackNo = 1, Minutes = 0, Seconds = 2, Frames = 0 }
+            new()
+            {
+                TrackType = TrackType.Data,
+                TrackNo = 1,
+                Minutes = 0,
+                Seconds = 2,
+                Frames = 0,
+            },
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);

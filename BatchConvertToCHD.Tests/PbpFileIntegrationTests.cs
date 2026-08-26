@@ -44,7 +44,11 @@ public class PbpFileIntegrationTests : IDisposable
             yield return path;
     }
 
-    private static IEnumerable<(string PbpPath, string BinPath, string CuePath)> GetPbpWithBinCuePairs()
+    private static IEnumerable<(
+        string PbpPath,
+        string BinPath,
+        string CuePath
+    )> GetPbpWithBinCuePairs()
     {
         if (!SamplesExist())
             yield break;
@@ -121,7 +125,10 @@ public class PbpFileIntegrationTests : IDisposable
             var error = PbpFile.Open(pbpPath, out var pbp);
             Assert.Equal(PbpError.None, error);
             Assert.NotNull(pbp);
-            Assert.False(string.IsNullOrWhiteSpace(pbp.Title), $"PBP missing title: {Path.GetFileName(pbpPath)}");
+            Assert.False(
+                string.IsNullOrWhiteSpace(pbp.Title),
+                $"PBP missing title: {Path.GetFileName(pbpPath)}"
+            );
             pbp.Dispose();
         }
     }
@@ -137,7 +144,10 @@ public class PbpFileIntegrationTests : IDisposable
             var error = PbpFile.Open(pbpPath, out var pbp);
             Assert.Equal(PbpError.None, error);
             Assert.NotNull(pbp);
-            Assert.False(string.IsNullOrWhiteSpace(pbp.DiscId), $"PBP missing disc ID: {Path.GetFileName(pbpPath)}");
+            Assert.False(
+                string.IsNullOrWhiteSpace(pbp.DiscId),
+                $"PBP missing disc ID: {Path.GetFileName(pbpPath)}"
+            );
             pbp.Dispose();
         }
     }
@@ -270,7 +280,8 @@ public class PbpFileIntegrationTests : IDisposable
 
             Assert.True(
                 buffer1.AsSpan(0, bytesRead1).SequenceEqual(buffer2.AsSpan(0, bytesRead2)),
-                $"Extracted ISO differs at offset {offset}");
+                $"Extracted ISO differs at offset {offset}"
+            );
             offset += bytesRead1;
         }
 
@@ -325,7 +336,8 @@ public class PbpFileIntegrationTests : IDisposable
             var disc = pbp.Discs[0];
             var generatedCue = CueSheetWriter.GenerateCueSheet(
                 Path.GetFileNameWithoutExtension(pbpPath) + ".bin",
-                disc.Toc);
+                disc.Toc
+            );
 
             var originalCue = File.ReadAllText(cuePath);
 
@@ -337,10 +349,12 @@ public class PbpFileIntegrationTests : IDisposable
 
     private static string NormalizeCue(string cue)
     {
-        return string.Join("\n",
+        return string.Join(
+            "\n",
             cue.Replace("\r\n", "\n")
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                .Select(l => l.Trim()));
+                .Select(l => l.Trim())
+        );
     }
 
     [Fact]
@@ -358,7 +372,10 @@ public class PbpFileIntegrationTests : IDisposable
             var disc = pbp.Discs[0];
             var buffer = new byte[16 * PbpDiscInfo.IsoBlockSize];
             disc.ReadBlock(0, buffer, out var bytesRead);
-            Assert.True(bytesRead > 0, $"ReadBlock returned 0 bytes for {Path.GetFileName(pbpPath)}");
+            Assert.True(
+                bytesRead > 0,
+                $"ReadBlock returned 0 bytes for {Path.GetFileName(pbpPath)}"
+            );
 
             pbp.Dispose();
         }

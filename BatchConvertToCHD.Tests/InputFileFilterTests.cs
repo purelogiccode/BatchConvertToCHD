@@ -52,10 +52,19 @@ public class InputFileFilterTests : IDisposable
         var ccd = CreateFile("Game.ccd", "[CloneCD]\r\nVersion=3\r\n");
         var img = CreateFile("Game.img");
 
-        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync([ccd, img], _log.Add, CancellationToken.None);
+        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync(
+            [ccd, img],
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.Equal([ccd], remaining);
-        Assert.Contains(_log, m => m.Contains("Game.img", StringComparison.Ordinal) && m.Contains("same base name", StringComparison.Ordinal));
+        Assert.Contains(
+            _log,
+            m =>
+                m.Contains("Game.img", StringComparison.Ordinal)
+                && m.Contains("same base name", StringComparison.Ordinal)
+        );
     }
 
     [Fact]
@@ -64,7 +73,11 @@ public class InputFileFilterTests : IDisposable
         var cue = CreateFile("Game.cue", "FILE \"Game.bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n");
         var bin = CreateFile("Game.bin");
 
-        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync([cue, bin], _log.Add, CancellationToken.None);
+        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync(
+            [cue, bin],
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.Equal([cue], remaining);
     }
@@ -76,14 +89,22 @@ public class InputFileFilterTests : IDisposable
         // has to come from reading the descriptor.
         var cue = CreateFile(
             "Game.cue",
-            "FILE \"Game (Track 01).bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\nFILE \"Game (Track 02).bin\" BINARY\r\n  TRACK 02 AUDIO\r\n");
+            "FILE \"Game (Track 01).bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\nFILE \"Game (Track 02).bin\" BINARY\r\n  TRACK 02 AUDIO\r\n"
+        );
         var track1 = CreateFile("Game (Track 01).bin");
         var track2 = CreateFile("Game (Track 02).bin");
 
-        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync([cue, track1, track2], _log.Add, CancellationToken.None);
+        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync(
+            [cue, track1, track2],
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.Equal([cue], remaining);
-        Assert.All(_log, m => Assert.Contains("referenced by Game.cue", m, StringComparison.Ordinal));
+        Assert.All(
+            _log,
+            m => Assert.Contains("referenced by Game.cue", m, StringComparison.Ordinal)
+        );
     }
 
     [Fact]
@@ -94,7 +115,11 @@ public class InputFileFilterTests : IDisposable
         var bin = CreateFile("Game.bin");
         var other = CreateFile("Bonus Disc.iso");
 
-        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync([cue, bin, other], _log.Add, CancellationToken.None);
+        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync(
+            [cue, bin, other],
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.Equal([cue, other], remaining);
     }
@@ -106,7 +131,11 @@ public class InputFileFilterTests : IDisposable
         var cue = CreateFile(Path.Combine("discA", "Game.cue"), "FILE \"Game.bin\" BINARY\r\n");
         var img = CreateFile(Path.Combine("discB", "Game.img"));
 
-        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync([cue, img], _log.Add, CancellationToken.None);
+        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync(
+            [cue, img],
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.Equal([cue, img], remaining);
         Assert.Empty(_log);
@@ -118,7 +147,11 @@ public class InputFileFilterTests : IDisposable
         var img = CreateFile("Standalone.img");
         var iso = CreateFile("Another.iso");
 
-        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync([img, iso], _log.Add, CancellationToken.None);
+        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync(
+            [img, iso],
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.Equal([img, iso], remaining);
         Assert.Empty(_log);
@@ -130,7 +163,11 @@ public class InputFileFilterTests : IDisposable
         var ccd = CreateFile("SAIYUKI.CCD", "[CloneCD]\r\n");
         var img = CreateFile("SAIYUKI.IMG");
 
-        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync([ccd, img], _log.Add, CancellationToken.None);
+        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync(
+            [ccd, img],
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.Equal([ccd], remaining);
     }
@@ -143,7 +180,11 @@ public class InputFileFilterTests : IDisposable
         var bin = CreateFile("B.bin");
         var last = CreateFile("C.iso");
 
-        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync([first, cue, bin, last], _log.Add, CancellationToken.None);
+        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync(
+            [first, cue, bin, last],
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.Equal([first, cue, last], remaining);
     }
@@ -154,7 +195,10 @@ public class InputFileFilterTests : IDisposable
         var ccd = CreateFile("Vagrant.ccd", "[CloneCD]\r\n");
         var img = CreateFile("Vagrant.img");
 
-        var suppressions = await InputFileFilter.FindCompanionSuppressionsAsync([ccd, img], CancellationToken.None);
+        var suppressions = await InputFileFilter.FindCompanionSuppressionsAsync(
+            [ccd, img],
+            CancellationToken.None
+        );
 
         var suppression = Assert.Single(suppressions);
         Assert.Equal(img, suppression.DataFile);
@@ -169,7 +213,11 @@ public class InputFileFilterTests : IDisposable
         var cue = CreateFile("Game.cue", "FILE \"Game.bin\" BINARY\r\n");
         CreateFile("Game.bin");
 
-        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync([cue], _log.Add, CancellationToken.None);
+        var remaining = await InputFileFilter.RemoveCompanionDataFilesAsync(
+            [cue],
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.Equal([cue], remaining);
         Assert.Empty(_log);
@@ -182,7 +230,9 @@ public class InputFileFilterTests : IDisposable
         string[] inputs = [@"C:\in\Game.cue", @"C:\in\Game.zip", @"C:\in\Other.iso"];
 
         var collisions = InputFileFilter.FindOutputCollisions(
-            inputs, f => Path.Combine("C:\\out", Path.GetFileNameWithoutExtension(f) + ".chd"));
+            inputs,
+            f => Path.Combine("C:\\out", Path.GetFileNameWithoutExtension(f) + ".chd")
+        );
 
         var collision = Assert.Single(collisions);
         Assert.Equal(2, collision.Count());
@@ -196,7 +246,9 @@ public class InputFileFilterTests : IDisposable
         string[] inputs = [@"C:\in\A.cue", @"C:\in\B.cue"];
 
         var collisions = InputFileFilter.FindOutputCollisions(
-            inputs, f => Path.Combine("C:\\out", Path.GetFileNameWithoutExtension(f) + ".chd"));
+            inputs,
+            f => Path.Combine("C:\\out", Path.GetFileNameWithoutExtension(f) + ".chd")
+        );
 
         Assert.Empty(collisions);
     }
@@ -207,7 +259,9 @@ public class InputFileFilterTests : IDisposable
         string[] inputs = [@"C:\in\game.cue", @"C:\in\GAME.zip"];
 
         var collisions = InputFileFilter.FindOutputCollisions(
-            inputs, f => Path.Combine("C:\\out", Path.GetFileNameWithoutExtension(f) + ".chd"));
+            inputs,
+            f => Path.Combine("C:\\out", Path.GetFileNameWithoutExtension(f) + ".chd")
+        );
 
         Assert.Single(collisions);
     }

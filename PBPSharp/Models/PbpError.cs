@@ -60,5 +60,5 @@ public enum PbpError
     /// The PARAM.SFO region inside the PBP does not carry the expected "\0PSF" signature, so the
     /// header offsets do not point at a valid SFO.
     /// </summary>
-    InvalidSfo
+    InvalidSfo,
 }

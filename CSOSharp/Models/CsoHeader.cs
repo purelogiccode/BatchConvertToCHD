@@ -68,7 +68,14 @@ public readonly struct CsoHeader
     /// </summary>
     public bool IsV2 => Version == 2;
 
-    internal CsoHeader(uint magic, uint headerSize, ulong uncompressedSize, uint blockSize, byte version, byte indexOffsetShift)
+    internal CsoHeader(
+        uint magic,
+        uint headerSize,
+        ulong uncompressedSize,
+        uint blockSize,
+        byte version,
+        byte indexOffsetShift
+    )
     {
         Magic = magic;
         HeaderSize = headerSize;

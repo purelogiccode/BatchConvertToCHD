@@ -13,5 +13,5 @@ public enum TrackType
     /// <summary>
     /// Audio track (AUDIO).
     /// </summary>
-    Audio = 0x01
+    Audio = 0x01,
 }

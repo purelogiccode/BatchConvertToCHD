@@ -61,28 +61,51 @@ internal static class EcmImageDecoder
     /// <param name="destinationPath">File to write the restored image to.</param>
     /// <param name="onLog">Log callback.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static Task<EcmDecodeResult> DecodeAsync(string ecmPath, string destinationPath, Action<string> onLog,
-        CancellationToken token)
+    internal static Task<EcmDecodeResult> DecodeAsync(
+        string ecmPath,
+        string destinationPath,
+        Action<string> onLog,
+        CancellationToken token
+    )
     {
         // The format is a byte-at-a-time state machine over the whole image, so it runs as one
         // blocking job off the UI thread rather than awaiting per read.
         return Task.Run(() => Decode(ecmPath, destinationPath, onLog, token), token);
     }
 
-    private static EcmDecodeResult Decode(string ecmPath, string destinationPath, Action<string> onLog,
-        CancellationToken token)
+    private static EcmDecodeResult Decode(
+        string ecmPath,
+        string destinationPath,
+        Action<string> onLog,
+        CancellationToken token
+    )
     {
         try
         {
-            using var input = new FileStream(ecmPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, BufferBytes);
-            using var output = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None,
-                BufferBytes);
+            using var input = new FileStream(
+                ecmPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite,
+                BufferBytes
+            );
+            using var output = new FileStream(
+                destinationPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                BufferBytes
+            );
 
             var header = new byte[Signature.Length];
-            if (input.ReadAtLeast(header, header.Length, throwOnEndOfStream: false) < header.Length ||
-                !header.AsSpan().SequenceEqual(Signature))
+            if (
+                input.ReadAtLeast(header, header.Length, throwOnEndOfStream: false) < header.Length
+                || !header.AsSpan().SequenceEqual(Signature)
+            )
             {
-                return EcmDecodeResult.Failed("the file does not start with an ECM header, so it is not an ECM file.");
+                return EcmDecodeResult.Failed(
+                    "the file does not start with an ECM header, so it is not an ECM file."
+                );
             }
 
             var sector = new byte[CdSectorEccEdc.SectorSize];
@@ -114,14 +137,35 @@ internal static class EcmImageDecoder
 
                 var ok = type switch
                 {
-                    TypeLiteral => TryCopyLiteral(input, output, sector, count, ref runningEdc, ref written),
-                    TypeMode1 => TryExpandMode1(input, output, sector, count, ref runningEdc, ref written),
+                    TypeLiteral => TryCopyLiteral(
+                        input,
+                        output,
+                        sector,
+                        count,
+                        ref runningEdc,
+                        ref written
+                    ),
+                    TypeMode1 => TryExpandMode1(
+                        input,
+                        output,
+                        sector,
+                        count,
+                        ref runningEdc,
+                        ref written
+                    ),
 
                     // The block header masks its kind to two bits, so these four are the only values
                     // possible; both Mode 2 forms expand through the same routine.
-                    TypeMode2Form1 or TypeMode2Form2 => TryExpandMode2(input, output, sector, count,
-                        type == TypeMode2Form1, ref runningEdc, ref written),
-                    _ => false
+                    TypeMode2Form1 or TypeMode2Form2 => TryExpandMode2(
+                        input,
+                        output,
+                        sector,
+                        count,
+                        type == TypeMode2Form1,
+                        ref runningEdc,
+                        ref written
+                    ),
+                    _ => false,
                 };
 
                 if (!ok)
@@ -134,8 +178,11 @@ internal static class EcmImageDecoder
                     var percent = (int)(input.Position * 100 / inputLength);
                     if (percent >= nextProgressPercent)
                     {
-                        onLog($" Decoded {percent.ToString(CultureInfo.InvariantCulture)}% of the ECM file.");
-                        nextProgressPercent = percent - percent % ProgressStepPercent + ProgressStepPercent;
+                        onLog(
+                            $" Decoded {percent.ToString(CultureInfo.InvariantCulture)}% of the ECM file."
+                        );
+                        nextProgressPercent =
+                            percent - percent % ProgressStepPercent + ProgressStepPercent;
                     }
                 }
             }
@@ -143,7 +190,10 @@ internal static class EcmImageDecoder
             // The file ends with the EDC of the whole restored image. This is the only check that the
             // regenerated parity and the recovered data are actually right, so it is not optional.
             var trailer = new byte[4];
-            if (input.ReadAtLeast(trailer, trailer.Length, throwOnEndOfStream: false) < trailer.Length)
+            if (
+                input.ReadAtLeast(trailer, trailer.Length, throwOnEndOfStream: false)
+                < trailer.Length
+            )
             {
                 return TruncatedFailure();
             }
@@ -152,7 +202,8 @@ internal static class EcmImageDecoder
             if (expectedEdc != runningEdc)
             {
                 return EcmDecodeResult.Failed(
-                    $"the ECM file's checksum does not match the data it decoded to (expected {expectedEdc.ToString("X8", CultureInfo.InvariantCulture)}, got {runningEdc.ToString("X8", CultureInfo.InvariantCulture)}), so the file is damaged.");
+                    $"the ECM file's checksum does not match the data it decoded to (expected {expectedEdc.ToString("X8", CultureInfo.InvariantCulture)}, got {runningEdc.ToString("X8", CultureInfo.InvariantCulture)}), so the file is damaged."
+                );
             }
 
             output.Flush();
@@ -211,15 +262,23 @@ internal static class EcmImageDecoder
         return true;
     }
 
-    private static bool TryCopyLiteral(Stream input, Stream output, byte[] buffer, uint count, ref uint runningEdc,
-        ref long written)
+    private static bool TryCopyLiteral(
+        Stream input,
+        Stream output,
+        byte[] buffer,
+        uint count,
+        ref uint runningEdc,
+        ref long written
+    )
     {
         var remaining = count;
 
         while (remaining > 0)
         {
             var chunk = (int)Math.Min(remaining, (uint)buffer.Length);
-            if (input.ReadAtLeast(buffer.AsSpan(0, chunk), chunk, throwOnEndOfStream: false) < chunk)
+            if (
+                input.ReadAtLeast(buffer.AsSpan(0, chunk), chunk, throwOnEndOfStream: false) < chunk
+            )
             {
                 return false;
             }
@@ -233,16 +292,24 @@ internal static class EcmImageDecoder
         return true;
     }
 
-    private static bool TryExpandMode1(Stream input, Stream output, byte[] sector, uint count, ref uint runningEdc,
-        ref long written)
+    private static bool TryExpandMode1(
+        Stream input,
+        Stream output,
+        byte[] sector,
+        uint count,
+        ref uint runningEdc,
+        ref long written
+    )
     {
         for (uint i = 0; i < count; i++)
         {
             CdSectorEccEdc.WriteSyncAndMode(sector, mode: 0x01);
 
             // The 3-byte MSF address, then 2048 bytes of user data. Everything else is regenerated.
-            if (!TryReadExactly(input, sector.AsSpan(0x00C, 0x003)) ||
-                !TryReadExactly(input, sector.AsSpan(0x010, 0x800)))
+            if (
+                !TryReadExactly(input, sector.AsSpan(0x00C, 0x003))
+                || !TryReadExactly(input, sector.AsSpan(0x010, 0x800))
+            )
             {
                 return false;
             }
@@ -262,8 +329,15 @@ internal static class EcmImageDecoder
     /// header: a Mode 2 sector's parity is computed over a zeroed address precisely so that it stays
     /// valid in a 2336-byte-per-sector image, and the encoder relies on that.
     /// </summary>
-    private static bool TryExpandMode2(Stream input, Stream output, byte[] sector, uint count, bool form1,
-        ref uint runningEdc, ref long written)
+    private static bool TryExpandMode2(
+        Stream input,
+        Stream output,
+        byte[] sector,
+        uint count,
+        bool form1,
+        ref uint runningEdc,
+        ref long written
+    )
     {
         var storedLength = form1 ? 0x804 : 0x918;
 
@@ -288,7 +362,10 @@ internal static class EcmImageDecoder
                 CdSectorEccEdc.GenerateMode2Form2(sector);
             }
 
-            runningEdc = CdSectorEccEdc.ComputeEdc(runningEdc, sector.AsSpan(0x010, CdSectorEccEdc.Mode2DataSize));
+            runningEdc = CdSectorEccEdc.ComputeEdc(
+                runningEdc,
+                sector.AsSpan(0x010, CdSectorEccEdc.Mode2DataSize)
+            );
             output.Write(sector, 0x010, CdSectorEccEdc.Mode2DataSize);
             written += CdSectorEccEdc.Mode2DataSize;
         }
@@ -298,18 +375,21 @@ internal static class EcmImageDecoder
 
     private static bool TryReadExactly(Stream input, Span<byte> destination)
     {
-        return input.ReadAtLeast(destination, destination.Length, throwOnEndOfStream: false) >= destination.Length;
+        return input.ReadAtLeast(destination, destination.Length, throwOnEndOfStream: false)
+               >= destination.Length;
     }
 
     private static EcmDecodeResult TruncatedFailure()
     {
         return EcmDecodeResult.Failed(
-            "the ECM file ends part way through a block, so it is truncated. Re-download it and try again.");
+            "the ECM file ends part way through a block, so it is truncated. Re-download it and try again."
+        );
     }
 
     private static EcmDecodeResult CorruptFailure()
     {
         return EcmDecodeResult.Failed(
-            "the ECM file describes an implausibly large block, so its structure is damaged.");
+            "the ECM file describes an implausibly large block, so its structure is damaged."
+        );
     }
 }

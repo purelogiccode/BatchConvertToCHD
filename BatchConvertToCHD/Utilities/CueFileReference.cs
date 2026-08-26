@@ -17,7 +17,8 @@ internal sealed record CueFileReference(
     string FullPath,
     string? TrackType,
     bool WasNameCorrected = false,
-    string? CueDirectory = null)
+    string? CueDirectory = null
+)
 {
     /// <summary>True when a file with this name (possibly case- or padding-resolved) was found for the cue.</summary>
     public bool IsResolved => ResolvedName is not null;
@@ -28,7 +29,11 @@ internal sealed record CueFileReference(
     /// combined with - anchoring on <see cref="FullPath"/>'s directory would repeat any
     /// subdirectory the reference already carried.
     /// </summary>
-    public string ResolvedFullPath => ResolvedName is null
-        ? FullPath
-        : Path.Combine(CueDirectory ?? Path.GetDirectoryName(FullPath) ?? string.Empty, ResolvedName);
+    public string ResolvedFullPath =>
+        ResolvedName is null
+            ? FullPath
+            : Path.Combine(
+                CueDirectory ?? Path.GetDirectoryName(FullPath) ?? string.Empty,
+                ResolvedName
+            );
 }

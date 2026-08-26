@@ -145,7 +145,7 @@ public sealed class CsoStream : Stream
             SeekOrigin.Begin => offset,
             SeekOrigin.Current => _position + offset,
             SeekOrigin.End => Length + offset,
-            _ => throw new ArgumentException("Invalid SeekOrigin.", nameof(origin))
+            _ => throw new ArgumentException("Invalid SeekOrigin.", nameof(origin)),
         };
 
         if (newPosition < 0)
@@ -194,7 +194,8 @@ public sealed class CsoStream : Stream
     /// <inheritdoc/>
     protected override void Dispose(bool disposing)
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
 
         _disposed = true;
 

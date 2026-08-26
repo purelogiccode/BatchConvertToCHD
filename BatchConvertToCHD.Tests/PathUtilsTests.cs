@@ -5,7 +5,10 @@ namespace BatchConvertToCHD.Tests;
 public class PathUtilsTests
 {
     /// <summary>Scratch space for the tests that need real directories on disk.</summary>
-    private static readonly string ReserveTempDir = Path.Combine(Path.GetTempPath(), $"PathUtilsTests_{Guid.NewGuid():N}");
+    private static readonly string ReserveTempDir = Path.Combine(
+        Path.GetTempPath(),
+        $"PathUtilsTests_{Guid.NewGuid():N}"
+    );
 
     [Theory]
     [InlineData("game.iso", "game.iso")]
@@ -54,7 +57,15 @@ public class PathUtilsTests
     public void ValidateAndNormalizePathEmptyPathReturnsNull()
     {
         string? capturedError = null;
-        var result = PathUtils.ValidateAndNormalizePath("", "test folder", msg => { capturedError = msg; }, static _ => { });
+        var result = PathUtils.ValidateAndNormalizePath(
+            "",
+            "test folder",
+            msg =>
+            {
+                capturedError = msg;
+            },
+            static _ => { }
+        );
         Assert.Null(result);
         Assert.NotNull(capturedError);
     }
@@ -64,7 +75,15 @@ public class PathUtilsTests
     {
         string? capturedError = null;
         var nonExistent = Path.Combine(Path.GetTempPath(), $"NonExistent_{Guid.NewGuid():N}");
-        var result = PathUtils.ValidateAndNormalizePath(nonExistent, "test folder", msg => { capturedError = msg; }, static _ => { });
+        var result = PathUtils.ValidateAndNormalizePath(
+            nonExistent,
+            "test folder",
+            msg =>
+            {
+                capturedError = msg;
+            },
+            static _ => { }
+        );
         Assert.Null(result);
         Assert.NotNull(capturedError);
     }
@@ -73,7 +92,12 @@ public class PathUtilsTests
     public void ValidateAndNormalizePathValidDirectoryReturnsNormalizedPath()
     {
         var tempDir = Path.GetTempPath();
-        var result = PathUtils.ValidateAndNormalizePath(tempDir, "temp", static _ => { }, static _ => { });
+        var result = PathUtils.ValidateAndNormalizePath(
+            tempDir,
+            "temp",
+            static _ => { },
+            static _ => { }
+        );
         Assert.NotNull(result);
         Assert.Equal(Path.GetFullPath(tempDir), result);
     }
@@ -82,7 +106,15 @@ public class PathUtilsTests
     public void ValidateAndNormalizePathNullPathReturnsNull()
     {
         string? capturedError = null;
-        var result = PathUtils.ValidateAndNormalizePath(null, "test folder", msg => { capturedError = msg; }, static _ => { });
+        var result = PathUtils.ValidateAndNormalizePath(
+            null,
+            "test folder",
+            msg =>
+            {
+                capturedError = msg;
+            },
+            static _ => { }
+        );
         Assert.Null(result);
         Assert.NotNull(capturedError);
     }
@@ -91,7 +123,15 @@ public class PathUtilsTests
     public void ValidateAndNormalizePathInvalidCharsReturnsNull()
     {
         string? capturedError = null;
-        var result = PathUtils.ValidateAndNormalizePath("\0invalid", "invalid path", msg => { capturedError = msg; }, static _ => { });
+        var result = PathUtils.ValidateAndNormalizePath(
+            "\0invalid",
+            "invalid path",
+            msg =>
+            {
+                capturedError = msg;
+            },
+            static _ => { }
+        );
         Assert.Null(result);
         Assert.NotNull(capturedError);
     }
@@ -100,7 +140,15 @@ public class PathUtilsTests
     public void ValidateAndNormalizePathWhitespaceOnlyReturnsNull()
     {
         string? capturedError = null;
-        var result = PathUtils.ValidateAndNormalizePath("   ", "test folder", msg => { capturedError = msg; }, static _ => { });
+        var result = PathUtils.ValidateAndNormalizePath(
+            "   ",
+            "test folder",
+            msg =>
+            {
+                capturedError = msg;
+            },
+            static _ => { }
+        );
         Assert.Null(result);
         Assert.NotNull(capturedError);
     }
@@ -272,7 +320,8 @@ public class PathUtilsTests
             Assert.Equal(
                 Path.GetPathRoot(Path.GetFullPath(reference)),
                 Path.GetPathRoot(Path.GetFullPath(created)),
-                StringComparer.OrdinalIgnoreCase);
+                StringComparer.OrdinalIgnoreCase
+            );
         }
         finally
         {
@@ -295,7 +344,10 @@ public class PathUtilsTests
             Assert.NotNull(created);
 
             var relative = Path.GetRelativePath(created, reference);
-            Assert.False(Path.IsPathRooted(relative), $"'{relative}' is rooted, so a generated cue could not reach the image");
+            Assert.False(
+                Path.IsPathRooted(relative),
+                $"'{relative}' is rooted, so a generated cue could not reach the image"
+            );
         }
         finally
         {
@@ -308,7 +360,11 @@ public class PathUtilsTests
     {
         // The roomiest-drive choice is wrong here: an image on a nearly full drive still needs its
         // cue on that drive. Each fixed volume is checked, since that is where source images live.
-        foreach (var drive in DriveInfo.GetDrives().Where(static d => d is { IsReady: true, DriveType: DriveType.Fixed }))
+        foreach (
+            var drive in DriveInfo
+                .GetDrives()
+                .Where(static d => d is { IsReady: true, DriveType: DriveType.Fixed })
+        )
         {
             var root = drive.RootDirectory.FullName;
             var reference = Path.Combine(root, $"image_{Guid.NewGuid():N}.iso");
@@ -326,7 +382,8 @@ public class PathUtilsTests
                 Assert.Equal(
                     Path.GetPathRoot(root),
                     Path.GetPathRoot(Path.GetFullPath(created)),
-                    StringComparer.OrdinalIgnoreCase);
+                    StringComparer.OrdinalIgnoreCase
+                );
             }
             finally
             {

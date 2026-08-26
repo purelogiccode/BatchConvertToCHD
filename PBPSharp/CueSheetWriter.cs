@@ -30,7 +30,9 @@ public static class CueSheetWriter
             if (track.TrackType == TrackType.Audio)
             {
                 var index0 = SubtractLeadin(track.Minutes, track.Seconds, track.Frames, 150);
-                sb.AppendLine($"    INDEX 00 {FormatMsf(index0.Minutes, index0.Seconds, index0.Frames)}");
+                sb.AppendLine(
+                    $"    INDEX 00 {FormatMsf(index0.Minutes, index0.Seconds, index0.Frames)}"
+                );
             }
 
             sb.AppendLine($"    INDEX 01 {FormatMsf(track.Minutes, track.Seconds, track.Frames)}");
@@ -44,7 +46,12 @@ public static class CueSheetWriter
         return $"{minutes:00}:{seconds:00}:{frames:00}";
     }
 
-    private static (int Minutes, int Seconds, int Frames) SubtractLeadin(int minutes, int seconds, int frames, int leadinFrames)
+    private static (int Minutes, int Seconds, int Frames) SubtractLeadin(
+        int minutes,
+        int seconds,
+        int frames,
+        int leadinFrames
+    )
     {
         var totalFrames = (long)minutes * 60 * 75 + (long)seconds * 75 + frames - leadinFrames;
         if (totalFrames < 0)

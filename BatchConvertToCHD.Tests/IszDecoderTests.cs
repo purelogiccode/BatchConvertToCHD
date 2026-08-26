@@ -38,13 +38,15 @@ public class IszDecoderTests : IDisposable
     public void ChunkEntryTypeComesFromTheTopTwoBits()
     {
         // A 3-byte pointer holding 0x1234 with each of the four flags in turn.
-        foreach (var (flag, expected) in new[]
-                 {
-                     (0x00, IszChunkType.Zero),
-                     (0x40, IszChunkType.Stored),
-                     (0x80, IszChunkType.ZLib),
-                     (0xC0, IszChunkType.BZip2)
-                 })
+        foreach (
+            var (flag, expected) in new[]
+            {
+                (0x00, IszChunkType.Zero),
+                (0x40, IszChunkType.Stored),
+                (0x80, IszChunkType.ZLib),
+                (0xC0, IszChunkType.BZip2),
+            }
+        )
         {
             var table = new byte[] { 0x34, 0x12, (byte)flag };
 
@@ -100,7 +102,10 @@ public class IszDecoderTests : IDisposable
     [Fact]
     public void DecodedNameKeepsTheStemAndBecomesAnIso()
     {
-        Assert.Equal("Breath of Fire IV.iso", IszDecoder.GetDecodedFileName(@"D:\roms\Breath of Fire IV.isz"));
+        Assert.Equal(
+            "Breath of Fire IV.iso",
+            IszDecoder.GetDecodedFileName(@"D:\roms\Breath of Fire IV.isz")
+        );
     }
 
     #endregion
@@ -110,13 +115,21 @@ public class IszDecoderTests : IDisposable
     [Fact]
     public async Task ZlibChunksRoundTrip()
     {
-        await AssertRoundTripsAsync(BuildImage(16), static _ => IszImageBuilder.AdiZlib, expectCompressed: true);
+        await AssertRoundTripsAsync(
+            BuildImage(16),
+            static _ => IszImageBuilder.AdiZlib,
+            expectCompressed: true
+        );
     }
 
     [Fact]
     public async Task Bzip2ChunksRoundTrip()
     {
-        await AssertRoundTripsAsync(BuildImage(16), static _ => IszImageBuilder.AdiBz2, expectCompressed: true);
+        await AssertRoundTripsAsync(
+            BuildImage(16),
+            static _ => IszImageBuilder.AdiBz2,
+            expectCompressed: true
+        );
     }
 
     [Fact]
@@ -133,7 +146,11 @@ public class IszDecoderTests : IDisposable
         var image = BuildImage(16);
         Array.Clear(image, ChunkSize * 4, ChunkSize * 4);
 
-        await AssertRoundTripsAsync(image, static index => index is >= 4 and < 8 ? IszImageBuilder.AdiZero : IszImageBuilder.AdiZlib);
+        await AssertRoundTripsAsync(
+            image,
+            static index =>
+                index is >= 4 and < 8 ? IszImageBuilder.AdiZero : IszImageBuilder.AdiZlib
+        );
     }
 
     [Fact]
@@ -144,13 +161,17 @@ public class IszDecoderTests : IDisposable
         var image = BuildImage(16);
         Array.Clear(image, ChunkSize * 3, ChunkSize);
 
-        await AssertRoundTripsAsync(image, static index => (index % 4) switch
-        {
-            0 => IszImageBuilder.AdiZlib,
-            1 => IszImageBuilder.AdiBz2,
-            2 => IszImageBuilder.AdiData,
-            _ => index == 3 ? IszImageBuilder.AdiZero : IszImageBuilder.AdiZlib
-        });
+        await AssertRoundTripsAsync(
+            image,
+            static index =>
+                (index % 4) switch
+                {
+                    0 => IszImageBuilder.AdiZlib,
+                    1 => IszImageBuilder.AdiBz2,
+                    2 => IszImageBuilder.AdiData,
+                    _ => index == 3 ? IszImageBuilder.AdiZero : IszImageBuilder.AdiZlib,
+                }
+        );
     }
 
     [Fact]
@@ -170,9 +191,21 @@ public class IszDecoderTests : IDisposable
         // decoder reports whatever it says so the result can be classified correctly.
         var image = BuildImage(4, sectorSize: 2352);
         var iszPath = Path.Combine(_tempDir, "raw.isz");
-        IszImageBuilder.WriteSingle(iszPath, image, 2352, ChunkSize, 3, static _ => IszImageBuilder.AdiZlib);
+        IszImageBuilder.WriteSingle(
+            iszPath,
+            image,
+            2352,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiZlib
+        );
 
-        var result = await IszDecoder.DecodeAsync(iszPath, Path.Combine(_tempDir, "raw.iso"), Log, CancellationToken.None);
+        var result = await IszDecoder.DecodeAsync(
+            iszPath,
+            Path.Combine(_tempDir, "raw.iso"),
+            Log,
+            CancellationToken.None
+        );
 
         Assert.True(result.Success, result.FailureReason);
         Assert.Equal(2352, result.SectorSize);
@@ -190,7 +223,15 @@ public class IszDecoderTests : IDisposable
 
         // Cut at an offset that is deliberately not a chunk boundary, which is the case the segment
         // table's "left_size" exists for.
-        IszImageBuilder.WriteSplit(iszPath, image, SectorSize, ChunkSize, 3, static _ => IszImageBuilder.AdiData, splitAfterBytes: ChunkSize * 4 + 111);
+        IszImageBuilder.WriteSplit(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiData,
+            splitAfterBytes: ChunkSize * 4 + 111
+        );
 
         Assert.True(File.Exists(IszImageBuilder.GetSecondSegmentPath(iszPath)));
 
@@ -206,7 +247,15 @@ public class IszDecoderTests : IDisposable
     {
         var image = BuildImage(12);
         var iszPath = Path.Combine(_tempDir, "splitz.isz");
-        IszImageBuilder.WriteSplit(iszPath, image, SectorSize, ChunkSize, 3, static _ => IszImageBuilder.AdiZlib, splitAfterBytes: 200);
+        IszImageBuilder.WriteSplit(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiZlib,
+            splitAfterBytes: 200
+        );
 
         var outputPath = Path.Combine(_tempDir, "splitz.iso");
         var result = await IszDecoder.DecodeAsync(iszPath, outputPath, Log, CancellationToken.None);
@@ -220,13 +269,26 @@ public class IszDecoderTests : IDisposable
     {
         var image = BuildImage(16);
         var iszPath = Path.Combine(_tempDir, "incomplete.isz");
-        IszImageBuilder.WriteSplit(iszPath, image, SectorSize, ChunkSize, 3, static _ => IszImageBuilder.AdiData, splitAfterBytes: ChunkSize * 4, writeSecondSegment: false);
+        IszImageBuilder.WriteSplit(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiData,
+            splitAfterBytes: ChunkSize * 4,
+            writeSecondSegment: false
+        );
 
         var outputPath = Path.Combine(_tempDir, "incomplete.iso");
         var result = await IszDecoder.DecodeAsync(iszPath, outputPath, Log, CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Contains("incomplete.i01", result.FailureReason ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains(
+            "incomplete.i01",
+            result.FailureReason ?? string.Empty,
+            StringComparison.Ordinal
+        );
         Assert.False(File.Exists(outputPath));
     }
 
@@ -237,12 +299,30 @@ public class IszDecoderTests : IDisposable
         // game would otherwise splice them together silently.
         var image = BuildImage(16);
         var iszPath = Path.Combine(_tempDir, "foreign.isz");
-        IszImageBuilder.WriteSplit(iszPath, image, SectorSize, ChunkSize, 3, static _ => IszImageBuilder.AdiData, splitAfterBytes: ChunkSize * 4, secondSegmentVolumeSerial: 0x99887766);
+        IszImageBuilder.WriteSplit(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiData,
+            splitAfterBytes: ChunkSize * 4,
+            secondSegmentVolumeSerial: 0x99887766
+        );
 
-        var result = await IszDecoder.DecodeAsync(iszPath, Path.Combine(_tempDir, "foreign.iso"), Log, CancellationToken.None);
+        var result = await IszDecoder.DecodeAsync(
+            iszPath,
+            Path.Combine(_tempDir, "foreign.iso"),
+            Log,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
-        Assert.Contains("different ISZ image", result.FailureReason ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains(
+            "different ISZ image",
+            result.FailureReason ?? string.Empty,
+            StringComparison.Ordinal
+        );
     }
 
     #endregion
@@ -255,10 +335,19 @@ public class IszDecoderTests : IDisposable
         var path = Path.Combine(_tempDir, "notisz.isz");
         await File.WriteAllBytesAsync(path, new byte[512]);
 
-        var result = await IszDecoder.DecodeAsync(path, Path.Combine(_tempDir, "notisz.iso"), Log, CancellationToken.None);
+        var result = await IszDecoder.DecodeAsync(
+            path,
+            Path.Combine(_tempDir, "notisz.iso"),
+            Log,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
-        Assert.Contains("not an ISZ image", result.FailureReason ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains(
+            "not an ISZ image",
+            result.FailureReason ?? string.Empty,
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -266,7 +355,15 @@ public class IszDecoderTests : IDisposable
     {
         var image = BuildImage(4);
         var iszPath = Path.Combine(_tempDir, "locked.isz");
-        IszImageBuilder.WriteSingle(iszPath, image, SectorSize, ChunkSize, 3, static _ => IszImageBuilder.AdiZlib, passwordMode: 4);
+        IszImageBuilder.WriteSingle(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiZlib,
+            passwordMode: 4
+        );
 
         var outputPath = Path.Combine(_tempDir, "locked.iso");
         var result = await IszDecoder.DecodeAsync(iszPath, outputPath, Log, CancellationToken.None);
@@ -283,17 +380,33 @@ public class IszDecoderTests : IDisposable
         // to be caught here.
         var image = BuildImage(16);
         var iszPath = Path.Combine(_tempDir, "cut.isz");
-        IszImageBuilder.WriteSingle(iszPath, image, SectorSize, ChunkSize, 3, static _ => IszImageBuilder.AdiData);
+        IszImageBuilder.WriteSingle(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiData
+        );
 
         await using (var file = new FileStream(iszPath, FileMode.Open, FileAccess.Write))
         {
             file.SetLength(file.Length - ChunkSize * 3);
         }
 
-        var result = await IszDecoder.DecodeAsync(iszPath, Path.Combine(_tempDir, "cut.iso"), Log, CancellationToken.None);
+        var result = await IszDecoder.DecodeAsync(
+            iszPath,
+            Path.Combine(_tempDir, "cut.iso"),
+            Log,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
-        Assert.Contains("truncated", result.FailureReason ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains(
+            "truncated",
+            result.FailureReason ?? string.Empty,
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -301,17 +414,33 @@ public class IszDecoderTests : IDisposable
     {
         var image = BuildImage(16);
         var iszPath = Path.Combine(_tempDir, "notable.isz");
-        IszImageBuilder.WriteSingle(iszPath, image, SectorSize, ChunkSize, 3, static _ => IszImageBuilder.AdiData);
+        IszImageBuilder.WriteSingle(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiData
+        );
 
         await using (var file = new FileStream(iszPath, FileMode.Open, FileAccess.Write))
         {
             file.SetLength(IszImageBuilder.HeaderLength + 4);
         }
 
-        var result = await IszDecoder.DecodeAsync(iszPath, Path.Combine(_tempDir, "notable.iso"), Log, CancellationToken.None);
+        var result = await IszDecoder.DecodeAsync(
+            iszPath,
+            Path.Combine(_tempDir, "notable.iso"),
+            Log,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
-        Assert.Contains("truncated", result.FailureReason ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains(
+            "truncated",
+            result.FailureReason ?? string.Empty,
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -319,18 +448,34 @@ public class IszDecoderTests : IDisposable
     {
         var image = BuildImage(8);
         var iszPath = Path.Combine(_tempDir, "damaged.isz");
-        IszImageBuilder.WriteSingle(iszPath, image, SectorSize, ChunkSize, 3, static _ => IszImageBuilder.AdiZlib);
+        IszImageBuilder.WriteSingle(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiZlib
+        );
 
         // Corrupt the deflate stream well past the tables.
         var bytes = await File.ReadAllBytesAsync(iszPath);
-        for (var offset = bytes.Length / 2; offset < Math.Min(bytes.Length, bytes.Length / 2 + 64); offset++)
+        for (
+            var offset = bytes.Length / 2;
+            offset < Math.Min(bytes.Length, bytes.Length / 2 + 64);
+            offset++
+        )
         {
             bytes[offset] ^= 0xFF;
         }
 
         await File.WriteAllBytesAsync(iszPath, bytes);
 
-        var result = await IszDecoder.DecodeAsync(iszPath, Path.Combine(_tempDir, "damaged.iso"), Log, CancellationToken.None);
+        var result = await IszDecoder.DecodeAsync(
+            iszPath,
+            Path.Combine(_tempDir, "damaged.iso"),
+            Log,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
         Assert.NotNull(result.FailureReason);
@@ -341,7 +486,14 @@ public class IszDecoderTests : IDisposable
     {
         var image = BuildImage(8);
         var iszPath = Path.Combine(_tempDir, "probe.isz");
-        IszImageBuilder.WriteSingle(iszPath, image, SectorSize, ChunkSize, 3, static _ => IszImageBuilder.AdiZlib);
+        IszImageBuilder.WriteSingle(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiZlib
+        );
 
         var header = await IszDecoder.TryReadHeaderAsync(iszPath, CancellationToken.None);
 
@@ -362,7 +514,11 @@ public class IszDecoderTests : IDisposable
 
     #endregion
 
-    private async Task AssertRoundTripsAsync(byte[] image, Func<int, int> flagForChunk, bool expectCompressed = false)
+    private async Task AssertRoundTripsAsync(
+        byte[] image,
+        Func<int, int> flagForChunk,
+        bool expectCompressed = false
+    )
     {
         var iszPath = Path.Combine(_tempDir, $"image_{Guid.NewGuid():N}.isz");
         var outputPath = Path.ChangeExtension(iszPath, ".iso");
@@ -373,7 +529,10 @@ public class IszDecoderTests : IDisposable
         {
             // Guards against a fixture whose chunks all fell back to being stored verbatim, which
             // would leave the decompression path untested while the test still passed.
-            Assert.True(new FileInfo(iszPath).Length < image.Length / 2, "the fixture did not actually compress, so the decompression path was not exercised");
+            Assert.True(
+                new FileInfo(iszPath).Length < image.Length / 2,
+                "the fixture did not actually compress, so the decompression path was not exercised"
+            );
         }
 
         var result = await IszDecoder.DecodeAsync(iszPath, outputPath, Log, CancellationToken.None);

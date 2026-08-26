@@ -18,7 +18,9 @@ public class FileItemTests
         var fired = false;
         item.PropertyChanged += (_, e) =>
         {
-            if (string.Equals(e.PropertyName, nameof(FileItem.IsSelected), StringComparison.Ordinal))
+            if (
+                string.Equals(e.PropertyName, nameof(FileItem.IsSelected), StringComparison.Ordinal)
+            )
             {
                 fired = true;
             }
@@ -34,7 +36,10 @@ public class FileItemTests
     {
         var item = new FileItem { IsSelected = true };
         var fired = false;
-        item.PropertyChanged += (_, _) => { fired = true; };
+        item.PropertyChanged += (_, _) =>
+        {
+            fired = true;
+        };
 
         item.IsSelected = true;
 
@@ -84,7 +89,13 @@ public class FileItemTests
         var fired = false;
         item.PropertyChanged += (_, e) =>
         {
-            if (string.Equals(e.PropertyName, nameof(FileItem.DisplaySize), StringComparison.Ordinal))
+            if (
+                string.Equals(
+                    e.PropertyName,
+                    nameof(FileItem.DisplaySize),
+                    StringComparison.Ordinal
+                )
+            )
             {
                 fired = true;
             }
@@ -111,7 +122,7 @@ public class FileItemTests
         var item = new FileItem
         {
             // Set to a non-zero value first to ensure the setter runs even when testing 0
-            FileSize = 1
+            FileSize = 1,
         };
         item.FileSize = bytes;
         Assert.Equal(expected, item.DisplaySize);
@@ -132,7 +143,13 @@ public class FileItemTests
         var displaySizeChanged = false;
         item.PropertyChanged += (_, e) =>
         {
-            if (string.Equals(e.PropertyName, nameof(FileItem.DisplaySize), StringComparison.Ordinal))
+            if (
+                string.Equals(
+                    e.PropertyName,
+                    nameof(FileItem.DisplaySize),
+                    StringComparison.Ordinal
+                )
+            )
             {
                 displaySizeChanged = true;
             }

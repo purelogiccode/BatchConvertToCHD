@@ -40,13 +40,14 @@ public sealed class Track
     /// <summary>
     /// Gets the CUE track type string for this track.
     /// </summary>
-    public string CueTrackType => Mode switch
-    {
-        TrackMode.Audio => "AUDIO",
-        TrackMode.Mode1 => "MODE1/2352",
-        TrackMode.Mode2 => "MODE2/2352",
-        _ => "MODE1/2352"
-    };
+    public string CueTrackType =>
+        Mode switch
+        {
+            TrackMode.Audio => "AUDIO",
+            TrackMode.Mode1 => "MODE1/2352",
+            TrackMode.Mode2 => "MODE2/2352",
+            _ => "MODE1/2352",
+        };
 
     /// <summary>
     /// Whether this track is an audio track.

@@ -11,7 +11,13 @@ namespace BatchConvertToCHD.Utilities.Isz;
 /// <param name="FirstChunkNumber">Index of the first chunk in this segment.</param>
 /// <param name="ChunkOffset">Offset within this segment where its first chunk starts.</param>
 /// <param name="LeftSize">Bytes of a chunk that spill over into the next segment.</param>
-internal sealed record IszSegment(long Size, int ChunkCount, int FirstChunkNumber, int ChunkOffset, int LeftSize)
+internal sealed record IszSegment(
+    long Size,
+    int ChunkCount,
+    int FirstChunkNumber,
+    int ChunkOffset,
+    int LeftSize
+)
 {
     /// <summary>Bytes per entry in the segment definition table.</summary>
     internal const int EntryLength = 24;

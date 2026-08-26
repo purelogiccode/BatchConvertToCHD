@@ -46,7 +46,12 @@ public class CueWorkDirectoryTests : IDisposable
     {
         public List<(string Mp3Path, string WavPath)> Calls { get; } = [];
 
-        public Task DecodeAsync(string mp3Path, string wavPath, Action<string>? onLog, CancellationToken token)
+        public Task DecodeAsync(
+            string mp3Path,
+            string wavPath,
+            Action<string>? onLog,
+            CancellationToken token
+        )
         {
             Calls.Add((mp3Path, wavPath));
             File.WriteAllText(wavPath, "wav-content");
@@ -54,9 +59,18 @@ public class CueWorkDirectoryTests : IDisposable
         }
     }
 
-    private static async Task<(CueWorkDirectoryResult Result, string? WorkDir)> PrepareAsync(string cuePath, IMp3Decoder? decoder = null)
+    private static async Task<(CueWorkDirectoryResult Result, string? WorkDir)> PrepareAsync(
+        string cuePath,
+        IMp3Decoder? decoder = null
+    )
     {
-        var result = await CueWorkDirectory.PrepareAsync(cuePath, "TestPrefix_", decoder, null, CancellationToken.None);
+        var result = await CueWorkDirectory.PrepareAsync(
+            cuePath,
+            "TestPrefix_",
+            decoder,
+            null,
+            CancellationToken.None
+        );
         return (result, result.WorkDir);
     }
 
@@ -65,7 +79,11 @@ public class CueWorkDirectoryTests : IDisposable
     {
         CreateFile("track1.bin", "dummy");
         // Written without a BOM — a canonical ASCII cue needs no work directory.
-        var cuePath = CreateFile("game.cue", "FILE \"track1.bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00", new UTF8Encoding(false));
+        var cuePath = CreateFile(
+            "game.cue",
+            "FILE \"track1.bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00",
+            new UTF8Encoding(false)
+        );
 
         var (result, workDir) = await PrepareAsync(cuePath);
 
@@ -82,7 +100,8 @@ public class CueWorkDirectoryTests : IDisposable
         var cuePath = CreateFile(
             "game.cue",
             $"FILE \"{koreanName}\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00",
-            Encoding.GetEncoding(949));
+            Encoding.GetEncoding(949)
+        );
 
         var (result, workDir) = await PrepareAsync(cuePath);
 
@@ -92,14 +111,21 @@ public class CueWorkDirectoryTests : IDisposable
             Assert.NotNull(result.WorkCuePath);
             Assert.True(Directory.Exists(workDir));
 
-            var files = Directory.GetFiles(workDir).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToList();
+            var files = Directory
+                .GetFiles(workDir)
+                .Select(Path.GetFileName)
+                .Order(StringComparer.Ordinal)
+                .ToList();
             Assert.Equal(["game.cue", "track01.bin"], files);
 
             var workCue = await File.ReadAllTextAsync(result.WorkCuePath, Encoding.UTF8);
             Assert.Contains("FILE \"track01.bin\" BINARY", workCue, StringComparison.Ordinal);
 
             var copiedBin = Path.Combine(workDir, "track01.bin");
-            Assert.Equal(await File.ReadAllTextAsync(sourceBinPath), await File.ReadAllTextAsync(copiedBin));
+            Assert.Equal(
+                await File.ReadAllTextAsync(sourceBinPath),
+                await File.ReadAllTextAsync(copiedBin)
+            );
         }
         finally
         {
@@ -123,7 +149,8 @@ public class CueWorkDirectoryTests : IDisposable
         CreateFile("Game (Track 2).bin", "dummy");
         var cuePath = CreateFile(
             "game.cue",
-            "FILE \"Game (Track 02).bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00");
+            "FILE \"Game (Track 02).bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00"
+        );
 
         var (result, workDir) = await PrepareAsync(cuePath);
 
@@ -131,7 +158,14 @@ public class CueWorkDirectoryTests : IDisposable
         {
             Assert.NotNull(workDir);
             Assert.NotNull(result.WorkCuePath);
-            Assert.Equal(["game.cue", "track01.bin"], Directory.GetFiles(workDir).Select(Path.GetFileName).OrderBy(static f => f, StringComparer.Ordinal).ToList());
+            Assert.Equal(
+                ["game.cue", "track01.bin"],
+                Directory
+                    .GetFiles(workDir)
+                    .Select(Path.GetFileName)
+                    .OrderBy(static f => f, StringComparer.Ordinal)
+                    .ToList()
+            );
 
             var workCue = await File.ReadAllTextAsync(result.WorkCuePath, Encoding.UTF8);
             Assert.Contains("FILE \"track01.bin\" BINARY", workCue, StringComparison.Ordinal);
@@ -163,7 +197,8 @@ public class CueWorkDirectoryTests : IDisposable
         var cuePath = CreateFile(
             "game.cue",
             "FILE \"track1.bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00",
-            Encoding.UTF8); // Encoding.UTF8 writes a BOM
+            Encoding.UTF8
+        ); // Encoding.UTF8 writes a BOM
 
         // Work directory on the same drive as the bin (inside the test temp dir) —
         // this is what makes the relative in-place path possible.
@@ -172,11 +207,22 @@ public class CueWorkDirectoryTests : IDisposable
 
         try
         {
-            var workCuePath = await CueWorkDirectory.TryWriteInPlaceWorkCueAsync(cuePath, workDir, CancellationToken.None);
+            var workCuePath = await CueWorkDirectory.TryWriteInPlaceWorkCueAsync(
+                cuePath,
+                workDir,
+                CancellationToken.None
+            );
             Assert.NotNull(workCuePath);
 
             // No bins are copied into the work directory.
-            Assert.Equal(["game.cue"], Directory.GetFiles(workDir).Select(Path.GetFileName).OrderBy(static f => f, StringComparer.Ordinal).ToList());
+            Assert.Equal(
+                ["game.cue"],
+                Directory
+                    .GetFiles(workDir)
+                    .Select(Path.GetFileName)
+                    .OrderBy(static f => f, StringComparer.Ordinal)
+                    .ToList()
+            );
 
             // The work cue must not start with a BOM.
             var workCueBytes = await File.ReadAllBytesAsync(workCuePath);
@@ -186,9 +232,15 @@ public class CueWorkDirectoryTests : IDisposable
             var workCue = await File.ReadAllTextAsync(workCuePath, Encoding.UTF8);
             var firstQuote = workCue.IndexOf('"');
             var lastQuote = workCue.LastIndexOf('"');
-            Assert.True(firstQuote != -1 && lastQuote > firstQuote, $"no quoted FILE line found in work cue: {workCue}");
+            Assert.True(
+                firstQuote != -1 && lastQuote > firstQuote,
+                $"no quoted FILE line found in work cue: {workCue}"
+            );
             var referencedName = workCue[(firstQuote + 1)..lastQuote];
-            Assert.False(Path.IsPathRooted(referencedName), "FILE line should reference the bin relatively, not absolutely");
+            Assert.False(
+                Path.IsPathRooted(referencedName),
+                "FILE line should reference the bin relatively, not absolutely"
+            );
             var referenced = Path.GetFullPath(Path.Combine(workDir, referencedName));
             Assert.Equal(Path.GetFullPath(binPath), referenced);
         }
@@ -211,7 +263,8 @@ public class CueWorkDirectoryTests : IDisposable
         var cuePath = CreateFile(
             "game.cue",
             "FILE \"missing.bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00",
-            Encoding.UTF8);
+            Encoding.UTF8
+        );
 
         // Missing bin: resolution fails, so the in-place fast path must decline.
         var workDir = Path.Combine(_tempDir, "work2");
@@ -219,7 +272,11 @@ public class CueWorkDirectoryTests : IDisposable
 
         try
         {
-            var workCuePath = await CueWorkDirectory.TryWriteInPlaceWorkCueAsync(cuePath, workDir, CancellationToken.None);
+            var workCuePath = await CueWorkDirectory.TryWriteInPlaceWorkCueAsync(
+                cuePath,
+                workDir,
+                CancellationToken.None
+            );
             Assert.Null(workCuePath);
         }
         finally
@@ -245,7 +302,8 @@ public class CueWorkDirectoryTests : IDisposable
         var cuePath = CreateFile(
             "game.cue",
             "FILE \"track1.bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00",
-            Encoding.UTF8);
+            Encoding.UTF8
+        );
 
         var (result, workDir) = await PrepareAsync(cuePath);
 
@@ -256,8 +314,10 @@ public class CueWorkDirectoryTests : IDisposable
             Assert.Empty(result.UnresolvedNames);
 
             var workCueBytes = await File.ReadAllBytesAsync(result.WorkCuePath);
-            Assert.False(workCueBytes is [0xEF, 0xBB, 0xBF, ..],
-                "work cue must not start with a UTF-8 BOM");
+            Assert.False(
+                workCueBytes is [0xEF, 0xBB, 0xBF, ..],
+                "work cue must not start with a UTF-8 BOM"
+            );
         }
         finally
         {
@@ -284,7 +344,8 @@ public class CueWorkDirectoryTests : IDisposable
         var cuePath = CreateFile(
             "game.cue",
             "FILE \"track1.mp3\" MP3\r\n  TRACK 01 AUDIO\r\n    INDEX 01 00:00:00",
-            Encoding.UTF8);
+            Encoding.UTF8
+        );
         var decoder = new FakeMp3Decoder();
 
         var (result, workDir) = await PrepareAsync(cuePath, decoder);
@@ -293,7 +354,14 @@ public class CueWorkDirectoryTests : IDisposable
         {
             Assert.NotNull(workDir);
             Assert.NotNull(result.WorkCuePath);
-            Assert.Equal(["game.cue", "track01.wav"], Directory.GetFiles(workDir).Select(Path.GetFileName).OrderBy(static f => f, StringComparer.Ordinal).ToList());
+            Assert.Equal(
+                ["game.cue", "track01.wav"],
+                Directory
+                    .GetFiles(workDir)
+                    .Select(Path.GetFileName)
+                    .OrderBy(static f => f, StringComparer.Ordinal)
+                    .ToList()
+            );
 
             var workCue = await File.ReadAllTextAsync(result.WorkCuePath, Encoding.UTF8);
             Assert.Contains("FILE \"track01.wav\" WAVE", workCue, StringComparison.Ordinal);
@@ -324,7 +392,8 @@ public class CueWorkDirectoryTests : IDisposable
         var cuePath = CreateFile(
             "game.cue",
             $"FILE \"{koreanName}\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00",
-            Encoding.UTF8);
+            Encoding.UTF8
+        );
 
         var (result, workDir) = await PrepareAsync(cuePath);
 
@@ -332,13 +401,23 @@ public class CueWorkDirectoryTests : IDisposable
         {
             Assert.NotNull(workDir);
             Assert.NotNull(result.WorkCuePath);
-            Assert.Equal(["game.cue", "track01.bin"], Directory.GetFiles(workDir).Select(Path.GetFileName).OrderBy(static f => f, StringComparer.Ordinal).ToList());
+            Assert.Equal(
+                ["game.cue", "track01.bin"],
+                Directory
+                    .GetFiles(workDir)
+                    .Select(Path.GetFileName)
+                    .OrderBy(static f => f, StringComparer.Ordinal)
+                    .ToList()
+            );
 
             var workCue = await File.ReadAllTextAsync(result.WorkCuePath, Encoding.UTF8);
             Assert.Contains("FILE \"track01.bin\" BINARY", workCue, StringComparison.Ordinal);
 
             var copiedBin = Path.Combine(workDir, "track01.bin");
-            Assert.Equal(await File.ReadAllTextAsync(sourceBinPath), await File.ReadAllTextAsync(copiedBin));
+            Assert.Equal(
+                await File.ReadAllTextAsync(sourceBinPath),
+                await File.ReadAllTextAsync(copiedBin)
+            );
         }
         finally
         {
@@ -365,7 +444,8 @@ public class CueWorkDirectoryTests : IDisposable
         var cuePath = CreateFile(
             "game.cue",
             "FILE \"Game (Track 02).bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00",
-            Encoding.UTF8);
+            Encoding.UTF8
+        );
 
         var (result, workDir) = await PrepareAsync(cuePath);
 
@@ -376,7 +456,10 @@ public class CueWorkDirectoryTests : IDisposable
             Assert.Empty(result.UnresolvedNames);
 
             var workCueBytes = await File.ReadAllBytesAsync(result.WorkCuePath);
-            Assert.False(workCueBytes is [0xEF, 0xBB, 0xBF, ..], "work cue must not start with a UTF-8 BOM");
+            Assert.False(
+                workCueBytes is [0xEF, 0xBB, 0xBF, ..],
+                "work cue must not start with a UTF-8 BOM"
+            );
 
             // The zero-padding correction must be applied: the uncorrected name may never appear.
             // Depending on drive layout the file is either referenced in place under its corrected
@@ -414,7 +497,10 @@ public class CueWorkDirectoryTests : IDisposable
     [Fact]
     public async Task PrepareAsyncMissingReferenceReturnsNoWorkDirAndReportsUnresolved()
     {
-        var cuePath = CreateFile("game.cue", "FILE \"missing.bin\" BINARY\n  TRACK 01 MODE2/2352\n    INDEX 01 00:00:00");
+        var cuePath = CreateFile(
+            "game.cue",
+            "FILE \"missing.bin\" BINARY\n  TRACK 01 MODE2/2352\n    INDEX 01 00:00:00"
+        );
 
         var (result, workDir) = await PrepareAsync(cuePath);
 
@@ -429,7 +515,8 @@ public class CueWorkDirectoryTests : IDisposable
         var mp3Path = CreateFile("track1.mp3", "mp3-content");
         var cuePath = CreateFile(
             "game.cue",
-            "FILE \"track1.mp3\" MP3\r\n  TRACK 01 AUDIO\r\n    INDEX 01 00:00:00");
+            "FILE \"track1.mp3\" MP3\r\n  TRACK 01 AUDIO\r\n    INDEX 01 00:00:00"
+        );
         var decoder = new FakeMp3Decoder();
 
         var (result, workDir) = await PrepareAsync(cuePath, decoder);
@@ -438,7 +525,14 @@ public class CueWorkDirectoryTests : IDisposable
         {
             Assert.NotNull(workDir);
             Assert.NotNull(result.WorkCuePath);
-            Assert.Equal(["game.cue", "track01.wav"], Directory.GetFiles(workDir).Select(Path.GetFileName).OrderBy(static f => f, StringComparer.Ordinal).ToList());
+            Assert.Equal(
+                ["game.cue", "track01.wav"],
+                Directory
+                    .GetFiles(workDir)
+                    .Select(Path.GetFileName)
+                    .OrderBy(static f => f, StringComparer.Ordinal)
+                    .ToList()
+            );
 
             var workCue = await File.ReadAllTextAsync(result.WorkCuePath, Encoding.UTF8);
             Assert.Contains("FILE \"track01.wav\" WAVE", workCue, StringComparison.Ordinal);
@@ -472,7 +566,8 @@ public class CueWorkDirectoryTests : IDisposable
         var cuePath = CreateFile(
             "game.cue",
             "FILE \"track1.mp3\" MP3\r\n  TRACK 01 AUDIO\r\n    INDEX 01 00:00:00",
-            new UTF8Encoding(false));
+            new UTF8Encoding(false)
+        );
 
         var (result, workDir) = await PrepareAsync(cuePath);
 
@@ -492,9 +587,10 @@ public class CueWorkDirectoryTests : IDisposable
         CreateFile("track3.aiff", "aiff-data");
         var cuePath = CreateFile(
             "game.cue",
-            "FILE \"Game (Track 02).bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00\r\n" +
-            "FILE \"track2.wav\" WAVE\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00\r\n" +
-            "FILE \"track3.aiff\" AIFF\r\n  TRACK 03 AUDIO\r\n    INDEX 01 00:00:00");
+            "FILE \"Game (Track 02).bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00\r\n"
+                + "FILE \"track2.wav\" WAVE\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00\r\n"
+                + "FILE \"track3.aiff\" AIFF\r\n  TRACK 03 AUDIO\r\n    INDEX 01 00:00:00"
+        );
 
         var (result, workDir) = await PrepareAsync(cuePath, new FakeMp3Decoder());
 
@@ -503,7 +599,12 @@ public class CueWorkDirectoryTests : IDisposable
             Assert.NotNull(workDir);
             Assert.Equal(
                 ["game.cue", "track01.bin", "track02.wav", "track03.aiff"],
-                Directory.GetFiles(workDir).Select(Path.GetFileName).OrderBy(static f => f, StringComparer.Ordinal).ToList());
+                Directory
+                    .GetFiles(workDir)
+                    .Select(Path.GetFileName)
+                    .OrderBy(static f => f, StringComparer.Ordinal)
+                    .ToList()
+            );
 
             var workCue = await File.ReadAllTextAsync(result.WorkCuePath!, Encoding.UTF8);
             Assert.Contains("FILE \"track01.bin\" BINARY", workCue, StringComparison.Ordinal);
@@ -550,24 +651,40 @@ public class CueWorkDirectoryTests : IDisposable
         sector[11] = 0x00;
         sector[12] = 0x01; // mode 1
         var binPath = Path.Combine(_tempDir, "track1.bin");
-        await File.WriteAllBytesAsync(binPath, Enumerable.Repeat(sector, 100).SelectMany(static s => s).ToArray());
+        await File.WriteAllBytesAsync(
+            binPath,
+            Enumerable.Repeat(sector, 100).SelectMany(static s => s).ToArray()
+        );
 
         var cuePath = CreateFile(
             "game.cue",
             "FILE \"track1.bin\" BINARY\r\n  TRACK 01 MODE1/2352\r\n    INDEX 01 00:00:00",
-            Encoding.UTF8); // Encoding.UTF8 writes a BOM
+            Encoding.UTF8
+        ); // Encoding.UTF8 writes a BOM
 
         // 1) Reproduce the bug: chdman directly on the BOM'd cue fails with the empty-bin error.
-        var (directExit, directOutput) = await RunChdmanAsync(chdmanPath, cuePath, Path.Combine(_tempDir, "direct.chd"));
+        var (directExit, directOutput) = await RunChdmanAsync(
+            chdmanPath,
+            cuePath,
+            Path.Combine(_tempDir, "direct.chd")
+        );
         Assert.NotEqual(0, directExit);
-        Assert.Contains("couldn't find bin file []", directOutput, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "couldn't find bin file []",
+            directOutput,
+            StringComparison.OrdinalIgnoreCase
+        );
 
         // 2) Fixed pipeline: BOM-free work cue referencing the bin via a relative path.
         var workDir = Path.Combine(_tempDir, "work_e2e");
         Directory.CreateDirectory(workDir);
         try
         {
-            var workCuePath = await CueWorkDirectory.TryWriteInPlaceWorkCueAsync(cuePath, workDir, CancellationToken.None);
+            var workCuePath = await CueWorkDirectory.TryWriteInPlaceWorkCueAsync(
+                cuePath,
+                workDir,
+                CancellationToken.None
+            );
             Assert.NotNull(workCuePath);
 
             var outputChd = Path.Combine(workDir, "game.chd");
@@ -588,7 +705,11 @@ public class CueWorkDirectoryTests : IDisposable
         }
     }
 
-    private static async Task<(int ExitCode, string Output)> RunChdmanAsync(string chdmanPath, string cuePath, string outputChd)
+    private static async Task<(int ExitCode, string Output)> RunChdmanAsync(
+        string chdmanPath,
+        string cuePath,
+        string outputChd
+    )
     {
         using var process = new System.Diagnostics.Process();
         process.StartInfo = new System.Diagnostics.ProcessStartInfo
@@ -598,7 +719,7 @@ public class CueWorkDirectoryTests : IDisposable
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
         };
         process.Start();
         var stdout = await process.StandardOutput.ReadToEndAsync();
@@ -618,7 +739,10 @@ public class CueWorkDirectoryTests : IDisposable
         await decoder.DecodeAsync(mp3Path, wavPath, null, CancellationToken.None);
 
         Assert.True(File.Exists(wavPath));
-        Assert.True(new FileInfo(wavPath).Length > 44, "WAV file should have a RIFF header plus samples");
+        Assert.True(
+            new FileInfo(wavPath).Length > 44,
+            "WAV file should have a RIFF header plus samples"
+        );
 
         // chdman's cue WAVE tracks require exactly 44100 Hz stereo 16-bit PCM.
         await using var reader = new NAudio.Wave.WaveFileReader(wavPath);
@@ -636,7 +760,7 @@ public class CueWorkDirectoryTests : IDisposable
         {
             Type = NAudio.Wave.SampleProviders.SignalGeneratorType.Sin,
             Frequency = 440,
-            Gain = 0.2
+            Gain = 0.2,
         };
 
         var normalized = Mp3ToWavDecoder.NormalizeForChdman(source);
@@ -651,7 +775,8 @@ public class CueWorkDirectoryTests : IDisposable
         while (total < 44100)
         {
             var read = normalized.Read(buffer.AsSpan(0, buffer.Length));
-            if (read == 0) break;
+            if (read == 0)
+                break;
 
             total += read;
         }
@@ -715,10 +840,17 @@ public class CueWorkDirectoryTests : IDisposable
         await WriteCraftedMp3Async(mp3Path);
         var cuePath = CreateFile(
             "game.cue",
-            "FILE \"game.bin\" BINARY\r\n  TRACK 01 MODE1/2352\r\n    INDEX 01 00:00:00\r\n" +
-            "FILE \"track02.mp3\" MP3\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00");
+            "FILE \"game.bin\" BINARY\r\n  TRACK 01 MODE1/2352\r\n    INDEX 01 00:00:00\r\n"
+                + "FILE \"track02.mp3\" MP3\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00"
+        );
 
-        var result = await CueWorkDirectory.PrepareAsync(cuePath, "TestPrefix_", new Mp3ToWavDecoder(), null, CancellationToken.None);
+        var result = await CueWorkDirectory.PrepareAsync(
+            cuePath,
+            "TestPrefix_",
+            new Mp3ToWavDecoder(),
+            null,
+            CancellationToken.None
+        );
         Assert.NotNull(result.WorkCuePath);
         Assert.Empty(result.UnresolvedNames);
 
@@ -731,7 +863,11 @@ public class CueWorkDirectoryTests : IDisposable
             Assert.Contains("track02.wav", workCue, StringComparison.Ordinal);
 
             var outputChd = Path.Combine(workDir, "game.chd");
-            var (exitCode, output) = await RunChdmanAsync(chdmanPath, result.WorkCuePath, outputChd);
+            var (exitCode, output) = await RunChdmanAsync(
+                chdmanPath,
+                result.WorkCuePath,
+                outputChd
+            );
             Assert.True(exitCode == 0, $"chdman failed on cue/bin/mp3 set: {output}");
             Assert.True(File.Exists(outputChd), "expected a CHD output");
         }
@@ -764,10 +900,17 @@ public class CueWorkDirectoryTests : IDisposable
         await WriteCraftedMp3Async(mp3Path);
         var cuePath = CreateFile(
             "game.cue",
-            "FILE \"game.iso\" BINARY\r\n  TRACK 01 MODE1/2048\r\n    INDEX 01 00:00:00\r\n" +
-            "FILE \"track02.mp3\" MP3\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00");
+            "FILE \"game.iso\" BINARY\r\n  TRACK 01 MODE1/2048\r\n    INDEX 01 00:00:00\r\n"
+                + "FILE \"track02.mp3\" MP3\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00"
+        );
 
-        var result = await CueWorkDirectory.PrepareAsync(cuePath, "TestPrefix_", new Mp3ToWavDecoder(), null, CancellationToken.None);
+        var result = await CueWorkDirectory.PrepareAsync(
+            cuePath,
+            "TestPrefix_",
+            new Mp3ToWavDecoder(),
+            null,
+            CancellationToken.None
+        );
         Assert.NotNull(result.WorkCuePath);
         Assert.Empty(result.UnresolvedNames);
 
@@ -779,7 +922,11 @@ public class CueWorkDirectoryTests : IDisposable
             Assert.Contains("track02.wav", workCue, StringComparison.Ordinal);
 
             var outputChd = Path.Combine(workDir, "game.chd");
-            var (exitCode, output) = await RunChdmanAsync(chdmanPath, result.WorkCuePath, outputChd);
+            var (exitCode, output) = await RunChdmanAsync(
+                chdmanPath,
+                result.WorkCuePath,
+                outputChd
+            );
             Assert.True(exitCode == 0, $"chdman failed on cue/iso/mp3 set: {output}");
             Assert.True(File.Exists(outputChd), "expected a CHD output");
         }
@@ -825,4 +972,3 @@ public class CueWorkDirectoryTests : IDisposable
         return Enumerable.Repeat(sector, sectorCount).SelectMany(static s => s).ToArray();
     }
 }
-

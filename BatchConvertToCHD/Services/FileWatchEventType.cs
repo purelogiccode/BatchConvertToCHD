@@ -5,5 +5,5 @@ internal enum FileWatchEventType
     Deleted,
     RenamedFrom,
     RenamedTo,
-    Created
+    Created,
 }

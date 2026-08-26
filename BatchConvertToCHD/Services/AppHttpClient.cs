@@ -34,9 +34,10 @@ internal static class AppHttpClient
                         SslOptions = new SslClientAuthenticationOptions
                         {
                             EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
-                            RemoteCertificateValidationCallback = ServerCertificateValidationCallback
+                            RemoteCertificateValidationCallback =
+                                ServerCertificateValidationCallback,
                         },
-                        PooledConnectionLifetime = TimeSpan.FromMinutes(10)
+                        PooledConnectionLifetime = TimeSpan.FromMinutes(10),
                     };
                     _client = new HttpClient(_handler);
                     _client.DefaultRequestHeaders.Add("Accept", "application/json");
@@ -47,22 +48,31 @@ internal static class AppHttpClient
         }
     }
 
-    private static bool ServerCertificateValidationCallback(object sender, X509Certificate? certificate,
-        X509Chain? chain, SslPolicyErrors sslPolicyErrors)
+    private static bool ServerCertificateValidationCallback(
+        object sender,
+        X509Certificate? certificate,
+        X509Chain? chain,
+        SslPolicyErrors sslPolicyErrors
+    )
     {
         if (sslPolicyErrors == SslPolicyErrors.None)
             return true;
 
         if (sslPolicyErrors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch))
         {
-            var subject = (certificate as X509Certificate2)?.Subject ?? certificate?.Subject ?? "unknown";
+            var subject =
+                (certificate as X509Certificate2)?.Subject ?? certificate?.Subject ?? "unknown";
             Logger.Warning(
                 "SSL certificate name mismatch for {Subject}. The server certificate does not match the expected hostname. This may be caused by a proxy or firewall intercepting the connection. Allowing the connection to proceed.",
-                subject);
+                subject
+            );
             return true;
         }
 
-        Logger.Warning("SSL certificate validation error: {Errors}. The connection will be rejected.", sslPolicyErrors);
+        Logger.Warning(
+            "SSL certificate validation error: {Errors}. The connection will be rejected.",
+            sslPolicyErrors
+        );
         return false;
     }
 

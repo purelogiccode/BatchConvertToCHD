@@ -1,7 +1,7 @@
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows%20x64%20%7C%20ARM64-0078d7.svg)](https://www.microsoft.com/windows)
 [![.NET 10.0](https://img.shields.io/badge/.NET-10.0-512bd4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE.txt)
-[![GitHub release](https://img.shields.io/github/v/release/drpetersonfernandes/BatchConvertToCHD)](https://github.com/drpetersonfernandes/BatchConvertToCHD/releases)
+[![GitHub release](https://img.shields.io/github/v/release/purelogiccode/BatchConvertToCHD)](https://github.com/purelogiccode/BatchConvertToCHD/releases)
 
 # Batch Convert to CHD
 
@@ -141,7 +141,7 @@ Generated cue sheets reference the disc image where it already lies rather than 
 
 ## 📥 Installation
 
-1.  Download the latest binary from the [Releases](https://github.com/drpetersonfernandes/BatchConvertToCHD/releases) page.
+1.  Download the latest binary from the [Releases](https://github.com/purelogiccode/BatchConvertToCHD/releases) page.
 2.  Extract the contents to a permanent folder.
 3.  **Important**: Ensure all `.exe` files (including ARM64 variants) remain in the same directory as `BatchConvertToCHD.exe`.
 4.  Launch the application.
@@ -204,7 +204,7 @@ The full project documentation (user guide, architecture, developer references, 
 
 ## 🤝 Contributing & Support
 
-If you encounter issues or have feature requests, please use the [GitHub Issues](https://github.com/drpetersonfernandes/BatchConvertToCHD/issues) tracker.
+If you encounter issues or have feature requests, please use the [GitHub Issues](https://github.com/purelogiccode/BatchConvertToCHD/issues) tracker.
 
 **Support the Project:**
 If this tool saves you time, consider supporting further development:

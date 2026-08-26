@@ -28,23 +28,28 @@ internal partial class AboutWindow
     {
         try
         {
-            using var process = Process.Start(new ProcessStartInfo
-            {
-                FileName = e.Uri.AbsoluteUri,
-                UseShellExecute = true
-            });
+            using var process = Process.Start(
+                new ProcessStartInfo { FileName = e.Uri.AbsoluteUri, UseShellExecute = true }
+            );
         }
         catch (Exception ex)
         {
             // Notify developer
             if (App.SharedBugReportService != null)
             {
-                _ = App.SharedBugReportService.SendBugReportAsync($"Error opening URL: {e.Uri.AbsoluteUri}", ex);
+                _ = App.SharedBugReportService.SendBugReportAsync(
+                    $"Error opening URL: {e.Uri.AbsoluteUri}",
+                    ex
+                );
             }
 
             // Notify user
-            MessageBox.Show($"Unable to open link: {ex.Message}",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(
+                $"Unable to open link: {ex.Message}",
+                "Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error
+            );
         }
 
         // Mark the event as handled

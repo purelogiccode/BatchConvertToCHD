@@ -68,24 +68,24 @@ public class AppConfigTests
     }
 
     [Fact]
-    public void GitHubApiLatestReleaseUrlsAreConfiguredInPreferenceOrder()
+    public void GitHubApiLatestReleaseUrlsPointToPureLogicCodeRepository()
     {
         var sources = AppConfig.GitHubApiLatestReleaseUrls;
 
-        Assert.Equal(2, sources.Count);
-        Assert.Equal(AppConfig.PrimaryGitHubApiLatestReleaseUrl, sources[0]);
-        Assert.Equal(AppConfig.FallbackGitHubApiLatestReleaseUrl, sources[1]);
-
-        // The primary source must be the new purelogiccode organization; the fallback is the
-        // previous owner's repository.
-        Assert.Contains("/purelogiccode/BatchConvertToCHD/", AppConfig.PrimaryGitHubApiLatestReleaseUrl, StringComparison.Ordinal);
-        Assert.EndsWith("/releases/latest", AppConfig.PrimaryGitHubApiLatestReleaseUrl, StringComparison.Ordinal);
-        Assert.Contains("/drpetersonfernandes/BatchConvertToCHD/", AppConfig.FallbackGitHubApiLatestReleaseUrl, StringComparison.Ordinal);
-        Assert.EndsWith("/releases/latest", AppConfig.FallbackGitHubApiLatestReleaseUrl, StringComparison.Ordinal);
-
-        foreach (var url in sources)
-        {
-            Assert.StartsWith("https://api.github.com/repos/", url, StringComparison.Ordinal);
-        }
+        // The ownership transfer to the purelogiccode organization completed, so update checks
+        // target that repository only.
+        var source = Assert.Single(sources);
+        Assert.Equal(AppConfig.PrimaryGitHubApiLatestReleaseUrl, source);
+        Assert.Contains(
+            "/purelogiccode/BatchConvertToCHD/",
+            source,
+            StringComparison.Ordinal
+        );
+        Assert.EndsWith(
+            "/releases/latest",
+            source,
+            StringComparison.Ordinal
+        );
+        Assert.StartsWith("https://api.github.com/repos/", source, StringComparison.Ordinal);
     }
 }

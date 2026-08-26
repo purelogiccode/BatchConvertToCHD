@@ -12,15 +12,19 @@ public class FakeHttpMessageHandler : HttpMessageHandler
         _handler = handler;
     }
 
-    public FakeHttpMessageHandler(HttpStatusCode statusCode, string content, string contentType = "application/json")
+    public FakeHttpMessageHandler(
+        HttpStatusCode statusCode,
+        string content,
+        string contentType = "application/json"
+    )
         : this(_ => new HttpResponseMessage(statusCode)
         {
-            Content = new StringContent(content, System.Text.Encoding.UTF8, contentType)
-        })
-    {
-    }
+            Content = new StringContent(content, System.Text.Encoding.UTF8, contentType),
+        }) { }
 
-    public static FakeHttpMessageHandler WithAsyncHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> asyncHandler)
+    public static FakeHttpMessageHandler WithAsyncHandler(
+        Func<HttpRequestMessage, Task<HttpResponseMessage>> asyncHandler
+    )
     {
         return new FakeHttpMessageHandler(asyncHandler);
     }
@@ -30,7 +34,10 @@ public class FakeHttpMessageHandler : HttpMessageHandler
         _asyncHandler = asyncHandler;
     }
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken
+    )
     {
         if (_asyncHandler != null)
             return _asyncHandler(request);

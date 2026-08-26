@@ -7,7 +7,12 @@ namespace BatchConvertToCHD.Utilities.Ecm;
 /// <param name="OutputPath">The written image, or null on failure.</param>
 /// <param name="BytesWritten">Size of the restored image.</param>
 /// <param name="FailureReason">User-facing explanation, or null on success.</param>
-internal sealed record EcmDecodeResult(bool Success, string? OutputPath, long BytesWritten, string? FailureReason)
+internal sealed record EcmDecodeResult(
+    bool Success,
+    string? OutputPath,
+    long BytesWritten,
+    string? FailureReason
+)
 {
     internal static EcmDecodeResult Succeeded(string outputPath, long bytesWritten)
     {

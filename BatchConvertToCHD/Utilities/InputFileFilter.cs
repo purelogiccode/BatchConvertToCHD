@@ -18,14 +18,22 @@ namespace BatchConvertToCHD.Utilities;
 internal static class InputFileFilter
 {
     /// <summary>Descriptor extensions that describe a track layout and reference data files.</summary>
-    private static readonly HashSet<string> DescriptorExtensions =
-        new([FileExtensions.Cue, FileExtensions.Ccd, FileExtensions.Gdi, FileExtensions.Toc, FileExtensions.Mds],
-            StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<string> DescriptorExtensions = new(
+        [
+            FileExtensions.Cue,
+            FileExtensions.Ccd,
+            FileExtensions.Gdi,
+            FileExtensions.Toc,
+            FileExtensions.Mds,
+        ],
+        StringComparer.OrdinalIgnoreCase
+    );
 
     /// <summary>Raw data extensions that a descriptor can cover.</summary>
-    private static readonly HashSet<string> DataExtensions =
-        new([FileExtensions.Bin, FileExtensions.Img, FileExtensions.Iso, FileExtensions.Raw],
-            StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<string> DataExtensions = new(
+        [FileExtensions.Bin, FileExtensions.Img, FileExtensions.Iso, FileExtensions.Raw],
+        StringComparer.OrdinalIgnoreCase
+    );
 
     /// <summary>One input dropped from the batch, with the descriptor that covers it.</summary>
     /// <param name="DataFile">Full path of the raw data file being suppressed.</param>
@@ -52,23 +60,33 @@ internal static class InputFileFilter
     /// </summary>
     /// <param name="files">Candidate input paths. Only files in the same directory are compared.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<List<Suppression>> FindCompanionSuppressionsAsync(IEnumerable<string> files,
-        CancellationToken token)
+    internal static async Task<List<Suppression>> FindCompanionSuppressionsAsync(
+        IEnumerable<string> files,
+        CancellationToken token
+    )
     {
         var suppressions = new List<Suppression>();
 
-        foreach (var group in files.GroupBy(static f => Path.GetDirectoryName(f) ?? string.Empty,
-                     StringComparer.OrdinalIgnoreCase))
+        foreach (
+            var group in files.GroupBy(
+                static f => Path.GetDirectoryName(f) ?? string.Empty,
+                StringComparer.OrdinalIgnoreCase
+            )
+        )
         {
             token.ThrowIfCancellationRequested();
 
-            var descriptors = group.Where(static f => DescriptorExtensions.Contains(Path.GetExtension(f))).ToList();
+            var descriptors = group
+                .Where(static f => DescriptorExtensions.Contains(Path.GetExtension(f)))
+                .ToList();
             if (descriptors.Count == 0)
             {
                 continue;
             }
 
-            var dataFiles = group.Where(static f => DataExtensions.Contains(Path.GetExtension(f))).ToList();
+            var dataFiles = group
+                .Where(static f => DataExtensions.Contains(Path.GetExtension(f)))
+                .ToList();
             if (dataFiles.Count == 0)
             {
                 continue;
@@ -83,8 +101,12 @@ internal static class InputFileFilter
 
                 var dataBaseName = Path.GetFileNameWithoutExtension(dataFile);
                 var byName = descriptors.FirstOrDefault(d =>
-                    string.Equals(Path.GetFileNameWithoutExtension(d), dataBaseName,
-                        StringComparison.OrdinalIgnoreCase));
+                    string.Equals(
+                        Path.GetFileNameWithoutExtension(d),
+                        dataBaseName,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                );
                 if (byName is not null)
                 {
                     suppressions.Add(new Suppression(dataFile, byName, true));
@@ -99,14 +121,18 @@ internal static class InputFileFilter
                 foreach (var descriptor in descriptors)
                 {
                     // A .ccd never names its .img, so there is nothing to look up.
-                    if (Path.GetExtension(descriptor).Equals(FileExtensions.Ccd, StringComparison.OrdinalIgnoreCase))
+                    if (
+                        Path.GetExtension(descriptor)
+                        .Equals(FileExtensions.Ccd, StringComparison.OrdinalIgnoreCase)
+                    )
                     {
                         continue;
                     }
 
                     if (!descriptorText.TryGetValue(descriptor, out var text))
                     {
-                        text = await ReadDescriptorTextAsync(descriptor, token).ConfigureAwait(false);
+                        text = await ReadDescriptorTextAsync(descriptor, token)
+                            .ConfigureAwait(false);
                         descriptorText[descriptor] = text;
                     }
 
@@ -130,21 +156,29 @@ internal static class InputFileFilter
     /// <param name="onLog">Callback used to report each suppressed file.</param>
     /// <param name="token">Cancellation token.</param>
     internal static async Task<List<string>> RemoveCompanionDataFilesAsync(
-        IEnumerable<string> files, Action<string>? onLog, CancellationToken token)
+        IEnumerable<string> files,
+        Action<string>? onLog,
+        CancellationToken token
+    )
     {
         var ordered = files.ToList();
-        var suppressions = await FindCompanionSuppressionsAsync(ordered, token).ConfigureAwait(false);
+        var suppressions = await FindCompanionSuppressionsAsync(ordered, token)
+            .ConfigureAwait(false);
         if (suppressions.Count == 0)
         {
             return ordered;
         }
 
-        var suppressed =
-            new HashSet<string>(suppressions.Select(static s => s.DataFile), StringComparer.OrdinalIgnoreCase);
+        var suppressed = new HashSet<string>(
+            suppressions.Select(static s => s.DataFile),
+            StringComparer.OrdinalIgnoreCase
+        );
 
         foreach (var suppression in suppressions)
         {
-            onLog?.Invoke($" Skipping {Path.GetFileName(suppression.DataFile)} - {suppression.Reason}.");
+            onLog?.Invoke(
+                $" Skipping {Path.GetFileName(suppression.DataFile)} - {suppression.Reason}."
+            );
         }
 
         return [.. ordered.Where(f => !suppressed.Contains(f))];
@@ -158,21 +192,27 @@ internal static class InputFileFilter
     /// <param name="files">Candidate input paths.</param>
     /// <param name="outputPathSelector">Maps an input path to the CHD path it would produce.</param>
     internal static List<IGrouping<string, string>> FindOutputCollisions(
-        IEnumerable<string> files, Func<string, string> outputPathSelector)
+        IEnumerable<string> files,
+        Func<string, string> outputPathSelector
+    )
     {
         return
         [
             .. files
                 .GroupBy(outputPathSelector, StringComparer.OrdinalIgnoreCase)
-                .Where(static g => g.Count() > 1)
+                .Where(static g => g.Count() > 1),
         ];
     }
 
-    private static async Task<string> ReadDescriptorTextAsync(string descriptorPath, CancellationToken token)
+    private static async Task<string> ReadDescriptorTextAsync(
+        string descriptorPath,
+        CancellationToken token
+    )
     {
         try
         {
-            var (lines, _, _) = await GameFileParser.ReadLinesWithDetectedEncodingAsync(descriptorPath, token)
+            var (lines, _, _) = await GameFileParser
+                .ReadLinesWithDetectedEncodingAsync(descriptorPath, token)
                 .ConfigureAwait(false);
             return string.Join('\n', lines);
         }

@@ -16,9 +16,18 @@ public class BugReportServiceTests
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
 
-        var apiUrlField = typeof(BugReportService).GetField("_apiUrl", BindingFlags.NonPublic | BindingFlags.Instance);
-        var apiKeyField = typeof(BugReportService).GetField("_apiKey", BindingFlags.NonPublic | BindingFlags.Instance);
-        var appNameField = typeof(BugReportService).GetField("_applicationName", BindingFlags.NonPublic | BindingFlags.Instance);
+        var apiUrlField = typeof(BugReportService).GetField(
+            "_apiUrl",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
+        var apiKeyField = typeof(BugReportService).GetField(
+            "_apiKey",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
+        var appNameField = typeof(BugReportService).GetField(
+            "_applicationName",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
 
         Assert.NotNull(apiUrlField);
         Assert.NotNull(apiKeyField);
@@ -32,7 +41,10 @@ public class BugReportServiceTests
     public void BuildFormattedReportIncludesMessageAndAppName()
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
-        var method = typeof(BugReportService).GetMethod("BuildFormattedReport", BindingFlags.NonPublic | BindingFlags.Instance);
+        var method = typeof(BugReportService).GetMethod(
+            "BuildFormattedReport",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(method);
 
         var result = method.Invoke(service, ["Test error message", null]) as string;
@@ -45,7 +57,10 @@ public class BugReportServiceTests
     public void BuildFormattedReportIncludesExceptionDetails()
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
-        var method = typeof(BugReportService).GetMethod("BuildFormattedReport", BindingFlags.NonPublic | BindingFlags.Instance);
+        var method = typeof(BugReportService).GetMethod(
+            "BuildFormattedReport",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(method);
 
         var ex = new InvalidOperationException("Something went wrong");
@@ -60,7 +75,10 @@ public class BugReportServiceTests
     public void BuildFormattedReportIncludesInnerException()
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
-        var method = typeof(BugReportService).GetMethod("BuildFormattedReport", BindingFlags.NonPublic | BindingFlags.Instance);
+        var method = typeof(BugReportService).GetMethod(
+            "BuildFormattedReport",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(method);
 
 #pragma warning disable MA0015
@@ -76,7 +94,10 @@ public class BugReportServiceTests
     [Fact]
     public void GetExceptionStackTraceNullReturnsNa()
     {
-        var method = typeof(BugReportService).GetMethod("GetExceptionStackTrace", BindingFlags.NonPublic | BindingFlags.Static);
+        var method = typeof(BugReportService).GetMethod(
+            "GetExceptionStackTrace",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
         Assert.NotNull(method);
 
         var result = method.Invoke(null, [null]) as string;
@@ -86,7 +107,10 @@ public class BugReportServiceTests
     [Fact]
     public void GetExceptionStackTraceIncludesExceptionDetails()
     {
-        var method = typeof(BugReportService).GetMethod("GetExceptionStackTrace", BindingFlags.NonPublic | BindingFlags.Static);
+        var method = typeof(BugReportService).GetMethod(
+            "GetExceptionStackTrace",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
         Assert.NotNull(method);
 
         var ex = new InvalidOperationException("Test error");
@@ -99,7 +123,10 @@ public class BugReportServiceTests
     [Fact]
     public void GetExceptionStackTraceHandlesNestedExceptions()
     {
-        var method = typeof(BugReportService).GetMethod("GetExceptionStackTrace", BindingFlags.NonPublic | BindingFlags.Static);
+        var method = typeof(BugReportService).GetMethod(
+            "GetExceptionStackTrace",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
         Assert.NotNull(method);
 
         var deep = new FormatException("Deep");
@@ -117,7 +144,10 @@ public class BugReportServiceTests
     [Fact]
     public void GetExceptionStackTraceLimitsDepth()
     {
-        var method = typeof(BugReportService).GetMethod("GetExceptionStackTrace", BindingFlags.NonPublic | BindingFlags.Static);
+        var method = typeof(BugReportService).GetMethod(
+            "GetExceptionStackTrace",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
         Assert.NotNull(method);
 
         var inner = new InvalidOperationException("deepest");
@@ -134,7 +164,10 @@ public class BugReportServiceTests
     [Fact]
     public void GetApplicationVersionReturnsValidValue()
     {
-        var method = typeof(BugReportService).GetMethod("GetApplicationVersion", BindingFlags.NonPublic | BindingFlags.Static);
+        var method = typeof(BugReportService).GetMethod(
+            "GetApplicationVersion",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
         Assert.NotNull(method);
 
         var result = method.Invoke(null, null) as string;
@@ -145,7 +178,10 @@ public class BugReportServiceTests
     [Fact]
     public void AppendExceptionDetailsWithNullStackTraceDoesNotCrash()
     {
-        var method = typeof(BugReportService).GetMethod("AppendExceptionDetails", BindingFlags.NonPublic | BindingFlags.Static);
+        var method = typeof(BugReportService).GetMethod(
+            "AppendExceptionDetails",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
         Assert.NotNull(method);
 
         var sb = new StringBuilder();
@@ -158,7 +194,11 @@ public class BugReportServiceTests
     [Fact]
     public async Task SendBugReportAsyncReturnsFalseOnNetworkError()
     {
-        var service = new BugReportService("https://invalid.example.invalid/api", TestApiKey, TestAppName);
+        var service = new BugReportService(
+            "https://invalid.example.invalid/api",
+            TestApiKey,
+            TestAppName
+        );
         var result = await service.SendBugReportAsync("Test message");
         Assert.False(result);
     }
@@ -167,7 +207,10 @@ public class BugReportServiceTests
     public void BuildFormattedReportExceptionWithNullFieldsDoesNotCrash()
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
-        var method = typeof(BugReportService).GetMethod("BuildFormattedReport", BindingFlags.NonPublic | BindingFlags.Instance);
+        var method = typeof(BugReportService).GetMethod(
+            "BuildFormattedReport",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(method);
 
         var ex = Record.Exception(() =>
@@ -186,7 +229,10 @@ public class BugReportServiceTests
     public void BuildFormattedReportEmptyMessageDoesNotCrash()
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
-        var method = typeof(BugReportService).GetMethod("BuildFormattedReport", BindingFlags.NonPublic | BindingFlags.Instance);
+        var method = typeof(BugReportService).GetMethod(
+            "BuildFormattedReport",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(method);
 
         var result = method.Invoke(service, ["", null]) as string;
@@ -198,7 +244,10 @@ public class BugReportServiceTests
     public void BuildFormattedReportExceptionWithoutStackTraceDoesNotCrash()
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
-        var method = typeof(BugReportService).GetMethod("BuildFormattedReport", BindingFlags.NonPublic | BindingFlags.Instance);
+        var method = typeof(BugReportService).GetMethod(
+            "BuildFormattedReport",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
         Assert.NotNull(method);
 
         // Create exception using parameterless constructor which may not populate StackTrace immediately
@@ -212,7 +261,10 @@ public class BugReportServiceTests
     [Fact]
     public void AppendExceptionDetailsHandlesExceptionWithoutSource()
     {
-        var method = typeof(BugReportService).GetMethod("AppendExceptionDetails", BindingFlags.NonPublic | BindingFlags.Static);
+        var method = typeof(BugReportService).GetMethod(
+            "AppendExceptionDetails",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
         Assert.NotNull(method);
 
         var sb = new StringBuilder();
@@ -234,7 +286,7 @@ public class BugReportServiceTests
             capturedMethod = req.Method;
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\",\"id\":1}")
+                Content = new StringContent("{\"message\":\"ok\",\"id\":1}"),
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -254,7 +306,7 @@ public class BugReportServiceTests
             capturedKey = req.Headers.GetValues("X-API-KEY").FirstOrDefault();
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\",\"id\":1}")
+                Content = new StringContent("{\"message\":\"ok\",\"id\":1}"),
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -274,7 +326,7 @@ public class BugReportServiceTests
             capturedBody = await req.Content!.ReadAsStringAsync().ConfigureAwait(false);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\",\"id\":1}")
+                Content = new StringContent("{\"message\":\"ok\",\"id\":1}"),
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -289,8 +341,10 @@ public class BugReportServiceTests
     [Fact]
     public async Task SendBugReportAsyncReturnsTrueOnSuccess()
     {
-        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK,
-            "{\"message\":\"Bug report received\",\"id\":42}");
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.OK,
+            "{\"message\":\"Bug report received\",\"id\":42}"
+        );
         using var httpClient = new HttpClient(handler);
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName, httpClient);
 
@@ -302,8 +356,10 @@ public class BugReportServiceTests
     [Fact]
     public async Task SendBugReportAsyncReturnsFalseOnServerError()
     {
-        var handler = new FakeHttpMessageHandler(HttpStatusCode.InternalServerError,
-            "{\"error\":\"Server error\"}");
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.InternalServerError,
+            "{\"error\":\"Server error\"}"
+        );
         using var httpClient = new HttpClient(handler);
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName, httpClient);
 
@@ -315,8 +371,10 @@ public class BugReportServiceTests
     [Fact]
     public async Task SendBugReportAsyncReturnsTrueOnBadRequest()
     {
-        var handler = new FakeHttpMessageHandler(HttpStatusCode.BadRequest,
-            "{\"error\":\"Missing required field: message\"}");
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.BadRequest,
+            "{\"error\":\"Missing required field: message\"}"
+        );
         using var httpClient = new HttpClient(handler);
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName, httpClient);
 
@@ -379,7 +437,9 @@ public class BugReportServiceTests
     [InlineData("Failed to initialize service")]
     [InlineData("Unexpected error during processing")]
     [InlineData("Failed to open PBP file: DecompressionError (code 8)")]
-    [InlineData("Failed to extract PBP file: Ridge Racer Type 4.PBP (650,000,000 bytes) - Failed to extract disc 1 of 2: DecompressionError (code 8)")]
+    [InlineData(
+        "Failed to extract PBP file: Ridge Racer Type 4.PBP (650,000,000 bytes) - Failed to extract disc 1 of 2: DecompressionError (code 8)"
+    )]
     [InlineData("Failed to read hunk 0: Chderrdecompressionerror")]
     public void IsExcludedFromBugReport_NormalMessages_ReturnsFalse(string message)
     {
@@ -400,13 +460,19 @@ public class BugReportServiceTests
     public void IsExcludedFromBugReport_SubstringMatchIsExcluded()
     {
         Assert.True(BugReportService.IsExcludedFromBugReport("disk space is critically low"));
-        Assert.True(BugReportService.IsExcludedFromBugReport("The archive file may be corrupted, please verify"));
+        Assert.True(
+            BugReportService.IsExcludedFromBugReport(
+                "The archive file may be corrupted, please verify"
+            )
+        );
     }
 
     [Fact]
     public async Task SendBugReportAsync_ExcludedMessage_ReturnsFalseWithoutHttpCall()
     {
-        var handler = new FakeHttpMessageHandler(_ => throw new InvalidOperationException("Should not be called"));
+        var handler = new FakeHttpMessageHandler(_ =>
+            throw new InvalidOperationException("Should not be called")
+        );
         using var httpClient = new HttpClient(handler);
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName, httpClient);
 

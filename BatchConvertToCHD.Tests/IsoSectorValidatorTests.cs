@@ -67,7 +67,11 @@ public class IsoSectorValidatorTests : IDisposable
         var warning = IsoSectorValidator.GetSectorSizeWarning(path);
 
         Assert.NotNull(warning);
-        Assert.Contains("not divisible by any standard sector size", warning, StringComparison.Ordinal);
+        Assert.Contains(
+            "not divisible by any standard sector size",
+            warning,
+            StringComparison.Ordinal
+        );
         Assert.Contains("corrupt or truncated", warning, StringComparison.Ordinal);
     }
 
@@ -94,7 +98,9 @@ public class IsoSectorValidatorTests : IDisposable
     [Fact]
     public void MissingFileReturnsNoWarning()
     {
-        var warning = IsoSectorValidator.GetSectorSizeWarning(Path.Combine(_tempDir, "missing.iso"));
+        var warning = IsoSectorValidator.GetSectorSizeWarning(
+            Path.Combine(_tempDir, "missing.iso")
+        );
 
         Assert.Null(warning);
     }

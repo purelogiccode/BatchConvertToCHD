@@ -19,78 +19,94 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
     /// <param name="wavPath">Destination path for the decoded 44100 Hz stereo 16-bit PCM WAV file.</param>
     /// <param name="onLog">Optional logging callback.</param>
     /// <param name="token">Cancellation token.</param>
-    public Task DecodeAsync(string mp3Path, string wavPath, Action<string>? onLog, CancellationToken token)
+    public Task DecodeAsync(
+        string mp3Path,
+        string wavPath,
+        Action<string>? onLog,
+        CancellationToken token
+    )
     {
-        return Task.Run(() =>
-        {
-            token.ThrowIfCancellationRequested();
-            onLog?.Invoke($"MP3: Decoding {Path.GetFileName(mp3Path)} to WAV (required for chdman)...");
-
-            Exception? primaryError;
-
-            try
+        return Task.Run(
+            () =>
             {
-                DecodeWithMediaFoundation(mp3Path, wavPath);
-
-                // Some inputs (notably crafted MPEG-2 Layer III files under recent NAudio/Media
-                // Foundation combinations) OPEN fine yet yield no samples at all. An empty audio
-                // payload means this path did not really succeed, so fall through to the built-in
-                // decoder instead of writing a header-only WAV.
-                if (WavHasAudioData(wavPath))
-                {
-                    token.ThrowIfCancellationRequested();
-                    return;
-                }
-
-                primaryError = new InvalidDataException("Media Foundation produced no audio samples for this file.");
+                token.ThrowIfCancellationRequested();
                 onLog?.Invoke(
-                    "MP3: Media Foundation decoding yielded no audio; falling back to the built-in MP3 decoder...");
-            }
-            catch (Exception mfEx)
-            {
-                if (token.IsCancellationRequested)
+                    $"MP3: Decoding {Path.GetFileName(mp3Path)} to WAV (required for chdman)..."
+                );
+
+                Exception? primaryError;
+
+                try
                 {
-                    throw new OperationCanceledException(token);
+                    DecodeWithMediaFoundation(mp3Path, wavPath);
+
+                    // Some inputs (notably crafted MPEG-2 Layer III files under recent NAudio/Media
+                    // Foundation combinations) OPEN fine yet yield no samples at all. An empty audio
+                    // payload means this path did not really succeed, so fall through to the built-in
+                    // decoder instead of writing a header-only WAV.
+                    if (WavHasAudioData(wavPath))
+                    {
+                        token.ThrowIfCancellationRequested();
+                        return;
+                    }
+
+                    primaryError = new InvalidDataException(
+                        "Media Foundation produced no audio samples for this file."
+                    );
+                    onLog?.Invoke(
+                        "MP3: Media Foundation decoding yielded no audio; falling back to the built-in MP3 decoder..."
+                    );
+                }
+                catch (Exception mfEx)
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        throw new OperationCanceledException(token);
+                    }
+
+                    primaryError = mfEx;
+
+                    // Media Foundation is unavailable (Windows N / Server Core) or the codec is
+                    // missing — fall back to NAudio's Mp3FileReader (ACM codec).
+                    onLog?.Invoke(
+                        $"MP3: Media Foundation decoding failed ({mfEx.Message}); falling back to the built-in MP3 decoder..."
+                    );
                 }
 
-                primaryError = mfEx;
-
-                // Media Foundation is unavailable (Windows N / Server Core) or the codec is
-                // missing — fall back to NAudio's Mp3FileReader (ACM codec).
-                onLog?.Invoke(
-                    $"MP3: Media Foundation decoding failed ({mfEx.Message}); falling back to the built-in MP3 decoder...");
-            }
-
-            try
-            {
-                DecodeWithBuiltInDecoder(mp3Path, wavPath);
-                if (WavHasAudioData(wavPath))
+                try
                 {
-                    token.ThrowIfCancellationRequested();
-                    return;
-                }
+                    DecodeWithBuiltInDecoder(mp3Path, wavPath);
+                    if (WavHasAudioData(wavPath))
+                    {
+                        token.ThrowIfCancellationRequested();
+                        return;
+                    }
 
-                throw new InvalidDataException(
-                    "the built-in decoder also produced no audio samples - the file may be empty or use an unsupported format.");
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception builtInEx)
-            {
-                if (token.IsCancellationRequested)
+                    throw new InvalidDataException(
+                        "the built-in decoder also produced no audio samples - the file may be empty or use an unsupported format."
+                    );
+                }
+                catch (OperationCanceledException)
                 {
-                    throw new OperationCanceledException(token);
+                    throw;
                 }
+                catch (Exception builtInEx)
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        throw new OperationCanceledException(token);
+                    }
 
-                // Chain the original Media Foundation error so the root cause (missing codec vs
-                // corrupt MP3) stays diagnosable.
-                throw new InvalidDataException(
-                    $"Failed to decode MP3 '{Path.GetFileName(mp3Path)}' with Media Foundation ({primaryError.Message}) and the built-in decoder ({builtInEx.Message}).",
-                    primaryError ?? builtInEx);
-            }
-        }, token);
+                    // Chain the original Media Foundation error so the root cause (missing codec vs
+                    // corrupt MP3) stays diagnosable.
+                    throw new InvalidDataException(
+                        $"Failed to decode MP3 '{Path.GetFileName(mp3Path)}' with Media Foundation ({primaryError.Message}) and the built-in decoder ({builtInEx.Message}).",
+                        primaryError ?? builtInEx
+                    );
+                }
+            },
+            token
+        );
     }
 
     /// <summary>

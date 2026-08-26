@@ -1,6 +1,6 @@
+using System.Net.Security;
 using System.Reflection;
 using System.Security.Authentication;
-using System.Net.Security;
 using BatchConvertToCHD.Services;
 
 namespace BatchConvertToCHD.Tests;
@@ -28,19 +28,24 @@ public class AppHttpClientTests
         var client = AppHttpClient.Client;
         Assert.True(client.DefaultRequestHeaders.Accept.Count > 0);
         Assert.Contains(
-            client.DefaultRequestHeaders.Accept, static m => string.Equals(m.MediaType, "application/json", StringComparison.Ordinal));
+            client.DefaultRequestHeaders.Accept,
+            static m => string.Equals(m.MediaType, "application/json", StringComparison.Ordinal)
+        );
     }
 
     [Fact]
     public void ClientUsesTls12And13()
     {
         var handlerField = typeof(AppHttpClient).GetField(
-            "_handler", BindingFlags.NonPublic | BindingFlags.Static);
+            "_handler",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
         Assert.NotNull(handlerField);
         var handler = handlerField.GetValue(null);
         Assert.NotNull(handler);
 
-        var sslOptionsProp = handler.GetType()
+        var sslOptionsProp = handler
+            .GetType()
             .GetProperty("SslOptions", BindingFlags.Public | BindingFlags.Instance);
         Assert.NotNull(sslOptionsProp);
         var sslOptions = sslOptionsProp.GetValue(handler) as SslClientAuthenticationOptions;
@@ -48,10 +53,12 @@ public class AppHttpClientTests
 
         Assert.True(
             sslOptions.EnabledSslProtocols.HasFlag(SslProtocols.Tls12),
-            "TLS 1.2 should be enabled");
+            "TLS 1.2 should be enabled"
+        );
         Assert.True(
             sslOptions.EnabledSslProtocols.HasFlag(SslProtocols.Tls13),
-            "TLS 1.3 should be enabled");
+            "TLS 1.3 should be enabled"
+        );
     }
 
     [Fact]
@@ -63,12 +70,16 @@ public class AppHttpClientTests
         AppHttpClient.Dispose();
 
         var clientField = typeof(AppHttpClient).GetField(
-            "_client", BindingFlags.NonPublic | BindingFlags.Static);
+            "_client",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
         Assert.NotNull(clientField);
         Assert.Null(clientField.GetValue(null));
 
         var handlerField = typeof(AppHttpClient).GetField(
-            "_handler", BindingFlags.NonPublic | BindingFlags.Static);
+            "_handler",
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
         Assert.NotNull(handlerField);
         Assert.Null(handlerField.GetValue(null));
     }
@@ -101,7 +112,10 @@ public class AppHttpClientTests
         for (var i = 0; i < 10; i++)
         {
             var index = i;
-            tasks[i] = Task.Run(() => { clients[index] = AppHttpClient.Client; });
+            tasks[i] = Task.Run(() =>
+            {
+                clients[index] = AppHttpClient.Client;
+            });
         }
 
         await Task.WhenAll(tasks);

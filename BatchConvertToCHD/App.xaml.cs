@@ -37,12 +37,18 @@ public partial class App
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
         // Initialize services
-        SharedBugReportService = new BugReportService(AppConfig.BugReportApiUrl, AppConfig.BugReportApiKey,
-            AppConfig.ApplicationName);
+        SharedBugReportService = new BugReportService(
+            AppConfig.BugReportApiUrl,
+            AppConfig.BugReportApiKey,
+            AppConfig.ApplicationName
+        );
         _bugReportService = SharedBugReportService;
 
-        _statsService = new StatsService(AppConfig.ApplicationStatsApiUrl, AppConfig.ApplicationStatsApiKey,
-            AppConfig.ApplicationName);
+        _statsService = new StatsService(
+            AppConfig.ApplicationStatsApiUrl,
+            AppConfig.ApplicationStatsApiKey,
+            AppConfig.ApplicationName
+        );
 
         ConfigureSerilog();
 
@@ -57,15 +63,21 @@ public partial class App
 
     private void ConfigureSerilog()
     {
-        var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            AppConfig.ApplicationName, "logs");
+        var logDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            AppConfig.ApplicationName,
+            "logs"
+        );
         Directory.CreateDirectory(logDir);
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
             .Enrich.FromLogContext()
             .Enrich.WithProperty("Application", AppConfig.ApplicationName)
-            .Enrich.WithProperty("Version", Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0.0")
+            .Enrich.WithProperty(
+                "Version",
+                Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0.0"
+            )
             .WriteTo.Debug(LogEventLevel.Debug, formatProvider: CultureInfo.InvariantCulture)
             .WriteTo.File(
                 Path.Combine(logDir, "BatchConvertToCHD-.log"),
@@ -73,7 +85,8 @@ public partial class App
                 retainedFileCountLimit: 7,
                 restrictedToMinimumLevel: LogEventLevel.Debug,
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
-                formatProvider: CultureInfo.InvariantCulture)
+                formatProvider: CultureInfo.InvariantCulture
+            )
             .WriteTo.Sink(new BugReportApiSink(_bugReportService!))
             .CreateLogger();
 
@@ -82,8 +95,11 @@ public partial class App
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        _singleInstanceMutex =
-            new Mutex(false, $"Global\\{AppConfig.ApplicationName}_SingleInstance", out var createdNew);
+        _singleInstanceMutex = new Mutex(
+            false,
+            $"Global\\{AppConfig.ApplicationName}_SingleInstance",
+            out var createdNew
+        );
         try
         {
             _singleInstanceMutex.WaitOne();
@@ -102,7 +118,8 @@ public partial class App
                 $"Another instance of {AppConfig.ApplicationName} is already running.",
                 AppConfig.ApplicationName,
                 MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                MessageBoxImage.Information
+            );
 
             Shutdown();
             return;
@@ -208,19 +225,26 @@ public partial class App
         }
     }
 
-    private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    private void App_DispatcherUnhandledException(
+        object sender,
+        DispatcherUnhandledExceptionEventArgs e
+    )
     {
         switch (e.Exception)
         {
             // Suppress WPF internal font rendering errors (UriFormatException from GlyphTypeface)
             // These are caused by system fonts with invalid paths and are not actionable by us
             case UriFormatException uriEx
-                when (uriEx.StackTrace?.Contains("GlyphTypeface", StringComparison.Ordinal) == true):
+                when (
+                    uriEx.StackTrace?.Contains("GlyphTypeface", StringComparison.Ordinal) == true
+                ):
             // Suppress WPF internal rendering OutOfMemoryException (DUCE.Channel.SyncFlush)
             // These occur during window resize/update when system memory is low and are not actionable
-            case OutOfMemoryException { Source: "PresentationCore" } oomEx when
-                (oomEx.StackTrace?.Contains("DUCE.Channel", StringComparison.Ordinal) == true ||
-                 oomEx.StackTrace?.Contains("HwndTarget", StringComparison.Ordinal) == true):
+            case OutOfMemoryException { Source: "PresentationCore" } oomEx
+                when (
+                    oomEx.StackTrace?.Contains("DUCE.Channel", StringComparison.Ordinal) == true
+                    || oomEx.StackTrace?.Contains("HwndTarget", StringComparison.Ordinal) == true
+                ):
                 e.Handled = true;
                 return;
             // Suppress WPF-internal FileNotFoundException raised when a ToolTip/Popup tries to
@@ -228,9 +252,13 @@ public partial class App
             // OS-level condition (broken/missing UIAutomationCore.dll, third-party accessibility
             // or security software), not a defect in this application: the tooltip simply never
             // appears. Reported repeatedly (14x) with identical PopupSecurityHelper stacks.
-            case FileNotFoundException fnfEx when
-                (fnfEx.StackTrace?.Contains("PopupSecurityHelper", StringComparison.Ordinal) == true ||
-                 fnfEx.StackTrace?.Contains("ForceMsaaToUiaBridge", StringComparison.Ordinal) == true):
+            case FileNotFoundException fnfEx
+                when (
+                    fnfEx.StackTrace?.Contains("PopupSecurityHelper", StringComparison.Ordinal)
+                    == true
+                    || fnfEx.StackTrace?.Contains("ForceMsaaToUiaBridge", StringComparison.Ordinal)
+                    == true
+                ):
                 Log.Debug(fnfEx, "WPF ToolTip/Popup accessibility bridge unavailable; suppressing");
                 e.Handled = true;
                 return;
@@ -242,7 +270,10 @@ public partial class App
         }
     }
 
-    private void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    private void TaskScheduler_UnobservedTaskException(
+        object? sender,
+        UnobservedTaskExceptionEventArgs e
+    )
     {
         Log.Error(e.Exception, "TaskScheduler.UnobservedTaskException");
         ReportException(e.Exception, "TaskScheduler.UnobservedTaskException");
@@ -256,14 +287,24 @@ public partial class App
             if (string.Equals(source, "AppDomain.UnhandledException", StringComparison.Ordinal))
             {
                 // Block synchronously — the process is about to terminate.
-                Task.Run(() => _bugReportService?.SendBugReportAsync($"Unhandled Exception from {source}", exception))
-                    .GetAwaiter().GetResult();
+                Task.Run(() =>
+                        _bugReportService?.SendBugReportAsync(
+                            $"Unhandled Exception from {source}",
+                            exception
+                        )
+                    )
+                    .GetAwaiter()
+                    .GetResult();
             }
             else
             {
                 // Fire-and-forget for dispatcher/task exceptions — blocking would freeze the UI.
                 _ = Task.Run(() =>
-                    _bugReportService?.SendBugReportAsync($"Unhandled Exception from {source}", exception));
+                    _bugReportService?.SendBugReportAsync(
+                        $"Unhandled Exception from {source}",
+                        exception
+                    )
+                );
             }
         }
         catch

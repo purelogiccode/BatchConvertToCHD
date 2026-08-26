@@ -85,7 +85,10 @@ public class CsoFileIntegrationTests : IDisposable
             var error = CsoFile.Open(csoPath, out var cso);
             Assert.Equal(CsoError.None, error);
             Assert.NotNull(cso);
-            Assert.True(cso.IsDeflate, $"Expected CSO v1 (deflate) for {Path.GetFileName(csoPath)}");
+            Assert.True(
+                cso.IsDeflate,
+                $"Expected CSO v1 (deflate) for {Path.GetFileName(csoPath)}"
+            );
             Assert.False(cso.IsLz4);
             cso.Dispose();
         }
@@ -175,7 +178,8 @@ public class CsoFileIntegrationTests : IDisposable
 
                 Assert.True(
                     csoBuffer.AsSpan().SequenceEqual(isoBuffer.AsSpan()),
-                    $"Block {i} mismatch in {Path.GetFileName(csoPath)}");
+                    $"Block {i} mismatch in {Path.GetFileName(csoPath)}"
+                );
             }
 
             cso.Dispose();
@@ -220,7 +224,8 @@ public class CsoFileIntegrationTests : IDisposable
 
                 Assert.True(
                     csoBuffer.AsSpan().SequenceEqual(isoBuffer.AsSpan()),
-                    $"Stream block {i} mismatch in {Path.GetFileName(csoPath)}");
+                    $"Stream block {i} mismatch in {Path.GetFileName(csoPath)}"
+                );
             }
 
             cso.Dispose();
@@ -256,7 +261,8 @@ public class CsoFileIntegrationTests : IDisposable
 
             Assert.True(
                 block5Buffer.AsSpan().SequenceEqual(block5Direct.AsSpan()),
-                $"Seek-read mismatch for block 5 in {Path.GetFileName(csoPath)}");
+                $"Seek-read mismatch for block 5 in {Path.GetFileName(csoPath)}"
+            );
 
             cso.Dispose();
         }
@@ -282,7 +288,10 @@ public class CsoFileIntegrationTests : IDisposable
         var outputPath = Path.Combine(_tempDir, "extracted.iso");
         var progressCalls = new List<(uint Processed, uint Total)>();
 
-        error = cso.ExtractToIso(outputPath, (processed, total) => progressCalls.Add((processed, total)));
+        error = cso.ExtractToIso(
+            outputPath,
+            (processed, total) => progressCalls.Add((processed, total))
+        );
         Assert.Equal(CsoError.None, error);
         Assert.True(File.Exists(outputPath));
         Assert.NotEmpty(progressCalls);
@@ -306,7 +315,8 @@ public class CsoFileIntegrationTests : IDisposable
 
             Assert.True(
                 buffer1.AsSpan(0, bytesRead1).SequenceEqual(buffer2.AsSpan(0, bytesRead2)),
-                $"Extracted file differs at offset {offset}");
+                $"Extracted file differs at offset {offset}"
+            );
             offset += bytesRead1;
         }
 

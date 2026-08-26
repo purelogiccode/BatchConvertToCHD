@@ -52,7 +52,10 @@ public class DiscImageSignatureTests : IDisposable
     public void AsciiSignaturesAreRecognised()
     {
         Assert.Equal(DiscImageKind.Rar, DiscImageSignature.Classify("Rar!\u001a\a"u8));
-        Assert.Equal(DiscImageKind.AlcoholDescriptor, DiscImageSignature.Classify("MEDIA DESCRIPTOR"u8));
+        Assert.Equal(
+            DiscImageKind.AlcoholDescriptor,
+            DiscImageSignature.Classify("MEDIA DESCRIPTOR"u8)
+        );
         Assert.Equal(DiscImageKind.Isz, DiscImageSignature.Classify("IsZ!"u8));
         Assert.Equal(DiscImageKind.Cso, DiscImageSignature.Classify("CISO"u8));
         Assert.Equal(DiscImageKind.Cso, DiscImageSignature.Classify("ZISO"u8));
@@ -63,7 +66,10 @@ public class DiscImageSignatureTests : IDisposable
     public void BinarySignaturesAreRecognised()
     {
         Assert.Equal(DiscImageKind.Zip, DiscImageSignature.Classify([0x50, 0x4B, 0x03, 0x04]));
-        Assert.Equal(DiscImageKind.SevenZip, DiscImageSignature.Classify([0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C]));
+        Assert.Equal(
+            DiscImageKind.SevenZip,
+            DiscImageSignature.Classify([0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C])
+        );
         Assert.Equal(DiscImageKind.Ecm, DiscImageSignature.Classify("ECM\0"u8));
         Assert.Equal(DiscImageKind.Pbp, DiscImageSignature.Classify("\0PBP"u8));
     }
@@ -93,7 +99,10 @@ public class DiscImageSignatureTests : IDisposable
 
         // The real case: named .rar, actually a disc image.
         Assert.Equal(DiscImageKind.RawCd, DiscImageSignature.Detect(path));
-        Assert.Equal(DiscImageKind.Unknown, DiscImageSignature.Detect(Path.Combine(_tempDir, "missing.rar")));
+        Assert.Equal(
+            DiscImageKind.Unknown,
+            DiscImageSignature.Detect(Path.Combine(_tempDir, "missing.rar"))
+        );
     }
 
     [Fact]

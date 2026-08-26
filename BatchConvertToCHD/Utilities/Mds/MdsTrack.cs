@@ -24,14 +24,16 @@ internal sealed record MdsTrack(int Number, byte ModeByte, int SectorSize, long 
     /// The cue TRACK type for this track once its sectors are 2352 bytes, or null when the mode is
     /// one this code has never seen and therefore cannot describe honestly.
     /// </summary>
-    internal string? CueTrackType => ModeByte switch
-    {
-        ModeAudio => "AUDIO",
-        ModeMode1 => BinCueGenerator.Mode1,
-        ModeMode2 or ModeMode2Form1 or ModeMode2Form2 => BinCueGenerator.Mode2,
-        _ => null
-    };
+    internal string? CueTrackType =>
+        ModeByte switch
+        {
+            ModeAudio => "AUDIO",
+            ModeMode1 => BinCueGenerator.Mode1,
+            ModeMode2 or ModeMode2Form1 or ModeMode2Form2 => BinCueGenerator.Mode2,
+            _ => null,
+        };
 
     /// <summary>A short description used in log messages.</summary>
-    internal string Description => $"{Number}:{CueTrackType ?? $"UNKNOWN(0x{ModeByte:x2})"}@{StartLba}/ss{SectorSize}";
+    internal string Description =>
+        $"{Number}:{CueTrackType ?? $"UNKNOWN(0x{ModeByte:x2})"}@{StartLba}/ss{SectorSize}";
 }

@@ -93,32 +93,38 @@ public sealed class PbpDiscInfo
             _stream.Seek(_psarOffset + PsarTocOffset, SeekOrigin.Begin);
 
             _stream.ReadExactly(buffer, 0, 0xA);
-            if (buffer[2] != 0xA0) return entries;
+            if (buffer[2] != 0xA0)
+                return entries;
 
             var startTrack = FromBinaryDecimal(buffer[7]);
 
             _stream.ReadExactly(buffer, 0, 0xA);
-            if (buffer[2] != 0xA1) return entries;
+            if (buffer[2] != 0xA1)
+                return entries;
 
             var endTrack = FromBinaryDecimal(buffer[7]);
 
             _stream.ReadExactly(buffer, 0, 0xA);
-            if (buffer[2] != 0xA2) return entries;
+            if (buffer[2] != 0xA2)
+                return entries;
 
             for (var c = startTrack; c <= endTrack; c++)
             {
                 _stream.ReadExactly(buffer, 0, 0xA);
                 var trackNo = FromBinaryDecimal(buffer[2]);
-                if (trackNo != c) return entries;
+                if (trackNo != c)
+                    return entries;
 
-                entries.Add(new TocEntry
-                {
-                    TrackType = (TrackType)buffer[0],
-                    TrackNo = trackNo,
-                    Minutes = FromBinaryDecimal(buffer[3]),
-                    Seconds = FromBinaryDecimal(buffer[4]),
-                    Frames = FromBinaryDecimal(buffer[5])
-                });
+                entries.Add(
+                    new TocEntry
+                    {
+                        TrackType = (TrackType)buffer[0],
+                        TrackNo = trackNo,
+                        Minutes = FromBinaryDecimal(buffer[3]),
+                        Seconds = FromBinaryDecimal(buffer[4]),
+                        Frames = FromBinaryDecimal(buffer[5]),
+                    }
+                );
             }
         }
         catch
@@ -141,7 +147,8 @@ public sealed class PbpDiscInfo
 
         while (thisOffset < psarIsoEnd)
         {
-            if (_stream.Read(indexBytes, 0, 32) != 32) break;
+            if (_stream.Read(indexBytes, 0, 32) != 32)
+                break;
 
             var offset = BinaryPrimitives.ReadUInt32LittleEndian(indexBytes.AsSpan(0, 4));
             var length = BinaryPrimitives.ReadInt32LittleEndian(indexBytes.AsSpan(4, 4));
@@ -166,7 +173,14 @@ public sealed class PbpDiscInfo
         try
         {
             ReadBlock(1, outBuffer, out _);
-            return (uint)((outBuffer[104] | (outBuffer[105] << 8) | (outBuffer[106] << 16) | (outBuffer[107] << 24)) * IsoBlockSize);
+            return (uint)(
+                (
+                    outBuffer[104]
+                    | (outBuffer[105] << 8)
+                    | (outBuffer[106] << 16)
+                    | (outBuffer[107] << 24)
+                ) * IsoBlockSize
+            );
         }
         finally
         {
@@ -222,7 +236,11 @@ public sealed class PbpDiscInfo
     /// <param name="outputStream">The stream to write the ISO data to.</param>
     /// <param name="progress">Optional callback with bytes written so far.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    public void ExtractTo(Stream outputStream, Action<uint>? progress = null, CancellationToken cancellationToken = default)
+    public void ExtractTo(
+        Stream outputStream,
+        Action<uint>? progress = null,
+        CancellationToken cancellationToken = default
+    )
     {
         var outBuffer = ArrayPool<byte>.Shared.Rent(16 * IsoBlockSize);
         try
@@ -260,7 +278,12 @@ public sealed class PbpDiscInfo
     /// <param name="progress">Optional callback with bytes written so far.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A <see cref="PbpError"/> indicating the result.</returns>
-    public PbpError ExtractToBinCue(string binPath, string? cuePath = null, Action<uint>? progress = null, CancellationToken cancellationToken = default)
+    public PbpError ExtractToBinCue(
+        string binPath,
+        string? cuePath = null,
+        Action<uint>? progress = null,
+        CancellationToken cancellationToken = default
+    )
     {
         cuePath ??= Path.ChangeExtension(binPath, ".cue");
 
@@ -304,14 +327,19 @@ public sealed class PbpDiscInfo
     private static int DecompressBlock(byte[] compressed, int compressedLength, byte[] output)
     {
         using var compressedStream = new MemoryStream(compressed, 0, compressedLength);
-        using var deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress, false);
+        using var deflateStream = new DeflateStream(
+            compressedStream,
+            CompressionMode.Decompress,
+            false
+        );
         using var outputMs = new MemoryStream(output);
 
         var writeBuffer = new byte[4096];
         while (true)
         {
             var totalRead = deflateStream.Read(writeBuffer, 0, writeBuffer.Length);
-            if (totalRead <= 0) break;
+            if (totalRead <= 0)
+                break;
 
             outputMs.Write(writeBuffer, 0, totalRead);
         }

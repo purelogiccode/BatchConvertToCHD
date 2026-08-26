@@ -129,7 +129,14 @@ public sealed class CsoFile : IDisposable
         if (version != 1 && version != 2)
             return CsoError.UnsupportedVersion;
 
-        header = new CsoHeader(magic, headerSize, uncompressedSize, blockSize, version, indexOffsetShift);
+        header = new CsoHeader(
+            magic,
+            headerSize,
+            uncompressedSize,
+            blockSize,
+            version,
+            indexOffsetShift
+        );
         return CsoError.None;
     }
 
@@ -228,7 +235,12 @@ public sealed class CsoFile : IDisposable
         }
     }
 
-    private CsoError DecompressDeflateBlock(int compressedSize, byte[] buffer, int offset, out int bytesRead)
+    private CsoError DecompressDeflateBlock(
+        int compressedSize,
+        byte[] buffer,
+        int offset,
+        out int bytesRead
+    )
     {
         bytesRead = 0;
 
@@ -245,15 +257,24 @@ public sealed class CsoFile : IDisposable
                 dataOffset = 2;
             }
 
-            using var compressedStream = new MemoryStream(compressedBuffer, dataOffset, actuallyRead - dataOffset);
-            using var deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress, false);
+            using var compressedStream = new MemoryStream(
+                compressedBuffer,
+                dataOffset,
+                actuallyRead - dataOffset
+            );
+            using var deflateStream = new DeflateStream(
+                compressedStream,
+                CompressionMode.Decompress,
+                false
+            );
 
             var totalRead = 0;
             var blockSize = (int)Header.BlockSize;
             while (totalRead < blockSize)
             {
                 var read = deflateStream.Read(buffer, offset + totalRead, blockSize - totalRead);
-                if (read == 0) break;
+                if (read == 0)
+                    break;
 
                 totalRead += read;
             }
@@ -271,7 +292,12 @@ public sealed class CsoFile : IDisposable
         }
     }
 
-    private CsoError DecompressLz4Block(int compressedSize, byte[] buffer, int offset, out int bytesRead)
+    private CsoError DecompressLz4Block(
+        int compressedSize,
+        byte[] buffer,
+        int offset,
+        out int bytesRead
+    )
     {
         bytesRead = 0;
 
@@ -283,7 +309,14 @@ public sealed class CsoFile : IDisposable
                 return CsoError.IoError;
 
             var blockSize = (int)Header.BlockSize;
-            var decoded = LZ4Codec.Decode(compressedBuffer, 0, actuallyRead, buffer, offset, blockSize);
+            var decoded = LZ4Codec.Decode(
+                compressedBuffer,
+                0,
+                actuallyRead,
+                buffer,
+                offset,
+                blockSize
+            );
 
             if (decoded < 0)
                 return CsoError.DecompressionError;
@@ -318,7 +351,11 @@ public sealed class CsoFile : IDisposable
     /// <param name="progress">Optional callback invoked with the number of blocks processed and total blocks.</param>
     /// <param name="cancellationToken">Cancellation token to abort the operation.</param>
     /// <returns>A <see cref="CsoError"/> indicating the result of the operation.</returns>
-    public CsoError ExtractToIso(string outputPath, Action<uint, uint>? progress = null, CancellationToken cancellationToken = default)
+    public CsoError ExtractToIso(
+        string outputPath,
+        Action<uint, uint>? progress = null,
+        CancellationToken cancellationToken = default
+    )
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
@@ -363,7 +400,8 @@ public sealed class CsoFile : IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
 
         _disposed = true;
 

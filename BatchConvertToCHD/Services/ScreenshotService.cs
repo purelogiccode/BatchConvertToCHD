@@ -46,8 +46,17 @@ internal class ScreenshotService
     private static extern IntPtr SelectObject(IntPtr hdc, IntPtr h);
 
     [DllImport("gdi32.dll")]
-    private static extern bool BitBlt(IntPtr hdcDest, int xDest, int yDest, int nWidth,
-        int nHeight, IntPtr hdcSrc, int xSrc, int ySrc, uint dwRop);
+    private static extern bool BitBlt(
+        IntPtr hdcDest,
+        int xDest,
+        int yDest,
+        int nWidth,
+        int nHeight,
+        IntPtr hdcSrc,
+        int xSrc,
+        int ySrc,
+        uint dwRop
+    );
 
     [DllImport("user32.dll")]
     private static extern bool ReleaseDC(IntPtr hWnd, IntPtr hdc);
@@ -107,17 +116,29 @@ internal class ScreenshotService
                             BitBlt(compatibleDc, 0, 0, width, height, windowDc, 0, 0, SrcCopy);
 
                             var bitmapSource = Imaging.CreateBitmapSourceFromHBitmap(
-                                bitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                                bitmap,
+                                IntPtr.Zero,
+                                Int32Rect.Empty,
+                                BitmapSizeOptions.FromEmptyOptions()
+                            );
 
                             var screenshotDir = Path.Combine(
-                                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                Environment.GetFolderPath(
+                                    Environment.SpecialFolder.LocalApplicationData
+                                ),
                                 AppConfig.ApplicationName,
-                                "screenshots");
+                                "screenshots"
+                            );
                             Directory.CreateDirectory(screenshotDir);
 
-                            var timestamp =
-                                DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-fff", CultureInfo.InvariantCulture);
-                            var filePath = Path.Combine(screenshotDir, $"screenshot_{timestamp}.png");
+                            var timestamp = DateTime.Now.ToString(
+                                "yyyy-MM-dd_HH-mm-ss-fff",
+                                CultureInfo.InvariantCulture
+                            );
+                            var filePath = Path.Combine(
+                                screenshotDir,
+                                $"screenshot_{timestamp}.png"
+                            );
 
                             using var fileStream = new FileStream(filePath, FileMode.Create);
                             var encoder = new PngBitmapEncoder();

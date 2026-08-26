@@ -24,7 +24,9 @@ public class CancellationHandlingTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var ex = Assert.ThrowsAny<OperationCanceledException>(() => cts.Token.ThrowIfCancellationRequested());
+        var ex = Assert.ThrowsAny<OperationCanceledException>(() =>
+            cts.Token.ThrowIfCancellationRequested()
+        );
 
         Assert.True(MainWindow.IsCancellationException(ex));
     }

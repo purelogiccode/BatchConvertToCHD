@@ -26,9 +26,11 @@ internal static class IsoSectorValidator
     /// <param name="imagePath">Path of the disc image file to validate.</param>
     internal static string? GetSectorSizeWarning(string imagePath)
     {
-        if (imagePath.EndsWith(FileExtensions.Cue, StringComparison.OrdinalIgnoreCase) ||
-            imagePath.EndsWith(FileExtensions.Gdi, StringComparison.OrdinalIgnoreCase) ||
-            imagePath.EndsWith(FileExtensions.Toc, StringComparison.OrdinalIgnoreCase))
+        if (
+            imagePath.EndsWith(FileExtensions.Cue, StringComparison.OrdinalIgnoreCase)
+            || imagePath.EndsWith(FileExtensions.Gdi, StringComparison.OrdinalIgnoreCase)
+            || imagePath.EndsWith(FileExtensions.Toc, StringComparison.OrdinalIgnoreCase)
+        )
         {
             return null;
         }

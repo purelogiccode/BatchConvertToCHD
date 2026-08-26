@@ -53,8 +53,14 @@ public class BinCueGeneratorTests : IDisposable
     [Fact]
     public void GetAlternateModeSwitchesBetweenMode1AndMode2()
     {
-        Assert.Equal(BinCueGenerator.Mode1, BinCueGenerator.GetAlternateMode(BinCueGenerator.Mode2));
-        Assert.Equal(BinCueGenerator.Mode2, BinCueGenerator.GetAlternateMode(BinCueGenerator.Mode1));
+        Assert.Equal(
+            BinCueGenerator.Mode1,
+            BinCueGenerator.GetAlternateMode(BinCueGenerator.Mode2)
+        );
+        Assert.Equal(
+            BinCueGenerator.Mode2,
+            BinCueGenerator.GetAlternateMode(BinCueGenerator.Mode1)
+        );
     }
 
     [Fact]
@@ -62,7 +68,10 @@ public class BinCueGeneratorTests : IDisposable
     {
         var binPath = Path.Combine(_tempDir, "Game.bin");
         var cuePath = BinCueGenerator.GetAutoCuePath(binPath);
-        await File.WriteAllTextAsync(cuePath, BinCueGenerator.BuildCueContent("Game.bin", BinCueGenerator.Mode2));
+        await File.WriteAllTextAsync(
+            cuePath,
+            BinCueGenerator.BuildCueContent("Game.bin", BinCueGenerator.Mode2)
+        );
 
         var mode = await BinCueGenerator.ReadTrackModeAsync(cuePath, CancellationToken.None);
 
@@ -74,9 +83,16 @@ public class BinCueGeneratorTests : IDisposable
     {
         var binPath = Path.Combine(_tempDir, "Game.bin");
         var cuePath = BinCueGenerator.GetAutoCuePath(binPath);
-        await File.WriteAllTextAsync(cuePath, BinCueGenerator.BuildCueContent("Game.bin", BinCueGenerator.Mode2));
+        await File.WriteAllTextAsync(
+            cuePath,
+            BinCueGenerator.BuildCueContent("Game.bin", BinCueGenerator.Mode2)
+        );
 
-        await BinCueGenerator.RewriteCueAsync(cuePath, BinCueGenerator.Mode1, CancellationToken.None);
+        await BinCueGenerator.RewriteCueAsync(
+            cuePath,
+            BinCueGenerator.Mode1,
+            CancellationToken.None
+        );
 
         var content = await File.ReadAllTextAsync(cuePath);
         Assert.Contains("FILE \"Game.bin\" BINARY", content, StringComparison.Ordinal);

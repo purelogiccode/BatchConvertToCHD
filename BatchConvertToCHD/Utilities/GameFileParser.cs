@@ -22,8 +22,11 @@ internal static class GameFileParser
     /// <param name="onLog">Callback for logging messages.</param>
     /// <param name="token">Cancellation token to cancel the operation.</param>
     /// <returns>A list of file paths referenced by the CUE sheet.</returns>
-    internal static Task<List<string>> GetReferencedFilesFromCueAsync(string cuePath, Action<string> onLog,
-        CancellationToken token)
+    internal static Task<List<string>> GetReferencedFilesFromCueAsync(
+        string cuePath,
+        Action<string> onLog,
+        CancellationToken token
+    )
     {
         return ParseFileReferenceLinesAsync(cuePath, onLog, "CUE", token);
     }
@@ -35,14 +38,18 @@ internal static class GameFileParser
     /// <param name="onLog">Callback for logging messages.</param>
     /// <param name="token">Cancellation token to cancel the operation.</param>
     /// <returns>A list of file paths referenced by the GDI file.</returns>
-    internal static async Task<List<string>> GetReferencedFilesFromGdiAsync(string gdiPath, Action<string> onLog,
-        CancellationToken token)
+    internal static async Task<List<string>> GetReferencedFilesFromGdiAsync(
+        string gdiPath,
+        Action<string> onLog,
+        CancellationToken token
+    )
     {
         var referencedFiles = new List<string>();
         var gdiDir = Path.GetDirectoryName(gdiPath) ?? string.Empty;
         try
         {
-            var lines = await File.ReadAllLinesAsync(gdiPath, Encoding.UTF8, token).ConfigureAwait(false);
+            var lines = await File.ReadAllLinesAsync(gdiPath, Encoding.UTF8, token)
+                .ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
             for (var i = 1; i < lines.Length; i++)
             {
@@ -57,7 +64,10 @@ internal static class GameFileParser
 
                 if (firstQuote != -1 && lastQuote > firstQuote)
                 {
-                    var fileName = trimmedLine.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
+                    var fileName = trimmedLine.Substring(
+                        firstQuote + 1,
+                        lastQuote - firstQuote - 1
+                    );
                     referencedFiles.Add(Path.Combine(gdiDir, fileName));
                 }
                 else
@@ -85,11 +95,15 @@ internal static class GameFileParser
         }
         catch (IOException ex)
         {
-            onLog($"[WARNING] Could not parse GDI file: {Path.GetFileName(gdiPath)}. Error: {ex.Message}");
+            onLog(
+                $"[WARNING] Could not parse GDI file: {Path.GetFileName(gdiPath)}. Error: {ex.Message}"
+            );
         }
         catch (UnauthorizedAccessException ex)
         {
-            onLog($"[WARNING] Could not access GDI file: {Path.GetFileName(gdiPath)}. Error: {ex.Message}");
+            onLog(
+                $"[WARNING] Could not access GDI file: {Path.GetFileName(gdiPath)}. Error: {ex.Message}"
+            );
         }
 
         return referencedFiles;
@@ -102,8 +116,11 @@ internal static class GameFileParser
     /// <param name="onLog">Callback for logging messages.</param>
     /// <param name="token">Cancellation token to cancel the operation.</param>
     /// <returns>A list of file paths referenced by the TOC file.</returns>
-    internal static Task<List<string>> GetReferencedFilesFromTocAsync(string tocPath, Action<string> onLog,
-        CancellationToken token)
+    internal static Task<List<string>> GetReferencedFilesFromTocAsync(
+        string tocPath,
+        Action<string> onLog,
+        CancellationToken token
+    )
     {
         return ParseFileReferenceLinesAsync(tocPath, onLog, "TOC", token);
     }
@@ -120,8 +137,11 @@ internal static class GameFileParser
     /// UTF-8 BOM: the first token becomes "\uFEFFFILE" and the FILE directive is never parsed,
     /// which makes chdman report "couldn't find bin file []" even when every bin exists.
     /// </remarks>
-    internal static async Task<(string[] Lines, Encoding Encoding, bool HasBom)> ReadLinesWithDetectedEncodingAsync(
-        string filePath, CancellationToken token)
+    internal static async Task<(
+        string[] Lines,
+        Encoding Encoding,
+        bool HasBom
+        )> ReadLinesWithDetectedEncodingAsync(string filePath, CancellationToken token)
     {
         var bytes = await File.ReadAllBytesAsync(filePath, token).ConfigureAwait(false);
 
@@ -133,7 +153,8 @@ internal static class GameFileParser
                 var bomUtf8 = new UTF8Encoding(false);
                 return (DecodeLines(bytes[3..], bomUtf8), bomUtf8, true);
             }
-            case >= 4 when bytes[0] == 0xFF && bytes[1] == 0xFE && bytes[2] == 0x00 && bytes[3] == 0x00:
+            case >= 4
+                when bytes[0] == 0xFF && bytes[1] == 0xFE && bytes[2] == 0x00 && bytes[3] == 0x00:
             {
                 // UTF-32LE BOM (FF FE 00 00) — must be checked before the UTF-16LE BOM.
                 var bomUtf32 = new UTF32Encoding(false, false);
@@ -142,13 +163,21 @@ internal static class GameFileParser
             case >= 2 when bytes[0] == 0xFF && bytes[1] == 0xFE:
                 return (DecodeLines(bytes[2..], Encoding.Unicode), Encoding.Unicode, true);
             case >= 2 when bytes[0] == 0xFE && bytes[1] == 0xFF:
-                return (DecodeLines(bytes[2..], Encoding.BigEndianUnicode), Encoding.BigEndianUnicode, true);
+                return (
+                    DecodeLines(bytes[2..], Encoding.BigEndianUnicode),
+                    Encoding.BigEndianUnicode,
+                    true
+                );
         }
 
         // 2) Strict UTF-8 (throws on invalid byte sequences)
         try
         {
-            return (DecodeLines(bytes, new UTF8Encoding(false, true)), new UTF8Encoding(false), false);
+            return (
+                DecodeLines(bytes, new UTF8Encoding(false, true)),
+                new UTF8Encoding(false),
+                false
+            );
         }
         catch (DecoderFallbackException)
         {
@@ -173,8 +202,11 @@ internal static class GameFileParser
             Encoding encoding;
             try
             {
-                encoding = Encoding.GetEncoding(codePage, EncoderFallback.ExceptionFallback,
-                    DecoderFallback.ExceptionFallback);
+                encoding = Encoding.GetEncoding(
+                    codePage,
+                    EncoderFallback.ExceptionFallback,
+                    DecoderFallback.ExceptionFallback
+                );
             }
             catch (Exception)
             {
@@ -198,10 +230,20 @@ internal static class GameFileParser
                 foreach (var line in decoded)
                 {
                     var trimmedLine = line.Trim();
-                    if (TryGetFileNameFromFileLine(trimmedLine, out var fileName) && fileName is not null)
+                    if (
+                        TryGetFileNameFromFileLine(trimmedLine, out var fileName)
+                        && fileName is not null
+                    )
                     {
-                        if (onDiskFiles.Any(f =>
-                                string.Equals(Path.GetFileName(f), fileName, StringComparison.OrdinalIgnoreCase)))
+                        if (
+                            onDiskFiles.Any(f =>
+                                string.Equals(
+                                    Path.GetFileName(f),
+                                    fileName,
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                        )
                         {
                             score += 10;
                         }
@@ -255,12 +297,14 @@ internal static class GameFileParser
             if (lastSpace > 0)
             {
                 var afterFilename = rest[(lastSpace + 1)..];
-                if (afterFilename.Equals("BINARY", StringComparison.OrdinalIgnoreCase) ||
-                    afterFilename.Equals("WAVE", StringComparison.OrdinalIgnoreCase) ||
-                    afterFilename.Equals("MP3", StringComparison.OrdinalIgnoreCase) ||
-                    afterFilename.Equals("AIFF", StringComparison.OrdinalIgnoreCase) ||
-                    afterFilename.Equals("MOTOROLA", StringComparison.OrdinalIgnoreCase) ||
-                    afterFilename.Equals("AUDIO", StringComparison.OrdinalIgnoreCase))
+                if (
+                    afterFilename.Equals("BINARY", StringComparison.OrdinalIgnoreCase)
+                    || afterFilename.Equals("WAVE", StringComparison.OrdinalIgnoreCase)
+                    || afterFilename.Equals("MP3", StringComparison.OrdinalIgnoreCase)
+                    || afterFilename.Equals("AIFF", StringComparison.OrdinalIgnoreCase)
+                    || afterFilename.Equals("MOTOROLA", StringComparison.OrdinalIgnoreCase)
+                    || afterFilename.Equals("AUDIO", StringComparison.OrdinalIgnoreCase)
+                )
                 {
                     fileName = rest[..lastSpace];
                 }
@@ -279,13 +323,18 @@ internal static class GameFileParser
     }
 
     private static async Task<List<string>> ParseFileReferenceLinesAsync(
-        string filePath, Action<string> onLog, string fileType, CancellationToken token)
+        string filePath,
+        Action<string> onLog,
+        string fileType,
+        CancellationToken token
+    )
     {
         var referencedFiles = new List<string>();
         var directory = Path.GetDirectoryName(filePath) ?? string.Empty;
         try
         {
-            var (lines, _, _) = await ReadLinesWithDetectedEncodingAsync(filePath, token).ConfigureAwait(false);
+            var (lines, _, _) = await ReadLinesWithDetectedEncodingAsync(filePath, token)
+                .ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
             foreach (var line in lines)
             {
@@ -305,11 +354,15 @@ internal static class GameFileParser
         }
         catch (IOException ex)
         {
-            onLog($"[WARNING] Could not parse {fileType} file: {Path.GetFileName(filePath)}. Error: {ex.Message}");
+            onLog(
+                $"[WARNING] Could not parse {fileType} file: {Path.GetFileName(filePath)}. Error: {ex.Message}"
+            );
         }
         catch (UnauthorizedAccessException ex)
         {
-            onLog($"[WARNING] Could not access {fileType} file: {Path.GetFileName(filePath)}. Error: {ex.Message}");
+            onLog(
+                $"[WARNING] Could not access {fileType} file: {Path.GetFileName(filePath)}. Error: {ex.Message}"
+            );
         }
 
         return referencedFiles;

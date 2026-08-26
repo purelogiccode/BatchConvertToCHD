@@ -16,9 +16,18 @@ public class StatsServiceTests
     {
         var service = new StatsService(TestApiUrl, TestApiKey, TestAppId);
 
-        var apiUrlField = typeof(StatsService).GetField("_apiUrl", BindingFlags.NonPublic | BindingFlags.Instance);
-        var apiKeyField = typeof(StatsService).GetField("_apiKey", BindingFlags.NonPublic | BindingFlags.Instance);
-        var appIdField = typeof(StatsService).GetField("_applicationId", BindingFlags.NonPublic | BindingFlags.Instance);
+        var apiUrlField = typeof(StatsService).GetField(
+            "_apiUrl",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
+        var apiKeyField = typeof(StatsService).GetField(
+            "_apiKey",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
+        var appIdField = typeof(StatsService).GetField(
+            "_applicationId",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
 
         Assert.NotNull(apiUrlField);
         Assert.NotNull(apiKeyField);
@@ -48,7 +57,7 @@ public class StatsServiceTests
             capturedMethod = req.Method;
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\"}")
+                Content = new StringContent("{\"message\":\"ok\"}"),
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -68,7 +77,7 @@ public class StatsServiceTests
             capturedUrl = req.RequestUri?.ToString();
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\"}")
+                Content = new StringContent("{\"message\":\"ok\"}"),
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -88,7 +97,7 @@ public class StatsServiceTests
             capturedAuth = req.Headers.Authorization?.ToString();
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\"}")
+                Content = new StringContent("{\"message\":\"ok\"}"),
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -110,7 +119,7 @@ public class StatsServiceTests
             capturedBody = await req.Content!.ReadAsStringAsync().ConfigureAwait(false);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\"}")
+                Content = new StringContent("{\"message\":\"ok\"}"),
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -133,7 +142,7 @@ public class StatsServiceTests
             capturedBody = await req.Content!.ReadAsStringAsync().ConfigureAwait(false);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\"}")
+                Content = new StringContent("{\"message\":\"ok\"}"),
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -150,7 +159,11 @@ public class StatsServiceTests
     [Fact]
     public async Task RecordUsageAsyncDoesNotThrowOnNetworkError()
     {
-        var service = new StatsService("https://invalid.example.invalid/api", TestApiKey, TestAppId);
+        var service = new StatsService(
+            "https://invalid.example.invalid/api",
+            TestApiKey,
+            TestAppId
+        );
         var exception = await Record.ExceptionAsync(service.RecordUsageAsync);
         Assert.Null(exception);
     }
@@ -158,8 +171,10 @@ public class StatsServiceTests
     [Fact]
     public async Task RecordUsageAsyncDoesNotThrowOnRateLimitResponse()
     {
-        var handler = new FakeHttpMessageHandler(HttpStatusCode.TooManyRequests,
-            "{\"error\":\"Rate limit exceeded\"}");
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.TooManyRequests,
+            "{\"error\":\"Rate limit exceeded\"}"
+        );
         using var httpClient = new HttpClient(handler);
         var service = new StatsService(TestApiUrl, TestApiKey, TestAppId, httpClient);
 
@@ -170,8 +185,7 @@ public class StatsServiceTests
     [Fact]
     public async Task RecordUsageAsyncDoesNotThrowOnUnauthorizedResponse()
     {
-        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK,
-            "{\"error\":\"Unauthorized\"}");
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, "{\"error\":\"Unauthorized\"}");
         using var httpClient = new HttpClient(handler);
         var service = new StatsService(TestApiUrl, TestApiKey, TestAppId, httpClient);
 
@@ -182,8 +196,10 @@ public class StatsServiceTests
     [Fact]
     public async Task RecordUsageAsyncDoesNotThrowOnBadRequestResponse()
     {
-        var handler = new FakeHttpMessageHandler(HttpStatusCode.BadRequest,
-            "{\"error\":\"applicationId is required\"}");
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.BadRequest,
+            "{\"error\":\"applicationId is required\"}"
+        );
         using var httpClient = new HttpClient(handler);
         var service = new StatsService(TestApiUrl, TestApiKey, TestAppId, httpClient);
 
@@ -194,8 +210,10 @@ public class StatsServiceTests
     [Fact]
     public async Task RecordUsageAsyncDoesNotThrowOnServerError()
     {
-        var handler = new FakeHttpMessageHandler(HttpStatusCode.InternalServerError,
-            "{\"error\":\"Server error\"}");
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.InternalServerError,
+            "{\"error\":\"Server error\"}"
+        );
         using var httpClient = new HttpClient(handler);
         var service = new StatsService(TestApiUrl, TestApiKey, TestAppId, httpClient);
 
@@ -206,8 +224,10 @@ public class StatsServiceTests
     [Fact]
     public async Task RecordUsageAsyncDoesNotThrowOnSuccess()
     {
-        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK,
-            "{\"message\":\"Stats recorded successfully\",\"applicationId\":\"test-app-id\"}");
+        var handler = new FakeHttpMessageHandler(
+            HttpStatusCode.OK,
+            "{\"message\":\"Stats recorded successfully\",\"applicationId\":\"test-app-id\"}"
+        );
         using var httpClient = new HttpClient(handler);
         var service = new StatsService(TestApiUrl, TestApiKey, TestAppId, httpClient);
 

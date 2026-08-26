@@ -125,7 +125,12 @@ internal static class CdSectorEccEdc
         WriteEdc(sector, UserDataOffset, 0x91C, Mode2Form2EdcOffset);
     }
 
-    private static void WriteEdc(Span<byte> sector, int sourceOffset, int length, int destinationOffset)
+    private static void WriteEdc(
+        Span<byte> sector,
+        int sourceOffset,
+        int length,
+        int destinationOffset
+    )
     {
         var edc = ComputeEdc(0, sector.Slice(sourceOffset, length));
         BinaryPrimitives.WriteUInt32LittleEndian(sector[destinationOffset..], edc);
@@ -142,8 +147,24 @@ internal static class CdSectorEccEdc
 
         // P parity spans the data column-wise, Q parity diagonally; the magic numbers are the
         // interleave the CD-ROM standard defines and are only meaningful as a set.
-        ComputeEccBlock(sector, AddressOffset, majorCount: 86, minorCount: 24, majorMult: 2, minorInc: 86, EccPOffset);
-        ComputeEccBlock(sector, AddressOffset, majorCount: 52, minorCount: 43, majorMult: 86, minorInc: 88, EccQOffset);
+        ComputeEccBlock(
+            sector,
+            AddressOffset,
+            majorCount: 86,
+            minorCount: 24,
+            majorMult: 2,
+            minorInc: 86,
+            EccPOffset
+        );
+        ComputeEccBlock(
+            sector,
+            AddressOffset,
+            majorCount: 52,
+            minorCount: 43,
+            majorMult: 86,
+            minorInc: 88,
+            EccQOffset
+        );
 
         if (zeroAddress)
         {
@@ -151,8 +172,15 @@ internal static class CdSectorEccEdc
         }
     }
 
-    private static void ComputeEccBlock(Span<byte> sector, int sourceOffset, int majorCount, int minorCount,
-        int majorMult, int minorInc, int destinationOffset)
+    private static void ComputeEccBlock(
+        Span<byte> sector,
+        int sourceOffset,
+        int majorCount,
+        int minorCount,
+        int majorMult,
+        int minorInc,
+        int destinationOffset
+    )
     {
         var size = majorCount * minorCount;
 

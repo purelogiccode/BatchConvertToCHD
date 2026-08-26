@@ -50,9 +50,16 @@ internal static class MdsParser
     {
         try
         {
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var stream = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite
+            );
             var header = new byte[SignatureLength];
-            if (stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false) < header.Length)
+            if (
+                stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false) < header.Length
+            )
             {
                 return false;
             }
@@ -80,27 +87,39 @@ internal static class MdsParser
 
         if (info.Length > MaxDescriptorBytes)
         {
-            throw new InvalidDataException($"{info.Length:N0} bytes is too large to be an MDS descriptor.");
+            throw new InvalidDataException(
+                $"{info.Length:N0} bytes is too large to be an MDS descriptor."
+            );
         }
 
         var bytes = File.ReadAllBytes(mdsPath);
-        if (bytes.Length < SessionBlockOffsetOffset + sizeof(uint) ||
-            !Encoding.ASCII.GetString(bytes, 0, SignatureLength).Equals(Signature, StringComparison.Ordinal))
+        if (
+            bytes.Length < SessionBlockOffsetOffset + sizeof(uint)
+            || !Encoding
+                .ASCII.GetString(bytes, 0, SignatureLength)
+                .Equals(Signature, StringComparison.Ordinal)
+        )
         {
-            throw new InvalidDataException("Not an Alcohol MDS descriptor (missing \"MEDIA DESCRIPTOR\" signature).");
+            throw new InvalidDataException(
+                "Not an Alcohol MDS descriptor (missing \"MEDIA DESCRIPTOR\" signature)."
+            );
         }
 
-        var sessionCount = BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(SessionCountOffset));
+        var sessionCount = BinaryPrimitives.ReadUInt16LittleEndian(
+            bytes.AsSpan(SessionCountOffset)
+        );
 
         // A corrupt or truncated descriptor produces nonsense here - one real example reported 8233
         // sessions - and walking that many offsets would just read garbage.
         if (sessionCount is 0 or > MaxPlausibleSessions)
         {
             throw new InvalidDataException(
-                $"Descriptor reports {sessionCount} sessions, so it is corrupt or truncated.");
+                $"Descriptor reports {sessionCount} sessions, so it is corrupt or truncated."
+            );
         }
 
-        var sessionBlockOffset = (long)BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(SessionBlockOffsetOffset));
+        var sessionBlockOffset = (long)
+            BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(SessionBlockOffsetOffset));
         var tracks = new List<MdsTrack>();
 
         for (var session = 0; session < sessionCount; session++)
@@ -112,8 +131,10 @@ internal static class MdsParser
             }
 
             var trackCount = bytes[sessionBase + SessionTrackCountOffset];
-            var trackBlockOffset = (long)BinaryPrimitives.ReadUInt32LittleEndian(
-                bytes.AsSpan((int)(sessionBase + SessionTrackOffsetOffset)));
+            var trackBlockOffset = (long)
+                BinaryPrimitives.ReadUInt32LittleEndian(
+                    bytes.AsSpan((int)(sessionBase + SessionTrackOffsetOffset))
+                );
 
             for (var track = 0; track < trackCount; track++)
             {
@@ -131,11 +152,18 @@ internal static class MdsParser
                     continue;
                 }
 
-                tracks.Add(new MdsTrack(
-                    point,
-                    bytes[trackBase + TrackModeOffset],
-                    BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan((int)(trackBase + TrackSectorSizeOffset))),
-                    BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan((int)(trackBase + TrackStartLbaOffset)))));
+                tracks.Add(
+                    new MdsTrack(
+                        point,
+                        bytes[trackBase + TrackModeOffset],
+                        BinaryPrimitives.ReadUInt16LittleEndian(
+                            bytes.AsSpan((int)(trackBase + TrackSectorSizeOffset))
+                        ),
+                        BinaryPrimitives.ReadUInt32LittleEndian(
+                            bytes.AsSpan((int)(trackBase + TrackStartLbaOffset))
+                        )
+                    )
+                );
             }
         }
 
@@ -164,9 +192,12 @@ internal static class MdsParser
         {
             candidates =
             [
-                .. Directory.GetFiles(directory)
+                .. Directory
+                    .GetFiles(directory)
                     .Where(static f =>
-                        Path.GetExtension(f).Equals(FileExtensions.Mdf, StringComparison.OrdinalIgnoreCase))
+                        Path.GetExtension(f)
+                            .Equals(FileExtensions.Mdf, StringComparison.OrdinalIgnoreCase)
+                    ),
             ];
         }
         catch (Exception)
@@ -176,7 +207,12 @@ internal static class MdsParser
 
         var baseName = Path.GetFileNameWithoutExtension(mdsPath);
         var byName = candidates.FirstOrDefault(f =>
-            string.Equals(Path.GetFileNameWithoutExtension(f), baseName, StringComparison.OrdinalIgnoreCase));
+            string.Equals(
+                Path.GetFileNameWithoutExtension(f),
+                baseName,
+                StringComparison.OrdinalIgnoreCase
+            )
+        );
         if (byName is not null)
         {
             return byName;
@@ -191,9 +227,15 @@ internal static class MdsParser
         // first volume stands in for the data file; the preparer joins the set before reading it.
         try
         {
-            return Directory.GetFiles(directory)
+            return Directory
+                .GetFiles(directory)
                 .FirstOrDefault(f =>
-                    Path.GetExtension(f).Equals(FileExtensions.SplitFirstAlcohol, StringComparison.OrdinalIgnoreCase));
+                    Path.GetExtension(f)
+                        .Equals(
+                            FileExtensions.SplitFirstAlcohol,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                );
         }
         catch (Exception)
         {

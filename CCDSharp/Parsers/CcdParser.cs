@@ -206,7 +206,8 @@ public static partial class CcdParser
         match = DataTracksScrambledRegex().Match(line);
         if (match.Success)
         {
-            disc.DataTracksScrambled = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) != 0;
+            disc.DataTracksScrambled =
+                int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) != 0;
             return;
         }
 
@@ -234,7 +235,7 @@ public static partial class CcdParser
                 0 => TrackMode.Audio,
                 1 => TrackMode.Mode1,
                 2 => TrackMode.Mode2,
-                _ => TrackMode.Mode1
+                _ => TrackMode.Mode1,
             };
             return;
         }

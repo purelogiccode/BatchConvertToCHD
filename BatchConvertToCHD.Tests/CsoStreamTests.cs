@@ -83,7 +83,8 @@ public class CsoStreamTests : IDisposable
         while (totalRead < buffer.Length)
         {
             var read = stream.Read(buffer, totalRead, buffer.Length - totalRead);
-            if (read == 0) break;
+            if (read == 0)
+                break;
 
             totalRead += read;
         }

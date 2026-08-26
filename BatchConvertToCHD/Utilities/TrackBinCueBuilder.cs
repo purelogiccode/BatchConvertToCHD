@@ -24,7 +24,8 @@ internal static class TrackBinCueBuilder
     /// <summary>Matches a trailing "(Track 2)" or "(Track 02)" in a file name.</summary>
     private static readonly Regex TrackNumberRegex = new(
         @"\(\s*track\s*(?<num>\d{1,3})\s*\)",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.NonBacktracking);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.NonBacktracking
+    );
 
     /// <summary>One track file and the number recovered from its name.</summary>
     /// <param name="Path">Full path of the bin.</param>
@@ -47,9 +48,15 @@ internal static class TrackBinCueBuilder
         {
             var fileName = Path.GetFileNameWithoutExtension(path);
             var match = TrackNumberRegex.Match(fileName);
-            if (!match.Success ||
-                !int.TryParse(match.Groups["num"].Value, NumberStyles.None, CultureInfo.InvariantCulture,
-                    out var number))
+            if (
+                !match.Success
+                || !int.TryParse(
+                    match.Groups["num"].Value,
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out var number
+                )
+            )
             {
                 continue;
             }
@@ -96,7 +103,8 @@ internal static class TrackBinCueBuilder
         {
             var track = tracks[i];
             builder.Append("FILE \"").Append(Path.GetFileName(track.Path)).Append("\" BINARY\r\n");
-            builder.Append("  TRACK ")
+            builder
+                .Append("  TRACK ")
                 .Append(track.Number.ToString("00", CultureInfo.InvariantCulture))
                 .Append(' ')
                 .Append(i == 0 ? dataTrackMode : "AUDIO")
@@ -114,11 +122,19 @@ internal static class TrackBinCueBuilder
     /// <param name="tracks">Track bins in order.</param>
     /// <param name="dataTrackMode">Cue mode for the data track.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<string> WriteCueAsync(IReadOnlyList<TrackBin> tracks, string dataTrackMode,
-        CancellationToken token)
+    internal static async Task<string> WriteCueAsync(
+        IReadOnlyList<TrackBin> tracks,
+        string dataTrackMode,
+        CancellationToken token
+    )
     {
         var cuePath = BinCueGenerator.GetAutoCuePath(tracks[0].Path);
-        await File.WriteAllTextAsync(cuePath, BuildCueContent(tracks, dataTrackMode), new UTF8Encoding(false), token)
+        await File.WriteAllTextAsync(
+                cuePath,
+                BuildCueContent(tracks, dataTrackMode),
+                new UTF8Encoding(false),
+                token
+            )
             .ConfigureAwait(false);
 
         return cuePath;

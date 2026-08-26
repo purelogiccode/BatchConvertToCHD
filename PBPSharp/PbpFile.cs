@@ -49,7 +49,13 @@ public sealed class PbpFile : IDisposable
     /// </summary>
     public string? Category => SfoData.GetString(SfoData.Keys.Category);
 
-    private PbpFile(Stream stream, bool ownsStream, PbpHeader header, SfoData sfoData, IReadOnlyList<PbpDiscInfo> discs)
+    private PbpFile(
+        Stream stream,
+        bool ownsStream,
+        PbpHeader header,
+        SfoData sfoData,
+        IReadOnlyList<PbpDiscInfo> discs
+    )
     {
         _stream = stream;
         _ownsStream = ownsStream;
@@ -160,7 +166,17 @@ public sealed class PbpFile : IDisposable
         var dataPspOffset = BinaryPrimitives.ReadInt32LittleEndian(headerBytes[32..36]);
         var dataPsarOffset = BinaryPrimitives.ReadInt32LittleEndian(headerBytes[36..40]);
 
-        header = new PbpHeader(version, sfoOffset, icon0Offset, icon1Offset, pic0Offset, pic1Offset, snd0Offset, dataPspOffset, dataPsarOffset);
+        header = new PbpHeader(
+            version,
+            sfoOffset,
+            icon0Offset,
+            icon1Offset,
+            pic0Offset,
+            pic1Offset,
+            snd0Offset,
+            dataPspOffset,
+            dataPsarOffset
+        );
         return PbpError.None;
     }
 
@@ -197,7 +213,7 @@ public sealed class PbpFile : IDisposable
             {
                 Format = BinaryPrimitives.ReadUInt16LittleEndian(dirBuffer.AsSpan(2, 2)),
                 Length = BinaryPrimitives.ReadUInt32LittleEndian(dirBuffer.AsSpan(4, 4)),
-                MaxLength = BinaryPrimitives.ReadUInt32LittleEndian(dirBuffer.AsSpan(8, 4))
+                MaxLength = BinaryPrimitives.ReadUInt32LittleEndian(dirBuffer.AsSpan(8, 4)),
             };
 
             var dataOffset = BinaryPrimitives.ReadUInt32LittleEndian(dirBuffer.AsSpan(12, 4));
@@ -253,10 +269,12 @@ public sealed class PbpFile : IDisposable
             var magicBuffer = new byte[16];
             stream.ReadExactly(magicBuffer, 0, 16);
 
-            if (BitConverter.ToUInt32(magicBuffer, 0) != 0x2CC9C5BC ||
-                BitConverter.ToUInt32(magicBuffer, 4) != 0x33B5A90F ||
-                BitConverter.ToUInt32(magicBuffer, 8) != 0x06F6B4B3 ||
-                BitConverter.ToUInt32(magicBuffer, 12) != 0xB25945BA)
+            if (
+                BitConverter.ToUInt32(magicBuffer, 0) != 0x2CC9C5BC
+                || BitConverter.ToUInt32(magicBuffer, 4) != 0x33B5A90F
+                || BitConverter.ToUInt32(magicBuffer, 8) != 0x06F6B4B3
+                || BitConverter.ToUInt32(magicBuffer, 12) != 0xB25945BA
+            )
                 return PbpError.InvalidPsarHeader;
 
             // Skip 0x76 uint32 values
@@ -295,7 +313,8 @@ public sealed class PbpFile : IDisposable
         for (var i = 0; i < maxLength; i++)
         {
             var b = stream.ReadByte();
-            if (b <= 0) break;
+            if (b <= 0)
+                break;
 
             buffer[length++] = (byte)b;
         }
@@ -308,7 +327,8 @@ public sealed class PbpFile : IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
 
         _disposed = true;
 

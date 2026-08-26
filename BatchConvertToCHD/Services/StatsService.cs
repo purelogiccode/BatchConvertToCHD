@@ -32,10 +32,7 @@ internal class StatsService
         {
             var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
 
-            var payload = new
-            {
-                applicationId = _applicationId, version
-            };
+            var payload = new { applicationId = _applicationId, version };
 
             using var request = new HttpRequestMessage(HttpMethod.Post, _apiUrl);
             request.Headers.Add("Authorization", $"Bearer {_apiKey}");
@@ -47,13 +44,18 @@ internal class StatsService
 
             if (statusCode == 429)
             {
-                Logger.Debug("Usage statistics rate-limited (HTTP 429) - this is expected behavior");
+                Logger.Debug(
+                    "Usage statistics rate-limited (HTTP 429) - this is expected behavior"
+                );
                 return;
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                Logger.Information("Failed to record usage statistics: HTTP {StatusCode}", statusCode);
+                Logger.Information(
+                    "Failed to record usage statistics: HTTP {StatusCode}",
+                    statusCode
+                );
             }
         }
         catch (Exception ex)

@@ -9,7 +9,10 @@ public class UpdateServiceTests
     public void ConstructorStoresApplicationName()
     {
         var service = new UpdateService("MyApp");
-        var field = typeof(UpdateService).GetField("_applicationName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var field = typeof(UpdateService).GetField(
+            "_applicationName",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+        );
         Assert.NotNull(field);
         Assert.Equal("MyApp", field.GetValue(service));
     }
@@ -20,8 +23,14 @@ public class UpdateServiceTests
         using var httpClient = new HttpClient();
         var service = new UpdateService("MyApp", httpClient);
 
-        var nameField = typeof(UpdateService).GetField("_applicationName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var httpField = typeof(UpdateService).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var nameField = typeof(UpdateService).GetField(
+            "_applicationName",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+        );
+        var httpField = typeof(UpdateService).GetField(
+            "_httpClient",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+        );
 
         Assert.Equal("MyApp", nameField!.GetValue(service));
         Assert.Same(httpClient, httpField!.GetValue(service));
@@ -78,7 +87,12 @@ public class UpdateServiceTests
     public void TryNormalizeVersionsReturnsTrueForValidVersions()
     {
         var current = new Version(2, 7);
-        var result = UpdateService.TryNormalizeVersions(current, "3.0.0", out var normalizedCurrent, out var normalizedRemote);
+        var result = UpdateService.TryNormalizeVersions(
+            current,
+            "3.0.0",
+            out var normalizedCurrent,
+            out var normalizedRemote
+        );
 
         Assert.True(result);
         Assert.Equal(new Version(2, 7, 0, 0), normalizedCurrent);
@@ -89,7 +103,12 @@ public class UpdateServiceTests
     public void TryNormalizeVersionsHandlesFullVersions()
     {
         var current = new Version(2, 7, 0, 1);
-        var result = UpdateService.TryNormalizeVersions(current, "2.7.0.1", out var normalizedCurrent, out var normalizedRemote);
+        var result = UpdateService.TryNormalizeVersions(
+            current,
+            "2.7.0.1",
+            out var normalizedCurrent,
+            out var normalizedRemote
+        );
 
         Assert.True(result);
         Assert.Equal(new Version(2, 7, 0, 1), normalizedCurrent);
@@ -99,7 +118,12 @@ public class UpdateServiceTests
     [Fact]
     public void TryNormalizeVersionsReturnsFalseForNullCurrentVersion()
     {
-        var result = UpdateService.TryNormalizeVersions(null, "1.0.0", out var normalizedCurrent, out var normalizedRemote);
+        var result = UpdateService.TryNormalizeVersions(
+            null,
+            "1.0.0",
+            out var normalizedCurrent,
+            out var normalizedRemote
+        );
 
         Assert.False(result);
         Assert.Null(normalizedCurrent);
@@ -113,7 +137,12 @@ public class UpdateServiceTests
     public void TryNormalizeVersionsReturnsFalseForInvalidRemoteTag(string invalidTag)
     {
         var current = new Version(2, 7);
-        var result = UpdateService.TryNormalizeVersions(current, invalidTag, out var normalizedCurrent, out var normalizedRemote);
+        var result = UpdateService.TryNormalizeVersions(
+            current,
+            invalidTag,
+            out var normalizedCurrent,
+            out var normalizedRemote
+        );
 
         Assert.False(result);
         Assert.Null(normalizedCurrent);
@@ -124,7 +153,12 @@ public class UpdateServiceTests
     public void TryNormalizeVersionsDefaultsNegativeBuildToZero()
     {
         var current = new Version(1, 0);
-        var result = UpdateService.TryNormalizeVersions(current, "1.0.0", out var normalizedCurrent, out _);
+        var result = UpdateService.TryNormalizeVersions(
+            current,
+            "1.0.0",
+            out var normalizedCurrent,
+            out _
+        );
 
         Assert.True(result);
         Assert.Equal(0, normalizedCurrent!.Build);
@@ -142,56 +176,56 @@ public class UpdateServiceTests
     }
 
     private const string NewReleaseJson = """
-    {
-        "tag_name": "v3.0.0",
-        "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
-        "name": "Version 3.0.0",
-        "body": "New features",
-        "prerelease": false,
-        "draft": false
-    }
-    """;
+        {
+            "tag_name": "v3.0.0",
+            "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
+            "name": "Version 3.0.0",
+            "body": "New features",
+            "prerelease": false,
+            "draft": false
+        }
+        """;
 
     private const string SameReleaseJson = """
-    {
-        "tag_name": "v2.7.0",
-        "html_url": "https://github.com/test/repo/releases/tag/v2.7.0",
-        "name": "Version 2.7.0",
-        "body": "Current version",
-        "prerelease": false,
-        "draft": false
-    }
-    """;
+        {
+            "tag_name": "v2.7.0",
+            "html_url": "https://github.com/test/repo/releases/tag/v2.7.0",
+            "name": "Version 2.7.0",
+            "body": "Current version",
+            "prerelease": false,
+            "draft": false
+        }
+        """;
 
     private const string DraftReleaseJson = """
-    {
-        "tag_name": "v3.0.0",
-        "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
-        "name": "Version 3.0.0",
-        "body": "Draft release",
-        "prerelease": false,
-        "draft": true
-    }
-    """;
+        {
+            "tag_name": "v3.0.0",
+            "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
+            "name": "Version 3.0.0",
+            "body": "Draft release",
+            "prerelease": false,
+            "draft": true
+        }
+        """;
 
     private const string PrereleaseJson = """
-    {
-        "tag_name": "v3.0.0-beta",
-        "html_url": "https://github.com/test/repo/releases/tag/v3.0.0-beta",
-        "name": "Beta Release",
-        "body": "Pre-release",
-        "prerelease": true,
-        "draft": false
-    }
-    """;
+        {
+            "tag_name": "v3.0.0-beta",
+            "html_url": "https://github.com/test/repo/releases/tag/v3.0.0-beta",
+            "name": "Beta Release",
+            "body": "Pre-release",
+            "prerelease": true,
+            "draft": false
+        }
+        """;
 
     private const string MinimalReleaseJson = """
-    {
-        "tag_name": "v3.0.0",
-        "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
-        "name": "v3.0.0"
-    }
-    """;
+        {
+            "tag_name": "v3.0.0",
+            "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
+            "name": "v3.0.0"
+        }
+        """;
 
     [Fact]
     public async Task CheckForNewVersionAsync_NewVersionAvailable_NotifiesUser()
@@ -203,24 +237,48 @@ public class UpdateServiceTests
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("Checking for updates", StringComparison.Ordinal));
-        Assert.Contains(logMessages, static m => m.Contains("Current version:", StringComparison.Ordinal));
-        Assert.Contains(logMessages, static m => m.Contains("Latest version:", StringComparison.Ordinal));
-        Assert.Contains(statusMessages, static m => m.Contains("Update available", StringComparison.Ordinal));
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("Checking for updates", StringComparison.Ordinal)
+        );
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("Current version:", StringComparison.Ordinal)
+        );
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("Latest version:", StringComparison.Ordinal)
+        );
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("Update available", StringComparison.Ordinal)
+        );
     }
 
     [Fact]
@@ -233,23 +291,44 @@ public class UpdateServiceTests
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("up to date", StringComparison.Ordinal));
-        Assert.Contains(statusMessages, static m => m.Contains("up to date", StringComparison.Ordinal));
-        Assert.DoesNotContain(statusMessages, static m => m.Contains("Update available", StringComparison.Ordinal));
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("up to date", StringComparison.Ordinal)
+        );
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("up to date", StringComparison.Ordinal)
+        );
+        Assert.DoesNotContain(
+            statusMessages,
+            static m => m.Contains("Update available", StringComparison.Ordinal)
+        );
     }
 
     [Fact]
@@ -261,18 +340,30 @@ public class UpdateServiceTests
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(static _ => { }),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(static _ => { }),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
         Assert.Contains(logMessages, static m => m.Contains("draft", StringComparison.Ordinal));
@@ -287,50 +378,85 @@ public class UpdateServiceTests
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(static _ => { }),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(static _ => { }),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("prerelease", StringComparison.Ordinal));
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("prerelease", StringComparison.Ordinal)
+        );
     }
 
     [Fact]
     public async Task CheckForNewVersionAsync_RateLimitExceeded_HandlesGracefully()
     {
-        using var httpClient = CreateHttpClient(HttpStatusCode.Forbidden,
-            """{ "message": "API rate limit exceeded for user." }""");
+        using var httpClient = CreateHttpClient(
+            HttpStatusCode.Forbidden,
+            """{ "message": "API rate limit exceeded for user." }"""
+        );
         var service = new UpdateService("TestApp", httpClient);
         var logMessages = new List<string>();
         var statusMessages = new List<string>();
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("rate limit exceeded", StringComparison.Ordinal));
-        Assert.Contains(statusMessages, static m => m.Contains("rate limit", StringComparison.Ordinal));
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("rate limit exceeded", StringComparison.Ordinal)
+        );
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("rate limit", StringComparison.Ordinal)
+        );
     }
 
     [Fact]
@@ -344,25 +470,42 @@ public class UpdateServiceTests
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)((msg, _) =>
-            {
-                reportedError = msg;
-                return Task.CompletedTask;
-            })
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(
+                        (msg, _) =>
+                        {
+                            reportedError = msg;
+                            return Task.CompletedTask;
+                        }
+                    ),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("Update check failed", StringComparison.Ordinal));
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("Update check failed", StringComparison.Ordinal)
+        );
         Assert.NotNull(reportedError);
     }
 
@@ -371,7 +514,9 @@ public class UpdateServiceTests
     [InlineData(HttpStatusCode.BadGateway)]
     [InlineData(HttpStatusCode.ServiceUnavailable)]
     [InlineData(HttpStatusCode.GatewayTimeout)]
-    public async Task CheckForNewVersionAsync_ServerErrors_HandledGracefullyWithoutBugReport(HttpStatusCode statusCode)
+    public async Task CheckForNewVersionAsync_ServerErrors_HandledGracefullyWithoutBugReport(
+        HttpStatusCode statusCode
+    )
     {
         using var httpClient = CreateHttpClient(statusCode, "Server error");
         var service = new UpdateService("TestApp", httpClient);
@@ -381,26 +526,46 @@ public class UpdateServiceTests
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)((_, _) =>
-            {
-                bugReportCalled = true;
-                return Task.CompletedTask;
-            })
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(
+                        (_, _) =>
+                        {
+                            bugReportCalled = true;
+                            return Task.CompletedTask;
+                        }
+                    ),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("server error", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(statusMessages, static m => m.Contains("server error", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("server error", StringComparison.OrdinalIgnoreCase)
+        );
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("server error", StringComparison.OrdinalIgnoreCase)
+        );
         Assert.False(bugReportCalled, "Bug report should NOT be called for server errors (5xx)");
     }
 
@@ -414,23 +579,46 @@ public class UpdateServiceTests
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("504", StringComparison.Ordinal) || m.Contains("server error", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(statusMessages, static m => m.Contains("server error", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(statusMessages, static m => m.Contains("failed", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            logMessages,
+            static m =>
+                m.Contains("504", StringComparison.Ordinal)
+                || m.Contains("server error", StringComparison.OrdinalIgnoreCase)
+        );
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("server error", StringComparison.OrdinalIgnoreCase)
+        );
+        Assert.DoesNotContain(
+            statusMessages,
+            static m => m.Contains("failed", StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     [Fact]
@@ -443,28 +631,50 @@ public class UpdateServiceTests
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("502", StringComparison.Ordinal) || m.Contains("server error", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(statusMessages, static m => m.Contains("server error", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            logMessages,
+            static m =>
+                m.Contains("502", StringComparison.Ordinal)
+                || m.Contains("server error", StringComparison.OrdinalIgnoreCase)
+        );
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("server error", StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     [Fact]
     public async Task CheckForNewVersionAsync_NetworkFailure_LogsAndReports()
     {
-        var handler = new FakeHttpMessageHandler(static _ => throw new HttpRequestException("Network unreachable"));
+        var handler = new FakeHttpMessageHandler(static _ =>
+            throw new HttpRequestException("Network unreachable")
+        );
         using var httpClient = new HttpClient(handler);
         var service = new UpdateService("TestApp", httpClient);
         var logMessages = new List<string>();
@@ -473,33 +683,55 @@ public class UpdateServiceTests
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)((_, _) =>
-            {
-                bugReportCalled = true;
-                return Task.CompletedTask;
-            })
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(
+                        (_, _) =>
+                        {
+                            bugReportCalled = true;
+                            return Task.CompletedTask;
+                        }
+                    ),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("Network unreachable", StringComparison.Ordinal));
-        Assert.Contains(statusMessages, static m => m.Contains("network", StringComparison.Ordinal));
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("Network unreachable", StringComparison.Ordinal)
+        );
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("network", StringComparison.Ordinal)
+        );
         Assert.False(bugReportCalled);
     }
 
     [Fact]
     public async Task CheckForNewVersionAsync_GenericException_ReportsBug()
     {
-        var handler = new FakeHttpMessageHandler(static _ => throw new InvalidOperationException("Unexpected error"));
+        var handler = new FakeHttpMessageHandler(static _ =>
+            throw new InvalidOperationException("Unexpected error")
+        );
         using var httpClient = new HttpClient(handler);
         var service = new UpdateService("TestApp", httpClient);
         var logMessages = new List<string>();
@@ -508,171 +740,266 @@ public class UpdateServiceTests
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)((msg, _) =>
-            {
-                reportedError = msg;
-                return Task.CompletedTask;
-            })
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(
+                        (msg, _) =>
+                        {
+                            reportedError = msg;
+                            return Task.CompletedTask;
+                        }
+                    ),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("Update check failed", StringComparison.Ordinal));
-        Assert.Contains(statusMessages, static m => m.Contains("Update check failed", StringComparison.Ordinal));
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("Update check failed", StringComparison.Ordinal)
+        );
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("Update check failed", StringComparison.Ordinal)
+        );
         Assert.NotNull(reportedError);
     }
 
     [Fact]
     public async Task CheckForNewVersionAsync_OlderRemoteVersion_DoesNotNotify()
     {
-        using var httpClient = CreateHttpClient(HttpStatusCode.OK, """
-        {
-            "tag_name": "v1.0.0",
-            "html_url": "https://github.com/test/repo/releases/tag/v1.0.0",
-            "name": "Old version",
-            "body": "Old release",
-            "prerelease": false,
-            "draft": false
-        }
-        """);
+        using var httpClient = CreateHttpClient(
+            HttpStatusCode.OK,
+            """
+            {
+                "tag_name": "v1.0.0",
+                "html_url": "https://github.com/test/repo/releases/tag/v1.0.0",
+                "name": "Old version",
+                "body": "Old release",
+                "prerelease": false,
+                "draft": false
+            }
+            """
+        );
         var service = new UpdateService("TestApp", httpClient);
         var logMessages = new List<string>();
         var statusMessages = new List<string>();
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("up to date", StringComparison.Ordinal));
-        Assert.DoesNotContain(statusMessages, static m => m.Contains("Update available", StringComparison.Ordinal));
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("up to date", StringComparison.Ordinal)
+        );
+        Assert.DoesNotContain(
+            statusMessages,
+            static m => m.Contains("Update available", StringComparison.Ordinal)
+        );
     }
 
     [Fact]
     public async Task CheckForNewVersionAsync_RemoteVersionHigherByMinor_Notifies()
     {
-        using var httpClient = CreateHttpClient(HttpStatusCode.OK, """
-        {
-            "tag_name": "v2.8.0",
-            "html_url": "https://github.com/test/repo/releases/tag/v2.8.0",
-            "name": "Minor update",
-            "body": "Minor release",
-            "prerelease": false,
-            "draft": false
-        }
-        """);
+        using var httpClient = CreateHttpClient(
+            HttpStatusCode.OK,
+            """
+            {
+                "tag_name": "v2.8.0",
+                "html_url": "https://github.com/test/repo/releases/tag/v2.8.0",
+                "name": "Minor update",
+                "body": "Minor release",
+                "prerelease": false,
+                "draft": false
+            }
+            """
+        );
         var service = new UpdateService("TestApp", httpClient);
         var logMessages = new List<string>();
         var statusMessages = new List<string>();
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(statusMessages, static m => m.Contains("Update available", StringComparison.Ordinal));
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("Update available", StringComparison.Ordinal)
+        );
     }
 
     [Fact]
     public async Task CheckForNewVersionAsync_RemoteVersionHigherByMajor_Notifies()
     {
-        using var httpClient = CreateHttpClient(HttpStatusCode.OK, """
-        {
-            "tag_name": "v3.0.0",
-            "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
-            "name": "Major update",
-            "body": "Major release",
-            "prerelease": false,
-            "draft": false
-        }
-        """);
+        using var httpClient = CreateHttpClient(
+            HttpStatusCode.OK,
+            """
+            {
+                "tag_name": "v3.0.0",
+                "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
+                "name": "Major update",
+                "body": "Major release",
+                "prerelease": false,
+                "draft": false
+            }
+            """
+        );
         var service = new UpdateService("TestApp", httpClient);
         var logMessages = new List<string>();
         var statusMessages = new List<string>();
 
         var currentVersion = new Version(1, 0, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(statusMessages, static m => m.Contains("Update available", StringComparison.Ordinal));
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("Update available", StringComparison.Ordinal)
+        );
     }
 
     [Fact]
     public async Task CheckForNewVersionAsync_InvalidTag_SkipsWithLog()
     {
-        using var httpClient = CreateHttpClient(HttpStatusCode.OK, """
-        {
-            "tag_name": "no_version_prefix",
-            "html_url": "https://github.com/test/repo/releases/tag/noversion",
-            "name": "No version",
-            "body": "Invalid",
-            "prerelease": false,
-            "draft": false
-        }
-        """);
+        using var httpClient = CreateHttpClient(
+            HttpStatusCode.OK,
+            """
+            {
+                "tag_name": "no_version_prefix",
+                "html_url": "https://github.com/test/repo/releases/tag/noversion",
+                "name": "No version",
+                "body": "Invalid",
+                "prerelease": false,
+                "draft": false
+            }
+            """
+        );
         var service = new UpdateService("TestApp", httpClient);
         var logMessages = new List<string>();
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(static _ => { }),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(static _ => { }),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("Could not compare versions", StringComparison.Ordinal));
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("Could not compare versions", StringComparison.Ordinal)
+        );
     }
 
     [Fact]
@@ -685,21 +1012,36 @@ public class UpdateServiceTests
 
         var currentVersion = new Version(2, 0, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(statusMessages, static m => m.Contains("Update available", StringComparison.Ordinal));
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("Update available", StringComparison.Ordinal)
+        );
     }
 
     [Fact]
@@ -712,201 +1054,255 @@ public class UpdateServiceTests
 
         var currentVersion = new Version(2, 7, 0);
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            currentVersion,
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    currentVersion,
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("rate limit exceeded", StringComparison.Ordinal));
-        Assert.Contains(statusMessages, static m => m.Contains("rate limit", StringComparison.Ordinal));
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("rate limit exceeded", StringComparison.Ordinal)
+        );
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("rate limit", StringComparison.Ordinal)
+        );
     }
 
     #endregion
 
-    #region CheckForNewVersionAsync - fallback sources
-
-    private static bool IsPrimarySource(HttpRequestMessage request)
-    {
-        return string.Equals(
-            request.RequestUri?.ToString(),
-            AppConfig.PrimaryGitHubApiLatestReleaseUrl,
-            StringComparison.OrdinalIgnoreCase);
-    }
+    #region CheckForNewVersionAsync - release source failures
 
     [Fact]
-    public async Task CheckForNewVersionAsync_PrimaryNotFound_FallsBackToSecondaryAndNotifies()
+    public async Task CheckForNewVersionAsync_ReleaseNotFound_ReportsFailureAndNotifiesOnce()
     {
-        // The primary repository has no reachable releases page (e.g. ownership transfer in
-        // flight); the fallback answers with a newer release.
-        var handler = new FakeHttpMessageHandler(request =>
-            IsPrimarySource(request)
-                ? new HttpResponseMessage(HttpStatusCode.NotFound) { Content = new StringContent("""{ "message": "Not Found" }""") }
-                : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(NewReleaseJson) });
-        using var httpClient = new HttpClient(handler);
-        var service = new UpdateService("TestApp", httpClient);
-        var logMessages = new List<string>();
-        var statusMessages = new List<string>();
-
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
-        Assert.NotNull(method);
-
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            new Version(2, 7, 0),
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
-        await task;
-
-        Assert.Contains(logMessages, static m => m.Contains("trying the fallback source", StringComparison.Ordinal));
-        Assert.Contains(logMessages, static m => m.Contains("Current version:", StringComparison.Ordinal));
-        Assert.Contains(statusMessages, static m => m.Contains("Update available", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public async Task CheckForNewVersionAsync_PrimaryServerError_FallsBackToSecondary()
-    {
-        var handler = new FakeHttpMessageHandler(request =>
-            IsPrimarySource(request)
-                ? new HttpResponseMessage(HttpStatusCode.InternalServerError) { Content = new StringContent("Server error") }
-                : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(NewReleaseJson) });
-        using var httpClient = new HttpClient(handler);
-        var service = new UpdateService("TestApp", httpClient);
-        var statusMessages = new List<string>();
-
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
-        Assert.NotNull(method);
-
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            new Version(2, 7, 0),
-            (Action<string>)(static _ => { }),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
-        await task;
-
-        Assert.Contains(statusMessages, static m => m.Contains("Update available", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public async Task CheckForNewVersionAsync_PrimaryUnreachable_FallsBackToSecondary()
-    {
-        var handler = new FakeHttpMessageHandler(request =>
+        // The configured repository has no reachable releases page; the check fails exactly
+        // once and routes the error to the bug-report callback.
+        var bugReportCount = 0;
+        var handler = new FakeHttpMessageHandler(static _ => new HttpResponseMessage(
+            HttpStatusCode.NotFound
+        )
         {
-            if (IsPrimarySource(request))
-            {
-                throw new HttpRequestException("Name resolution failed");
-            }
-
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(NewReleaseJson) };
+            Content = new StringContent("""{ "message": "Not Found" }"""),
         });
         using var httpClient = new HttpClient(handler);
         var service = new UpdateService("TestApp", httpClient);
-        var logMessages = new List<string>();
         var statusMessages = new List<string>();
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            new Version(2, 7, 0),
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    new Version(2, 7, 0),
+                    (Action<string>)(static _ => { }),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(
+                        (_, _) =>
+                        {
+                            bugReportCount++;
+                            return Task.CompletedTask;
+                        }
+                    ),
+                ]
+            )!;
         await task;
 
-        Assert.Contains(logMessages, static m => m.Contains("trying the fallback source", StringComparison.Ordinal));
-        Assert.Contains(statusMessages, static m => m.Contains("Update available", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public async Task CheckForNewVersionAsync_AllSourcesUnavailable_ReportsFailureOnce()
-    {
-        var bugReportCount = 0;
-        var handler = new FakeHttpMessageHandler(static _ =>
-            new HttpResponseMessage(HttpStatusCode.NotFound) { Content = new StringContent("""{ "message": "Not Found" }""") });
-        using var httpClient = new HttpClient(handler);
-        var service = new UpdateService("TestApp", httpClient);
-        var logMessages = new List<string>();
-        var statusMessages = new List<string>();
-
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
-        Assert.NotNull(method);
-
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            new Version(2, 7, 0),
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(statusMessages.Add),
-            (Func<string, Exception?, Task>)((_, _) =>
-            {
-                bugReportCount++;
-                return Task.CompletedTask;
-            })
-        ])!;
-        await task;
-
-        Assert.Contains(logMessages, static m => m.Contains("trying the fallback source", StringComparison.Ordinal));
-        Assert.Equal(1, logMessages.Count(static m => m.Contains("trying the fallback source", StringComparison.Ordinal)));
-        Assert.Contains(statusMessages, static m => m.Contains("failed", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("failed", StringComparison.OrdinalIgnoreCase)
+        );
         Assert.Equal(1, bugReportCount);
     }
 
     [Fact]
-    public async Task CheckForNewVersionAsync_RateLimit_DoesNotTryFallback()
+    public async Task CheckForNewVersionAsync_ServerError_SkipsCheckWithoutBugReport()
     {
-        // Rate limits are per IP and shared across api.github.com URLs; the fallback must not
-        // be attempted.
+        var bugReportCount = 0;
+        var handler = new FakeHttpMessageHandler(static _ => new HttpResponseMessage(
+            HttpStatusCode.InternalServerError
+        )
+        {
+            Content = new StringContent("Server error"),
+        });
+        using var httpClient = new HttpClient(handler);
+        var service = new UpdateService("TestApp", httpClient);
+        var statusMessages = new List<string>();
+
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
+        Assert.NotNull(method);
+
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    new Version(2, 7, 0),
+                    (Action<string>)(static _ => { }),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(
+                        (_, _) =>
+                        {
+                            bugReportCount++;
+                            return Task.CompletedTask;
+                        }
+                    ),
+                ]
+            )!;
+        await task;
+
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("skipped", StringComparison.OrdinalIgnoreCase)
+        );
+        Assert.Equal(0, bugReportCount);
+    }
+
+    [Fact]
+    public async Task CheckForNewVersionAsync_SourceUnreachable_ReportsNetworkFailureWithoutBugReport()
+    {
+        var bugReportCount = 0;
+        var handler = new FakeHttpMessageHandler(static _ =>
+            throw new HttpRequestException("Name resolution failed")
+        );
+        using var httpClient = new HttpClient(handler);
+        var service = new UpdateService("TestApp", httpClient);
+        var statusMessages = new List<string>();
+
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
+        Assert.NotNull(method);
+
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    new Version(2, 7, 0),
+                    (Action<string>)(static _ => { }),
+                    (Action<string>)(statusMessages.Add),
+                    (Func<string, Exception?, Task>)(
+                        (_, _) =>
+                        {
+                            bugReportCount++;
+                            return Task.CompletedTask;
+                        }
+                    ),
+                ]
+            )!;
+        await task;
+
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("network", StringComparison.OrdinalIgnoreCase)
+        );
+        Assert.Equal(0, bugReportCount);
+    }
+
+    [Fact]
+    public async Task CheckForNewVersionAsync_RateLimit_SkipsCheck()
+    {
+        // Rate limits are per IP and shared across api.github.com URLs, so retrying another
+        // source cannot help; a single request must be made.
         var requestCount = 0;
         var handler = new FakeHttpMessageHandler(_ =>
         {
             Interlocked.Increment(ref requestCount);
             return new HttpResponseMessage(HttpStatusCode.Forbidden)
             {
-                Content = new StringContent("""{ "message": "API rate limit exceeded for user." }""")
+                Content = new StringContent(
+                    """{ "message": "API rate limit exceeded for user." }"""
+                ),
             };
         });
         using var httpClient = new HttpClient(handler);
         var service = new UpdateService("TestApp", httpClient);
         var logMessages = new List<string>();
 
-        var method = typeof(UpdateService).GetMethod("CheckForNewVersionAsync",
+        var method = typeof(UpdateService).GetMethod(
+            "CheckForNewVersionAsync",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            [typeof(HttpClient), typeof(Version), typeof(Action<string>), typeof(Action<string>), typeof(Func<string, Exception?, Task>)]);
+            [
+                typeof(HttpClient),
+                typeof(Version),
+                typeof(Action<string>),
+                typeof(Action<string>),
+                typeof(Func<string, Exception?, Task>),
+            ]
+        );
         Assert.NotNull(method);
 
-        var task = (Task)method.Invoke(service, [
-            httpClient,
-            new Version(2, 7, 0),
-            (Action<string>)(logMessages.Add),
-            (Action<string>)(static _ => { }),
-            (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
-        ])!;
+        var task = (Task)
+            method.Invoke(
+                service,
+                [
+                    httpClient,
+                    new Version(2, 7, 0),
+                    (Action<string>)(logMessages.Add),
+                    (Action<string>)(static _ => { }),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                ]
+            )!;
         await task;
 
         Assert.Equal(1, requestCount);
-        Assert.Contains(logMessages, static m => m.Contains("rate limit exceeded", StringComparison.Ordinal));
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("rate limit exceeded", StringComparison.Ordinal)
+        );
     }
 
     #endregion

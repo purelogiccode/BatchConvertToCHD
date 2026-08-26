@@ -55,7 +55,10 @@ internal static class BinCueGenerator
             foreach (var line in lines)
             {
                 var trimmed = line.Trim();
-                if (trimmed.StartsWith("TRACK ", StringComparison.OrdinalIgnoreCase) && trimmed.Contains('/'))
+                if (
+                    trimmed.StartsWith("TRACK ", StringComparison.OrdinalIgnoreCase)
+                    && trimmed.Contains('/')
+                )
                 {
                     var mode = trimmed[(trimmed.LastIndexOf(' ') + 1)..].Trim();
                     if (mode.Length > 0)
@@ -81,9 +84,11 @@ internal static class BinCueGenerator
     /// <param name="token">Cancellation token.</param>
     internal static async Task RewriteCueAsync(string cuePath, string mode, CancellationToken token)
     {
-        var binFileName = await ReadReferencedBinNameAsync(cuePath, token).ConfigureAwait(false) ??
-                          GetFallbackBinName(cuePath);
-        await File.WriteAllTextAsync(cuePath, BuildCueContent(binFileName, mode), token).ConfigureAwait(false);
+        var binFileName =
+            await ReadReferencedBinNameAsync(cuePath, token).ConfigureAwait(false)
+            ?? GetFallbackBinName(cuePath);
+        await File.WriteAllTextAsync(cuePath, BuildCueContent(binFileName, mode), token)
+            .ConfigureAwait(false);
     }
 
     private static string GetFallbackBinName(string cuePath)
@@ -97,7 +102,10 @@ internal static class BinCueGenerator
         return baseName + FileExtensions.Bin;
     }
 
-    private static async Task<string?> ReadReferencedBinNameAsync(string cuePath, CancellationToken token)
+    private static async Task<string?> ReadReferencedBinNameAsync(
+        string cuePath,
+        CancellationToken token
+    )
     {
         try
         {
@@ -105,9 +113,11 @@ internal static class BinCueGenerator
             foreach (var line in lines)
             {
                 var trimmed = line.Trim();
-                if (trimmed.StartsWith("FILE ", StringComparison.OrdinalIgnoreCase) &&
-                    GameFileParser.TryGetFileNameFromFileLine(trimmed, out var fileName) &&
-                    fileName is not null)
+                if (
+                    trimmed.StartsWith("FILE ", StringComparison.OrdinalIgnoreCase)
+                    && GameFileParser.TryGetFileNameFromFileLine(trimmed, out var fileName)
+                    && fileName is not null
+                )
                 {
                     return fileName;
                 }

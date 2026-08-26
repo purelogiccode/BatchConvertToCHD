@@ -44,23 +44,38 @@ public class MdsTests : IDisposable
     }
 
     /// <summary>Builds a descriptor with one session and the supplied tracks.</summary>
-    private string WriteMds(string name, params (byte Mode, byte Point, ushort SectorSize, uint StartLba)[] tracks)
+    private string WriteMds(
+        string name,
+        params (byte Mode, byte Point, ushort SectorSize, uint StartLba)[] tracks
+    )
     {
         var bytes = new byte[TrackBlockStart + (TrackBlockSize * Math.Max(tracks.Length, 1))];
         "MEDIA DESCRIPTOR"u8.ToArray().CopyTo(bytes, 0);
         BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(SessionCountOffset), 1);
-        BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(SessionBlockOffsetOffset), SessionBlockStart);
+        BinaryPrimitives.WriteUInt32LittleEndian(
+            bytes.AsSpan(SessionBlockOffsetOffset),
+            SessionBlockStart
+        );
 
         bytes[SessionBlockStart + 0x0A] = (byte)tracks.Length;
-        BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(SessionBlockStart + 0x14), TrackBlockStart);
+        BinaryPrimitives.WriteUInt32LittleEndian(
+            bytes.AsSpan(SessionBlockStart + 0x14),
+            TrackBlockStart
+        );
 
         for (var i = 0; i < tracks.Length; i++)
         {
             var offset = TrackBlockStart + (i * TrackBlockSize);
             bytes[offset + 0x00] = tracks[i].Mode;
             bytes[offset + 0x04] = tracks[i].Point;
-            BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(offset + 0x10), tracks[i].SectorSize);
-            BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(offset + 0x24), tracks[i].StartLba);
+            BinaryPrimitives.WriteUInt16LittleEndian(
+                bytes.AsSpan(offset + 0x10),
+                tracks[i].SectorSize
+            );
+            BinaryPrimitives.WriteUInt32LittleEndian(
+                bytes.AsSpan(offset + 0x24),
+                tracks[i].StartLba
+            );
         }
 
         var path = Path.Combine(_tempDir, name);
@@ -182,7 +197,12 @@ public class MdsTests : IDisposable
     public void LeadInAndLeadOutEntriesAreSkipped()
     {
         // POINT values outside 1-99 describe lead-in/lead-out, not playable tracks.
-        var mds = WriteMds("leadin.mds", (0xEC, 0xA0, 2352, 0), (0xEC, 1, 2352, 0), (0xEC, 0xA2, 2352, 100));
+        var mds = WriteMds(
+            "leadin.mds",
+            (0xEC, 0xA0, 2352, 0),
+            (0xEC, 1, 2352, 0),
+            (0xEC, 0xA2, 2352, 100)
+        );
 
         var disc = MdsParser.Parse(mds);
 
@@ -207,7 +227,12 @@ public class MdsTests : IDisposable
         var mdf = WriteMdf("strip.mdf", 2448, 5);
         var stripped = Path.Combine(_tempDir, "stripped.bin");
 
-        var failure = await MdsInputPreparer.StripSubchannelAsync(mdf, stripped, 2448, CancellationToken.None);
+        var failure = await MdsInputPreparer.StripSubchannelAsync(
+            mdf,
+            stripped,
+            2448,
+            CancellationToken.None
+        );
 
         Assert.Null(failure);
         var bytes = await File.ReadAllBytesAsync(stripped);
@@ -217,7 +242,10 @@ public class MdsTests : IDisposable
         for (var sector = 0; sector < 5; sector++)
         {
             Assert.Equal((byte)(sector + 1), bytes[sector * MdsDisc.RawSectorSize]);
-            Assert.Equal((byte)(sector + 1), bytes[(sector * MdsDisc.RawSectorSize) + MdsDisc.RawSectorSize - 1]);
+            Assert.Equal(
+                (byte)(sector + 1),
+                bytes[(sector * MdsDisc.RawSectorSize) + MdsDisc.RawSectorSize - 1]
+            );
         }
 
         Assert.DoesNotContain((byte)0xFF, bytes);
@@ -232,7 +260,12 @@ public class MdsTests : IDisposable
             fs.SetLength(fs.Length - 100);
         }
 
-        var failure = await MdsInputPreparer.StripSubchannelAsync(mdf, Path.Combine(_tempDir, "out.bin"), 2448, CancellationToken.None);
+        var failure = await MdsInputPreparer.StripSubchannelAsync(
+            mdf,
+            Path.Combine(_tempDir, "out.bin"),
+            2448,
+            CancellationToken.None
+        );
 
         Assert.NotNull(failure);
         Assert.Contains("truncated", failure, StringComparison.Ordinal);
@@ -247,7 +280,12 @@ public class MdsTests : IDisposable
         Directory.CreateDirectory(workDir);
 
         var disc = MdsParser.Parse(mds);
-        var result = await MdsInputPreparer.PrepareAsync(disc, workDir, _log.Add, CancellationToken.None);
+        var result = await MdsInputPreparer.PrepareAsync(
+            disc,
+            workDir,
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.True(result.Success);
         Assert.NotNull(result.CuePath);
@@ -275,7 +313,12 @@ public class MdsTests : IDisposable
         Directory.CreateDirectory(workDir);
 
         var disc = MdsParser.Parse(mds);
-        var result = await MdsInputPreparer.PrepareAsync(disc, workDir, _log.Add, CancellationToken.None);
+        var result = await MdsInputPreparer.PrepareAsync(
+            disc,
+            workDir,
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.True(result.Success);
         var cue = await File.ReadAllTextAsync(result.CuePath!);
@@ -295,7 +338,12 @@ public class MdsTests : IDisposable
         Directory.CreateDirectory(workDir);
 
         var disc = MdsParser.Parse(mds);
-        var result = await MdsInputPreparer.PrepareAsync(disc, workDir, _log.Add, CancellationToken.None);
+        var result = await MdsInputPreparer.PrepareAsync(
+            disc,
+            workDir,
+            _log.Add,
+            CancellationToken.None
+        );
 
         var cue = await File.ReadAllTextAsync(result.CuePath!);
         Assert.Contains("TRACK 01 MODE2/2352", cue, StringComparison.Ordinal);
@@ -317,7 +365,12 @@ public class MdsTests : IDisposable
         Directory.CreateDirectory(workDir);
 
         var disc = MdsParser.Parse(mds);
-        var result = await MdsInputPreparer.PrepareAsync(disc, workDir, _log.Add, CancellationToken.None);
+        var result = await MdsInputPreparer.PrepareAsync(
+            disc,
+            workDir,
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.True(result.Success);
         Assert.Null(result.CuePath);
@@ -343,7 +396,12 @@ public class MdsTests : IDisposable
 
         var workDir = Path.Combine(_tempDir, "worksplit");
         Directory.CreateDirectory(workDir);
-        var result = await MdsInputPreparer.PrepareAsync(disc, workDir, _log.Add, CancellationToken.None);
+        var result = await MdsInputPreparer.PrepareAsync(
+            disc,
+            workDir,
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.True(result.Success);
         Assert.NotNull(result.DvdImagePath);
@@ -361,10 +419,19 @@ public class MdsTests : IDisposable
         Directory.CreateDirectory(workDir);
 
         var disc = MdsParser.Parse(mds);
-        var result = await MdsInputPreparer.PrepareAsync(disc, workDir, _log.Add, CancellationToken.None);
+        var result = await MdsInputPreparer.PrepareAsync(
+            disc,
+            workDir,
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
-        Assert.Contains(".mdf data file was not found", result.FailureReason!, StringComparison.Ordinal);
+        Assert.Contains(
+            ".mdf data file was not found",
+            result.FailureReason!,
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -376,7 +443,12 @@ public class MdsTests : IDisposable
         Directory.CreateDirectory(workDir);
 
         var disc = MdsParser.Parse(mds);
-        var result = await MdsInputPreparer.PrepareAsync(disc, workDir, _log.Add, CancellationToken.None);
+        var result = await MdsInputPreparer.PrepareAsync(
+            disc,
+            workDir,
+            _log.Add,
+            CancellationToken.None
+        );
 
         Assert.False(result.Success);
         Assert.Contains("cannot express in a cue", result.FailureReason!, StringComparison.Ordinal);

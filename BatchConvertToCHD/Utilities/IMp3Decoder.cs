@@ -13,5 +13,10 @@ internal interface IMp3Decoder
     /// <param name="wavPath">Destination path for the decoded 16-bit PCM WAV file.</param>
     /// <param name="onLog">Optional logging callback.</param>
     /// <param name="token">Cancellation token.</param>
-    Task DecodeAsync(string mp3Path, string wavPath, Action<string>? onLog, CancellationToken token);
+    Task DecodeAsync(
+        string mp3Path,
+        string wavPath,
+        Action<string>? onLog,
+        CancellationToken token
+    );
 }

@@ -18,5 +18,5 @@ internal enum IszChunkType
     ZLib = 2,
 
     /// <summary>ADI_BZ2: bzip2.</summary>
-    BZip2 = 3
+    BZip2 = 3,
 }

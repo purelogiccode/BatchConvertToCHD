@@ -19,5 +19,5 @@ public enum TrackMode
     /// <summary>
     /// Mode 2 data track (CD-XA / CDI). 2352 bytes raw, variable user data.
     /// </summary>
-    Mode2 = 2
+    Mode2 = 2,
 }

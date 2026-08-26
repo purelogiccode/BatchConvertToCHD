@@ -47,15 +47,21 @@ internal class BugReportApiSink : ILogEventSink
         {
             // Use a 10-second timeout so a hung HTTP call doesn't permanently block
             // subsequent bug reports. The flag is always reset in the continuation.
-            _ = _bugReportService.SendBugReportAsync(message, ex)
-                .ContinueWith(static _ => { Interlocked.Exchange(ref _isSending, 0); },
-                    TaskContinuationOptions.ExecuteSynchronously);
+            _ = _bugReportService
+                .SendBugReportAsync(message, ex)
+                .ContinueWith(
+                    static _ => { Interlocked.Exchange(ref _isSending, 0); },
+                    TaskContinuationOptions.ExecuteSynchronously
+                );
 
             // Safety net: clear the flag after 12 seconds even if SendBugReportAsync
             // never completes (e.g. TCP connection hang). Task.Delay is deliberately
             // not awaited — it runs as an independent fire-and-forget timer.
-            _ = Task.Delay(TimeSpan.FromSeconds(12)).ContinueWith(static _ => { Volatile.Write(ref _isSending, 0); },
-                TaskContinuationOptions.ExecuteSynchronously);
+            _ = Task.Delay(TimeSpan.FromSeconds(12))
+                .ContinueWith(
+                    static _ => { Volatile.Write(ref _isSending, 0); },
+                    TaskContinuationOptions.ExecuteSynchronously
+                );
         }
     }
 }

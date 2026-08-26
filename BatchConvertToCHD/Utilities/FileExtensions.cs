@@ -56,29 +56,46 @@ internal static class FileExtensions
     /// </remarks>
     internal static readonly string[] AllSupportedInputExtensionsForConversion =
     [
-        Cue, Iso, Img, Gdi, Toc, Raw, Ccd, Bin, Mds, Ecm, Isz, SplitFirstNumbered, SplitFirstAlcohol, Zip, SevenZip,
-        Rar, Cso, Pbp
+        Cue,
+        Iso,
+        Img,
+        Gdi,
+        Toc,
+        Raw,
+        Ccd,
+        Bin,
+        Mds,
+        Ecm,
+        Isz,
+        SplitFirstNumbered,
+        SplitFirstAlcohol,
+        Zip,
+        SevenZip,
+        Rar,
+        Cso,
+        Pbp,
     ];
 
     /// <summary>
     /// HashSet of all supported input extensions for efficient case-insensitive lookups.
     /// </summary>
-    internal static readonly HashSet<string> AllSupportedInputExtensionsForConversionSet =
-        new(AllSupportedInputExtensionsForConversion, ExtensionComparer);
+    internal static readonly HashSet<string> AllSupportedInputExtensionsForConversionSet = new(
+        AllSupportedInputExtensionsForConversion,
+        ExtensionComparer
+    );
 
     /// <summary>
     /// Archive file extensions.
     /// </summary>
-    internal static readonly string[] ArchiveExtensions =
-    [
-        Zip, SevenZip, Rar
-    ];
+    internal static readonly string[] ArchiveExtensions = [Zip, SevenZip, Rar];
 
     /// <summary>
     /// HashSet of archive extensions for efficient case-insensitive lookups.
     /// </summary>
-    internal static readonly HashSet<string> ArchiveExtensionsSet =
-        new(ArchiveExtensions, ExtensionComparer);
+    internal static readonly HashSet<string> ArchiveExtensionsSet = new(
+        ArchiveExtensions,
+        ExtensionComparer
+    );
 
     /// <summary>
     /// Primary target extensions for extraction from archives.
@@ -89,12 +106,22 @@ internal static class FileExtensions
     /// </remarks>
     internal static readonly string[] PrimaryTargetExtensions =
     [
-        Cue, Iso, Img, Gdi, Toc, Raw, Ccd, Mds, Isz
+        Cue,
+        Iso,
+        Img,
+        Gdi,
+        Toc,
+        Raw,
+        Ccd,
+        Mds,
+        Isz,
     ];
 
     /// <summary>
     /// HashSet of primary target extensions for efficient case-insensitive lookups.
     /// </summary>
-    internal static readonly HashSet<string> PrimaryTargetExtensionsSet =
-        new(PrimaryTargetExtensions, ExtensionComparer);
+    internal static readonly HashSet<string> PrimaryTargetExtensionsSet = new(
+        PrimaryTargetExtensions,
+        ExtensionComparer
+    );
 }

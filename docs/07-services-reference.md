@@ -147,7 +147,7 @@ Checks GitHub for new releases at startup.
 
 - `CheckForNewVersionAsync(onLog, onStatusUpdate, onBugReport)` — wrapper; core overload takes `(HttpClient, Version? currentVersion, ...)` for testing.
 - Flow:
-  1. GET the release URL for each configured source in order (`AppConfig.GitHubApiLatestReleaseUrls`: primary `https://api.github.com/repos/purelogiccode/BatchConvertToCHD/releases/latest`, then fallback `https://api.github.com/repos/drpetersonfernandes/BatchConvertToCHD/releases/latest`) with a User-Agent. 404/5xx/network failures move to the next source; rate limits (403/429) skip the check entirely because they are per-IP and shared by both URLs.
+  1. GET the configured release URL (`AppConfig.GitHubApiLatestReleaseUrls`: `https://api.github.com/repos/purelogiccode/BatchConvertToCHD/releases/latest`) with a User-Agent. Rate limits (403/429) skip the check entirely because they are per-IP; other failures fall through to error handling.
   2. **403/429** → "GitHub API rate limit exceeded. Skipping update check." — no bug report.
   3. **5xx** → "Update check skipped: GitHub server error." — no bug report.
   4. Deserialize `GitHubRelease` (`tag_name`, `html_url`, `name`, `body`, `prerelease`, `draft`).
