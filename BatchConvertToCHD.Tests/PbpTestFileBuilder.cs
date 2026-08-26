@@ -230,53 +230,38 @@ internal sealed class PbpTestFileBuilder
 
     private static void WriteMinimalToc(Stream stream)
     {
-        // A0 entry (start track)
-        stream.WriteByte(0x41); // track type (data)
-        stream.WriteByte(0);
-        stream.WriteByte(0xA0);
-        stream.WriteByte(0);
-        stream.WriteByte(0);
-        stream.WriteByte(1); // MSF = 00:00:01 (start track 1)
-        stream.WriteByte(0);
-        stream.WriteByte(0);
-        stream.WriteByte(0);
-        stream.WriteByte(0);
+        // A0 point: first track is 1
+        WriteEntry(0x41, 0xA0, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00);
 
-        // A1 entry (end track)
-        stream.WriteByte(0x41);
-        stream.WriteByte(0);
-        stream.WriteByte(0xA1);
-        stream.WriteByte(0);
-        stream.WriteByte(0);
-        stream.WriteByte(1); // end track 1
-        stream.WriteByte(0);
-        stream.WriteByte(0);
-        stream.WriteByte(0);
-        stream.WriteByte(0);
+        // A1 point: last track is 1
+        WriteEntry(0x41, 0xA1, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00);
 
-        // A2 entry (lead-out)
-        stream.WriteByte(0x41);
-        stream.WriteByte(0);
-        stream.WriteByte(0xA2);
-        stream.WriteByte(0);
-        stream.WriteByte(2);
-        stream.WriteByte(0); // MSF = 00:02:00
-        stream.WriteByte(0);
-        stream.WriteByte(0);
-        stream.WriteByte(0);
-        stream.WriteByte(0);
+        // A2 point: lead-out at MSF 00:02:00
+        WriteEntry(0x41, 0xA2, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00);
 
-        // Track 1
-        stream.WriteByte(0x41); // data track
-        stream.WriteByte(0);
-        stream.WriteByte(0x01); // track 1
-        stream.WriteByte(0);
-        stream.WriteByte(2);
-        stream.WriteByte(0); // MSF = 00:02:00
-        stream.WriteByte(0);
-        stream.WriteByte(0);
-        stream.WriteByte(0);
-        stream.WriteByte(0);
+        // Track 1 (data) starting at MSF 00:02:00
+        WriteEntry(0x41, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00);
+        return;
+
+        // Each TOC entry is 10 bytes, matching the layout read by PbpDiscInfo/ReadTOC:
+        //   [0]     track type (0x41 data / 0x01 audio)
+        //   [2]     point (BCD track number, or control point 0xA0/0xA1/0xA2)
+        //   [3..5]  MSF address (binary-coded decimal minutes, seconds, frames)
+        //   [7]     A0/A1 only: BCD first/last track number (see reference TOCHelper usage)
+        //   [7..9]  A2 only: MSF of the lead-out
+        void WriteEntry(byte type, byte point, byte m, byte s, byte f, byte b7, byte b8, byte b9)
+        {
+            stream.WriteByte(type);
+            stream.WriteByte(0x00);
+            stream.WriteByte(point);
+            stream.WriteByte(m);
+            stream.WriteByte(s);
+            stream.WriteByte(f);
+            stream.WriteByte(0x00);
+            stream.WriteByte(b7);
+            stream.WriteByte(b8);
+            stream.WriteByte(b9);
+        }
     }
 
     private List<uint> WriteIsoIndex(Stream stream, int blockCount)
@@ -328,9 +313,11 @@ internal sealed class PbpTestFileBuilder
 
     private byte[] GetBlockData(int blockIndex)
     {
-        if (blockIndex == 0)
+        if (blockIndex == 1)
         {
-            // Block 0: contains ISO size at bytes 104-107
+            // Block index 1 (the second block) carries the ISO9660 volume information:
+            // PbpDiscInfo.ReadIsoSize reads the sector count from bytes 104..107 of this
+            // block, exactly like the reference implementation's GetIsoSize().
             var data = new byte[BlockSize];
 
             // Fill with a recognizable pattern

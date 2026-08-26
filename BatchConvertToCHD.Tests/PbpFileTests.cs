@@ -786,8 +786,12 @@ public class PbpFileTests : IDisposable
 
         pbp.Dispose();
 
-        // Stream should still be usable
-        Assert.Equal(0, stream.Position); // can still seek
+        // Stream should still be usable (ownership was not transferred)
+        Assert.True(stream.CanRead);
+        Assert.True(stream.CanSeek);
+        stream.Seek(0, SeekOrigin.Begin);
+        Assert.Equal(0, stream.ReadByte());
+        stream.Dispose();
     }
 
     [Fact]
@@ -912,23 +916,63 @@ public class PbpFileTests : IDisposable
     }
 
     [Fact]
-    public void SyntheticPbpSingleBlockExtraction()
+    public void SyntheticPbpExtractedContentMatchesBuilderPattern()
     {
-        var path = Path.Combine(_tempDir, $"synth_singleblock_{Guid.NewGuid():N}.pbp");
-        new PbpTestFileBuilder().WithBlockCount(1).BuildTo(path);
+        // Round-trip check: extraction must reproduce the exact ISO data that was
+        // packed into the PSAR, verifying offsets, decompression, and ordering.
+        const int blockCount = 3;
+        var path = Path.Combine(_tempDir, $"synth_roundtrip_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithBlockCount(blockCount)
+            .WithCompressedBlocks(true)
+            .BuildTo(path);
 
         var error = PbpFile.Open(path, out var pbp);
         Assert.Equal(PbpError.None, error);
         Assert.NotNull(pbp);
 
-        var disc = pbp.Discs[0];
-        Assert.Equal(1, disc.BlockCount);
+        const int blockSize = 16 * PbpDiscInfo.IsoBlockSize;
+        var expected = new byte[blockCount * blockSize];
+
+        // Block 1 carries a recognizable pattern plus the sector count at bytes 104-107;
+        // all other blocks use the (i + block*17) pattern (see PbpTestFileBuilder).
+        for (var i = 0; i < blockSize; i++)
+            expected[blockSize + i] = (byte)((i + 1) & 0xFF);
+        BitConverter.GetBytes((uint)(blockCount * 16)).CopyTo(expected, blockSize + 104);
+
+        for (var b = 0; b < blockCount; b++)
+        {
+            if (b == 1)
+                continue;
+            for (var i = 0; i < blockSize; i++)
+                expected[b * blockSize + i] = (byte)((i + b * 17) & 0xFF);
+        }
 
         using var outputStream = new MemoryStream();
-        disc.ExtractTo(outputStream);
-        Assert.Equal(disc.IsoSize, (uint)outputStream.Length);
+        pbp.Discs[0].ExtractTo(outputStream);
+
+        Assert.Equal(expected.Length, outputStream.Length);
+        Assert.True(
+            expected.AsSpan().SequenceEqual(outputStream.ToArray()),
+            "Extracted ISO data does not match the data written into the PBP"
+        );
 
         pbp.Dispose();
+    }
+
+    [Fact]
+    public void OpenSyntheticSingleBlockPbpReturnsCorruptFile()
+    {
+        // The PSAR format stores the ISO size inside block index 1 (the second block),
+        // so a PSAR with a single indexed block cannot expose a usable ISO size. This
+        // mirrors the reference implementation, which also throws when reading the size
+        // from such a file.
+        var path = Path.Combine(_tempDir, $"synth_singleblock_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder().WithBlockCount(1).BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.CorruptFile, error);
+        Assert.Null(pbp);
     }
 
     [Fact]
