@@ -31,9 +31,11 @@ public sealed partial class BattleEngine
             : null;
 
         AddOutcome(report, new StepOutcome(battle, "chdman", rm.ExitCode == 0, rm.Seconds, FileLen(mChd),
-            mh, rm.ExitCode, Mibs(rm.Seconds, report.LogicalBytes), Ratio(rm.ExitCode == 0, FileLen(mChd), report.LogicalBytes), FailMsg(rm)));
+            mh, rm.ExitCode, Mibs(rm.Seconds, report.LogicalBytes),
+            Ratio(rm.ExitCode == 0, FileLen(mChd), report.LogicalBytes), FailMsg(rm)));
         AddOutcome(report, new StepOutcome(battle, "chdsharp", rs.ExitCode == 0, rs.Seconds, FileLen(sChd),
-            sh, rs.ExitCode, Mibs(rs.Seconds, report.LogicalBytes), Ratio(rs.ExitCode == 0, FileLen(sChd), report.LogicalBytes), FailMsg(rs)));
+            sh, rs.ExitCode, Mibs(rs.Seconds, report.LogicalBytes),
+            Ratio(rs.ExitCode == 0, FileLen(sChd), report.LogicalBytes), FailMsg(rs)));
 
         bool parity = mh is not null && sh is not null &&
                       string.Equals(mh, sh, StringComparison.OrdinalIgnoreCase);
@@ -51,8 +53,21 @@ public sealed partial class BattleEngine
 
         if (!_cfg.KeepTemp)
         {
-            try { File.Delete(mChd); } catch { }
-            try { File.Delete(sChd); } catch { }
+            try
+            {
+                File.Delete(mChd);
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                File.Delete(sChd);
+            }
+            catch
+            {
+            }
         }
     }
 
@@ -64,7 +79,8 @@ public sealed partial class BattleEngine
             MediaKind.GdRom => ("createcd", FindStructuredArtifact(work, ".gdi"), "create_m_s.chd"),
             MediaKind.Dvd => ("createdvd", FindStructuredArtifact(work, ".iso"), "create_m_s.chd"),
             MediaKind.Hdd => ("createhd", FindStructuredArtifact(work, ".img"), "create_m_s.chd"),
-            MediaKind.LaserDisc when _cfg.IncludeAv => ("createld", FindStructuredArtifact(work, ".avi"), "create_m_s.chd"),
+            MediaKind.LaserDisc when _cfg.IncludeAv => ("createld", FindStructuredArtifact(work, ".avi"),
+                "create_m_s.chd"),
             _ => ("createraw", null, "create_m_s.chd")
         };
 
@@ -81,6 +97,7 @@ public sealed partial class BattleEngine
                 Log($"     create battle: SKIPPED - no decoded artifact available for {cmd}");
                 return;
             }
+
             Log($"  [encode] {cmd} battle from decoded artifact");
         }
         else
@@ -91,6 +108,7 @@ public sealed partial class BattleEngine
                 Log($"     create battle: SKIPPED - raw decode artifact missing for createraw");
                 return;
             }
+
             Log($"  [encode] createraw battle from decoded raw image");
         }
 
@@ -113,9 +131,11 @@ public sealed partial class BattleEngine
             : null;
 
         AddOutcome(report, new StepOutcome(battle, "chdman", rm.ExitCode == 0, rm.Seconds, FileLen(mChd),
-            mh, rm.ExitCode, Mibs(rm.Seconds, report.LogicalBytes), Ratio(rm.ExitCode == 0, FileLen(mChd), report.LogicalBytes), FailMsg(rm)));
+            mh, rm.ExitCode, Mibs(rm.Seconds, report.LogicalBytes),
+            Ratio(rm.ExitCode == 0, FileLen(mChd), report.LogicalBytes), FailMsg(rm)));
         AddOutcome(report, new StepOutcome(battle, "chdsharp", rs.ExitCode == 0, rs.Seconds, FileLen(sChd),
-            sh, rs.ExitCode, Mibs(rs.Seconds, report.LogicalBytes), Ratio(rs.ExitCode == 0, FileLen(sChd), report.LogicalBytes), FailMsg(rs)));
+            sh, rs.ExitCode, Mibs(rs.Seconds, report.LogicalBytes),
+            Ratio(rs.ExitCode == 0, FileLen(sChd), report.LogicalBytes), FailMsg(rs)));
 
         bool parity = mh is not null && sh is not null &&
                       string.Equals(mh, sh, StringComparison.OrdinalIgnoreCase);
@@ -133,8 +153,21 @@ public sealed partial class BattleEngine
 
         if (!_cfg.KeepTemp)
         {
-            try { File.Delete(mChd); } catch { }
-            try { File.Delete(sChd); } catch { }
+            try
+            {
+                File.Delete(mChd);
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                File.Delete(sChd);
+            }
+            catch
+            {
+            }
         }
     }
 
@@ -151,7 +184,8 @@ public sealed partial class BattleEngine
             sv.ExitCode == 0, sv.Seconds, 0, null, sv.ExitCode, null, null, FailMsg(sv)));
 
         bool agree = rv.ExitCode == 0 && sv.ExitCode == 0;
-        Log($"     verify {producer} product: chdman={Ok(rv.ExitCode == 0)} chdsharp={Ok(sv.ExitCode == 0)}{(agree ? "" : "  << VERIFIERS DISAGREE")}");
+        Log(
+            $"     verify {producer} product: chdman={Ok(rv.ExitCode == 0)} chdsharp={Ok(sv.ExitCode == 0)}{(agree ? "" : "  << VERIFIERS DISAGREE")}");
     }
 
     private static string? FindStructuredArtifact(string work, string extension)
@@ -163,6 +197,7 @@ public sealed partial class BattleEngine
             string hit = Directory.EnumerateFiles(dir, "*" + extension, SearchOption.AllDirectories).FirstOrDefault();
             if (hit is not null) return hit;
         }
+
         return null;
     }
 
@@ -173,6 +208,7 @@ public sealed partial class BattleEngine
             string candidate = Path.Combine(work, sub, "raw.bin");
             if (File.Exists(candidate)) return candidate;
         }
+
         return null;
     }
 

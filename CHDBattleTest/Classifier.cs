@@ -50,6 +50,7 @@ public static class Classifier
                 break;
             }
         }
+
         return isAv ? MediaKind.LaserDisc : MediaKind.Unknown;
     }
 }

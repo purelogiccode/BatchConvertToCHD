@@ -33,7 +33,8 @@ public sealed partial class BattleEngine
 
         bool parity = mHash is not null && sHash is not null &&
                       string.Equals(mHash, sHash, StringComparison.OrdinalIgnoreCase);
-        string? parityErr = parity ? null
+        string? parityErr = parity
+            ? null
             : (rm.ExitCode == 0 && rs.ExitCode == 0 && FileLen(mRaw) != FileLen(sRaw))
                 ? $"output format differs (chdman={FileLen(mRaw)} B vs chdsharp={FileLen(sRaw)} B)"
                 : "decoded outputs differ";
@@ -62,7 +63,14 @@ public sealed partial class BattleEngine
                 AddOutcome(report, new StepOutcome("decode-lib", "chdsharp-lib", false, sw.Elapsed.TotalSeconds,
                     FileLen(lRaw), null, -1, null, null, ex.Message));
             }
-            try { File.Delete(lRaw); } catch { }
+
+            try
+            {
+                File.Delete(lRaw);
+            }
+            catch
+            {
+            }
         }
 
         await StructuredExtractBattleAsync(report, work).ConfigureAwait(false);
@@ -122,7 +130,8 @@ public sealed partial class BattleEngine
         bool parity = mHash is not null && sHash is not null &&
                       string.Equals(mHash, sHash, StringComparison.OrdinalIgnoreCase);
         bool formatDiff = !parity && rm.ExitCode == 0 && rs.ExitCode == 0 && mBytes != sBytes;
-        string? parityErr = parity ? null
+        string? parityErr = parity
+            ? null
             : formatDiff
                 ? $"output convention differs (chdman={mBytes} B vs chdsharp={sBytes} B total)"
                 : "structured extraction outputs differ";
@@ -138,11 +147,23 @@ public sealed partial class BattleEngine
         {
             if (rm.ExitCode == 0)
             {
-                try { Directory.Delete(sDir, true); } catch { }
+                try
+                {
+                    Directory.Delete(sDir, true);
+                }
+                catch
+                {
+                }
             }
             else
             {
-                try { Directory.Delete(mDir, true); } catch { }
+                try
+                {
+                    Directory.Delete(mDir, true);
+                }
+                catch
+                {
+                }
             }
         }
     }

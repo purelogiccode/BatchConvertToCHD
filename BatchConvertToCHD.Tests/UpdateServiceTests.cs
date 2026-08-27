@@ -176,56 +176,56 @@ public class UpdateServiceTests
     }
 
     private const string NewReleaseJson = """
-        {
-            "tag_name": "v3.0.0",
-            "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
-            "name": "Version 3.0.0",
-            "body": "New features",
-            "prerelease": false,
-            "draft": false
-        }
-        """;
+                                          {
+                                              "tag_name": "v3.0.0",
+                                              "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
+                                              "name": "Version 3.0.0",
+                                              "body": "New features",
+                                              "prerelease": false,
+                                              "draft": false
+                                          }
+                                          """;
 
     private const string SameReleaseJson = """
-        {
-            "tag_name": "v2.7.0",
-            "html_url": "https://github.com/test/repo/releases/tag/v2.7.0",
-            "name": "Version 2.7.0",
-            "body": "Current version",
-            "prerelease": false,
-            "draft": false
-        }
-        """;
+                                           {
+                                               "tag_name": "v2.7.0",
+                                               "html_url": "https://github.com/test/repo/releases/tag/v2.7.0",
+                                               "name": "Version 2.7.0",
+                                               "body": "Current version",
+                                               "prerelease": false,
+                                               "draft": false
+                                           }
+                                           """;
 
     private const string DraftReleaseJson = """
-        {
-            "tag_name": "v3.0.0",
-            "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
-            "name": "Version 3.0.0",
-            "body": "Draft release",
-            "prerelease": false,
-            "draft": true
-        }
-        """;
+                                            {
+                                                "tag_name": "v3.0.0",
+                                                "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
+                                                "name": "Version 3.0.0",
+                                                "body": "Draft release",
+                                                "prerelease": false,
+                                                "draft": true
+                                            }
+                                            """;
 
     private const string PrereleaseJson = """
-        {
-            "tag_name": "v3.0.0-beta",
-            "html_url": "https://github.com/test/repo/releases/tag/v3.0.0-beta",
-            "name": "Beta Release",
-            "body": "Pre-release",
-            "prerelease": true,
-            "draft": false
-        }
-        """;
+                                          {
+                                              "tag_name": "v3.0.0-beta",
+                                              "html_url": "https://github.com/test/repo/releases/tag/v3.0.0-beta",
+                                              "name": "Beta Release",
+                                              "body": "Pre-release",
+                                              "prerelease": true,
+                                              "draft": false
+                                          }
+                                          """;
 
     private const string MinimalReleaseJson = """
-        {
-            "tag_name": "v3.0.0",
-            "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
-            "name": "v3.0.0"
-        }
-        """;
+                                              {
+                                                  "tag_name": "v3.0.0",
+                                                  "html_url": "https://github.com/test/repo/releases/tag/v3.0.0",
+                                                  "name": "v3.0.0"
+                                              }
+                                              """;
 
     [Fact]
     public async Task CheckForNewVersionAsync_NewVersionAvailable_NotifiesUser()

@@ -20,7 +20,9 @@ public class FakeHttpMessageHandler : HttpMessageHandler
         : this(_ => new HttpResponseMessage(statusCode)
         {
             Content = new StringContent(content, System.Text.Encoding.UTF8, contentType),
-        }) { }
+        })
+    {
+    }
 
     public static FakeHttpMessageHandler WithAsyncHandler(
         Func<HttpRequestMessage, Task<HttpResponseMessage>> asyncHandler

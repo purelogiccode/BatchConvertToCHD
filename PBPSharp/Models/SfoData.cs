@@ -41,8 +41,8 @@ public sealed class SfoData
     public string? GetString(string key)
     {
         return Entries
-                .FirstOrDefault(e => string.Equals(e.Key, key, StringComparison.Ordinal))
-                ?.Value as string;
+            .FirstOrDefault(e => string.Equals(e.Key, key, StringComparison.Ordinal))
+            ?.Value as string;
     }
 
     /// <summary>
@@ -51,8 +51,8 @@ public sealed class SfoData
     public uint? GetUInt32(string key)
     {
         return Entries
-                .FirstOrDefault(e => string.Equals(e.Key, key, StringComparison.Ordinal))
-                ?.Value as uint?;
+            .FirstOrDefault(e => string.Equals(e.Key, key, StringComparison.Ordinal))
+            ?.Value as uint?;
     }
 
     /// <summary>

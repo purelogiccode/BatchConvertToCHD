@@ -48,7 +48,7 @@ public class PbpFileIntegrationTests : IDisposable
         string PbpPath,
         string BinPath,
         string CuePath
-    )> GetPbpWithBinCuePairs()
+        )> GetPbpWithBinCuePairs()
     {
         if (!SamplesExist())
             yield break;

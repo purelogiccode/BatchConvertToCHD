@@ -127,7 +127,7 @@ public class CueNormalizerFallbackTests : IDisposable
         var cue = WriteFile(
             "Split.cue",
             "FILE \"Split (Track 01).bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00\r\n"
-                + "FILE \"Split (Track 02).bin\" BINARY\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00\r\n"
+            + "FILE \"Split (Track 02).bin\" BINARY\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00\r\n"
         );
         WriteFile("Split (Track 01).bin", "a");
 

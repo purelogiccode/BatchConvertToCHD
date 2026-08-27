@@ -1,40 +1,40 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
-    <NeutralLanguage>en</NeutralLanguage>
-    <Company>PureLogicCode.com</Company>
-    <AssemblyVersion>1.0.0</AssemblyVersion>
-    <FileVersion>1.0.0</FileVersion>
-    <DebugType>embedded</DebugType>
-    <DebugSymbols>true</DebugSymbols>
+    <PropertyGroup>
+        <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <LangVersion>latest</LangVersion>
+        <NeutralLanguage>en</NeutralLanguage>
+        <Company>PureLogicCode.com</Company>
+        <AssemblyVersion>1.0.0</AssemblyVersion>
+        <FileVersion>1.0.0</FileVersion>
+        <DebugType>embedded</DebugType>
+        <DebugSymbols>true</DebugSymbols>
 
-    <!-- NuGet Package Metadata -->
-    <IsPackable>true</IsPackable>
-    <PackageId>CSOSharp</PackageId>
-    <Version>1.0.0</Version>
-    <Authors>PureLogicCode</Authors>
-    <Description>A managed C# library for reading and decompressing CSO/CISO (Compressed ISO) files. Supports CSO v1 (deflate/zlib) and CSO v2/ZSO (LZ4) formats. Ideal for extracting ISO disc images from compressed CSO/CISO containers.</Description>
-    <PackageTags>cso;ciso;iso;decompress;disc-image;psp;ps2;emulation</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/PureLogicCode/CSOSharp</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/PureLogicCode/CSOSharp</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-  </PropertyGroup>
+        <!-- NuGet Package Metadata -->
+        <IsPackable>true</IsPackable>
+        <PackageId>CSOSharp</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>PureLogicCode</Authors>
+        <Description>A managed C# library for reading and decompressing CSO/CISO (Compressed ISO) files. Supports CSO v1 (deflate/zlib) and CSO v2/ZSO (LZ4) formats. Ideal for extracting ISO disc images from compressed CSO/CISO containers.</Description>
+        <PackageTags>cso;ciso;iso;decompress;disc-image;psp;ps2;emulation</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/PureLogicCode/CSOSharp</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/PureLogicCode/CSOSharp</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="K4os.Compression.LZ4" Version="1.3.8" />
-    <PackageReference Include="Meziantou.Analyzer" Version="3.0.177">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="K4os.Compression.LZ4" Version="1.3.8" />
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.177">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
 
-  <ItemGroup>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>BatchConvertToCHD.Tests</_Parameter1>
-    </AssemblyAttribute>
-  </ItemGroup>
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+            <_Parameter1>BatchConvertToCHD.Tests</_Parameter1>
+        </AssemblyAttribute>
+    </ItemGroup>
 </Project>

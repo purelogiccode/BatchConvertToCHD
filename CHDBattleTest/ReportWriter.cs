@@ -30,13 +30,15 @@ public static class ReportWriter
                 .Append(s.Tool).Append(',')
                 .Append(s.Success ? "1" : "0").Append(',')
                 .Append(s.Seconds.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)).Append(',')
-                .Append(s.MibPerSecond?.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) ?? "").Append(',')
+                .Append(s.MibPerSecond?.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) ?? "")
+                .Append(',')
                 .Append(s.OutputBytes).Append(',')
                 .Append(s.Ratio?.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) ?? "").Append(',')
                 .Append(s.Hash ?? "").Append(',')
                 .Append(s.ExitCode).Append(',')
                 .AppendLine(Csv(s.Error ?? ""));
         }
+
         File.AppendAllText(csvPath, sb.ToString());
     }
 
@@ -50,10 +52,12 @@ public static class ReportWriter
             if (i <= 0) continue;
             keys.Add(line[..i]);
         }
+
         return keys;
     }
 
-    public static void WriteMarkdown(string mdPath, string inputDir, IReadOnlyList<FileReport> reports, BattleConfig cfg)
+    public static void WriteMarkdown(string mdPath, string inputDir, IReadOnlyList<FileReport> reports,
+        BattleConfig cfg)
     {
         var sb = new StringBuilder();
         sb.AppendLine("# chdman vs CHDSharp - Battleground Results");
@@ -61,7 +65,8 @@ public static class ReportWriter
         sb.AppendLine($"- Input: `{inputDir}`");
         sb.AppendLine($"- Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine($"- Files run: {reports.Count(r => r.SkippedReason is null)} / {reports.Count}");
-        sb.AppendLine($"- Workers (-np): {cfg.Workers} | Codecs: raw/copy/dvd/hd=`{cfg.CodecRaw}`, cd/gd=`{cfg.CodecCd}`");
+        sb.AppendLine(
+            $"- Workers (-np): {cfg.Workers} | Codecs: raw/copy/dvd/hd=`{cfg.CodecRaw}`, cd/gd=`{cfg.CodecCd}`");
         sb.AppendLine($"- chdman: `{cfg.ChdmanPath}` | CHDSharp: `{cfg.ChdSharpPath}`");
         sb.AppendLine();
 
@@ -83,8 +88,10 @@ public static class ReportWriter
                      .OrderBy(g => g.Key))
         {
             int ok = g.Count(s => s.Success);
-            sb.AppendLine($"| {g.Key} | {ok}/{g.Count()} {(ok == g.Count() ? "MATCH" : "MISMATCH/FAIL")} | {g.Count()} |");
+            sb.AppendLine(
+                $"| {g.Key} | {ok}/{g.Count()} {(ok == g.Count() ? "MATCH" : "MISMATCH/FAIL")} | {g.Count()} |");
         }
+
         sb.AppendLine();
 
         sb.AppendLine("## Per-file results");
@@ -98,6 +105,7 @@ public static class ReportWriter
                 sb.AppendLine($"- skipped: {r.SkippedReason}");
                 continue;
             }
+
             sb.AppendLine();
             sb.AppendLine("| battle | tool | ok | seconds | MiB/s | out bytes | ratio | hash12 | error |");
             sb.AppendLine("|---|---|---|---|---|---|---|---|---|");
@@ -110,6 +118,7 @@ public static class ReportWriter
                               $"{s.Ratio?.ToString("F4") ?? ""} | {s.Hash ?? ""} | " +
                               $"{(s.Error ?? "").Replace('|', '/')} |");
             }
+
             sb.AppendLine();
         }
 
@@ -148,11 +157,15 @@ public static class ReportWriter
             int wins = winner == tool && valid.Count == 2 ? st.Ok : 0;
             sb.AppendLine($"| {tool} | {st.Runs} | {st.Ok} | {st.Secs:F1} | {st.Mibs:F1} | {wins} |");
         }
+
         sb.AppendLine();
     }
 
-    private static string Mib(long bytes) => (bytes / 1048576.0).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
-    private static string MibU(ulong bytes) => (bytes / 1048576.0).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+    private static string Mib(long bytes) =>
+        (bytes / 1048576.0).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static string MibU(ulong bytes) =>
+        (bytes / 1048576.0).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
 
     private static string Csv(string field)
     {

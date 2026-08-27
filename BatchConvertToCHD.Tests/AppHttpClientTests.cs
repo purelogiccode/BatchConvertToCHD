@@ -112,10 +112,7 @@ public class AppHttpClientTests
         for (var i = 0; i < 10; i++)
         {
             var index = i;
-            tasks[i] = Task.Run(() =>
-            {
-                clients[index] = AppHttpClient.Client;
-            });
+            tasks[i] = Task.Run(() => { clients[index] = AppHttpClient.Client; });
         }
 
         await Task.WhenAll(tasks);

@@ -588,8 +588,8 @@ public class CueWorkDirectoryTests : IDisposable
         var cuePath = CreateFile(
             "game.cue",
             "FILE \"Game (Track 02).bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00\r\n"
-                + "FILE \"track2.wav\" WAVE\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00\r\n"
-                + "FILE \"track3.aiff\" AIFF\r\n  TRACK 03 AUDIO\r\n    INDEX 01 00:00:00"
+            + "FILE \"track2.wav\" WAVE\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00\r\n"
+            + "FILE \"track3.aiff\" AIFF\r\n  TRACK 03 AUDIO\r\n    INDEX 01 00:00:00"
         );
 
         var (result, workDir) = await PrepareAsync(cuePath, new FakeMp3Decoder());
@@ -841,7 +841,7 @@ public class CueWorkDirectoryTests : IDisposable
         var cuePath = CreateFile(
             "game.cue",
             "FILE \"game.bin\" BINARY\r\n  TRACK 01 MODE1/2352\r\n    INDEX 01 00:00:00\r\n"
-                + "FILE \"track02.mp3\" MP3\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00"
+            + "FILE \"track02.mp3\" MP3\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00"
         );
 
         var result = await CueWorkDirectory.PrepareAsync(
@@ -901,7 +901,7 @@ public class CueWorkDirectoryTests : IDisposable
         var cuePath = CreateFile(
             "game.cue",
             "FILE \"game.iso\" BINARY\r\n  TRACK 01 MODE1/2048\r\n    INDEX 01 00:00:00\r\n"
-                + "FILE \"track02.mp3\" MP3\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00"
+            + "FILE \"track02.mp3\" MP3\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00"
         );
 
         var result = await CueWorkDirectory.PrepareAsync(

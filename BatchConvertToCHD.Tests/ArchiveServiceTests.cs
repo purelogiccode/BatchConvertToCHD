@@ -568,11 +568,11 @@ public class ArchiveServiceTests : IDisposable
                 "invalid or incomplete",
                 StringComparison.OrdinalIgnoreCase
             )
-                || result.ErrorMessage.Contains("corrupt", StringComparison.OrdinalIgnoreCase)
-                || result.ErrorMessage.Contains(
-                    "Error extracting archive",
-                    StringComparison.OrdinalIgnoreCase
-                ),
+            || result.ErrorMessage.Contains("corrupt", StringComparison.OrdinalIgnoreCase)
+            || result.ErrorMessage.Contains(
+                "Error extracting archive",
+                StringComparison.OrdinalIgnoreCase
+            ),
             $"Expected a known error message but got: {result.ErrorMessage}"
         );
     }
@@ -947,8 +947,8 @@ public class ArchiveServiceTests : IDisposable
         Assert.False(result.Success);
         Assert.True(
             result.ErrorMessage.Contains("corrupt", StringComparison.OrdinalIgnoreCase)
-                || result.ErrorMessage.Contains("invalid", StringComparison.OrdinalIgnoreCase)
-                || result.ErrorMessage.Contains("incomplete", StringComparison.OrdinalIgnoreCase),
+            || result.ErrorMessage.Contains("invalid", StringComparison.OrdinalIgnoreCase)
+            || result.ErrorMessage.Contains("incomplete", StringComparison.OrdinalIgnoreCase),
             $"Expected corrupt/invalid/incomplete message but got: {result.ErrorMessage}"
         );
     }

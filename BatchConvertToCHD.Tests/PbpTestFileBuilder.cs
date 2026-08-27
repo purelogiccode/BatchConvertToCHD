@@ -354,6 +354,7 @@ internal sealed class PbpTestFileBuilder
         {
             deflate.Write(data, 0, data.Length);
         }
+
         return ms.ToArray();
     }
 

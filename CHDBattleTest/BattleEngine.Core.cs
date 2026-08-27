@@ -32,7 +32,13 @@ public sealed partial class BattleEngine
         {
             if (!_cfg.KeepTemp)
             {
-                try { Directory.Delete(workDir, recursive: true); } catch { }
+                try
+                {
+                    Directory.Delete(workDir, recursive: true);
+                }
+                catch
+                {
+                }
             }
         }
     }
@@ -41,7 +47,8 @@ public sealed partial class BattleEngine
     {
         string exe = toolKey == "chdman" ? _cfg.ChdmanPath : _cfg.ChdSharpPath;
         if (_cfg.Verbose) Log($"     $ {Path.GetFileName(exe)} {args}");
-        var r = await ToolRunner.RunAsync(exe, args, TimeSpan.FromMinutes(_cfg.TimeoutMinutes), _ct).ConfigureAwait(false);
+        var r = await ToolRunner.RunAsync(exe, args, TimeSpan.FromMinutes(_cfg.TimeoutMinutes), _ct)
+            .ConfigureAwait(false);
         if (r.ExitCode != 0 && !string.IsNullOrWhiteSpace(r.OutputTail))
             Log($"     !! {toolKey} {battle} failed (exit {r.ExitCode}): {LastLine(r.OutputTail)}");
         return r;
@@ -61,7 +68,14 @@ public sealed partial class BattleEngine
 
     internal static long FileLen(string path)
     {
-        try { return new FileInfo(path).Length; } catch { return 0; }
+        try
+        {
+            return new FileInfo(path).Length;
+        }
+        catch
+        {
+            return 0;
+        }
     }
 
     internal double? Mibs(double seconds, ulong bytes) =>
@@ -72,8 +86,8 @@ public sealed partial class BattleEngine
 
     internal string? FailMsg(ToolRunner.RunResult r) =>
         r.ExitCode == 0 ? null
-            : r.TimedOut ? $"timeout after {_cfg.TimeoutMinutes} min"
-            : $"exit {r.ExitCode}: {LastLine(r.OutputTail)}";
+        : r.TimedOut ? $"timeout after {_cfg.TimeoutMinutes} min"
+        : $"exit {r.ExitCode}: {LastLine(r.OutputTail)}";
 
     internal static string? LastLine(string text)
     {

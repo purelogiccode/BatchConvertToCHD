@@ -1001,7 +1001,9 @@ public class PbpFileTests : IDisposable
     private sealed class NonSeekableStream : MemoryStream
     {
         public NonSeekableStream(byte[] buffer)
-            : base(buffer) { }
+            : base(buffer)
+        {
+        }
 
         public override bool CanSeek => false;
     }
@@ -1019,6 +1021,7 @@ public class PbpFileTests : IDisposable
         public override bool CanSeek => _inner.CanSeek;
         public override bool CanWrite => true;
         public override long Length => _inner.Length;
+
         public override long Position
         {
             get => _inner.Position;

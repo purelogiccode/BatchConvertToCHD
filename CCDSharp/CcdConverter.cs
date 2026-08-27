@@ -85,7 +85,7 @@ public static class CcdConverter
             using var reader = new StreamReader(filePath);
             var firstLine = reader.ReadLine();
             return firstLine != null
-                && firstLine.Trim().Equals("[CloneCD]", StringComparison.OrdinalIgnoreCase);
+                   && firstLine.Trim().Equals("[CloneCD]", StringComparison.OrdinalIgnoreCase);
         }
         catch
         {
@@ -104,6 +104,6 @@ public static class CcdConverter
         var audioTracks = disc.Tracks.Count(t => t.IsAudio);
 
         return $"CloneCD v{disc.Version}: {disc.Tracks.Count} tracks ({dataTracks} data, {audioTracks} audio), "
-            + $"{disc.Sessions} session(s), Catalog: {(disc.Catalog ?? "none")}";
+               + $"{disc.Sessions} session(s), Catalog: {(disc.Catalog ?? "none")}";
     }
 }

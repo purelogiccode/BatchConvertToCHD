@@ -24,8 +24,14 @@ public static class ToolRunner
 
         using var proc = new Process { StartInfo = psi };
         var sb = new StringBuilder();
-        proc.OutputDataReceived += (_, e) => { if (e.Data is not null) Append(sb, e.Data); };
-        proc.ErrorDataReceived += (_, e) => { if (e.Data is not null) Append(sb, e.Data); };
+        proc.OutputDataReceived += (_, e) =>
+        {
+            if (e.Data is not null) Append(sb, e.Data);
+        };
+        proc.ErrorDataReceived += (_, e) =>
+        {
+            if (e.Data is not null) Append(sb, e.Data);
+        };
 
         var sw = Stopwatch.StartNew();
         if (!proc.Start())
@@ -44,9 +50,17 @@ public static class ToolRunner
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             timedOut = true;
-            try { proc.Kill(entireProcessTree: true); } catch { }
+            try
+            {
+                proc.Kill(entireProcessTree: true);
+            }
+            catch
+            {
+            }
+
             await proc.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
         }
+
         sw.Stop();
 
         string tail = sb.Length > 8000 ? "..." + sb.ToString(sb.Length - 8000, 8000) : sb.ToString();
@@ -94,11 +108,13 @@ public static class Hashing
                 total += read;
             }
         }
+
         sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
         return (Convert.ToHexString(sha.Hash ?? []), total);
     }
 
-    public static async Task LibDecodeAsync(string chdPath, string outPath, Action<double> progress, CancellationToken ct)
+    public static async Task LibDecodeAsync(string chdPath, string outPath, Action<double> progress,
+        CancellationToken ct)
     {
         var err = CHDSharp.ChdFile.Open(chdPath, out var chd);
         if (err != CHDSharp.Models.ChdError.Chderrnone)
@@ -116,7 +132,8 @@ public static class Hashing
                 var e2 = chd.ReadHunk((uint)i, buf);
                 if (e2 != CHDSharp.Models.ChdError.Chderrnone)
                     throw new InvalidOperationException($"ReadHunk({i}) failed: {e2}");
-                await fs.WriteAsync(buf.AsMemory(0, (int)Math.Min(hunkBytes, (ulong)buf.Length)), ct).ConfigureAwait(false);
+                await fs.WriteAsync(buf.AsMemory(0, (int)Math.Min(hunkBytes, (ulong)buf.Length)), ct)
+                    .ConfigureAwait(false);
                 if ((i & 0x3FF) == 0) progress(i * 100.0 / Math.Max(1UL, hunkCount));
             }
         }

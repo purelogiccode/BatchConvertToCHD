@@ -1,42 +1,42 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
-    <NeutralLanguage>en</NeutralLanguage>
-    <Company>PureLogicCode.com</Company>
-    <AssemblyVersion>1.0.0</AssemblyVersion>
-    <FileVersion>1.0.0</FileVersion>
-    <DebugType>embedded</DebugType>
-    <DebugSymbols>true</DebugSymbols>
+    <PropertyGroup>
+        <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <LangVersion>latest</LangVersion>
+        <NeutralLanguage>en</NeutralLanguage>
+        <Company>PureLogicCode.com</Company>
+        <AssemblyVersion>1.0.0</AssemblyVersion>
+        <FileVersion>1.0.0</FileVersion>
+        <DebugType>embedded</DebugType>
+        <DebugSymbols>true</DebugSymbols>
 
-    <!-- Suppress MA0009 for [GeneratedRegex] - compiled at build time, not vulnerable to ReDoS -->
-    <NoWarn>$(NoWarn);MA0009</NoWarn>
+        <!-- Suppress MA0009 for [GeneratedRegex] - compiled at build time, not vulnerable to ReDoS -->
+        <NoWarn>$(NoWarn);MA0009</NoWarn>
 
-    <!-- NuGet Package Metadata -->
-    <IsPackable>true</IsPackable>
-    <PackageId>CCDSharp</PackageId>
-    <Version>1.0.0</Version>
-    <Authors>PureLogicCode</Authors>
-    <Description>A managed C# library for parsing and converting CloneCD disc images (.ccd/.img/.sub) to standard formats. Supports conversion to .iso (2048-byte cooked data) and .cue/.bin (raw 2352-byte sectors). Ideal for disc image preservation and emulation workflows.</Description>
-    <PackageTags>ccd;clonecd;img;sub;iso;cue;bin;disc-image;conversion;emulation</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/PureLogicCode/CCDSharp</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/PureLogicCode/CCDSharp</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-  </PropertyGroup>
+        <!-- NuGet Package Metadata -->
+        <IsPackable>true</IsPackable>
+        <PackageId>CCDSharp</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>PureLogicCode</Authors>
+        <Description>A managed C# library for parsing and converting CloneCD disc images (.ccd/.img/.sub) to standard formats. Supports conversion to .iso (2048-byte cooked data) and .cue/.bin (raw 2352-byte sectors). Ideal for disc image preservation and emulation workflows.</Description>
+        <PackageTags>ccd;clonecd;img;sub;iso;cue;bin;disc-image;conversion;emulation</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/PureLogicCode/CCDSharp</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/PureLogicCode/CCDSharp</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Meziantou.Analyzer" Version="3.0.177">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.177">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
 
-  <ItemGroup>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>BatchConvertToCHD.Tests</_Parameter1>
-    </AssemblyAttribute>
-  </ItemGroup>
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+            <_Parameter1>BatchConvertToCHD.Tests</_Parameter1>
+        </AssemblyAttribute>
+    </ItemGroup>
 </Project>
