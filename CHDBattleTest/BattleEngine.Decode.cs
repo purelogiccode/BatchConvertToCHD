@@ -6,7 +6,7 @@ public sealed partial class BattleEngine
 {
     private async Task DecodePhaseAsync(FileReport report, string work)
     {
-        Log($"  [decode] extractraw battle");
+        Log("  [decode] extractraw battle");
         string mDir = Path.Combine(work, "m_raw");
         string sDir = Path.Combine(work, "s_raw");
         Directory.CreateDirectory(mDir);
@@ -70,6 +70,7 @@ public sealed partial class BattleEngine
             }
             catch
             {
+                // ignored
             }
         }
 
@@ -80,7 +81,7 @@ public sealed partial class BattleEngine
     {
         if (!_cfg.IncludeAv && report.Kind == MediaKind.LaserDisc)
         {
-            Log($"     structured extract: laserdisc skipped (enable --include-av)");
+            Log("     structured extract: laserdisc skipped (enable --include-av)");
             return;
         }
 
@@ -153,6 +154,7 @@ public sealed partial class BattleEngine
                 }
                 catch
                 {
+                    // ignored
                 }
             }
             else
@@ -163,6 +165,7 @@ public sealed partial class BattleEngine
                 }
                 catch
                 {
+                    // ignored
                 }
             }
         }

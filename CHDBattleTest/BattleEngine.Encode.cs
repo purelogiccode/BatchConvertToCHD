@@ -59,6 +59,7 @@ public sealed partial class BattleEngine
             }
             catch
             {
+                // ignored
             }
 
             try
@@ -67,6 +68,7 @@ public sealed partial class BattleEngine
             }
             catch
             {
+                // ignored
             }
         }
     }
@@ -86,7 +88,7 @@ public sealed partial class BattleEngine
 
         if (!_cfg.IncludeAv && report.Kind == MediaKind.LaserDisc)
         {
-            Log($"     create battle: laserdisc skipped (enable --include-av)");
+            Log("     create battle: laserdisc skipped (enable --include-av)");
             return;
         }
 
@@ -105,11 +107,11 @@ public sealed partial class BattleEngine
             input = FindRawArtifact(work);
             if (input is null)
             {
-                Log($"     create battle: SKIPPED - raw decode artifact missing for createraw");
+                Log("     create battle: SKIPPED - raw decode artifact missing for createraw");
                 return;
             }
 
-            Log($"  [encode] createraw battle from decoded raw image");
+            Log("  [encode] createraw battle from decoded raw image");
         }
 
         string codec = _cfg.CodecFor(report.Kind);
@@ -159,6 +161,7 @@ public sealed partial class BattleEngine
             }
             catch
             {
+                // ignored
             }
 
             try
@@ -167,6 +170,7 @@ public sealed partial class BattleEngine
             }
             catch
             {
+                // ignored
             }
         }
     }
@@ -212,10 +216,18 @@ public sealed partial class BattleEngine
         return null;
     }
 
-    private static double? Ratio(bool ok, long outBytes, ulong logical) =>
-        ok && logical > 0 ? (double)outBytes / logical : null;
+    private static double? Ratio(bool ok, long outBytes, ulong logical)
+    {
+        return ok && logical > 0 ? (double)outBytes / logical : null;
+    }
 
-    private static string OkFail(ToolRunner.RunResult r) => r.ExitCode == 0 ? "ok" : "FAIL";
+    private static string OkFail(ToolRunner.RunResult r)
+    {
+        return r.ExitCode == 0 ? "ok" : "FAIL";
+    }
 
-    private static string Ok(bool b) => b ? "ok" : "FAIL";
+    private static string Ok(bool b)
+    {
+        return b ? "ok" : "FAIL";
+    }
 }

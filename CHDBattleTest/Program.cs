@@ -39,7 +39,7 @@ internal static class Program
         Directory.CreateDirectory(cfg.OutputRoot);
         Directory.CreateDirectory(cfg.WorkRoot);
 
-        using var log = new StreamWriter(cfg.LogPath, append: false);
+        await using var log = new StreamWriter(cfg.LogPath, append: false);
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) =>
         {
@@ -156,7 +156,7 @@ internal static class Program
             ReportWriter.AppendCsv(cfg.CsvPath, report);
             doneBytes += fi.Length;
             Console.WriteLine(
-                $"  >> progress: {doneBytes / 1048576.0:0} MiB done, elapsed {overallSw.Elapsed:hh\\:mm\\:ss}");
+                $@"  >> progress: {doneBytes / 1048576.0:0} MiB done, elapsed {overallSw.Elapsed:hh\:mm\:ss}");
         }
 
         Console.WriteLine();
@@ -164,7 +164,7 @@ internal static class Program
         ReportWriter.WriteMarkdown(cfg.MdPath, cfg.InputDir, reports, cfg);
         Console.WriteLine($"csv:     {cfg.CsvPath}");
         Console.WriteLine($"report:  {cfg.MdPath}");
-        Console.WriteLine($"total time: {overallSw.Elapsed:hh\\:mm\\:ss}");
+        Console.WriteLine($@"total time: {overallSw.Elapsed:hh\:mm\:ss}");
 
         if (!_cfgKeepWork)
         {
@@ -174,6 +174,7 @@ internal static class Program
             }
             catch
             {
+                // ignored
             }
         }
 
@@ -201,7 +202,6 @@ internal static class Program
         for (int i = 0; i < args.Length; i++)
         {
             string a = args[i];
-            string Next() => i + 1 < args.Length ? args[++i] : throw new ArgumentException($"missing value for {a}");
             switch (a)
             {
                 case "-i":
@@ -238,6 +238,13 @@ internal static class Program
                 case "-v":
                 case "--verbose": cfg.Verbose = true; break;
                 default: throw new ArgumentException($"unknown option '{a}'");
+            }
+
+            continue;
+
+            string Next()
+            {
+                return i + 1 < args.Length ? args[++i] : throw new ArgumentException($"missing value for {a}");
             }
         }
     }

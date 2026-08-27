@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace CHDBattleTest;
 
 public sealed partial class BattleEngine
@@ -38,6 +36,7 @@ public sealed partial class BattleEngine
                 }
                 catch
                 {
+                    // ignored
                 }
             }
         }
@@ -78,16 +77,22 @@ public sealed partial class BattleEngine
         }
     }
 
-    internal double? Mibs(double seconds, ulong bytes) =>
-        seconds > 0.001 && bytes > 0 ? bytes / 1048576.0 / seconds : null;
+    internal double? Mibs(double seconds, ulong bytes)
+    {
+        return seconds > 0.001 && bytes > 0 ? bytes / 1048576.0 / seconds : null;
+    }
 
-    internal static double? Ratio(ToolRunner.RunResult r, long outBytes, ulong logical) =>
-        r.ExitCode == 0 && logical > 0 ? (double)outBytes / logical : null;
+    internal static double? Ratio(ToolRunner.RunResult r, long outBytes, ulong logical)
+    {
+        return r.ExitCode == 0 && logical > 0 ? (double)outBytes / logical : null;
+    }
 
-    internal string? FailMsg(ToolRunner.RunResult r) =>
-        r.ExitCode == 0 ? null
-        : r.TimedOut ? $"timeout after {_cfg.TimeoutMinutes} min"
-        : $"exit {r.ExitCode}: {LastLine(r.OutputTail)}";
+    internal string? FailMsg(ToolRunner.RunResult r)
+    {
+        return r.ExitCode == 0 ? null
+            : r.TimedOut ? $"timeout after {_cfg.TimeoutMinutes} min"
+            : $"exit {r.ExitCode}: {LastLine(r.OutputTail)}";
+    }
 
     internal static string? LastLine(string text)
     {
@@ -96,11 +101,15 @@ public sealed partial class BattleEngine
         return lines.Length == 0 ? null : lines[^1][..Math.Min(300, lines[^1].Length)];
     }
 
-    internal static string ShortHash(string? hash) =>
-        string.IsNullOrEmpty(hash) ? "-" : hash[..12];
+    internal static string ShortHash(string? hash)
+    {
+        return string.IsNullOrEmpty(hash) ? "-" : hash[..12];
+    }
 
-    internal static string FmtS(double seconds) =>
-        seconds >= 60 ? $"{seconds / 60.0:F1}m" : $"{seconds:F1}s";
+    internal static string FmtS(double seconds)
+    {
+        return seconds >= 60 ? $"{seconds / 60.0:F1}m" : $"{seconds:F1}s";
+    }
 
     internal static string Sanitize(string name)
     {

@@ -22,7 +22,8 @@ public static class ToolRunner
             StandardErrorEncoding = Encoding.UTF8
         };
 
-        using var proc = new Process { StartInfo = psi };
+        using var proc = new Process();
+        proc.StartInfo = psi;
         var sb = new StringBuilder();
         proc.OutputDataReceived += (_, e) =>
         {
@@ -56,6 +57,7 @@ public static class ToolRunner
             }
             catch
             {
+                // ignored
             }
 
             await proc.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
@@ -121,25 +123,28 @@ public static class Hashing
             throw new InvalidOperationException($"ChdFile.Open failed: {err}");
         try
         {
-            uint hunkBytes = chd.HunkBytes;
-            ulong hunkCount = chd.HunkCount;
-            byte[] buf = new byte[hunkBytes];
-            await using var fs = new FileStream(outPath, FileMode.Create, FileAccess.Write, FileShare.None,
-                1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
-            for (ulong i = 0; i < hunkCount; i++)
+            if (chd != null)
             {
-                ct.ThrowIfCancellationRequested();
-                var e2 = chd.ReadHunk((uint)i, buf);
-                if (e2 != CHDSharp.Models.ChdError.Chderrnone)
-                    throw new InvalidOperationException($"ReadHunk({i}) failed: {e2}");
-                await fs.WriteAsync(buf.AsMemory(0, (int)Math.Min(hunkBytes, (ulong)buf.Length)), ct)
-                    .ConfigureAwait(false);
-                if ((i & 0x3FF) == 0) progress(i * 100.0 / Math.Max(1UL, hunkCount));
+                uint hunkBytes = chd.HunkBytes;
+                ulong hunkCount = chd.HunkCount;
+                byte[] buf = new byte[hunkBytes];
+                await using var fs = new FileStream(outPath, FileMode.Create, FileAccess.Write, FileShare.None,
+                    1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                for (ulong i = 0; i < hunkCount; i++)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var e2 = chd.ReadHunk((uint)i, buf);
+                    if (e2 != CHDSharp.Models.ChdError.Chderrnone)
+                        throw new InvalidOperationException($"ReadHunk({i}) failed: {e2}");
+                    await fs.WriteAsync(buf.AsMemory(0, (int)Math.Min(hunkBytes, (ulong)buf.Length)), ct)
+                        .ConfigureAwait(false);
+                    if ((i & 0x3FF) == 0) progress(i * 100.0 / Math.Max(1UL, hunkCount));
+                }
             }
         }
         finally
         {
-            await chd.DisposeAsync().ConfigureAwait(false);
+            if (chd != null) await chd.DisposeAsync().ConfigureAwait(false);
         }
     }
 }

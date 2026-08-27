@@ -30,11 +30,13 @@ public sealed class BattleConfig
     public string MdPath => Path.Combine(OutputRoot, "report.md");
     public string LogPath => Path.Combine(OutputRoot, "battle.log");
 
-    public string CodecFor(MediaKind kind) =>
-        kind switch
+    public string CodecFor(MediaKind kind)
+    {
+        return kind switch
         {
             MediaKind.Cd or MediaKind.GdRom => CodecCd,
             MediaKind.LaserDisc => "avhu",
             _ => CodecRaw
         };
+    }
 }

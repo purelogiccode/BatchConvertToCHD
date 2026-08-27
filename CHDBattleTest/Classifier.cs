@@ -21,7 +21,7 @@ public static class Classifier
         }
         finally
         {
-            chd.Dispose();
+            if (chd != null) chd.Dispose();
         }
     }
 

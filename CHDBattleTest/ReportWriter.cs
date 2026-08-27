@@ -161,11 +161,15 @@ public static class ReportWriter
         sb.AppendLine();
     }
 
-    private static string Mib(long bytes) =>
-        (bytes / 1048576.0).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+    private static string Mib(long bytes)
+    {
+        return (bytes / 1048576.0).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+    }
 
-    private static string MibU(ulong bytes) =>
-        (bytes / 1048576.0).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+    private static string MibU(ulong bytes)
+    {
+        return (bytes / 1048576.0).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+    }
 
     private static string Csv(string field)
     {

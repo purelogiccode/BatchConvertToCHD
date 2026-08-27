@@ -1015,7 +1015,10 @@ public class PbpFileTests : IDisposable
     {
         private readonly Stream _inner;
 
-        public WriteOnlyStream(Stream inner) => _inner = inner;
+        public WriteOnlyStream(Stream inner)
+        {
+            _inner = inner;
+        }
 
         public override bool CanRead => false;
         public override bool CanSeek => _inner.CanSeek;
@@ -1028,17 +1031,30 @@ public class PbpFileTests : IDisposable
             set => _inner.Position = value;
         }
 
-        public override void Flush() => _inner.Flush();
+        public override void Flush()
+        {
+            _inner.Flush();
+        }
 
-        public override int Read(byte[] buffer, int offset, int count) =>
+        public override int Read(byte[] buffer, int offset, int count)
+        {
             throw new NotSupportedException();
+        }
 
-        public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            return _inner.Seek(offset, origin);
+        }
 
-        public override void SetLength(long value) => _inner.SetLength(value);
+        public override void SetLength(long value)
+        {
+            _inner.SetLength(value);
+        }
 
-        public override void Write(byte[] buffer, int offset, int count) =>
+        public override void Write(byte[] buffer, int offset, int count)
+        {
             _inner.Write(buffer, offset, count);
+        }
 
         protected override void Dispose(bool disposing)
         {
