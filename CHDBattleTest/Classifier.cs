@@ -1,4 +1,5 @@
 using CHDSharp;
+using CHDSharp.Models;
 
 namespace CHDBattleTest;
 
@@ -6,18 +7,23 @@ public static class Classifier
 {
     public static (bool IsChd, uint Version, MediaKind Kind, ulong LogicalBytes, string? Error) Inspect(string path)
     {
-        if (!Chd.IsChdFile(path, out uint version))
+        if (!Chd.IsChdFile(path, out var version))
             return (false, 0, MediaKind.Unknown, 0, "not a CHD file");
 
         var err = ChdFile.Open(path, out var chd);
-        if (err != CHDSharp.Models.ChdError.Chderrnone)
+        if (err != ChdError.Chderrnone)
             return (true, version, MediaKind.Unknown, 0, $"open failed: {err}");
 
         try
         {
-            ulong logical = (ulong)chd.HunkCount * chd.HunkBytes;
-            MediaKind kind = DetectKind(path, chd);
-            return (true, version, kind, logical, null);
+            if (chd != null)
+            {
+                var logical = (ulong)chd.HunkCount * chd.HunkBytes;
+                var kind = DetectKind(path, chd);
+                return (true, version, kind, logical, null);
+            }
+
+            return (true, version, MediaKind.Unknown, 0, "open failed: null instance");
         }
         finally
         {
@@ -27,9 +33,8 @@ public static class Classifier
 
     private static MediaKind DetectKind(string path, ChdFile chd)
     {
-        var classErr = Chd.Classify(path, out string? classification);
-        if (classErr == CHDSharp.Models.ChdError.Chderrnone && classification is not null)
-        {
+        var classErr = Chd.Classify(path, out var classification);
+        if (classErr == ChdError.Chderrnone && classification is not null)
             return classification switch
             {
                 "cd" => MediaKind.Cd,
@@ -38,12 +43,11 @@ public static class Classifier
                 "hdd" => MediaKind.Hdd,
                 _ => MediaKind.Unknown
             };
-        }
 
-        bool isAv = false;
+        var isAv = false;
         foreach (var meta in chd.Metadata)
         {
-            string s = meta.ToString() ?? "";
+            var s = meta.ToString() ?? "";
             if (s.Contains("AVLD", StringComparison.Ordinal) || s.Contains("AVAV", StringComparison.Ordinal))
             {
                 isAv = true;

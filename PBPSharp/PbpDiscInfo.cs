@@ -7,8 +7,8 @@ using PBPSharp.Models;
 namespace PBPSharp;
 
 /// <summary>
-/// Represents a single disc entry within a PBP file. Provides access to
-/// the disc's TOC, ISO index, and methods to read/extract ISO data.
+///     Represents a single disc entry within a PBP file. Provides access to
+///     the disc's TOC, ISO index, and methods to read/extract ISO data.
 /// </summary>
 public sealed class PbpDiscInfo
 {
@@ -19,38 +19,14 @@ public sealed class PbpDiscInfo
     private const uint PsarIsoOffset = 0x100000;
 
     /// <summary>
-    /// The size of one ISO block in bytes (2352 bytes per sector).
+    ///     The size of one ISO block in bytes (2352 bytes per sector).
     /// </summary>
     public const int IsoBlockSize = 0x930;
 
-    private readonly Stream _stream;
-    private readonly int _psarOffset;
     private readonly List<IsoIndexEntry> _isoIndex;
+    private readonly int _psarOffset;
 
-    /// <summary>
-    /// The 1-based disc index within the PBP (1 for single-disc).
-    /// </summary>
-    public int Index { get; }
-
-    /// <summary>
-    /// The disc ID (e.g., "SCUS94163").
-    /// </summary>
-    public string DiscId { get; }
-
-    /// <summary>
-    /// The Table of Contents entries for this disc.
-    /// </summary>
-    public IReadOnlyList<TocEntry> Toc { get; }
-
-    /// <summary>
-    /// The total uncompressed ISO size in bytes.
-    /// </summary>
-    public uint IsoSize { get; }
-
-    /// <summary>
-    /// The number of ISO data blocks.
-    /// </summary>
-    public int BlockCount => _isoIndex.Count;
+    private readonly Stream _stream;
 
     internal PbpDiscInfo(Stream stream, int psarOffset, int index)
     {
@@ -71,6 +47,31 @@ public sealed class PbpDiscInfo
 
         IsoSize = ReadIsoSize();
     }
+
+    /// <summary>
+    ///     The 1-based disc index within the PBP (1 for single-disc).
+    /// </summary>
+    public int Index { get; }
+
+    /// <summary>
+    ///     The disc ID (e.g., "SCUS94163").
+    /// </summary>
+    public string DiscId { get; }
+
+    /// <summary>
+    ///     The Table of Contents entries for this disc.
+    /// </summary>
+    public IReadOnlyList<TocEntry> Toc { get; }
+
+    /// <summary>
+    ///     The total uncompressed ISO size in bytes.
+    /// </summary>
+    public uint IsoSize { get; }
+
+    /// <summary>
+    ///     The number of ISO data blocks.
+    /// </summary>
+    public int BlockCount => _isoIndex.Count;
 
     private string ReadDiscId()
     {
@@ -122,7 +123,7 @@ public sealed class PbpDiscInfo
                         TrackNo = trackNo,
                         Minutes = FromBinaryDecimal(buffer[3]),
                         Seconds = FromBinaryDecimal(buffer[4]),
-                        Frames = FromBinaryDecimal(buffer[5]),
+                        Frames = FromBinaryDecimal(buffer[5])
                     }
                 );
             }
@@ -189,7 +190,7 @@ public sealed class PbpDiscInfo
     }
 
     /// <summary>
-    /// Reads and decompresses a single ISO block.
+    ///     Reads and decompresses a single ISO block.
     /// </summary>
     /// <param name="blockIndex">The zero-based block index.</param>
     /// <param name="buffer">Buffer to receive the decompressed data (must be at least 16 * IsoBlockSize bytes).</param>
@@ -231,7 +232,7 @@ public sealed class PbpDiscInfo
     }
 
     /// <summary>
-    /// Extracts the entire disc ISO to the specified output stream.
+    ///     Extracts the entire disc ISO to the specified output stream.
     /// </summary>
     /// <param name="outputStream">The stream to write the ISO data to.</param>
     /// <param name="progress">Optional callback with bytes written so far.</param>
@@ -253,10 +254,7 @@ public sealed class PbpDiscInfo
 
                 ReadBlock(i, outBuffer, out var bufferSize);
 
-                if (totalWritten + bufferSize > IsoSize)
-                {
-                    bufferSize = (int)(IsoSize - totalWritten);
-                }
+                if (totalWritten + bufferSize > IsoSize) bufferSize = (int)(IsoSize - totalWritten);
 
                 outputStream.Write(outBuffer, 0, bufferSize);
                 totalWritten += (uint)bufferSize;
@@ -271,13 +269,13 @@ public sealed class PbpDiscInfo
     }
 
     /// <summary>
-    /// Extracts the disc as a BIN file and generates a companion CUE file.
+    ///     Extracts the disc as a BIN file and generates a companion CUE file.
     /// </summary>
     /// <param name="binPath">The path for the output BIN file.</param>
     /// <param name="cuePath">The path for the output CUE file. If null, uses binPath with .cue extension.</param>
     /// <param name="progress">Optional callback with bytes written so far.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A <see cref="PbpError"/> indicating the result.</returns>
+    /// <returns>A <see cref="PbpError" /> indicating the result.</returns>
     public PbpError ExtractToBinCue(
         string binPath,
         string? cuePath = null,

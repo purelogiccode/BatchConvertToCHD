@@ -3,25 +3,28 @@ using System.IO;
 namespace BatchConvertToCHD.Utilities;
 
 /// <summary>
-/// Prepares an isolated ASCII work directory for a cue/toc descriptor when chdman cannot be handed
-/// the original file as-is: UTF-8 BOM (which chdman's parser does not skip, producing
-/// "couldn't find bin file []"), non-UTF-8 cue text, non-ASCII names or paths, paths at or beyond
-/// MAX_PATH (chdman's ANSI file APIs cannot open them), or referenced names
-/// that needed zero-padding correction. The work directory contains a canonicalized cue plus every
-/// referenced file under safe ASCII names (trackNN.ext), so chdman sees a self-contained cue set.
-/// When the only problem is a BOM and the bins are on the same drive as the work directory, the
-/// bins are NOT copied — the canonical cue instead references them via relative paths.
+///     Prepares an isolated ASCII work directory for a cue/toc descriptor when chdman cannot be handed
+///     the original file as-is: UTF-8 BOM (which chdman's parser does not skip, producing
+///     "couldn't find bin file []"), non-UTF-8 cue text, non-ASCII names or paths, paths at or beyond
+///     MAX_PATH (chdman's ANSI file APIs cannot open them), or referenced names
+///     that needed zero-padding correction. The work directory contains a canonicalized cue plus every
+///     referenced file under safe ASCII names (trackNN.ext), so chdman sees a self-contained cue set.
+///     When the only problem is a BOM and the bins are on the same drive as the work directory, the
+///     bins are NOT copied — the canonical cue instead references them via relative paths.
 /// </summary>
 internal static class CueWorkDirectory
 {
     /// <summary>
-    /// Creates the work directory and copies the cue set into it, or returns a result with null
-    /// paths when the descriptor can be converted directly. On failure, the work directory is
-    /// removed and the exception is rethrown.
+    ///     Creates the work directory and copies the cue set into it, or returns a result with null
+    ///     paths when the descriptor can be converted directly. On failure, the work directory is
+    ///     removed and the exception is rethrown.
     /// </summary>
     /// <param name="cuePath">Path of the .cue or .toc descriptor.</param>
     /// <param name="tempDirPrefix">Prefix used for the work directory name (e.g. "BatchConvertToCHD_Temp_").</param>
-    /// <param name="mp3Decoder">Optional MP3 decoder; when provided, MP3 audio tracks are decoded to WAV in the work directory instead of being copied.</param>
+    /// <param name="mp3Decoder">
+    ///     Optional MP3 decoder; when provided, MP3 audio tracks are decoded to WAV in the work directory
+    ///     instead of being copied.
+    /// </param>
     /// <param name="onLog">Optional logging callback.</param>
     /// <param name="token">Cancellation token.</param>
     internal static async Task<CueWorkDirectoryResult> PrepareAsync(
@@ -35,10 +38,7 @@ internal static class CueWorkDirectory
         var result = await CueNormalizer.NormalizeAsync(cuePath, token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
 
-        if (result.UnresolvedNames.Count > 0)
-        {
-            return new CueWorkDirectoryResult(null, null, result.UnresolvedNames);
-        }
+        if (result.UnresolvedNames.Count > 0) return new CueWorkDirectoryResult(null, null, result.UnresolvedNames);
 
         var isUtf8 = string.Equals(
             result.SourceEncoding.WebName,
@@ -71,10 +71,7 @@ internal static class CueWorkDirectory
             || hasMp3Tracks
             || namesNeedAscii
             || pathTooLong;
-        if (!needsWorkDir)
-        {
-            return new CueWorkDirectoryResult(null, null, []);
-        }
+        if (!needsWorkDir) return new CueWorkDirectoryResult(null, null, []);
 
         var workDir = PathUtils.GetBestTempDirectory(cuePath, cuePath, tempDirPrefix);
         Directory.CreateDirectory(workDir);
@@ -91,10 +88,7 @@ internal static class CueWorkDirectory
             {
                 var inPlaceWorkCue = await TryWriteInPlaceWorkCueAsync(cuePath, workDir, token)
                     .ConfigureAwait(false);
-                if (inPlaceWorkCue is not null)
-                {
-                    return new CueWorkDirectoryResult(inPlaceWorkCue, workDir, []);
-                }
+                if (inPlaceWorkCue is not null) return new CueWorkDirectoryResult(inPlaceWorkCue, workDir, []);
             }
 
             // Assign a unique ASCII work name (trackNN.ext) to every referenced file.
@@ -124,10 +118,8 @@ internal static class CueWorkDirectory
                 var baseName = workName;
                 var suffix = 1;
                 while (!usedNames.Add(workName))
-                {
                     workName =
                         $"{Path.GetFileNameWithoutExtension(baseName)}_{suffix++}{Path.GetExtension(baseName)}";
-                }
 
                 workNames[reference.FullPath] = workName;
             }
@@ -143,7 +135,6 @@ internal static class CueWorkDirectory
                     mp3Decoder is not null
                     && string.Equals(reference.TrackType, "MP3", StringComparison.Ordinal)
                 )
-                {
                     await mp3Decoder
                         .DecodeAsync(
                             reference.ResolvedFullPath,
@@ -152,16 +143,13 @@ internal static class CueWorkDirectory
                             token
                         )
                         .ConfigureAwait(false);
-                }
                 else
-                {
                     await CopyWithRetryAsync(
                             reference.ResolvedFullPath,
                             Path.Combine(workDir, workName),
                             token
                         )
                         .ConfigureAwait(false);
-                }
             }
 
             var normalized = await CueNormalizer
@@ -176,10 +164,7 @@ internal static class CueWorkDirectory
             // Rewrite the cue so its FILE lines reference the ASCII work names.
             (string Name, string? TrackType)? Transform(CueFileReference reference)
             {
-                if (!workNames.TryGetValue(reference.FullPath, out var workName))
-                {
-                    return null;
-                }
+                if (!workNames.TryGetValue(reference.FullPath, out var workName)) return null;
 
                 return workTypes.TryGetValue(reference.FullPath, out var workType)
                     ? (workName, workType)
@@ -203,12 +188,12 @@ internal static class CueWorkDirectory
     }
 
     /// <summary>
-    /// Attempts the in-place fast path: writes a BOM-free canonical cue named "game.cue" into
-    /// <paramref name="workDir"/> whose FILE lines reference every bin via a path relative to
-    /// <paramref name="workDir"/> (chdman prepends the cue's directory to every FILE name, so the
-    /// bins must be addressed relative to where the cue lives). No bin files are copied.
-    /// Returns null when any bin cannot be referenced relatively (e.g. it is on another drive),
-    /// in which case the caller must fall back to the copy-based path.
+    ///     Attempts the in-place fast path: writes a BOM-free canonical cue named "game.cue" into
+    ///     <paramref name="workDir" /> whose FILE lines reference every bin via a path relative to
+    ///     <paramref name="workDir" /> (chdman prepends the cue's directory to every FILE name, so the
+    ///     bins must be addressed relative to where the cue lives). No bin files are copied.
+    ///     Returns null when any bin cannot be referenced relatively (e.g. it is on another drive),
+    ///     in which case the caller must fall back to the copy-based path.
     /// </summary>
     internal static async Task<string?> TryWriteInPlaceWorkCueAsync(
         string cuePath,
@@ -227,9 +212,7 @@ internal static class CueWorkDirectory
                     Path.IsPathRooted(Path.GetRelativePath(workDir, r.ResolvedFullPath))
                 )
             )
-            {
                 return null;
-            }
         }
         catch (ArgumentException)
         {

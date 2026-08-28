@@ -21,9 +21,7 @@ public class FileItemTests
             if (
                 string.Equals(e.PropertyName, nameof(FileItem.IsSelected), StringComparison.Ordinal)
             )
-            {
                 fired = true;
-            }
         };
 
         item.IsSelected = false;
@@ -50,10 +48,7 @@ public class FileItemTests
         var fired = false;
         item.PropertyChanged += (_, e) =>
         {
-            if (string.Equals(e.PropertyName, nameof(FileItem.FileName), StringComparison.Ordinal))
-            {
-                fired = true;
-            }
+            if (string.Equals(e.PropertyName, nameof(FileItem.FileName), StringComparison.Ordinal)) fired = true;
         };
 
         item.FileName = "test.iso";
@@ -68,10 +63,7 @@ public class FileItemTests
         var fired = false;
         item.PropertyChanged += (_, e) =>
         {
-            if (string.Equals(e.PropertyName, nameof(FileItem.FullPath), StringComparison.Ordinal))
-            {
-                fired = true;
-            }
+            if (string.Equals(e.PropertyName, nameof(FileItem.FullPath), StringComparison.Ordinal)) fired = true;
         };
 
         item.FullPath = @"C:\test.iso";
@@ -93,9 +85,7 @@ public class FileItemTests
                     StringComparison.Ordinal
                 )
             )
-            {
                 fired = true;
-            }
         };
 
         item.FileSize = 1536; // 1.5 KB
@@ -119,7 +109,7 @@ public class FileItemTests
         var item = new FileItem
         {
             // Set to a non-zero value first to ensure the setter runs even when testing 0
-            FileSize = 1,
+            FileSize = 1
         };
         item.FileSize = bytes;
         Assert.Equal(expected, item.DisplaySize);
@@ -147,9 +137,7 @@ public class FileItemTests
                     StringComparison.Ordinal
                 )
             )
-            {
                 displaySizeChanged = true;
-            }
         };
 
         item.FileSize = 1024;

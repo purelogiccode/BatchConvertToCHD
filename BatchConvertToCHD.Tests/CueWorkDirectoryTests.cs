@@ -1,5 +1,8 @@
+using System.Diagnostics;
 using System.Text;
 using BatchConvertToCHD.Utilities;
+using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace BatchConvertToCHD.Tests;
 
@@ -22,10 +25,7 @@ public class CueWorkDirectoryTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
+            if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true);
         }
         catch
         {
@@ -40,23 +40,6 @@ public class CueWorkDirectoryTests : IDisposable
         var path = Path.Combine(_tempDir, name);
         File.WriteAllText(path, content, encoding ?? Encoding.UTF8);
         return path;
-    }
-
-    private sealed class FakeMp3Decoder : IMp3Decoder
-    {
-        public List<(string Mp3Path, string WavPath)> Calls { get; } = [];
-
-        public Task DecodeAsync(
-            string mp3Path,
-            string wavPath,
-            Action<string>? onLog,
-            CancellationToken token
-        )
-        {
-            Calls.Add((mp3Path, wavPath));
-            File.WriteAllText(wavPath, "wav-content");
-            return Task.CompletedTask;
-        }
     }
 
     private static async Task<(CueWorkDirectoryResult Result, string? WorkDir)> PrepareAsync(
@@ -130,7 +113,6 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
-            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -139,7 +121,6 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
-            }
         }
     }
 
@@ -173,7 +154,6 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
-            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -182,7 +162,6 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
-            }
         }
     }
 
@@ -322,7 +301,6 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
-            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -331,7 +309,6 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
-            }
         }
     }
 
@@ -369,7 +346,6 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
-            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -378,7 +354,6 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
-            }
         }
     }
 
@@ -422,7 +397,6 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
-            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -431,7 +405,6 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
-            }
         }
     }
 
@@ -470,18 +443,13 @@ public class CueWorkDirectoryTests : IDisposable
 
             var filesInWorkDir = Directory.GetFiles(workDir).Select(Path.GetFileName).ToList();
             if (filesInWorkDir.Contains("track01.bin", StringComparer.OrdinalIgnoreCase))
-            {
                 Assert.Contains("FILE \"track01.bin\" BINARY", workCue, StringComparison.Ordinal);
-            }
             else
-            {
                 Assert.Contains("Game (Track 2).bin", workCue, StringComparison.Ordinal);
-            }
         }
         finally
         {
             if (workDir is not null)
-            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -490,7 +458,6 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
-            }
         }
     }
 
@@ -545,7 +512,6 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
-            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -554,7 +520,6 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
-            }
         }
     }
 
@@ -614,7 +579,6 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
-            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -623,7 +587,6 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
-            }
         }
     }
 
@@ -635,18 +598,12 @@ public class CueWorkDirectoryTests : IDisposable
         // the BOM and therefore never sees the FILE directive. The fixed pipeline prepares a
         // BOM-free work cue referencing the bin relatively, which chdman converts.
         var chdmanPath = Path.Combine(AppContext.BaseDirectory, "chdman.exe");
-        if (!File.Exists(chdmanPath))
-        {
-            return; // integration test — skipped when the bundled chdman is unavailable
-        }
+        if (!File.Exists(chdmanPath)) return; // integration test — skipped when the bundled chdman is unavailable
 
         // Valid MODE1/2352 bin: 100 sectors with proper sync headers.
         var sector = new byte[2352];
         sector[0] = 0x00;
-        for (var i = 1; i < 11; i++)
-        {
-            sector[i] = 0xFF;
-        }
+        for (var i = 1; i < 11; i++) sector[i] = 0xFF;
 
         sector[11] = 0x00;
         sector[12] = 0x01; // mode 1
@@ -711,15 +668,15 @@ public class CueWorkDirectoryTests : IDisposable
         string outputChd
     )
     {
-        using var process = new System.Diagnostics.Process();
-        process.StartInfo = new System.Diagnostics.ProcessStartInfo
+        using var process = new Process();
+        process.StartInfo = new ProcessStartInfo
         {
             FileName = chdmanPath,
             Arguments = $"createcd -i \"{cuePath}\" -o \"{outputChd}\" -f",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
-            CreateNoWindow = true,
+            CreateNoWindow = true
         };
         process.Start();
         var stdout = await process.StandardOutput.ReadToEndAsync();
@@ -745,7 +702,7 @@ public class CueWorkDirectoryTests : IDisposable
         );
 
         // chdman's cue WAVE tracks require exactly 44100 Hz stereo 16-bit PCM.
-        await using var reader = new NAudio.Wave.WaveFileReader(wavPath);
+        await using var reader = new WaveFileReader(wavPath);
         Assert.Equal(44100, reader.WaveFormat.SampleRate);
         Assert.Equal(2, reader.WaveFormat.Channels);
         Assert.Equal(16, reader.WaveFormat.BitsPerSample);
@@ -756,11 +713,11 @@ public class CueWorkDirectoryTests : IDisposable
     {
         // Non-standard rips (mono or 22.05 kHz audio tracks) must be normalized to chdman's
         // hard requirements: exactly 44100 Hz stereo (16-bit happens at WAV write time).
-        var source = new NAudio.Wave.SampleProviders.SignalGenerator(22050, 1)
+        var source = new SignalGenerator(22050, 1)
         {
-            Type = NAudio.Wave.SampleProviders.SignalGeneratorType.Sin,
+            Type = SignalGeneratorType.Sin,
             Frequency = 440,
-            Gain = 0.2,
+            Gain = 0.2
         };
 
         var normalized = Mp3ToWavDecoder.NormalizeForChdman(source);
@@ -800,10 +757,7 @@ public class CueWorkDirectoryTests : IDisposable
         const int frameCount = 100;
         var frames = new byte[frameSize * frameCount];
         var header = new byte[] { 0xFF, 0xF3, 0x90, 0xC0 }; // MPEG-2 L3, 80kbps, 22050 Hz, mono
-        for (var i = 0; i < frameCount; i++)
-        {
-            Array.Copy(header, 0, frames, i * frameSize, header.Length);
-        }
+        for (var i = 0; i < frameCount; i++) Array.Copy(header, 0, frames, i * frameSize, header.Length);
 
         var mp3Path = Path.Combine(_tempDir, "mono22050.mp3");
         await File.WriteAllBytesAsync(mp3Path, frames);
@@ -812,7 +766,7 @@ public class CueWorkDirectoryTests : IDisposable
         var decoder = new Mp3ToWavDecoder();
         await decoder.DecodeAsync(mp3Path, wavPath, null, CancellationToken.None);
 
-        await using var reader = new NAudio.Wave.WaveFileReader(wavPath);
+        await using var reader = new WaveFileReader(wavPath);
 
         // The ACM decoder outputs 22050 Hz mono, so these format asserts are the proof that
         // NormalizeForChdman resampled to 44100 and upmixed to stereo — without it the WAV
@@ -829,10 +783,7 @@ public class CueWorkDirectoryTests : IDisposable
         // cue/bin/mp3: a data bin track plus MP3 audio tracks. The MP3 must be decoded to WAV
         // before chdman runs — chdman itself rejects MP3 tracks ("Unhandled track type MP3").
         var chdmanPath = Path.Combine(AppContext.BaseDirectory, "chdman.exe");
-        if (!File.Exists(chdmanPath))
-        {
-            return; // integration test — skipped when the bundled chdman is unavailable
-        }
+        if (!File.Exists(chdmanPath)) return; // integration test — skipped when the bundled chdman is unavailable
 
         var binPath = Path.Combine(_tempDir, "game.bin");
         await File.WriteAllBytesAsync(binPath, CreateMode1Bin(100));
@@ -889,10 +840,7 @@ public class CueWorkDirectoryTests : IDisposable
     {
         // cue/iso/mp3: an ISO data track (MODE1/2048) plus MP3 audio tracks.
         var chdmanPath = Path.Combine(AppContext.BaseDirectory, "chdman.exe");
-        if (!File.Exists(chdmanPath))
-        {
-            return; // integration test — skipped when the bundled chdman is unavailable
-        }
+        if (!File.Exists(chdmanPath)) return; // integration test — skipped when the bundled chdman is unavailable
 
         var isoPath = Path.Combine(_tempDir, "game.iso");
         await File.WriteAllBytesAsync(isoPath, CreateMode1Bin(100, 2048));
@@ -950,10 +898,7 @@ public class CueWorkDirectoryTests : IDisposable
         const int frameCount = 100;
         var frames = new byte[frameSize * frameCount];
         var header = new byte[] { 0xFF, 0xFB, 0x90, 0x00 };
-        for (var i = 0; i < frameCount; i++)
-        {
-            Array.Copy(header, 0, frames, i * frameSize, header.Length);
-        }
+        for (var i = 0; i < frameCount; i++) Array.Copy(header, 0, frames, i * frameSize, header.Length);
 
         await File.WriteAllBytesAsync(path, frames);
     }
@@ -962,13 +907,27 @@ public class CueWorkDirectoryTests : IDisposable
     {
         var sector = new byte[sectorSize];
         sector[0] = 0x00;
-        for (var i = 1; i < 11; i++)
-        {
-            sector[i] = 0xFF;
-        }
+        for (var i = 1; i < 11; i++) sector[i] = 0xFF;
 
         sector[11] = 0x00;
         sector[12] = 0x01; // mode 1
         return Enumerable.Repeat(sector, sectorCount).SelectMany(static s => s).ToArray();
+    }
+
+    private sealed class FakeMp3Decoder : IMp3Decoder
+    {
+        public List<(string Mp3Path, string WavPath)> Calls { get; } = [];
+
+        public Task DecodeAsync(
+            string mp3Path,
+            string wavPath,
+            Action<string>? onLog,
+            CancellationToken token
+        )
+        {
+            Calls.Add((mp3Path, wavPath));
+            File.WriteAllText(wavPath, "wav-content");
+            return Task.CompletedTask;
+        }
     }
 }

@@ -6,15 +6,15 @@ using CCDSharp.Parsers;
 namespace CCDSharp.Writers;
 
 /// <summary>
-/// Converts a CloneCD disc image to CUE/BIN format.
-/// The .img file serves as the raw .bin data, and a .cue sheet is generated to describe it.
+///     Converts a CloneCD disc image to CUE/BIN format.
+///     The .img file serves as the raw .bin data, and a .cue sheet is generated to describe it.
 /// </summary>
 internal static class CueBinWriter
 {
     private const int MaxCopyRetries = 4;
 
     /// <summary>
-    /// Generates a CUE sheet string from a parsed DiscImage.
+    ///     Generates a CUE sheet string from a parsed DiscImage.
     /// </summary>
     /// <param name="disc">The parsed disc image.</param>
     /// <param name="binFileName">The BIN file name to reference in the CUE sheet (without path).</param>
@@ -78,13 +78,15 @@ internal static class CueBinWriter
     }
 
     /// <summary>
-    /// Converts a CloneCD image to CUE/BIN format by writing the .cue file.
-    /// The .img file is used directly as the .bin file (renamed or referenced).
+    ///     Converts a CloneCD image to CUE/BIN format by writing the .cue file.
+    ///     The .img file is used directly as the .bin file (renamed or referenced).
     /// </summary>
     /// <param name="disc">The parsed disc image.</param>
     /// <param name="outputCuePath">Path for the output .cue file.</param>
-    /// <param name="copyBinFile">If true, copies the .img file to a .bin file next to the .cue.
-    /// If false, the .cue references the .img file directly.</param>
+    /// <param name="copyBinFile">
+    ///     If true, copies the .img file to a .bin file next to the .cue.
+    ///     If false, the .cue references the .img file directly.
+    /// </param>
     /// <returns>The path to the .cue file created.</returns>
     public static string Write(DiscImage disc, string outputCuePath, bool copyBinFile = false)
     {
@@ -125,8 +127,8 @@ internal static class CueBinWriter
     }
 
     /// <summary>
-    /// Returns the path to <paramref name="imgFilePath"/> relative to <paramref name="cueDir"/>, or a
-    /// rooted path when no relative path exists (different volumes, or mismatched root forms).
+    ///     Returns the path to <paramref name="imgFilePath" /> relative to <paramref name="cueDir" />, or a
+    ///     rooted path when no relative path exists (different volumes, or mismatched root forms).
     /// </summary>
     private static string GetReferencePath(string cueDir, string imgFilePath)
     {
@@ -141,7 +143,7 @@ internal static class CueBinWriter
     }
 
     /// <summary>
-    /// Converts a CloneCD image to CUE/BIN format using streams.
+    ///     Converts a CloneCD image to CUE/BIN format using streams.
     /// </summary>
     /// <param name="disc">The parsed disc image.</param>
     /// <param name="cueWriter">Writer for the .cue sheet content.</param>
@@ -155,7 +157,6 @@ internal static class CueBinWriter
     private static void CopyWithRetry(string source, string dest)
     {
         for (var attempt = 0; attempt < MaxCopyRetries; attempt++)
-        {
             try
             {
                 File.Copy(source, dest, true);
@@ -165,6 +166,5 @@ internal static class CueBinWriter
             {
                 Thread.Sleep(300 * (attempt + 1));
             }
-        }
     }
 }

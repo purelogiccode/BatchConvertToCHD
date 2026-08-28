@@ -19,10 +19,7 @@ public class RetryingFileOperationsTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
+            if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true);
         }
         catch
         {
@@ -75,10 +72,7 @@ public class RetryingFileOperationsTests : IDisposable
         }
         finally
         {
-            if (File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-            }
+            if (File.Exists(path)) File.SetAttributes(path, FileAttributes.Normal);
         }
     }
 
@@ -125,10 +119,8 @@ public class RetryingFileOperationsTests : IDisposable
                 {
                     attempts++;
                     if (attempts == 2)
-                    {
                         // Release the lock so the next attempt succeeds.
                         lockStream.Dispose();
-                    }
                 },
                 static _ => 1
             );
@@ -235,10 +227,8 @@ public class RetryingFileOperationsTests : IDisposable
                 {
                     attempts++;
                     if (attempts == 2)
-                    {
                         // Release the lock so the next attempt succeeds.
                         lockStream.Dispose();
-                    }
                 },
                 static _ => 1
             );

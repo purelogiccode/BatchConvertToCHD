@@ -4,20 +4,20 @@ using Serilog.Events;
 namespace BatchConvertToCHD.Services;
 
 /// <summary>
-/// A Serilog log event sink that forwards warning-level and above log events to the
-/// <see cref="BugReportService"/> for bug report submission. Events below
-/// <see cref="LogEventLevel.Warning"/> are silently ignored. Messages matching
-/// known informational patterns are excluded via <see cref="BugReportService.IsExcludedFromBugReport"/>.
-/// Uses an interlocked flag to prevent concurrent API flood when many warnings fire rapidly.
-/// A 10-second send timeout prevents the throttle flag from being held indefinitely.
+///     A Serilog log event sink that forwards warning-level and above log events to the
+///     <see cref="BugReportService" /> for bug report submission. Events below
+///     <see cref="LogEventLevel.Warning" /> are silently ignored. Messages matching
+///     known informational patterns are excluded via <see cref="BugReportService.IsExcludedFromBugReport" />.
+///     Uses an interlocked flag to prevent concurrent API flood when many warnings fire rapidly.
+///     A 10-second send timeout prevents the throttle flag from being held indefinitely.
 /// </summary>
 internal class BugReportApiSink : ILogEventSink
 {
-    private readonly BugReportService _bugReportService;
     private static int _isSending;
+    private readonly BugReportService _bugReportService;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="BugReportApiSink"/> class.
+    ///     Initializes a new instance of the <see cref="BugReportApiSink" /> class.
     /// </summary>
     /// <param name="bugReportService">The bug report service to forward warning events to.</param>
     internal BugReportApiSink(BugReportService bugReportService)
@@ -26,9 +26,9 @@ internal class BugReportApiSink : ILogEventSink
     }
 
     /// <summary>
-    /// Emits the provided log event to the sink. Only events at or above
-    /// <see cref="LogEventLevel.Warning"/> are forwarded to the bug report API.
-    /// Messages matching informational exclusion patterns are dropped.
+    ///     Emits the provided log event to the sink. Only events at or above
+    ///     <see cref="LogEventLevel.Warning" /> are forwarded to the bug report API.
+    ///     Messages matching informational exclusion patterns are dropped.
     /// </summary>
     /// <param name="logEvent">The log event to emit.</param>
     public void Emit(LogEvent logEvent)

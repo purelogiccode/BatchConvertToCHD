@@ -4,12 +4,11 @@ using System.Text;
 namespace BatchConvertToCHD.Utilities;
 
 /// <summary>
-/// Identifies files by their leading bytes instead of trusting the extension.
-///
-/// Collections are full of files whose name does not match their content: raw CD dumps saved as
-/// .iso, disc images renamed .rar, byte-splits given archive extensions, and images called .isz
-/// that were never compressed. Reading the magic bytes settles what a file really is, which both
-/// routes it correctly and lets the log say something true when it cannot be converted.
+///     Identifies files by their leading bytes instead of trusting the extension.
+///     Collections are full of files whose name does not match their content: raw CD dumps saved as
+///     .iso, disc images renamed .rar, byte-splits given archive extensions, and images called .isz
+///     that were never compressed. Reading the magic bytes settles what a file really is, which both
+///     routes it correctly and lets the log say something true when it cannot be converted.
 /// </summary>
 internal static class DiscImageSignature
 {
@@ -30,11 +29,11 @@ internal static class DiscImageSignature
         0xFF,
         0xFF,
         0xFF,
-        0x00,
+        0x00
     ];
 
     /// <summary>
-    /// Reads <paramref name="path"/> and reports what it appears to be.
+    ///     Reads <paramref name="path" /> and reports what it appears to be.
     /// </summary>
     /// <param name="path">File to inspect.</param>
     internal static DiscImageKind Detect(string path)
@@ -52,7 +51,7 @@ internal static class DiscImageSignature
                 )
             )
             {
-                read = stream.ReadAtLeast(header, header.Length, throwOnEndOfStream: false);
+                read = stream.ReadAtLeast(header, header.Length, false);
             }
 
             return Classify(header.AsSpan(0, read));
@@ -64,8 +63,8 @@ internal static class DiscImageSignature
     }
 
     /// <summary>
-    /// Classifies an already-read header. Separated from <see cref="Detect"/> so it can be tested
-    /// without touching the filesystem.
+    ///     Classifies an already-read header. Separated from <see cref="Detect" /> so it can be tested
+    ///     without touching the filesystem.
     /// </summary>
     /// <param name="header">Leading bytes of the file.</param>
     internal static DiscImageKind Classify(ReadOnlySpan<byte> header)
@@ -74,25 +73,17 @@ internal static class DiscImageSignature
             header.Length >= CdSyncMark.Length
             && header[..CdSyncMark.Length].SequenceEqual(CdSyncMark)
         )
-        {
             return DiscImageKind.RawCd;
-        }
 
-        if (StartsWithAscii(header, "MEDIA DESCRIPTOR"))
-        {
-            return DiscImageKind.AlcoholDescriptor;
-        }
+        if (StartsWithAscii(header, "MEDIA DESCRIPTOR")) return DiscImageKind.AlcoholDescriptor;
 
-        if (StartsWithAscii(header, "Rar!"))
-        {
-            return DiscImageKind.Rar;
-        }
+        if (StartsWithAscii(header, "Rar!")) return DiscImageKind.Rar;
 
         switch (header.Length)
         {
             // Local file header, central directory, or a spanned/empty archive marker.
             case >= 4
-                when header[0] == 0x50 && header[1] == 0x4B && (header[2] is 0x03 or 0x05 or 0x07):
+                when header[0] == 0x50 && header[1] == 0x4B && header[2] is 0x03 or 0x05 or 0x07:
                 return DiscImageKind.Zip;
             case >= 6
                 when header[0] == 0x37
@@ -104,10 +95,7 @@ internal static class DiscImageSignature
                 return DiscImageKind.SevenZip;
         }
 
-        if (StartsWithAscii(header, "IsZ!"))
-        {
-            return DiscImageKind.Isz;
-        }
+        if (StartsWithAscii(header, "IsZ!")) return DiscImageKind.Isz;
 
         if (
             header.Length >= 4
@@ -116,14 +104,9 @@ internal static class DiscImageSignature
             && header[2] == 0x4D
             && header[3] == 0x00
         )
-        {
             return DiscImageKind.Ecm;
-        }
 
-        if (StartsWithAscii(header, "CISO") || StartsWithAscii(header, "ZISO"))
-        {
-            return DiscImageKind.Cso;
-        }
+        if (StartsWithAscii(header, "CISO") || StartsWithAscii(header, "ZISO")) return DiscImageKind.Cso;
 
         if (
             header.Length >= 4
@@ -132,14 +115,9 @@ internal static class DiscImageSignature
             && header[2] == 0x42
             && header[3] == 0x50
         )
-        {
             return DiscImageKind.Pbp;
-        }
 
-        if (StartsWithAscii(header, "MComprHD"))
-        {
-            return DiscImageKind.Chd;
-        }
+        if (StartsWithAscii(header, "MComprHD")) return DiscImageKind.Chd;
 
         return DiscImageKind.Unknown;
     }
@@ -152,7 +130,7 @@ internal static class DiscImageSignature
     }
 
     /// <summary>
-    /// A human-readable description used when a file's content contradicts its extension.
+    ///     A human-readable description used when a file's content contradicts its extension.
     /// </summary>
     /// <param name="kind">Detected kind.</param>
     internal static string Describe(DiscImageKind kind)
@@ -169,16 +147,13 @@ internal static class DiscImageSignature
             DiscImageKind.Cso => "a CISO/ZISO compressed image",
             DiscImageKind.Pbp => "a PlayStation EBOOT.PBP",
             DiscImageKind.Chd => "an existing CHD",
-            _ => "an unrecognised format",
+            _ => "an unrecognised format"
         };
     }
 
     private static bool StartsWithAscii(ReadOnlySpan<byte> header, string signature)
     {
-        if (header.Length < signature.Length)
-        {
-            return false;
-        }
+        if (header.Length < signature.Length) return false;
 
         return Encoding
             .ASCII.GetString(header[..signature.Length])

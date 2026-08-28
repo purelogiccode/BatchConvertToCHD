@@ -15,19 +15,19 @@ using SharpCompress.Common;
 namespace BatchConvertToCHD.Services;
 
 /// <summary>
-/// Handles decompression and extraction of compressed disc image and archive files.
-/// Supports CSO (via CSOSharp), ZIP (System.IO.Compression with 7za fallback),
-/// 7z and RAR (via SharpCompress with 7za fallback).
-/// Implements <see cref="IDisposable"/> for deterministic cleanup.
+///     Handles decompression and extraction of compressed disc image and archive files.
+///     Supports CSO (via CSOSharp), ZIP (System.IO.Compression with 7za fallback),
+///     7z and RAR (via SharpCompress with 7za fallback).
+///     Implements <see cref="IDisposable" /> for deterministic cleanup.
 /// </summary>
 internal class ArchiveService
 {
-    private readonly string _sevenZipExePath;
-    private readonly bool _isSevenZipAvailable;
     private static readonly ILogger Logger = Log.ForContext<ArchiveService>();
+    private readonly bool _isSevenZipAvailable;
+    private readonly string _sevenZipExePath;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ArchiveService"/> class.
+    ///     Initializes a new instance of the <see cref="ArchiveService" /> class.
     /// </summary>
     /// <param name="sevenZipExePath">The full path to the 7za executable.</param>
     /// <param name="isSevenZipAvailable">Whether the 7za executable was found on disk.</param>
@@ -38,7 +38,7 @@ internal class ArchiveService
     }
 
     /// <summary>
-    /// Decompresses a CSO/CISO file to a temporary ISO file using CSOSharp.
+    ///     Decompresses a CSO/CISO file to a temporary ISO file using CSOSharp.
     /// </summary>
     /// <param name="originalCsoPath">The full path to the source CSO file.</param>
     /// <param name="tempOutputIsoPath">The full path where the decompressed ISO should be written.</param>
@@ -46,8 +46,8 @@ internal class ArchiveService
     /// <param name="onLog">Callback for logging progress messages.</param>
     /// <param name="token">Cancellation token to abort the operation.</param>
     /// <returns>
-    /// A tuple containing success status, the output ISO file path, the temp directory root,
-    /// and an error message string (empty on success).
+    ///     A tuple containing success status, the output ISO file path, the temp directory root,
+    ///     and an error message string (empty on success).
     /// </returns>
     internal async Task<(
         bool Success,
@@ -120,16 +120,16 @@ internal class ArchiveService
     }
 
     /// <summary>
-    /// Extracts a compressed archive (ZIP, 7z, or RAR) to a temporary directory.
-    /// Uses System.IO.Compression for ZIP with 7za fallback, SharpCompress for 7z and RAR.
+    ///     Extracts a compressed archive (ZIP, 7z, or RAR) to a temporary directory.
+    ///     Uses System.IO.Compression for ZIP with 7za fallback, SharpCompress for 7z and RAR.
     /// </summary>
     /// <param name="originalArchivePath">The full path to the source archive file.</param>
     /// <param name="tempDirectoryRoot">The root directory where extracted files will be placed.</param>
     /// <param name="onLog">Callback for logging progress messages.</param>
     /// <param name="token">Cancellation token to abort the operation.</param>
     /// <returns>
-    /// A tuple containing success status, the list of extracted primary file paths,
-    /// the temp directory root, and an error message string (empty on success).
+    ///     A tuple containing success status, the list of extracted primary file paths,
+    ///     the temp directory root, and an error message string (empty on success).
     /// </returns>
     internal async Task<(
         bool Success,
@@ -204,7 +204,7 @@ internal class ArchiveService
                         var options = new EnumerationOptions
                         {
                             RecurseSubdirectories = true,
-                            IgnoreInaccessible = true,
+                            IgnoreInaccessible = true
                         };
                         return Directory
                             .GetFiles(tempDirectoryRoot, "*.*", options)
@@ -230,7 +230,7 @@ internal class ArchiveService
                         new EnumerationOptions
                         {
                             RecurseSubdirectories = true,
-                            IgnoreInaccessible = true,
+                            IgnoreInaccessible = true
                         }
                     )
                     .Where(static f =>
@@ -263,11 +263,9 @@ internal class ArchiveService
                             .OrderByDescending(f => new FileInfo(f).Length)
                             .First();
                         if (binFiles.Count > 1)
-                        {
                             onLog(
                                 $"WARNING: Archive contains {binFiles.Count} .bin files but no descriptor (.cue/.iso/.img) and no recognisable track numbering. Converting the largest one ({Path.GetFileName(largestBin)}) as a single data track; any other tracks will be missing."
                             );
-                        }
 
                         var cuePath = BinCueGenerator.GetAutoCuePath(largestBin);
                         await File.WriteAllTextAsync(
@@ -308,14 +306,12 @@ internal class ArchiveService
                     StringComparison.OrdinalIgnoreCase
                 )
             )
-            {
                 return (
                     false,
                     [],
                     tempDirectoryRoot,
                     "The archive file uses a compression method that is not supported by the built-in ZIP extractor (e.g., Deflate64, LZMA, PPMd). Try re-compressing the archive with standard Deflate compression, or extract it manually with 7-Zip or WinRAR and add the extracted files for conversion."
                 );
-            }
 
             return (
                 false,
@@ -502,7 +498,6 @@ internal class ArchiveService
     {
         const int maxRetries = 3;
         for (var attempt = 1; attempt <= maxRetries; attempt++)
-        {
             try
             {
                 using var archive = ZipFile.OpenRead(archivePath);
@@ -530,11 +525,10 @@ internal class ArchiveService
                 return;
             }
             catch (Exception ex)
-                when ((ex is IOException or UnauthorizedAccessException) && attempt < maxRetries)
+                when (ex is IOException or UnauthorizedAccessException && attempt < maxRetries)
             {
                 Thread.Sleep(attempt * 1000);
             }
-        }
     }
 
     private async Task ExtractSevenZipArchiveAsync(
@@ -595,27 +589,23 @@ internal class ArchiveService
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                ErrorDialog = false,
+                ErrorDialog = false
             };
             process.OutputDataReceived += (_, args) =>
             {
                 if (args.Data != null)
-                {
                     lock (outputLock)
                     {
                         outputBuilder.AppendLine(args.Data);
                     }
-                }
             };
             process.ErrorDataReceived += (_, args) =>
             {
                 if (args.Data != null)
-                {
                     lock (outputLock)
                     {
                         outputBuilder.AppendLine(args.Data);
                     }
-                }
             };
             process.Start();
             process.BeginOutputReadLine();
@@ -680,9 +670,9 @@ internal class ArchiveService
     }
 
     /// <summary>
-    /// Extracts archive entries using the specified archive opener function, with a fallback
-    /// strategy that copies the archive to a temp file before extraction if the direct
-    /// stream-based extraction fails.
+    ///     Extracts archive entries using the specified archive opener function, with a fallback
+    ///     strategy that copies the archive to a temp file before extraction if the direct
+    ///     stream-based extraction fails.
     /// </summary>
     /// <typeparam name="TArchive">The SharpCompress archive type.</typeparam>
     /// <param name="archivePath">Full path to the archive file.</param>
@@ -745,9 +735,7 @@ internal class ArchiveService
                     StringComparison.Ordinal
                 )
             )
-            {
                 throw;
-            }
 
             Logger.Error(ex, "Direct extraction failed");
         }
@@ -805,7 +793,6 @@ internal class ArchiveService
     {
         const int maxRetries = 3;
         for (var attempt = 1;; attempt++)
-        {
             try
             {
                 entry.WriteToFile(destinationPath);
@@ -815,7 +802,6 @@ internal class ArchiveService
             {
                 Thread.Sleep(attempt * 1000);
             }
-        }
     }
 
     private static void TryDeleteFile(string filePath)
@@ -836,7 +822,7 @@ internal class ArchiveService
     }
 
     /// <summary>
-    /// Detects the SharpCompress error thrown when a multi-part RAR is missing one of its volumes.
+    ///     Detects the SharpCompress error thrown when a multi-part RAR is missing one of its volumes.
     /// </summary>
     internal static bool IsMultiPartRarError(Exception ex)
     {
@@ -845,7 +831,7 @@ internal class ArchiveService
     }
 
     /// <summary>
-    /// Detects I/O errors caused by an unavailable network location (disconnected drive/share).
+    ///     Detects I/O errors caused by an unavailable network location (disconnected drive/share).
     /// </summary>
     internal static bool IsNetworkUnavailableError(Exception ex)
     {

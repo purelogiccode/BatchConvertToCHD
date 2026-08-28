@@ -24,7 +24,7 @@ public class TocEntryTests
             TrackNo = 1,
             Minutes = 0,
             Seconds = 2,
-            Frames = 0,
+            Frames = 0
         };
 
         Assert.Equal(TrackType.Data, entry.TrackType);
@@ -55,7 +55,7 @@ public class TocEntryTests
             TrackNo = 2,
             Minutes = 4,
             Seconds = 30,
-            Frames = 25,
+            Frames = 25
         };
 
         Assert.Equal(TrackType.Audio, entry.TrackType);

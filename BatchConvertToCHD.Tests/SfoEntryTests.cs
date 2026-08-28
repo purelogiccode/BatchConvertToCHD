@@ -24,7 +24,7 @@ public class SfoEntryTests
             Format = 0x0204,
             Length = 10,
             MaxLength = 32,
-            Value = "Test Game",
+            Value = "Test Game"
         };
 
         Assert.Equal("TITLE", entry.Key);
@@ -43,7 +43,7 @@ public class SfoEntryTests
             Format = 0x0404,
             Length = 4,
             MaxLength = 4,
-            Value = 1u,
+            Value = 1u
         };
 
         Assert.Equal(1u, entry.Value);

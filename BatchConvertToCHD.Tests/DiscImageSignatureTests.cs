@@ -16,10 +16,7 @@ public class DiscImageSignatureTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
+            if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true);
         }
         catch
         {
@@ -32,10 +29,7 @@ public class DiscImageSignatureTests : IDisposable
     private static byte[] CdSyncHeader()
     {
         var header = new byte[32];
-        for (var i = 1; i <= 10; i++)
-        {
-            header[i] = 0xFF;
-        }
+        for (var i = 1; i <= 10; i++) header[i] = 0xFF;
 
         header[15] = 2;
 
@@ -120,8 +114,6 @@ public class DiscImageSignatureTests : IDisposable
     public void EveryKindHasADescription()
     {
         foreach (var kind in Enum.GetValues<DiscImageKind>())
-        {
             Assert.False(string.IsNullOrWhiteSpace(DiscImageSignature.Describe(kind)));
-        }
     }
 }

@@ -7,11 +7,11 @@ namespace BatchConvertToCHD.Services;
 
 internal class StatsService
 {
-    private readonly string _apiUrl;
+    private static readonly ILogger Logger = Log.ForContext<StatsService>();
     private readonly string _apiKey;
+    private readonly string _apiUrl;
     private readonly string _applicationId;
     private readonly HttpClient _httpClient;
-    private static readonly ILogger Logger = Log.ForContext<StatsService>();
 
     internal StatsService(string apiUrl, string apiKey, string applicationId)
         : this(apiUrl, apiKey, applicationId, AppHttpClient.Client)
@@ -51,12 +51,10 @@ internal class StatsService
             }
 
             if (!response.IsSuccessStatusCode)
-            {
                 Logger.Information(
                     "Failed to record usage statistics: HTTP {StatusCode}",
                     statusCode
                 );
-            }
         }
         catch (Exception ex)
         {

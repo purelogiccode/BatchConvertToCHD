@@ -6,8 +6,8 @@ using PBPSharp.Models;
 namespace BatchConvertToCHD.Tests;
 
 /// <summary>
-/// Builds synthetic PBP files in memory for unit testing PBPSharp.
-/// Creates valid PBP structure: header + SFO + PSAR (with TOC, index, and compressed/uncompressed ISO blocks).
+///     Builds synthetic PBP files in memory for unit testing PBPSharp.
+///     Creates valid PBP structure: header + SFO + PSAR (with TOC, index, and compressed/uncompressed ISO blocks).
 /// </summary>
 internal sealed class PbpTestFileBuilder
 {
@@ -17,15 +17,15 @@ internal sealed class PbpTestFileBuilder
     private const uint PsarIndexOffset = 0x4000;
     private const uint PsarTocOffset = 0x800;
     private const uint PsarGameIdOffset = 0x400;
-
-    private string _title = "Test Game";
-    private string _discId = "SLUS00001";
-    private string _category = "ME";
     private int _blockCount = 2;
+    private string _category = "ME";
     private bool _compressBlocks = true;
+    private byte[]? _customIsoBlock1Data;
+    private string _discId = "SLUS00001";
     private bool _multiDisc;
     private List<int>? _multiDiscPositions;
-    private byte[]? _customIsoBlock1Data;
+
+    private string _title = "Test Game";
 
     public PbpTestFileBuilder WithTitle(string title)
     {
@@ -71,7 +71,7 @@ internal sealed class PbpTestFileBuilder
     }
 
     /// <summary>
-    /// Builds the PBP file and writes it to the specified path.
+    ///     Builds the PBP file and writes it to the specified path.
     /// </summary>
     public void BuildTo(string path)
     {
@@ -79,7 +79,7 @@ internal sealed class PbpTestFileBuilder
     }
 
     /// <summary>
-    /// Builds the PBP file and returns it as a byte array.
+    ///     Builds the PBP file and returns it as a byte array.
     /// </summary>
     public byte[] Build()
     {
@@ -89,7 +89,7 @@ internal sealed class PbpTestFileBuilder
     }
 
     /// <summary>
-    /// Builds the PBP file and writes it to the specified stream.
+    ///     Builds the PBP file and writes it to the specified stream.
     /// </summary>
     public void BuildTo(Stream stream)
     {
@@ -109,19 +109,15 @@ internal sealed class PbpTestFileBuilder
         PadTo(stream, dataPsarOffset);
 
         if (_multiDisc)
-        {
             WriteMultiDiscPsar(stream, dataPsarOffset);
-        }
         else
-        {
             WriteSingleDiscPsar(stream, dataPsarOffset);
-        }
     }
 
     private static void WritePbpHeader(Stream stream, int sfoOffset, int dataPsarOffset)
     {
         Span<byte> header = stackalloc byte[PbpHeader.HeaderSize];
-        BinaryPrimitives.WriteUInt32LittleEndian(header[0..4], PbpHeader.MagicValue);
+        BinaryPrimitives.WriteUInt32LittleEndian(header[..4], PbpHeader.MagicValue);
         BinaryPrimitives.WriteUInt32LittleEndian(header[4..8], 1u); // version
         BinaryPrimitives.WriteInt32LittleEndian(header[8..12], sfoOffset);
         BinaryPrimitives.WriteInt32LittleEndian(header[12..16], 0x100); // icon0
@@ -166,7 +162,7 @@ internal sealed class PbpTestFileBuilder
 
         // Magic DWORDs
         Span<byte> magic = stackalloc byte[16];
-        BinaryPrimitives.WriteUInt32LittleEndian(magic[0..4], 0x2CC9C5BCu);
+        BinaryPrimitives.WriteUInt32LittleEndian(magic[..4], 0x2CC9C5BCu);
         BinaryPrimitives.WriteUInt32LittleEndian(magic[4..8], 0x33B5A90Fu);
         BinaryPrimitives.WriteUInt32LittleEndian(magic[8..12], 0x06F6B4B3u);
         BinaryPrimitives.WriteUInt32LittleEndian(magic[12..16], 0xB25945BAu);
@@ -180,12 +176,10 @@ internal sealed class PbpTestFileBuilder
         var positions = _multiDiscPositions ?? [0x200000];
         Span<byte> posBytes = stackalloc byte[20];
         for (var i = 0; i < 5; i++)
-        {
             BinaryPrimitives.WriteUInt32LittleEndian(
                 posBytes[(i * 4)..],
                 i < positions.Count ? (uint)positions[i] : 0u
             );
-        }
 
         stream.Write(posBytes);
 
@@ -279,7 +273,7 @@ internal sealed class PbpTestFileBuilder
 
             // Write index entry (32 bytes)
             entry.Clear();
-            BinaryPrimitives.WriteUInt32LittleEndian(entry[0..4], currentOffset);
+            BinaryPrimitives.WriteUInt32LittleEndian(entry[..4], currentOffset);
             BinaryPrimitives.WriteInt32LittleEndian(
                 entry[4..8],
                 _compressBlocks ? compressedLength : BlockSize
@@ -350,7 +344,7 @@ internal sealed class PbpTestFileBuilder
     private static byte[] CompressBlock(byte[] data)
     {
         using var ms = new MemoryStream();
-        using (var deflate = new DeflateStream(ms, CompressionLevel.Fastest, leaveOpen: true))
+        using (var deflate = new DeflateStream(ms, CompressionLevel.Fastest, true))
         {
             deflate.Write(data, 0, data.Length);
         }
@@ -368,7 +362,7 @@ internal sealed class PbpTestFileBuilder
             ("CATEGORY", 0x0204, Encoding.UTF8.GetBytes(category)),
             ("DISC_ID", 0x0204, Encoding.UTF8.GetBytes(discId)),
             ("BOOTABLE", 0x0404, BitConverter.GetBytes(1u)),
-            ("REGION", 0x0404, BitConverter.GetBytes(0xFFFFFFFFu)),
+            ("REGION", 0x0404, BitConverter.GetBytes(0xFFFFFFFFu))
         };
 
         // SFO header placeholder (20 bytes)

@@ -7,13 +7,13 @@ public sealed partial class BattleEngine
     private async Task DecodePhaseAsync(FileReport report, string work)
     {
         Log("  [decode] extractraw battle");
-        string mDir = Path.Combine(work, "m_raw");
-        string sDir = Path.Combine(work, "s_raw");
+        var mDir = Path.Combine(work, "m_raw");
+        var sDir = Path.Combine(work, "s_raw");
         Directory.CreateDirectory(mDir);
         Directory.CreateDirectory(sDir);
 
-        string mRaw = Path.Combine(mDir, "raw.bin");
-        string sRaw = Path.Combine(sDir, "raw.bin");
+        var mRaw = Path.Combine(mDir, "raw.bin");
+        var sRaw = Path.Combine(sDir, "raw.bin");
 
         var rm = await RunTool("chdman", "extractraw",
             $"extractraw -i \"{report.SourcePath}\" -o \"{mRaw}\" -f", report).ConfigureAwait(false);
@@ -31,11 +31,11 @@ public sealed partial class BattleEngine
         AddOutcome(report, new StepOutcome("extractraw", "chdsharp", rs.ExitCode == 0, rs.Seconds,
             FileLen(sRaw), sHash, rs.ExitCode, Mibs(rs.Seconds, report.LogicalBytes), null, FailMsg(rs)));
 
-        bool parity = mHash is not null && sHash is not null &&
-                      string.Equals(mHash, sHash, StringComparison.OrdinalIgnoreCase);
-        string? parityErr = parity
+        var parity = mHash is not null && sHash is not null &&
+                     string.Equals(mHash, sHash, StringComparison.OrdinalIgnoreCase);
+        var parityErr = parity
             ? null
-            : (rm.ExitCode == 0 && rs.ExitCode == 0 && FileLen(mRaw) != FileLen(sRaw))
+            : rm.ExitCode == 0 && rs.ExitCode == 0 && FileLen(mRaw) != FileLen(sRaw)
                 ? $"output format differs (chdman={FileLen(mRaw)} B vs chdsharp={FileLen(sRaw)} B)"
                 : "decoded outputs differ";
         AddOutcome(report, new StepOutcome("extractraw-parity", "cross", parity, 0,
@@ -47,7 +47,7 @@ public sealed partial class BattleEngine
 
         if (_cfg.LibDecode && report.Kind != MediaKind.LaserDisc)
         {
-            string lRaw = Path.Combine(work, "lib_raw.bin");
+            var lRaw = Path.Combine(work, "lib_raw.bin");
             var sw = Stopwatch.StartNew();
             try
             {
@@ -85,7 +85,7 @@ public sealed partial class BattleEngine
             return;
         }
 
-        (string cmd, string outName) = report.Kind switch
+        var (cmd, outName) = report.Kind switch
         {
             MediaKind.Cd => ("extractcd", "disc.cue"),
             MediaKind.GdRom => ("extractcd", "disc.gdi"),
@@ -102,13 +102,13 @@ public sealed partial class BattleEngine
         }
 
         Log($"  [decode] {cmd} battle");
-        string mDir = Path.Combine(work, "m_struct");
-        string sDir = Path.Combine(work, "s_struct");
+        var mDir = Path.Combine(work, "m_struct");
+        var sDir = Path.Combine(work, "s_struct");
         Directory.CreateDirectory(mDir);
         Directory.CreateDirectory(sDir);
 
-        string mOut = Path.Combine(mDir, outName);
-        string sOut = Path.Combine(sDir, outName);
+        var mOut = Path.Combine(mDir, outName);
+        var sOut = Path.Combine(sDir, outName);
 
         var rm = await RunTool("chdman", cmd,
             $"{cmd} -i \"{report.SourcePath}\" -o \"{mOut}\" -f", report).ConfigureAwait(false);
@@ -122,16 +122,16 @@ public sealed partial class BattleEngine
         if (rs.ExitCode == 0)
             (sHash, sBytes) = await Hashing.Sha256DirectoryAsync(sDir, _ct).ConfigureAwait(false);
 
-        ulong denom = (ulong)Math.Max(mBytes, sBytes);
+        var denom = (ulong)Math.Max(mBytes, sBytes);
         AddOutcome(report, new StepOutcome(cmd, "chdman", rm.ExitCode == 0, rm.Seconds, mBytes, mHash, rm.ExitCode,
             Mibs(rm.Seconds, denom), null, FailMsg(rm)));
         AddOutcome(report, new StepOutcome(cmd, "chdsharp", rs.ExitCode == 0, rs.Seconds, sBytes, sHash, rs.ExitCode,
             Mibs(rs.Seconds, denom), null, FailMsg(rs)));
 
-        bool parity = mHash is not null && sHash is not null &&
-                      string.Equals(mHash, sHash, StringComparison.OrdinalIgnoreCase);
-        bool formatDiff = !parity && rm.ExitCode == 0 && rs.ExitCode == 0 && mBytes != sBytes;
-        string? parityErr = parity
+        var parity = mHash is not null && sHash is not null &&
+                     string.Equals(mHash, sHash, StringComparison.OrdinalIgnoreCase);
+        var formatDiff = !parity && rm.ExitCode == 0 && rs.ExitCode == 0 && mBytes != sBytes;
+        var parityErr = parity
             ? null
             : formatDiff
                 ? $"output convention differs (chdman={mBytes} B vs chdsharp={sBytes} B total)"
@@ -147,7 +147,6 @@ public sealed partial class BattleEngine
         if (!_cfg.KeepTemp)
         {
             if (rm.ExitCode == 0)
-            {
                 try
                 {
                     Directory.Delete(sDir, true);
@@ -156,9 +155,7 @@ public sealed partial class BattleEngine
                 {
                     // ignored
                 }
-            }
             else
-            {
                 try
                 {
                     Directory.Delete(mDir, true);
@@ -167,7 +164,6 @@ public sealed partial class BattleEngine
                 {
                     // ignored
                 }
-            }
         }
     }
 }

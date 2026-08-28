@@ -6,7 +6,7 @@ using System.Windows.Navigation;
 namespace BatchConvertToCHD;
 
 /// <summary>
-/// About window displaying application version and information.
+///     About window displaying application version and information.
 /// </summary>
 internal partial class AboutWindow
 {
@@ -36,12 +36,10 @@ internal partial class AboutWindow
         {
             // Notify developer
             if (App.SharedBugReportService != null)
-            {
                 _ = App.SharedBugReportService.SendBugReportAsync(
                     $"Error opening URL: {e.Uri.AbsoluteUri}",
                     ex
                 );
-            }
 
             // Notify user
             MessageBox.Show(

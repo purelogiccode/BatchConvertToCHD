@@ -16,13 +16,9 @@ public class AppConfigTests
     public void ChdmanExeNameMatchesArchitecture()
     {
         if (AppConfig.IsArm64)
-        {
             Assert.Equal("chdman_arm64.exe", AppConfig.ChdmanExeName);
-        }
         else
-        {
             Assert.Equal("chdman.exe", AppConfig.ChdmanExeName);
-        }
     }
 
     [Fact]

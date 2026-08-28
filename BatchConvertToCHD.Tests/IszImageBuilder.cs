@@ -1,16 +1,16 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 using SharpCompress.Compressors.BZip2;
+using CompressionMode = SharpCompress.Compressors.CompressionMode;
 
 namespace BatchConvertToCHD.Tests;
 
 /// <summary>
-/// Builds synthetic ISZ files for the decoder tests.
-///
-/// The layout here is written straight from EZB Systems' ISZ File Format Specification 1.00 rather
-/// than from the production reader, with every offset spelled out, so the two agreeing means the
-/// reader matches the spec and not merely itself. There is no sample from UltraISO to test against,
-/// which is what this stands in for.
+///     Builds synthetic ISZ files for the decoder tests.
+///     The layout here is written straight from EZB Systems' ISZ File Format Specification 1.00 rather
+///     than from the production reader, with every offset spelled out, so the two agreeing means the
+///     reader matches the spec and not merely itself. There is no sample from UltraISO to test against,
+///     which is what this stands in for.
 /// </summary>
 internal static class IszImageBuilder
 {
@@ -26,8 +26,8 @@ internal static class IszImageBuilder
     internal const uint DefaultVolumeSerial = 0x11223344;
 
     /// <summary>
-    /// Writes a whole-file ISZ. Returns the image bytes it describes so a caller can compare them
-    /// with what the decoder produces.
+    ///     Writes a whole-file ISZ. Returns the image bytes it describes so a caller can compare them
+    ///     with what the decoder produces.
     /// </summary>
     /// <param name="path">File to write.</param>
     /// <param name="image">The image being stored.</param>
@@ -55,18 +55,18 @@ internal static class IszImageBuilder
         var dataOffset = HeaderLength + chunkTable.Length;
 
         var header = BuildHeader(
-            sectorSize: sectorSize,
-            totalSectors: declaredSectors ?? (uint)(image.Length / sectorSize),
-            passwordMode: passwordMode,
-            segmentSize: 0,
-            chunkCount: (uint)chunks.Count,
-            chunkSize: (uint)chunkSize,
-            pointerLength: pointerLength,
-            segmentNumber: 1,
-            chunkTableOffset: HeaderLength,
-            segmentTableOffset: 0,
-            dataOffset: (uint)dataOffset,
-            volumeSerial: DefaultVolumeSerial
+            sectorSize,
+            declaredSectors ?? (uint)(image.Length / sectorSize),
+            passwordMode,
+            0,
+            (uint)chunks.Count,
+            (uint)chunkSize,
+            pointerLength,
+            1,
+            HeaderLength,
+            0,
+            (uint)dataOffset,
+            DefaultVolumeSerial
         );
 
         using var file = new FileStream(path, FileMode.Create, FileAccess.Write);
@@ -76,8 +76,8 @@ internal static class IszImageBuilder
     }
 
     /// <summary>
-    /// Writes a two-segment ISZ, cutting the chunk data at <paramref name="splitAfterBytes"/> so a
-    /// chunk straddles the boundary when that offset falls inside one.
+    ///     Writes a two-segment ISZ, cutting the chunk data at <paramref name="splitAfterBytes" /> so a
+    ///     chunk straddles the boundary when that offset falls inside one.
     /// </summary>
     /// <param name="firstPath">Path of the .isz first segment; the second becomes ".i01".</param>
     /// <param name="image">The image being stored.</param>
@@ -116,17 +116,11 @@ internal static class IszImageBuilder
         var cursor = 0;
         foreach (var chunk in chunks)
         {
-            if (cursor >= splitAfterBytes)
-            {
-                break;
-            }
+            if (cursor >= splitAfterBytes) break;
 
             chunksStartingInFirst++;
             var end = cursor + chunk.Stored.Length;
-            if (end > splitAfterBytes)
-            {
-                leftSize = end - splitAfterBytes;
-            }
+            if (end > splitAfterBytes) leftSize = end - splitAfterBytes;
 
             cursor = end;
         }
@@ -154,18 +148,18 @@ internal static class IszImageBuilder
         // Third entry stays zeroed: the spec terminates the table with a zero-size entry.
 
         var firstHeader = BuildHeader(
-            sectorSize: sectorSize,
-            totalSectors: (uint)(image.Length / sectorSize),
-            passwordMode: 0,
-            segmentSize: firstLength,
-            chunkCount: (uint)chunks.Count,
-            chunkSize: (uint)chunkSize,
-            pointerLength: pointerLength,
-            segmentNumber: 1,
-            chunkTableOffset: chunkTableOffset,
-            segmentTableOffset: HeaderLength,
-            dataOffset: (uint)dataOffset,
-            volumeSerial: DefaultVolumeSerial
+            sectorSize,
+            (uint)(image.Length / sectorSize),
+            0,
+            firstLength,
+            (uint)chunks.Count,
+            (uint)chunkSize,
+            pointerLength,
+            1,
+            chunkTableOffset,
+            HeaderLength,
+            (uint)dataOffset,
+            DefaultVolumeSerial
         );
 
         using (var file = new FileStream(firstPath, FileMode.Create, FileAccess.Write))
@@ -176,24 +170,21 @@ internal static class IszImageBuilder
             file.Write(firstData);
         }
 
-        if (!writeSecondSegment)
-        {
-            return;
-        }
+        if (!writeSecondSegment) return;
 
         var secondHeader = BuildHeader(
-            sectorSize: sectorSize,
-            totalSectors: (uint)(image.Length / sectorSize),
-            passwordMode: 0,
-            segmentSize: secondLength,
-            chunkCount: (uint)chunks.Count,
-            chunkSize: (uint)chunkSize,
-            pointerLength: pointerLength,
-            segmentNumber: 2,
-            chunkTableOffset: 0,
-            segmentTableOffset: 0,
-            dataOffset: HeaderLength,
-            volumeSerial: secondSegmentVolumeSerial ?? DefaultVolumeSerial
+            sectorSize,
+            (uint)(image.Length / sectorSize),
+            0,
+            secondLength,
+            (uint)chunks.Count,
+            (uint)chunkSize,
+            pointerLength,
+            2,
+            0,
+            0,
+            HeaderLength,
+            secondSegmentVolumeSerial ?? DefaultVolumeSerial
         );
 
         using var second = new FileStream(
@@ -213,8 +204,8 @@ internal static class IszImageBuilder
     }
 
     /// <summary>
-    /// Builds a 48-byte header with a distinct value in every field, for checking that each one is
-    /// read at the offset the spec gives it.
+    ///     Builds a 48-byte header with a distinct value in every field, for checking that each one is
+    ///     read at the offset the spec gives it.
     /// </summary>
     internal static byte[] BuildHeader(
         int sectorSize,
@@ -276,7 +267,7 @@ internal static class IszImageBuilder
                     var deflate = new ZLibStream(
                         output,
                         CompressionLevel.SmallestSize,
-                        leaveOpen: true
+                        true
                     )
                 )
                 {
@@ -291,9 +282,9 @@ internal static class IszImageBuilder
                 using (
                     var bzip2 = BZip2Stream.Create(
                         output,
-                        SharpCompress.Compressors.CompressionMode.Compress,
-                        decompressConcatenated: false,
-                        leaveOpen: true
+                        CompressionMode.Compress,
+                        false,
+                        true
                     )
                 )
                 {
@@ -332,11 +323,9 @@ internal static class IszImageBuilder
             }
 
             if (stored.Length > maxStored)
-            {
                 throw new InvalidOperationException(
                     $"chunk {chunks.Count} stores {stored.Length} bytes, more than a {pointerLength}-byte pointer can express"
                 );
-            }
 
             chunks.Add(new Chunk(flag, stored));
         }
@@ -357,10 +346,7 @@ internal static class IszImageBuilder
             var entry =
                 (uint)chunk.Stored.Length | ((ulong)(chunk.Flag >> 6) << (8 * pointerLength - 2));
 
-            for (var b = 0; b < pointerLength; b++)
-            {
-                table[index * pointerLength + b] = (byte)(entry >> (8 * b));
-            }
+            for (var b = 0; b < pointerLength; b++) table[index * pointerLength + b] = (byte)(entry >> (8 * b));
         }
 
         return table;
@@ -385,10 +371,7 @@ internal static class IszImageBuilder
     private static byte[] Concat(List<Chunk> chunks)
     {
         using var buffer = new MemoryStream();
-        foreach (var chunk in chunks)
-        {
-            buffer.Write(chunk.Stored);
-        }
+        foreach (var chunk in chunks) buffer.Write(chunk.Stored);
 
         return buffer.ToArray();
     }

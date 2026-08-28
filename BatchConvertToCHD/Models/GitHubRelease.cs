@@ -3,8 +3,8 @@
 namespace BatchConvertToCHD.Models;
 
 /// <summary>
-/// Represents the structure of a GitHub release JSON response.
-/// Properties are public for System.Text.Json deserialization.
+///     Represents the structure of a GitHub release JSON response.
+///     Properties are public for System.Text.Json deserialization.
 /// </summary>
 internal sealed class GitHubRelease
 {

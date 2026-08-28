@@ -3,9 +3,9 @@ using System.IO;
 namespace BatchConvertToCHD.Utilities;
 
 /// <summary>
-/// File operations that retry with backoff, used when files may be temporarily locked by
-/// another process (e.g. antivirus scanning a freshly written CHD before the original file
-/// is deleted).
+///     File operations that retry with backoff, used when files may be temporarily locked by
+///     another process (e.g. antivirus scanning a freshly written CHD before the original file
+///     is deleted).
 /// </summary>
 internal static class RetryingFileOperations
 {
@@ -21,15 +21,15 @@ internal static class RetryingFileOperations
             2 => 2000,
             3 => 4000,
             4 => 6000,
-            _ => 8000,
+            _ => 8000
         };
     }
 
     /// <summary>
-    /// Attempts to delete <paramref name="path"/>, retrying with backoff while the file is
-    /// locked. Returns true when deleted or already gone, false after all attempts failed.
-    /// Read-only files have the ReadOnly attribute cleared once so the deletion can proceed;
-    /// other permanent failures (e.g. access denied) fail fast instead of retrying pointlessly.
+    ///     Attempts to delete <paramref name="path" />, retrying with backoff while the file is
+    ///     locked. Returns true when deleted or already gone, false after all attempts failed.
+    ///     Read-only files have the ReadOnly attribute cleared once so the deletion can proceed;
+    ///     other permanent failures (e.g. access denied) fail fast instead of retrying pointlessly.
     /// </summary>
     /// <param name="path">Path of the file to delete.</param>
     /// <param name="token">Cancellation token; cancelling aborts the retry loop.</param>
@@ -62,10 +62,7 @@ internal static class RetryingFileOperations
             }
             catch (IOException)
             {
-                if (attempt >= MaxDeleteAttempts - 1)
-                {
-                    return false;
-                }
+                if (attempt >= MaxDeleteAttempts - 1) return false;
 
                 onRetry?.Invoke(attempt);
                 await DelayAsync(backoffMsProvider, attempt, token).ConfigureAwait(false);
@@ -74,10 +71,7 @@ internal static class RetryingFileOperations
             {
                 // Typically the ReadOnly attribute (or an ACL). Clear the attribute once and
                 // retry; if it still fails, the file is ACL-protected and retrying won't help.
-                if (clearedReadOnly)
-                {
-                    return false;
-                }
+                if (clearedReadOnly) return false;
 
                 clearedReadOnly = true;
                 TryClearReadOnly(path);
@@ -90,10 +84,10 @@ internal static class RetryingFileOperations
     }
 
     /// <summary>
-    /// Attempts to move <paramref name="sourcePath"/> to <paramref name="destinationPath"/>,
-    /// retrying with backoff while the source is temporarily locked (e.g. antivirus scanning a
-    /// freshly written CHD, or another process still holding the file open). Returns true when
-    /// the move succeeded or the source is already gone, false after all attempts failed.
+    ///     Attempts to move <paramref name="sourcePath" /> to <paramref name="destinationPath" />,
+    ///     retrying with backoff while the source is temporarily locked (e.g. antivirus scanning a
+    ///     freshly written CHD, or another process still holding the file open). Returns true when
+    ///     the move succeeded or the source is already gone, false after all attempts failed.
     /// </summary>
     /// <param name="sourcePath">Path of the file to move.</param>
     /// <param name="destinationPath">Destination path for the move.</param>
@@ -128,10 +122,7 @@ internal static class RetryingFileOperations
                 // Includes DirectoryNotFoundException (missing destination directory, e.g.
                 // disconnected network path): retry in case it resolves, then report failure.
                 // Never treat a failed move as success — the source file still exists.
-                if (attempt >= MaxDeleteAttempts - 1)
-                {
-                    return false;
-                }
+                if (attempt >= MaxDeleteAttempts - 1) return false;
 
                 onRetry?.Invoke(attempt);
                 await DelayAsync(backoffMsProvider, attempt, token).ConfigureAwait(false);
@@ -153,20 +144,14 @@ internal static class RetryingFileOperations
     )
     {
         var delayMs = (backoffMsProvider ?? GetDeleteBackoffMs)(attempt);
-        if (delayMs > 0)
-        {
-            await Task.Delay(delayMs, token).ConfigureAwait(false);
-        }
+        if (delayMs > 0) await Task.Delay(delayMs, token).ConfigureAwait(false);
     }
 
     private static void TryClearReadOnly(string path)
     {
         try
         {
-            if (File.Exists(path))
-            {
-                File.SetAttributes(path, FileAttributes.Normal);
-            }
+            if (File.Exists(path)) File.SetAttributes(path, FileAttributes.Normal);
         }
         catch (Exception)
         {

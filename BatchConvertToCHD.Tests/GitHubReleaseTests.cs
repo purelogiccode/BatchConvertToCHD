@@ -7,7 +7,7 @@ public class GitHubReleaseTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true,
+        PropertyNameCaseInsensitive = true
     };
 
     [Fact]
@@ -32,7 +32,7 @@ public class GitHubReleaseTests
             Name = "Release 1.0.0",
             Body = "Release notes",
             Prerelease = true,
-            Draft = false,
+            Draft = false
         };
         Assert.Equal("v1.0.0", release.TagName);
         Assert.Equal("https://github.com/repo/releases/v1.0.0", release.HtmlUrl);

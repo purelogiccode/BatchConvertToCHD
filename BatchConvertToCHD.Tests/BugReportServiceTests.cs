@@ -152,10 +152,7 @@ public class BugReportServiceTests
 
         var inner = new InvalidOperationException("deepest");
         var current = inner;
-        for (var i = 0; i < 10; i++)
-        {
-            current = new InvalidOperationException($"level {i}", current);
-        }
+        for (var i = 0; i < 10; i++) current = new InvalidOperationException($"level {i}", current);
 
         var result = method.Invoke(null, [current]) as string;
         Assert.NotNull(result);
@@ -283,7 +280,7 @@ public class BugReportServiceTests
             capturedMethod = req.Method;
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\",\"id\":1}"),
+                Content = new StringContent("{\"message\":\"ok\",\"id\":1}")
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -303,7 +300,7 @@ public class BugReportServiceTests
             capturedKey = req.Headers.GetValues("X-API-KEY").FirstOrDefault();
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\",\"id\":1}"),
+                Content = new StringContent("{\"message\":\"ok\",\"id\":1}")
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -323,7 +320,7 @@ public class BugReportServiceTests
             capturedBody = await req.Content!.ReadAsStringAsync().ConfigureAwait(false);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\",\"id\":1}"),
+                Content = new StringContent("{\"message\":\"ok\",\"id\":1}")
             };
         });
         using var httpClient = new HttpClient(handler);

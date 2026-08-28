@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using CHDSharp;
+using CHDSharp.Models;
 
 namespace CHDBattleTest;
 
 public static class ToolRunner
 {
-    public sealed record RunResult(int ExitCode, double Seconds, bool TimedOut, string OutputTail);
-
     public static async Task<RunResult> RunAsync(string exePath, string args, TimeSpan timeout, CancellationToken ct)
     {
         var psi = new ProcessStartInfo
@@ -43,7 +43,7 @@ public static class ToolRunner
 
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeoutCts.CancelAfter(timeout);
-        bool timedOut = false;
+        var timedOut = false;
         try
         {
             await proc.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
@@ -53,7 +53,7 @@ public static class ToolRunner
             timedOut = true;
             try
             {
-                proc.Kill(entireProcessTree: true);
+                proc.Kill(true);
             }
             catch
             {
@@ -65,7 +65,7 @@ public static class ToolRunner
 
         sw.Stop();
 
-        string tail = sb.Length > 8000 ? "..." + sb.ToString(sb.Length - 8000, 8000) : sb.ToString();
+        var tail = sb.Length > 8000 ? "..." + sb.ToString(sb.Length - 8000, 8000) : sb.ToString();
         return new RunResult(timedOut ? -9 : proc.ExitCode, sw.Elapsed.TotalSeconds, timedOut, tail.Replace('\0', ' '));
     }
 
@@ -74,6 +74,8 @@ public static class ToolRunner
         if (sb.Length > 200_000) return;
         sb.AppendLine(line);
     }
+
+    public sealed record RunResult(int ExitCode, double Seconds, bool TimedOut, string OutputTail);
 }
 
 public static class Hashing
@@ -83,7 +85,7 @@ public static class Hashing
         await using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
             1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
         using var sha = SHA256.Create();
-        byte[] hash = await sha.ComputeHashAsync(fs, ct).ConfigureAwait(false);
+        var hash = await sha.ComputeHashAsync(fs, ct).ConfigureAwait(false);
         return (Convert.ToHexString(hash), fs.Length);
     }
 
@@ -97,12 +99,12 @@ public static class Hashing
         foreach (var f in files)
         {
             ct.ThrowIfCancellationRequested();
-            string rel = Path.GetRelativePath(dir, f).Replace('\\', '/');
-            byte[] nameBytes = Encoding.UTF8.GetBytes(rel.ToLowerInvariant() + ":" + new FileInfo(f).Length + ":");
+            var rel = Path.GetRelativePath(dir, f).Replace('\\', '/');
+            var nameBytes = Encoding.UTF8.GetBytes(rel.ToLowerInvariant() + ":" + new FileInfo(f).Length + ":");
             sha.TransformBlock(nameBytes, 0, nameBytes.Length, null, 0);
             await using var fs = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.Read,
                 1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
-            byte[] buf = new byte[1024 * 1024];
+            var buf = new byte[1024 * 1024];
             int read;
             while ((read = await fs.ReadAsync(buf, ct).ConfigureAwait(false)) > 0)
             {
@@ -118,23 +120,23 @@ public static class Hashing
     public static async Task LibDecodeAsync(string chdPath, string outPath, Action<double> progress,
         CancellationToken ct)
     {
-        var err = CHDSharp.ChdFile.Open(chdPath, out var chd);
-        if (err != CHDSharp.Models.ChdError.Chderrnone)
+        var err = ChdFile.Open(chdPath, out var chd);
+        if (err != ChdError.Chderrnone)
             throw new InvalidOperationException($"ChdFile.Open failed: {err}");
         try
         {
             if (chd != null)
             {
-                uint hunkBytes = chd.HunkBytes;
+                var hunkBytes = chd.HunkBytes;
                 ulong hunkCount = chd.HunkCount;
-                byte[] buf = new byte[hunkBytes];
+                var buf = new byte[hunkBytes];
                 await using var fs = new FileStream(outPath, FileMode.Create, FileAccess.Write, FileShare.None,
                     1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
                 for (ulong i = 0; i < hunkCount; i++)
                 {
                     ct.ThrowIfCancellationRequested();
                     var e2 = chd.ReadHunk((uint)i, buf);
-                    if (e2 != CHDSharp.Models.ChdError.Chderrnone)
+                    if (e2 != ChdError.Chderrnone)
                         throw new InvalidOperationException($"ReadHunk({i}) failed: {e2}");
                     await fs.WriteAsync(buf.AsMemory(0, (int)Math.Min(hunkBytes, (ulong)buf.Length)), ct)
                         .ConfigureAwait(false);

@@ -3,7 +3,7 @@ using System.Text;
 namespace BatchConvertToCHD.Utilities;
 
 /// <summary>
-/// The result of normalizing a CUE sheet.
+///     The result of normalizing a CUE sheet.
 /// </summary>
 /// <param name="SourceEncoding">Encoding the cue was decoded with.</param>
 /// <param name="HasBom">True when the cue file started with an explicit BOM that was stripped during decoding.</param>
@@ -11,7 +11,10 @@ namespace BatchConvertToCHD.Utilities;
 /// <param name="UnresolvedNames">Referenced names for which no matching file was found.</param>
 /// <param name="CanonicalLines">The rewritten cue content (quoted FILE lines with resolved names).</param>
 /// <param name="NeedsRewrite">True when the canonical content differs from the original file content.</param>
-/// <param name="ReferencesChanged">True when any referenced file name was corrected (zero-padding) or renamed by the transform.</param>
+/// <param name="ReferencesChanged">
+///     True when any referenced file name was corrected (zero-padding) or renamed by the
+///     transform.
+/// </param>
 internal sealed record CueNormalizationResult(
     Encoding SourceEncoding,
     bool HasBom,

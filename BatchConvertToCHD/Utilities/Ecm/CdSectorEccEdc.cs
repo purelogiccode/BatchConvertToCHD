@@ -3,16 +3,14 @@ using System.Buffers.Binary;
 namespace BatchConvertToCHD.Utilities.Ecm;
 
 /// <summary>
-/// Regenerates the error detection and correction fields of a raw 2352-byte CD sector.
-///
-/// This is what ECM strips out: the EDC checksum and the Reed-Solomon P/Q parity are wholly
-/// derivable from the sector's user data, so an encoder discards them and a decoder computes them
-/// again. Getting the parity subtly wrong is the dangerous failure here, because the game data
-/// still reads correctly while the image's hash never matches a known-good dump - so this is
-/// verified byte for byte against Neill Corlett's original tool rather than by inspection.
-///
-/// The layout of a raw sector: 12 bytes of sync, a 4-byte address and mode header, then the mode's
-/// own arrangement of user data, EDC and parity inside the remaining 2336 bytes.
+///     Regenerates the error detection and correction fields of a raw 2352-byte CD sector.
+///     This is what ECM strips out: the EDC checksum and the Reed-Solomon P/Q parity are wholly
+///     derivable from the sector's user data, so an encoder discards them and a decoder computes them
+///     again. Getting the parity subtly wrong is the dangerous failure here, because the game data
+///     still reads correctly while the image's hash never matches a known-good dump - so this is
+///     verified byte for byte against Neill Corlett's original tool rather than by inspection.
+///     The layout of a raw sector: 12 bytes of sync, a 4-byte address and mode header, then the mode's
+///     own arrangement of user data, EDC and parity inside the remaining 2336 bytes.
 /// </summary>
 internal static class CdSectorEccEdc
 {
@@ -37,7 +35,7 @@ internal static class CdSectorEccEdc
     /// <summary>GF(2^8) multiply-by-two table, with the CD-ROM field polynomial 0x11D.</summary>
     private static readonly byte[] EccForwardLut = new byte[256];
 
-    /// <summary>Inverse of <see cref="EccForwardLut"/>, used to finish a parity byte.</summary>
+    /// <summary>Inverse of <see cref="EccForwardLut" />, used to finish a parity byte.</summary>
     private static readonly byte[] EccBackwardLut = new byte[256];
 
     /// <summary>Byte-wise table for the EDC CRC-32 variant, polynomial 0xD8018001, reflected.</summary>
@@ -52,27 +50,21 @@ internal static class CdSectorEccEdc
             EccBackwardLut[(i ^ doubled) & 0xFF] = (byte)i;
 
             var edc = i;
-            for (var bit = 0; bit < 8; bit++)
-            {
-                edc = (edc >> 1) ^ ((edc & 1) != 0 ? 0xD8018001u : 0u);
-            }
+            for (var bit = 0; bit < 8; bit++) edc = (edc >> 1) ^ ((edc & 1) != 0 ? 0xD8018001u : 0u);
 
             EdcLut[i] = edc;
         }
     }
 
     /// <summary>
-    /// Continues an EDC checksum over <paramref name="data"/>. Callers accumulate across the whole
-    /// image, which is how an ECM file's trailing checksum is validated.
+    ///     Continues an EDC checksum over <paramref name="data" />. Callers accumulate across the whole
+    ///     image, which is how an ECM file's trailing checksum is validated.
     /// </summary>
     /// <param name="edc">Checksum so far, 0 to start.</param>
     /// <param name="data">Bytes to fold in.</param>
     internal static uint ComputeEdc(uint edc, ReadOnlySpan<byte> data)
     {
-        foreach (var value in data)
-        {
-            edc = (edc >> 8) ^ EdcLut[(edc ^ value) & 0xFF];
-        }
+        foreach (var value in data) edc = (edc >> 8) ^ EdcLut[(edc ^ value) & 0xFF];
 
         return edc;
     }
@@ -90,20 +82,20 @@ internal static class CdSectorEccEdc
     }
 
     /// <summary>
-    /// Fills in the EDC, the intermediate zero field and the P/Q parity of a Mode 1 sector, whose
-    /// user data occupies 0x010 to 0x80F.
+    ///     Fills in the EDC, the intermediate zero field and the P/Q parity of a Mode 1 sector, whose
+    ///     user data occupies 0x010 to 0x80F.
     /// </summary>
     /// <param name="sector">A full 2352-byte sector with sync, header and user data already set.</param>
     internal static void GenerateMode1(Span<byte> sector)
     {
         WriteEdc(sector, 0x000, 0x810, Mode1EdcOffset);
         sector.Slice(Mode1IntermediateOffset, Mode1IntermediateLength).Clear();
-        GenerateEcc(sector, zeroAddress: false);
+        GenerateEcc(sector, false);
     }
 
     /// <summary>
-    /// Fills in the EDC and P/Q parity of a Mode 2 Form 1 sector, whose 8-byte subheader and user
-    /// data occupy 0x010 to 0x817.
+    ///     Fills in the EDC and P/Q parity of a Mode 2 Form 1 sector, whose 8-byte subheader and user
+    ///     data occupy 0x010 to 0x817.
     /// </summary>
     /// <param name="sector">A full 2352-byte sector with sync, header, subheader and data set.</param>
     internal static void GenerateMode2Form1(Span<byte> sector)
@@ -112,12 +104,12 @@ internal static class CdSectorEccEdc
 
         // Mode 2 parity is computed over a zeroed address, because a Form 1 sector's parity has to
         // stay valid when the sector is read without its header.
-        GenerateEcc(sector, zeroAddress: true);
+        GenerateEcc(sector, true);
     }
 
     /// <summary>
-    /// Fills in the EDC of a Mode 2 Form 2 sector. Form 2 carries no parity: the extra 276 bytes are
-    /// user data, which is why it is used for streamed audio and video.
+    ///     Fills in the EDC of a Mode 2 Form 2 sector. Form 2 carries no parity: the extra 276 bytes are
+    ///     user data, which is why it is used for streamed audio and video.
     /// </summary>
     /// <param name="sector">A full 2352-byte sector with sync, header, subheader and data set.</param>
     internal static void GenerateMode2Form2(Span<byte> sector)
@@ -150,26 +142,23 @@ internal static class CdSectorEccEdc
         ComputeEccBlock(
             sector,
             AddressOffset,
-            majorCount: 86,
-            minorCount: 24,
-            majorMult: 2,
-            minorInc: 86,
+            86,
+            24,
+            2,
+            86,
             EccPOffset
         );
         ComputeEccBlock(
             sector,
             AddressOffset,
-            majorCount: 52,
-            minorCount: 43,
-            majorMult: 86,
-            minorInc: 88,
+            52,
+            43,
+            86,
+            88,
             EccQOffset
         );
 
-        if (zeroAddress)
-        {
-            savedAddress.CopyTo(sector.Slice(AddressOffset, 4));
-        }
+        if (zeroAddress) savedAddress.CopyTo(sector.Slice(AddressOffset, 4));
     }
 
     private static void ComputeEccBlock(
@@ -194,10 +183,7 @@ internal static class CdSectorEccEdc
             {
                 var value = sector[sourceOffset + index];
                 index += minorInc;
-                if (index >= size)
-                {
-                    index -= size;
-                }
+                if (index >= size) index -= size;
 
                 eccA ^= value;
                 eccB ^= value;

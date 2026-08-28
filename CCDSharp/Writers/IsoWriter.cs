@@ -3,13 +3,13 @@ using CCDSharp.Models;
 namespace CCDSharp.Writers;
 
 /// <summary>
-/// Extracts user data sectors from a CloneCD .img file to produce a standard .iso file.
-/// Only valid for data tracks (Mode 1 or Mode 2 Form 1).
+///     Extracts user data sectors from a CloneCD .img file to produce a standard .iso file.
+///     Only valid for data tracks (Mode 1 or Mode 2 Form 1).
 /// </summary>
 public static class IsoWriter
 {
     /// <summary>
-    /// Converts a CloneCD .img file to a standard .iso file by extracting 2048-byte user data sectors.
+    ///     Converts a CloneCD .img file to a standard .iso file by extracting 2048-byte user data sectors.
     /// </summary>
     /// <param name="imgFilePath">Path to the .img data file.</param>
     /// <param name="isoFilePath">Path for the output .iso file.</param>
@@ -41,7 +41,7 @@ public static class IsoWriter
     }
 
     /// <summary>
-    /// Converts a CloneCD .img stream to a standard .iso stream.
+    ///     Converts a CloneCD .img stream to a standard .iso stream.
     /// </summary>
     /// <param name="input">Stream containing raw 2352-byte sectors.</param>
     /// <param name="output">Stream to write 2048-byte user data sectors to.</param>
@@ -58,7 +58,7 @@ public static class IsoWriter
     }
 
     /// <summary>
-    /// Converts a parsed DiscImage to a .iso file. Only the first data track is extracted.
+    ///     Converts a parsed DiscImage to a .iso file. Only the first data track is extracted.
     /// </summary>
     /// <param name="disc">The parsed disc image.</param>
     /// <param name="isoFilePath">Path for the output .iso file.</param>
@@ -139,7 +139,7 @@ public static class IsoWriter
     }
 
     /// <summary>
-    /// Extracts the 2048-byte user data payload from a raw 2352-byte sector.
+    ///     Extracts the 2048-byte user data payload from a raw 2352-byte sector.
     /// </summary>
     /// <param name="rawSector">The raw 2352-byte sector.</param>
     /// <param name="output">Buffer to write 2048 bytes of user data to.</param>
@@ -152,13 +152,11 @@ public static class IsoWriter
         // Check for sync mark
         var hasSync = true;
         for (var i = 0; i < SectorConstants.SyncMark.Length; i++)
-        {
             if (rawSector[i] != SectorConstants.SyncMark[i])
             {
                 hasSync = false;
                 break;
             }
-        }
 
         if (!hasSync)
             return 0;
@@ -171,7 +169,7 @@ public static class IsoWriter
             1 => ExtractMode1(rawSector, output),
             // Mode 2: check subheader for Form 1 vs Form 2
             2 => ExtractMode2(rawSector, output),
-            _ => 0,
+            _ => 0
         };
     }
 

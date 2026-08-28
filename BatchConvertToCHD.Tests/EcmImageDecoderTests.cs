@@ -8,9 +8,9 @@ public class EcmImageDecoderTests : IDisposable
     private const int SectorSize = 2352;
 
     /// <summary>
-    /// SHA1 of the image the fixture decodes to. Recorded from a run where Neill Corlett's own
-    /// decoder produced the identical bytes, so this constant is the reference implementation's
-    /// answer rather than this code's.
+    ///     SHA1 of the image the fixture decodes to. Recorded from a run where Neill Corlett's own
+    ///     decoder produced the identical bytes, so this constant is the reference implementation's
+    ///     answer rather than this code's.
     /// </summary>
     private const string ExpectedSha1 = "C79042C9DF371FDED431F72B43DCBEDC4DEAEF11";
 
@@ -32,10 +32,7 @@ public class EcmImageDecoderTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
+            if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true);
         }
         catch
         {
@@ -43,6 +40,116 @@ public class EcmImageDecoderTests : IDisposable
         }
 
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    ///     Rebuilds the 12-sector image the fixture was encoded from: four Mode 1, four Mode 2 Form 1 and
+    ///     four Mode 2 Form 2 sectors, each with a correct address, EDC and parity.
+    /// </summary>
+    internal static byte[] BuildReferenceImage()
+    {
+        const int sectors = 12;
+        var image = new byte[sectors * SectorSize];
+
+        for (var lba = 0; lba < sectors; lba++)
+        {
+            var sector = image.AsSpan(lba * SectorSize, SectorSize);
+
+            switch (lba)
+            {
+                case < 4:
+                    CdSectorEccEdc.WriteSyncAndMode(sector, 0x01);
+                    WriteAddress(sector, lba);
+                    FillPayload(sector.Slice(0x010, 0x800), lba);
+                    CdSectorEccEdc.GenerateMode1(sector);
+                    break;
+                case < 8:
+                    CdSectorEccEdc.WriteSyncAndMode(sector, 0x02);
+                    WriteAddress(sector, lba);
+                    WriteSubheader(sector, false);
+                    FillPayload(sector.Slice(0x018, 0x800), lba);
+                    CdSectorEccEdc.GenerateMode2Form1(sector);
+                    break;
+                default:
+                    CdSectorEccEdc.WriteSyncAndMode(sector, 0x02);
+                    WriteAddress(sector, lba);
+                    WriteSubheader(sector, true);
+                    FillPayload(sector.Slice(0x018, 0x914), lba);
+                    CdSectorEccEdc.GenerateMode2Form2(sector);
+                    break;
+            }
+        }
+
+        return image;
+    }
+
+    /// <summary>Counts the blocks of each kind in an ECM file, without decoding it.</summary>
+    private static async Task<int[]> CountBlockTypesAsync(string path)
+    {
+        var counts = new int[4];
+        var bytes = await File.ReadAllBytesAsync(path);
+        var offset = 4;
+
+        while (offset < bytes.Length)
+        {
+            var first = bytes[offset++];
+            var type = first & 3;
+            var count = (uint)((first >> 2) & 0x1F);
+            var bits = 5;
+            var current = first;
+
+            while ((current & 0x80) != 0 && offset < bytes.Length)
+            {
+                current = bytes[offset++];
+                count |= (uint)(current & 0x7F) << bits;
+                bits += 7;
+            }
+
+            if (count == 0xFFFFFFFF) break;
+
+            count++;
+            counts[type]++;
+
+            // Skip the block's stored bytes to reach the next header.
+            var stored = type switch
+            {
+                0 => count,
+                1 => count * 0x803,
+                2 => count * 0x804,
+                _ => count * 0x918
+            };
+
+            offset += (int)stored;
+        }
+
+        return counts;
+    }
+
+    private static void WriteAddress(Span<byte> sector, int lba)
+    {
+        var absolute = lba + 150;
+        sector[0x00C] = ToBcd(absolute / (60 * 75));
+        sector[0x00D] = ToBcd(absolute / 75 % 60);
+        sector[0x00E] = ToBcd(absolute % 75);
+    }
+
+    private static void WriteSubheader(Span<byte> sector, bool form2)
+    {
+        sector[0x010] = 0x00;
+        sector[0x011] = 0x00;
+        sector[0x012] = (byte)(form2 ? 0x28 : 0x08);
+        sector[0x013] = 0x00;
+        sector.Slice(0x010, 4).CopyTo(sector.Slice(0x014, 4));
+    }
+
+    private static void FillPayload(Span<byte> payload, int lba)
+    {
+        for (var i = 0; i < payload.Length; i++) payload[i] = (byte)(lba * 31 + i * 7 + (i >> 5));
+    }
+
+    private static byte ToBcd(int value)
+    {
+        return (byte)(value / 10 * 16 + value % 10);
     }
 
     #region The reference fixture
@@ -223,120 +330,4 @@ public class EcmImageDecoderTests : IDisposable
     }
 
     #endregion
-
-    /// <summary>
-    /// Rebuilds the 12-sector image the fixture was encoded from: four Mode 1, four Mode 2 Form 1 and
-    /// four Mode 2 Form 2 sectors, each with a correct address, EDC and parity.
-    /// </summary>
-    internal static byte[] BuildReferenceImage()
-    {
-        const int sectors = 12;
-        var image = new byte[sectors * SectorSize];
-
-        for (var lba = 0; lba < sectors; lba++)
-        {
-            var sector = image.AsSpan(lba * SectorSize, SectorSize);
-
-            switch (lba)
-            {
-                case < 4:
-                    CdSectorEccEdc.WriteSyncAndMode(sector, 0x01);
-                    WriteAddress(sector, lba);
-                    FillPayload(sector.Slice(0x010, 0x800), lba);
-                    CdSectorEccEdc.GenerateMode1(sector);
-                    break;
-                case < 8:
-                    CdSectorEccEdc.WriteSyncAndMode(sector, 0x02);
-                    WriteAddress(sector, lba);
-                    WriteSubheader(sector, form2: false);
-                    FillPayload(sector.Slice(0x018, 0x800), lba);
-                    CdSectorEccEdc.GenerateMode2Form1(sector);
-                    break;
-                default:
-                    CdSectorEccEdc.WriteSyncAndMode(sector, 0x02);
-                    WriteAddress(sector, lba);
-                    WriteSubheader(sector, form2: true);
-                    FillPayload(sector.Slice(0x018, 0x914), lba);
-                    CdSectorEccEdc.GenerateMode2Form2(sector);
-                    break;
-            }
-        }
-
-        return image;
-    }
-
-    /// <summary>Counts the blocks of each kind in an ECM file, without decoding it.</summary>
-    private static async Task<int[]> CountBlockTypesAsync(string path)
-    {
-        var counts = new int[4];
-        var bytes = await File.ReadAllBytesAsync(path);
-        var offset = 4;
-
-        while (offset < bytes.Length)
-        {
-            var first = bytes[offset++];
-            var type = first & 3;
-            var count = (uint)((first >> 2) & 0x1F);
-            var bits = 5;
-            var current = first;
-
-            while ((current & 0x80) != 0 && offset < bytes.Length)
-            {
-                current = bytes[offset++];
-                count |= (uint)(current & 0x7F) << bits;
-                bits += 7;
-            }
-
-            if (count == 0xFFFFFFFF)
-            {
-                break;
-            }
-
-            count++;
-            counts[type]++;
-
-            // Skip the block's stored bytes to reach the next header.
-            var stored = type switch
-            {
-                0 => count,
-                1 => count * 0x803,
-                2 => count * 0x804,
-                _ => count * 0x918,
-            };
-
-            offset += (int)stored;
-        }
-
-        return counts;
-    }
-
-    private static void WriteAddress(Span<byte> sector, int lba)
-    {
-        var absolute = lba + 150;
-        sector[0x00C] = ToBcd(absolute / (60 * 75));
-        sector[0x00D] = ToBcd(absolute / 75 % 60);
-        sector[0x00E] = ToBcd(absolute % 75);
-    }
-
-    private static void WriteSubheader(Span<byte> sector, bool form2)
-    {
-        sector[0x010] = 0x00;
-        sector[0x011] = 0x00;
-        sector[0x012] = (byte)(form2 ? 0x28 : 0x08);
-        sector[0x013] = 0x00;
-        sector.Slice(0x010, 4).CopyTo(sector.Slice(0x014, 4));
-    }
-
-    private static void FillPayload(Span<byte> payload, int lba)
-    {
-        for (var i = 0; i < payload.Length; i++)
-        {
-            payload[i] = (byte)(lba * 31 + i * 7 + (i >> 5));
-        }
-    }
-
-    private static byte ToBcd(int value)
-    {
-        return (byte)(value / 10 * 16 + value % 10);
-    }
 }

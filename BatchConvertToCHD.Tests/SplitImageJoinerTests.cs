@@ -16,10 +16,7 @@ public class SplitImageJoinerTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
+            if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true);
         }
         catch
         {
@@ -137,10 +134,7 @@ public class SplitImageJoinerTests : IDisposable
         // End to end for the split case: the parts alone are unreadable, the join is a valid raw CD.
         const int sectorSize = 2352;
         var firstData = new byte[sectorSize];
-        for (var i = 1; i <= 10; i++)
-        {
-            firstData[i] = 0xFF;
-        }
+        for (var i = 1; i <= 10; i++) firstData[i] = 0xFF;
 
         firstData[15] = 2;
 

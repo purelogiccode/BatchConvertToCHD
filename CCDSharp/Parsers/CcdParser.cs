@@ -5,7 +5,7 @@ using CCDSharp.Models;
 namespace CCDSharp.Parsers;
 
 /// <summary>
-/// Parses CloneCD .ccd descriptor files into a DiscImage model.
+///     Parses CloneCD .ccd descriptor files into a DiscImage model.
 /// </summary>
 public static partial class CcdParser
 {
@@ -55,7 +55,7 @@ public static partial class CcdParser
     private static partial Regex CatalogRegex();
 
     /// <summary>
-    /// Parses a .ccd file and returns a DiscImage model.
+    ///     Parses a .ccd file and returns a DiscImage model.
     /// </summary>
     /// <param name="ccdFilePath">Path to the .ccd file.</param>
     /// <returns>The parsed disc image.</returns>
@@ -71,7 +71,7 @@ public static partial class CcdParser
     }
 
     /// <summary>
-    /// Parses CCD content from a TextReader.
+    ///     Parses CCD content from a TextReader.
     /// </summary>
     /// <param name="reader">The TextReader to read CCD content from.</param>
     /// <param name="ccdFilePath">Optional path to the .ccd file for resolving associated files.</param>
@@ -162,17 +162,10 @@ public static partial class CcdParser
 
             // Parse fields based on current section
             if (inCcd)
-            {
                 ParseCcdSection(line, disc);
-            }
             else if (inDisc)
-            {
                 ParseDiscSection(line, disc);
-            }
-            else if (currentTrack > 0)
-            {
-                ParseTrackSection(line, disc.Tracks[currentTrack - 1]);
-            }
+            else if (currentTrack > 0) ParseTrackSection(line, disc.Tracks[currentTrack - 1]);
         }
 
         return disc;
@@ -181,10 +174,7 @@ public static partial class CcdParser
     private static void ParseCcdSection(string line, DiscImage disc)
     {
         var versionMatch = VersionRegex().Match(line);
-        if (versionMatch.Success)
-        {
-            disc.Version = int.Parse(versionMatch.Groups[1].Value, CultureInfo.InvariantCulture);
-        }
+        if (versionMatch.Success) disc.Version = int.Parse(versionMatch.Groups[1].Value, CultureInfo.InvariantCulture);
     }
 
     private static void ParseDiscSection(string line, DiscImage disc)
@@ -219,10 +209,7 @@ public static partial class CcdParser
         }
 
         match = CatalogRegex().Match(line);
-        if (match.Success)
-        {
-            disc.Catalog = match.Groups[1].Value;
-        }
+        if (match.Success) disc.Catalog = match.Groups[1].Value;
     }
 
     private static void ParseTrackSection(string line, Track track)
@@ -235,7 +222,7 @@ public static partial class CcdParser
                 0 => TrackMode.Audio,
                 1 => TrackMode.Mode1,
                 2 => TrackMode.Mode2,
-                _ => TrackMode.Mode1,
+                _ => TrackMode.Mode1
             };
             return;
         }
@@ -257,14 +244,11 @@ public static partial class CcdParser
         }
 
         var isrcMatch = TrackIsrcRegex().Match(line);
-        if (isrcMatch.Success)
-        {
-            track.Isrc = isrcMatch.Groups[1].Value.Trim();
-        }
+        if (isrcMatch.Success) track.Isrc = isrcMatch.Groups[1].Value.Trim();
     }
 
     /// <summary>
-    /// Converts an LBA (Logical Block Address) frame count to MSF (Minutes:Seconds:Frames) format.
+    ///     Converts an LBA (Logical Block Address) frame count to MSF (Minutes:Seconds:Frames) format.
     /// </summary>
     /// <param name="lba">The LBA frame count.</param>
     /// <returns>A tuple of (minutes, seconds, frames).</returns>
@@ -278,7 +262,7 @@ public static partial class CcdParser
     }
 
     /// <summary>
-    /// Formats an MSF tuple as a CUE-compatible string (MM:SS:FF).
+    ///     Formats an MSF tuple as a CUE-compatible string (MM:SS:FF).
     /// </summary>
     public static string FormatMsf(int minutes, int seconds, int frames)
     {

@@ -5,19 +5,15 @@ using System.Net.Http.Json;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using Serilog;
 
 namespace BatchConvertToCHD.Services;
 
 /// <summary>
-/// Service responsible for sending bug reports to the BugReport API
+///     Service responsible for sending bug reports to the BugReport API
 /// </summary>
 internal class BugReportService
 {
-    private readonly string _apiUrl;
-    private readonly string _apiKey;
-    private readonly string _applicationName;
-    private readonly HttpClient _httpClient;
-
     private static readonly string[] ExcludedMessagePatterns =
     [
         "Failed to record usage statistics",
@@ -62,19 +58,13 @@ internal class BugReportService
         "Archive is encrypted",
         "compression method that is not supported",
         "CCDSharp: Conversion error",
-        "File not found, skipping:",
+        "File not found, skipping:"
     ];
 
-    internal static bool IsExcludedFromBugReport(string message)
-    {
-        foreach (var pattern in ExcludedMessagePatterns)
-        {
-            if (message.Contains(pattern, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
-        return false;
-    }
+    private readonly string _apiKey;
+    private readonly string _apiUrl;
+    private readonly string _applicationName;
+    private readonly HttpClient _httpClient;
 
     internal BugReportService(string apiUrl, string apiKey, string applicationName)
         : this(apiUrl, apiKey, applicationName, AppHttpClient.Client)
@@ -95,8 +85,17 @@ internal class BugReportService
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
     }
 
+    internal static bool IsExcludedFromBugReport(string message)
+    {
+        foreach (var pattern in ExcludedMessagePatterns)
+            if (message.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+        return false;
+    }
+
     /// <summary>
-    /// Sends a bug report to the API with full environment and exception details
+    ///     Sends a bug report to the API with full environment and exception details
     /// </summary>
     /// <param name="message">A summary of the error or bug report</param>
     /// <param name="ex">The exception object, if available</param>
@@ -128,7 +127,7 @@ internal class BugReportService
                 version = versionString,
                 userInfo = Environment.UserName,
                 environment = AppConfig.BugReportEnvironment,
-                stackTrace,
+                stackTrace
             };
 
             var content = JsonContent.Create(requestPayload);
@@ -147,13 +146,13 @@ internal class BugReportService
         }
         catch (Exception sendEx)
         {
-            Serilog.Log.Debug(sendEx, "Failed to send bug report");
+            Log.Debug(sendEx, "Failed to send bug report");
             return false;
         }
     }
 
     /// <summary>
-    /// Builds a formatted report string with all details for the message field
+    ///     Builds a formatted report string with all details for the message field
     /// </summary>
     private string BuildFormattedReport(string message, Exception? ex)
     {
@@ -211,7 +210,7 @@ internal class BugReportService
     }
 
     /// <summary>
-    /// Appends exception details to the StringBuilder
+    ///     Appends exception details to the StringBuilder
     /// </summary>
     private static void AppendExceptionDetails(StringBuilder sb, Exception exception, int level = 0)
     {
@@ -239,10 +238,7 @@ internal class BugReportService
                     ['\r', '\n'],
                     StringSplitOptions.RemoveEmptyEntries
                 );
-                foreach (var line in lines)
-                {
-                    sb.AppendLine(CultureInfo.InvariantCulture, $"{indent}  {line}");
-                }
+                foreach (var line in lines) sb.AppendLine(CultureInfo.InvariantCulture, $"{indent}  {line}");
             }
             else
             {
@@ -267,7 +263,7 @@ internal class BugReportService
     }
 
     /// <summary>
-    /// Gets exception stack trace for structured API fields
+    ///     Gets exception stack trace for structured API fields
     /// </summary>
     private static string GetExceptionStackTrace(Exception? ex)
     {
@@ -280,7 +276,7 @@ internal class BugReportService
     }
 
     /// <summary>
-    /// Gets environment details for structured API fields
+    ///     Gets environment details for structured API fields
     /// </summary>
     private static string GetApplicationVersion()
     {

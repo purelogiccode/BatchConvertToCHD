@@ -6,8 +6,8 @@ namespace BatchConvertToCHD.Tests;
 
 public class FileWatcherServiceTests : IDisposable
 {
-    private readonly string _tempDir;
     private readonly FileWatcherService _service;
+    private readonly string _tempDir;
 
     public FileWatcherServiceTests()
     {
@@ -39,6 +39,70 @@ public class FileWatcherServiceTests : IDisposable
     {
         Assert.False(_service.IsWatching);
         Assert.Null(_service.WatchedFolder);
+    }
+
+    #endregion
+
+    #region GetContextForMissingFile - not watching
+
+    [Fact]
+    public void GetContextForMissingFile_WhenNotWatching_ReturnsNull()
+    {
+        var result = _service.GetContextForMissingFile(@"C:\test.iso");
+
+        Assert.Null(result);
+    }
+
+    #endregion
+
+    #region RecordEvent - event type storage (via reflection)
+
+    [Fact]
+    public void RecordEvent_StoresCorrectEventTypes()
+    {
+        var recordEventMethod = typeof(FileWatcherService).GetMethod(
+            "RecordEvent",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
+        Assert.NotNull(recordEventMethod);
+
+        var dictField = typeof(FileWatcherService).GetField(
+            "_lastEventByFile",
+            BindingFlags.NonPublic | BindingFlags.Instance
+        );
+        Assert.NotNull(dictField);
+        var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
+        Assert.NotNull(dict);
+
+        var createdPath = Path.Combine(_tempDir, "c.bin");
+        var deletedPath = Path.Combine(_tempDir, "d.bin");
+        var renamedFromPath = Path.Combine(_tempDir, "rf.bin");
+        var renamedToPath = Path.Combine(_tempDir, "rt.bin");
+
+        recordEventMethod.Invoke(_service, [createdPath, FileWatchEventType.Created, null]);
+        recordEventMethod.Invoke(_service, [deletedPath, FileWatchEventType.Deleted, null]);
+        recordEventMethod.Invoke(
+            _service,
+            [renamedFromPath, FileWatchEventType.RenamedFrom, "newname.bin"]
+        );
+        recordEventMethod.Invoke(
+            _service,
+            [renamedToPath, FileWatchEventType.RenamedTo, "oldname.bin"]
+        );
+
+        Assert.True(dict.TryGetValue(createdPath, out var cr));
+        Assert.Equal(FileWatchEventType.Created, cr.EventType);
+
+        Assert.True(dict.TryGetValue(deletedPath, out var dr));
+        Assert.Equal(FileWatchEventType.Deleted, dr.EventType);
+
+        Assert.True(dict.TryGetValue(renamedFromPath, out var rfr));
+        Assert.Equal(FileWatchEventType.RenamedFrom, rfr.EventType);
+        Assert.Equal("newname.bin", rfr.RelatedName);
+
+        Assert.True(dict.TryGetValue(renamedToPath, out var rtr));
+        Assert.Equal(FileWatchEventType.RenamedTo, rtr.EventType);
+        Assert.Equal("oldname.bin", rtr.RelatedName);
     }
 
     #endregion
@@ -129,18 +193,6 @@ public class FileWatcherServiceTests : IDisposable
         var ex = Record.Exception(() => _service.Dispose());
 
         Assert.Null(ex);
-    }
-
-    #endregion
-
-    #region GetContextForMissingFile - not watching
-
-    [Fact]
-    public void GetContextForMissingFile_WhenNotWatching_ReturnsNull()
-    {
-        var result = _service.GetContextForMissingFile(@"C:\test.iso");
-
-        Assert.Null(result);
     }
 
     #endregion
@@ -283,58 +335,6 @@ public class FileWatcherServiceTests : IDisposable
 
     #endregion
 
-    #region RecordEvent - event type storage (via reflection)
-
-    [Fact]
-    public void RecordEvent_StoresCorrectEventTypes()
-    {
-        var recordEventMethod = typeof(FileWatcherService).GetMethod(
-            "RecordEvent",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(recordEventMethod);
-
-        var dictField = typeof(FileWatcherService).GetField(
-            "_lastEventByFile",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(dictField);
-        var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
-        Assert.NotNull(dict);
-
-        var createdPath = Path.Combine(_tempDir, "c.bin");
-        var deletedPath = Path.Combine(_tempDir, "d.bin");
-        var renamedFromPath = Path.Combine(_tempDir, "rf.bin");
-        var renamedToPath = Path.Combine(_tempDir, "rt.bin");
-
-        recordEventMethod.Invoke(_service, [createdPath, FileWatchEventType.Created, null]);
-        recordEventMethod.Invoke(_service, [deletedPath, FileWatchEventType.Deleted, null]);
-        recordEventMethod.Invoke(
-            _service,
-            [renamedFromPath, FileWatchEventType.RenamedFrom, "newname.bin"]
-        );
-        recordEventMethod.Invoke(
-            _service,
-            [renamedToPath, FileWatchEventType.RenamedTo, "oldname.bin"]
-        );
-
-        Assert.True(dict.TryGetValue(createdPath, out var cr));
-        Assert.Equal(FileWatchEventType.Created, cr.EventType);
-
-        Assert.True(dict.TryGetValue(deletedPath, out var dr));
-        Assert.Equal(FileWatchEventType.Deleted, dr.EventType);
-
-        Assert.True(dict.TryGetValue(renamedFromPath, out var rfr));
-        Assert.Equal(FileWatchEventType.RenamedFrom, rfr.EventType);
-        Assert.Equal("newname.bin", rfr.RelatedName);
-
-        Assert.True(dict.TryGetValue(renamedToPath, out var rtr));
-        Assert.Equal(FileWatchEventType.RenamedTo, rtr.EventType);
-        Assert.Equal("oldname.bin", rtr.RelatedName);
-    }
-
-    #endregion
-
     #region RecordEvent - eviction (via reflection)
 
     [Fact]
@@ -390,10 +390,7 @@ public class FileWatcherServiceTests : IDisposable
         }
 
         Assert.Equal(10, dict.Count);
-        for (var i = 0; i < 10; i++)
-        {
-            Assert.True(dict.ContainsKey(Path.Combine(_tempDir, $"keep{i}.bin")));
-        }
+        for (var i = 0; i < 10; i++) Assert.True(dict.ContainsKey(Path.Combine(_tempDir, $"keep{i}.bin")));
     }
 
     [Fact]

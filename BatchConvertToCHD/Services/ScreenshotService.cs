@@ -9,22 +9,14 @@ using Serilog;
 namespace BatchConvertToCHD.Services;
 
 /// <summary>
-/// Captures a screenshot of the currently active (foreground) window
-/// and saves it as a PNG file in the screenshots folder under
-/// %LocalAppData%\BatchConvertToCHD\screenshots.
+///     Captures a screenshot of the currently active (foreground) window
+///     and saves it as a PNG file in the screenshots folder under
+///     %LocalAppData%\BatchConvertToCHD\screenshots.
 /// </summary>
 internal class ScreenshotService
 {
+    private const uint SrcCopy = 0x00CC0020;
     private static readonly ILogger Logger = Log.ForContext<ScreenshotService>();
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Rect
-    {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
-    }
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
@@ -67,12 +59,10 @@ internal class ScreenshotService
     [DllImport("gdi32.dll")]
     private static extern bool DeleteObject(IntPtr h);
 
-    private const uint SrcCopy = 0x00CC0020;
-
     /// <summary>
-    /// Captures a screenshot of the currently active foreground window
-    /// and saves it as a PNG in the screenshots folder under
-    /// %LocalAppData%\BatchConvertToCHD\screenshots.
+    ///     Captures a screenshot of the currently active foreground window
+    ///     and saves it as a PNG in the screenshots folder under
+    ///     %LocalAppData%\BatchConvertToCHD\screenshots.
     /// </summary>
     internal string? TakeScreenshot()
     {
@@ -175,5 +165,14 @@ internal class ScreenshotService
             Logger.Error(ex, "Failed to take screenshot");
             return null;
         }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Rect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
     }
 }

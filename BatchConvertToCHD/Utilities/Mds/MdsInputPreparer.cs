@@ -5,46 +5,21 @@ using System.Text;
 namespace BatchConvertToCHD.Utilities.Mds;
 
 /// <summary>
-/// Turns an Alcohol .mds/.mdf pair into something chdman can actually convert.
-///
-/// Three shapes exist in practice:
-///  - 2352-byte sectors: a cue is all that is missing, and the .mdf is referenced where it lies.
-///  - 2448-byte sectors (2352 data + 96 subchannel): chdman will not read these, so the subchannel
-///    tail is stripped into a new image and a cue is written for that.
-///  - 2048-byte sectors: the .mdf is really an ISO, so it converts as a DVD image with no cue.
+///     Turns an Alcohol .mds/.mdf pair into something chdman can actually convert.
+///     Three shapes exist in practice:
+///     - 2352-byte sectors: a cue is all that is missing, and the .mdf is referenced where it lies.
+///     - 2448-byte sectors (2352 data + 96 subchannel): chdman will not read these, so the subchannel
+///     tail is stripped into a new image and a cue is written for that.
+///     - 2048-byte sectors: the .mdf is really an ISO, so it converts as a DVD image with no cue.
 /// </summary>
 internal static class MdsInputPreparer
 {
     /// <summary>Sectors repacked per read. A write per sector is far too slow at disc scale.</summary>
     private const int StripChunkSectors = 2048;
 
-    /// <summary>What chdman should be handed for an Alcohol image.</summary>
-    /// <param name="CuePath">Cue to convert as a CD, or null.</param>
-    /// <param name="DvdImagePath">Image to convert as a DVD, or null.</param>
-    /// <param name="FailureReason">Why nothing could be prepared, or null on success.</param>
-    internal sealed record Result(string? CuePath, string? DvdImagePath, string? FailureReason)
-    {
-        internal bool Success => FailureReason is null;
-
-        internal static Result Cue(string cuePath)
-        {
-            return new Result(cuePath, null, null);
-        }
-
-        internal static Result Dvd(string imagePath)
-        {
-            return new Result(null, imagePath, null);
-        }
-
-        internal static Result Failed(string reason)
-        {
-            return new Result(null, null, reason);
-        }
-    }
-
     /// <summary>
-    /// Prepares <paramref name="disc"/> for conversion, writing any generated files into
-    /// <paramref name="workDir"/>.
+    ///     Prepares <paramref name="disc" /> for conversion, writing any generated files into
+    ///     <paramref name="workDir" />.
     /// </summary>
     /// <param name="disc">The parsed Alcohol image.</param>
     /// <param name="workDir">Existing directory for generated files.</param>
@@ -58,9 +33,7 @@ internal static class MdsInputPreparer
     )
     {
         if (disc.MdfPath is null || !File.Exists(disc.MdfPath))
-        {
             return Result.Failed("the .mdf data file was not found next to the .mds descriptor");
-        }
 
         // Alcohol can split the data across ".i00", ".i01" and so on. Nothing can read that until
         // the pieces are back together, so join them before looking at sector layout.
@@ -113,10 +86,7 @@ internal static class MdsInputPreparer
                     token
                 )
                 .ConfigureAwait(false);
-            if (stripped is not null)
-            {
-                return Result.Failed(stripped);
-            }
+            if (stripped is not null) return Result.Failed(stripped);
 
             var cuePath = await WriteCueAsync(disc, workDir, Path.GetFileName(strippedPath), token)
                 .ConfigureAwait(false);
@@ -124,11 +94,9 @@ internal static class MdsInputPreparer
         }
 
         if (!disc.IsPlainRawCd)
-        {
             return Result.Failed(
                 $"the descriptor reports {disc.SectorSize} bytes per sector, which is neither a raw CD ({MdsDisc.RawSectorSize}), a subchannel-bearing CD ({MdsDisc.RawPlusSubchannelSize}) nor a DVD image ({MdsDisc.CookedSectorSize})"
             );
-        }
 
         // Already 2352: reference the data file where it is rather than duplicating a whole disc.
         var reference = GetReferencePath(workDir, dataFilePath);
@@ -148,9 +116,9 @@ internal static class MdsInputPreparer
     }
 
     /// <summary>
-    /// Copies <paramref name="sourcePath"/> to <paramref name="destinationPath"/> keeping only the
-    /// first <see cref="MdsDisc.RawSectorSize"/> bytes of every sector. Returns null on success or a
-    /// user-facing reason on failure.
+    ///     Copies <paramref name="sourcePath" /> to <paramref name="destinationPath" /> keeping only the
+    ///     first <see cref="MdsDisc.RawSectorSize" /> bytes of every sector. Returns null on success or a
+    ///     user-facing reason on failure.
     /// </summary>
     /// <param name="sourcePath">The .mdf holding oversized sectors.</param>
     /// <param name="destinationPath">Where the 2352-byte image is written.</param>
@@ -163,17 +131,12 @@ internal static class MdsInputPreparer
         CancellationToken token
     )
     {
-        if (sectorSize <= MdsDisc.RawSectorSize)
-        {
-            return $"sector size {sectorSize} carries no subchannel data to strip";
-        }
+        if (sectorSize <= MdsDisc.RawSectorSize) return $"sector size {sectorSize} carries no subchannel data to strip";
 
         var length = new FileInfo(sourcePath).Length;
         if (length == 0 || length % sectorSize != 0)
-        {
             return
                 $"{Path.GetFileName(sourcePath)} is {length:N0} bytes, which is not a whole number of {sectorSize}-byte sectors, so it is truncated or the descriptor is wrong";
-        }
 
         var readBuffer = new byte[sectorSize * StripChunkSectors];
         var writeBuffer = new byte[MdsDisc.RawSectorSize * StripChunkSectors];
@@ -184,7 +147,7 @@ internal static class MdsInputPreparer
             FileAccess.Read,
             FileShare.ReadWrite,
             readBuffer.Length,
-            useAsync: true
+            true
         );
         await using var output = new FileStream(
             destinationPath,
@@ -192,7 +155,7 @@ internal static class MdsInputPreparer
             FileAccess.Write,
             FileShare.None,
             writeBuffer.Length,
-            useAsync: true
+            true
         );
 
         while (true)
@@ -200,40 +163,32 @@ internal static class MdsInputPreparer
             token.ThrowIfCancellationRequested();
 
             var read = await input
-                .ReadAtLeastAsync(readBuffer, readBuffer.Length, throwOnEndOfStream: false, token)
+                .ReadAtLeastAsync(readBuffer, readBuffer.Length, false, token)
                 .ConfigureAwait(false);
-            if (read == 0)
-            {
-                break;
-            }
+            if (read == 0) break;
 
             var sectors = read / sectorSize;
             for (var sector = 0; sector < sectors; sector++)
-            {
                 readBuffer
                     .AsSpan(sector * sectorSize, MdsDisc.RawSectorSize)
                     .CopyTo(writeBuffer.AsSpan(sector * MdsDisc.RawSectorSize));
-            }
 
             await output
                 .WriteAsync(writeBuffer.AsMemory(0, sectors * MdsDisc.RawSectorSize), token)
                 .ConfigureAwait(false);
 
-            if (read < readBuffer.Length)
-            {
-                break;
-            }
+            if (read < readBuffer.Length) break;
         }
 
         return null;
     }
 
     /// <summary>
-    /// Writes a single-FILE cue describing every track, and returns its path.
+    ///     Writes a single-FILE cue describing every track, and returns its path.
     /// </summary>
     /// <param name="disc">The parsed Alcohol image.</param>
     /// <param name="workDir">Directory the cue is written into.</param>
-    /// <param name="dataFileReference">FILE entry to record, relative to <paramref name="workDir"/>.</param>
+    /// <param name="dataFileReference">FILE entry to record, relative to <paramref name="workDir" />.</param>
     /// <param name="token">Cancellation token.</param>
     internal static async Task<string> WriteCueAsync(
         MdsDisc disc,
@@ -278,10 +233,7 @@ internal static class MdsInputPreparer
         const int framesPerSecond = 75;
         const int framesPerMinute = framesPerSecond * 60;
 
-        if (lba < 0)
-        {
-            lba = 0;
-        }
+        if (lba < 0) lba = 0;
 
         var minutes = lba / framesPerMinute;
         var remainder = lba % framesPerMinute;
@@ -319,7 +271,7 @@ internal static class MdsInputPreparer
             FileAccess.Read,
             FileShare.ReadWrite,
             1024 * 1024,
-            useAsync: true
+            true
         );
         await using var output = new FileStream(
             destinationPath,
@@ -327,8 +279,32 @@ internal static class MdsInputPreparer
             FileAccess.Write,
             FileShare.None,
             1024 * 1024,
-            useAsync: true
+            true
         );
         await input.CopyToAsync(output, token).ConfigureAwait(false);
+    }
+
+    /// <summary>What chdman should be handed for an Alcohol image.</summary>
+    /// <param name="CuePath">Cue to convert as a CD, or null.</param>
+    /// <param name="DvdImagePath">Image to convert as a DVD, or null.</param>
+    /// <param name="FailureReason">Why nothing could be prepared, or null on success.</param>
+    internal sealed record Result(string? CuePath, string? DvdImagePath, string? FailureReason)
+    {
+        internal bool Success => FailureReason is null;
+
+        internal static Result Cue(string cuePath)
+        {
+            return new Result(cuePath, null, null);
+        }
+
+        internal static Result Dvd(string imagePath)
+        {
+            return new Result(null, imagePath, null);
+        }
+
+        internal static Result Failed(string reason)
+        {
+            return new Result(null, null, reason);
+        }
     }
 }

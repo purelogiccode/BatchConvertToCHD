@@ -4,6 +4,8 @@ namespace CHDBattleTest;
 
 internal static class Program
 {
+    private static bool _cfgKeepWork;
+
     private static async Task<int> Main(string[] args)
     {
         var cfg = new BattleConfig();
@@ -18,7 +20,7 @@ internal static class Program
             return 2;
         }
 
-        string baseDir = AppContext.BaseDirectory;
+        var baseDir = AppContext.BaseDirectory;
         cfg.ChdmanPath = Path.Combine(baseDir, "chdman.exe");
         cfg.ChdSharpPath = Path.Combine(baseDir, "CHDSharp.exe");
         if (!File.Exists(cfg.ChdmanPath) || !File.Exists(cfg.ChdSharpPath))
@@ -39,11 +41,12 @@ internal static class Program
         Directory.CreateDirectory(cfg.OutputRoot);
         Directory.CreateDirectory(cfg.WorkRoot);
 
-        await using var log = new StreamWriter(cfg.LogPath, append: false);
+        await using var log = new StreamWriter(cfg.LogPath, false);
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) =>
         {
             e.Cancel = true;
+            // ReSharper disable once AccessToDisposedClosure
             cts.Cancel();
         };
 
@@ -64,7 +67,7 @@ internal static class Program
             foreach (var fi in files)
             {
                 var insp = Classifier.Inspect(fi.FullName);
-                string kind = !insp.IsChd ? "NOT A CHD" : $"{insp.Kind} V{insp.Version}";
+                var kind = !insp.IsChd ? "NOT A CHD" : $"{insp.Kind} V{insp.Version}";
                 Console.WriteLine(
                     $"{fi.Name,-70} {fi.Length / 1048576.0,10:F1} {insp.LogicalBytes / 1048576.0,12:F1} {kind}");
             }
@@ -78,7 +81,8 @@ internal static class Program
             : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         long doneBytes = 0;
-        long totalBytes = files.Sum(f => f.Length);
+        // ReSharper disable once UnusedVariable
+        var totalBytes = files.Sum(f => f.Length);
         var overallSw = Stopwatch.StartNew();
 
         foreach (var fi in files)
@@ -98,11 +102,11 @@ internal static class Program
             report.Kind = insp.Kind;
             report.LogicalBytes = insp.LogicalBytes;
 
-            string kindTag = insp.IsChd ? $"{insp.Kind} V{insp.Version}" : "NOT A CHD";
+            var kindTag = insp.IsChd ? $"{insp.Kind} V{insp.Version}" : "NOT A CHD";
             Console.WriteLine();
             Console.WriteLine($"[{reports.IndexOf(report) + 1}/{files.Count}] {fi.Name}");
             Console.WriteLine(
-                $"  chd={fi.Length / 1048576.0:F1} MiB logical={(insp.LogicalBytes / 1048576.0):F1} MiB kind={kindTag}");
+                $"  chd={fi.Length / 1048576.0:F1} MiB logical={insp.LogicalBytes / 1048576.0:F1} MiB kind={kindTag}");
 
             if (!insp.IsChd)
             {
@@ -133,7 +137,7 @@ internal static class Program
                 continue;
             }
 
-            string work = Path.Combine(cfg.WorkRoot,
+            var work = Path.Combine(cfg.WorkRoot,
                 BattleEngine.Sanitize(fi.Name) + "_" + Guid.NewGuid().ToString("N")[..8]);
             try
             {
@@ -167,21 +171,17 @@ internal static class Program
         Console.WriteLine($@"total time: {overallSw.Elapsed:hh\:mm\:ss}");
 
         if (!_cfgKeepWork)
-        {
             try
             {
-                Directory.Delete(cfg.WorkRoot, recursive: true);
+                Directory.Delete(cfg.WorkRoot, true);
             }
             catch
             {
                 // ignored
             }
-        }
 
         return 0;
     }
-
-    private static bool _cfgKeepWork;
 
     private static List<FileInfo> DiscoverFiles(BattleConfig cfg)
     {
@@ -199,9 +199,9 @@ internal static class Program
 
     private static void ParseArgs(string[] args, BattleConfig cfg)
     {
-        for (int i = 0; i < args.Length; i++)
+        for (var i = 0; i < args.Length; i++)
         {
-            string a = args[i];
+            var a = args[i];
             switch (a)
             {
                 case "-i":
@@ -217,11 +217,9 @@ internal static class Program
                 case "--workers": cfg.Workers = int.Parse(Next()); break;
                 case "--phases":
                     foreach (var p in Next().Split(','))
-                    {
                         if (p.Equals("decode", StringComparison.OrdinalIgnoreCase)) cfg.Decode = true;
                         else if (p.Equals("encode", StringComparison.OrdinalIgnoreCase)) cfg.Encode = true;
                         else throw new ArgumentException($"unknown phase '{p}'");
-                    }
 
                     break;
                 case "--no-decode": cfg.Decode = false; break;

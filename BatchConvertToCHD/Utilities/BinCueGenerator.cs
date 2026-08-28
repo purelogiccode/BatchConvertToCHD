@@ -3,10 +3,10 @@ using System.IO;
 namespace BatchConvertToCHD.Utilities;
 
 /// <summary>
-/// Generates and manages auto-generated CUE sheets for archives that contain only a .bin file
-/// (no .cue/.iso/.img descriptor). chdman needs a cue to know the track layout; a single raw bin
-/// is treated as one data track. The default mode is MODE2/2352 (PlayStation/Redump style), with
-/// MODE1/2352 as the fallback for other systems.
+///     Generates and manages auto-generated CUE sheets for archives that contain only a .bin file
+///     (no .cue/.iso/.img descriptor). chdman needs a cue to know the track layout; a single raw bin
+///     is treated as one data track. The default mode is MODE2/2352 (PlayStation/Redump style), with
+///     MODE1/2352 as the fallback for other systems.
 /// </summary>
 internal static class BinCueGenerator
 {
@@ -16,7 +16,7 @@ internal static class BinCueGenerator
     /// <summary>Marker embedded in the auto-generated cue file name so the app can recognize it.</summary>
     private const string AutoCueMarker = ".autocue";
 
-    /// <summary>Returns the path of the auto-generated cue for <paramref name="binPath"/>.</summary>
+    /// <summary>Returns the path of the auto-generated cue for <paramref name="binPath" />.</summary>
     /// <param name="binPath">Path of the .bin file the cue is generated for.</param>
     internal static string GetAutoCuePath(string binPath)
     {
@@ -43,7 +43,7 @@ internal static class BinCueGenerator
     }
 
     /// <summary>
-    /// Reads the track mode of an auto-generated cue (e.g. "MODE2/2352").
+    ///     Reads the track mode of an auto-generated cue (e.g. "MODE2/2352").
     /// </summary>
     /// <param name="cuePath">Path of the auto-generated cue.</param>
     /// <param name="token">Cancellation token.</param>
@@ -61,10 +61,7 @@ internal static class BinCueGenerator
                 )
                 {
                     var mode = trimmed[(trimmed.LastIndexOf(' ') + 1)..].Trim();
-                    if (mode.Length > 0)
-                    {
-                        return mode;
-                    }
+                    if (mode.Length > 0) return mode;
                 }
             }
         }
@@ -77,7 +74,7 @@ internal static class BinCueGenerator
     }
 
     /// <summary>
-    /// Rewrites an auto-generated cue with a different track mode, preserving the referenced bin name.
+    ///     Rewrites an auto-generated cue with a different track mode, preserving the referenced bin name.
     /// </summary>
     /// <param name="cuePath">Path of the auto-generated cue to rewrite.</param>
     /// <param name="mode">The track mode to write (e.g. "MODE1/2352").</param>
@@ -95,9 +92,7 @@ internal static class BinCueGenerator
     {
         var baseName = Path.GetFileNameWithoutExtension(cuePath); // "Game.autocue"
         if (baseName.EndsWith(AutoCueMarker, StringComparison.OrdinalIgnoreCase))
-        {
             baseName = baseName[..^AutoCueMarker.Length]; // "Game"
-        }
 
         return baseName + FileExtensions.Bin;
     }
@@ -118,9 +113,7 @@ internal static class BinCueGenerator
                     && GameFileParser.TryGetFileNameFromFileLine(trimmed, out var fileName)
                     && fileName is not null
                 )
-                {
                     return fileName;
-                }
             }
         }
         catch (Exception)

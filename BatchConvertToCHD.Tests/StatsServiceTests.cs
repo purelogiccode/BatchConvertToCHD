@@ -57,7 +57,7 @@ public class StatsServiceTests
             capturedMethod = req.Method;
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\"}"),
+                Content = new StringContent("{\"message\":\"ok\"}")
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -77,7 +77,7 @@ public class StatsServiceTests
             capturedUrl = req.RequestUri?.ToString();
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\"}"),
+                Content = new StringContent("{\"message\":\"ok\"}")
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -97,7 +97,7 @@ public class StatsServiceTests
             capturedAuth = req.Headers.Authorization?.ToString();
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\"}"),
+                Content = new StringContent("{\"message\":\"ok\"}")
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -119,7 +119,7 @@ public class StatsServiceTests
             capturedBody = await req.Content!.ReadAsStringAsync().ConfigureAwait(false);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\"}"),
+                Content = new StringContent("{\"message\":\"ok\"}")
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -142,7 +142,7 @@ public class StatsServiceTests
             capturedBody = await req.Content!.ReadAsStringAsync().ConfigureAwait(false);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"message\":\"ok\"}"),
+                Content = new StringContent("{\"message\":\"ok\"}")
             };
         });
         using var httpClient = new HttpClient(handler);

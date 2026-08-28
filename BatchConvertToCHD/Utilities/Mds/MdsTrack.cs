@@ -1,10 +1,10 @@
 namespace BatchConvertToCHD.Utilities.Mds;
 
 /// <summary>
-/// One track from an Alcohol 120% .mds track table.
+///     One track from an Alcohol 120% .mds track table.
 /// </summary>
 /// <param name="Number">Track number as recorded in the descriptor's POINT field (1-99).</param>
-/// <param name="ModeByte">Raw mode byte; see <see cref="CueTrackType"/> for the meanings.</param>
+/// <param name="ModeByte">Raw mode byte; see <see cref="CueTrackType" /> for the meanings.</param>
 /// <param name="SectorSize">Bytes per sector for this track as the rip stored them.</param>
 /// <param name="StartLba">Absolute sector at which the track starts.</param>
 internal sealed record MdsTrack(int Number, byte ModeByte, int SectorSize, long StartLba)
@@ -21,8 +21,8 @@ internal sealed record MdsTrack(int Number, byte ModeByte, int SectorSize, long 
     internal bool IsAudio => ModeByte == ModeAudio;
 
     /// <summary>
-    /// The cue TRACK type for this track once its sectors are 2352 bytes, or null when the mode is
-    /// one this code has never seen and therefore cannot describe honestly.
+    ///     The cue TRACK type for this track once its sectors are 2352 bytes, or null when the mode is
+    ///     one this code has never seen and therefore cannot describe honestly.
     /// </summary>
     internal string? CueTrackType =>
         ModeByte switch
@@ -30,7 +30,7 @@ internal sealed record MdsTrack(int Number, byte ModeByte, int SectorSize, long 
             ModeAudio => "AUDIO",
             ModeMode1 => BinCueGenerator.Mode1,
             ModeMode2 or ModeMode2Form1 or ModeMode2Form2 => BinCueGenerator.Mode2,
-            _ => null,
+            _ => null
         };
 
     /// <summary>A short description used in log messages.</summary>

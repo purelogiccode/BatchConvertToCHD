@@ -6,14 +6,16 @@ using NAudio.Wave.SampleProviders;
 namespace BatchConvertToCHD.Utilities;
 
 /// <summary>
-/// MP3 → WAV decoder. chdman cannot read MP3 audio tracks in cue sheets ("Unhandled track type
-/// MP3"), and its WAVE track support requires exactly 44100 Hz, stereo, 16-bit PCM — so MP3
-/// tracks are decoded to a chdman-compatible WAV before conversion. Decoding is backed by
-/// Windows Media Foundation (NAudio.MediaFoundationReader) with a fallback to NAudio's
-/// Mp3FileReader (ACM codec) for systems without Media Foundation (e.g. Windows N editions).
+///     MP3 → WAV decoder. chdman cannot read MP3 audio tracks in cue sheets ("Unhandled track type
+///     MP3"), and its WAVE track support requires exactly 44100 Hz, stereo, 16-bit PCM — so MP3
+///     tracks are decoded to a chdman-compatible WAV before conversion. Decoding is backed by
+///     Windows Media Foundation (NAudio.MediaFoundationReader) with a fallback to NAudio's
+///     Mp3FileReader (ACM codec) for systems without Media Foundation (e.g. Windows N editions).
 /// </summary>
 internal sealed class Mp3ToWavDecoder : IMp3Decoder
 {
+    private static readonly Lock MediaFoundationLock = new();
+
     /// <inheritdoc />
     /// <param name="mp3Path">Path of the MP3 file to decode.</param>
     /// <param name="wavPath">Destination path for the decoded 44100 Hz stereo 16-bit PCM WAV file.</param>
@@ -59,10 +61,7 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
                 }
                 catch (Exception mfEx)
                 {
-                    if (token.IsCancellationRequested)
-                    {
-                        throw new OperationCanceledException(token);
-                    }
+                    if (token.IsCancellationRequested) throw new OperationCanceledException(token);
 
                     primaryError = mfEx;
 
@@ -92,10 +91,7 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
                 }
                 catch (Exception builtInEx)
                 {
-                    if (token.IsCancellationRequested)
-                    {
-                        throw new OperationCanceledException(token);
-                    }
+                    if (token.IsCancellationRequested) throw new OperationCanceledException(token);
 
                     // Chain the original Media Foundation error so the root cause (missing codec vs
                     // corrupt MP3) stays diagnosable.
@@ -110,8 +106,8 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
     }
 
     /// <summary>
-    /// True when the WAV at <paramref name="wavPath"/> carries an actual audio payload rather
-    /// than just a format header.
+    ///     True when the WAV at <paramref name="wavPath" /> carries an actual audio payload rather
+    ///     than just a format header.
     /// </summary>
     private static bool WavHasAudioData(string wavPath)
     {
@@ -152,26 +148,20 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
     }
 
     /// <summary>
-    /// Normalizes any PCM sample stream into what chdman's cue WAVE tracks require:
-    /// exactly 44100 Hz, stereo, 16-bit (the 16-bit conversion happens at write time via
-    /// <see cref="WaveFileWriter.CreateWaveFile16"/>).
+    ///     Normalizes any PCM sample stream into what chdman's cue WAVE tracks require:
+    ///     exactly 44100 Hz, stereo, 16-bit (the 16-bit conversion happens at write time via
+    ///     <see cref="WaveFileWriter.CreateWaveFile16" />).
     /// </summary>
     /// <remarks>
-    /// The WDL resampler buffers ~100 ms of audio at the higher of the input/output rates, so
-    /// it stays comfortably within memory for all common MP3 sample rates (8–48 kHz).
+    ///     The WDL resampler buffers ~100 ms of audio at the higher of the input/output rates, so
+    ///     it stays comfortably within memory for all common MP3 sample rates (8–48 kHz).
     /// </remarks>
     internal static ISampleProvider NormalizeForChdman(ISampleProvider source)
     {
         var sample = source;
-        if (sample.WaveFormat.SampleRate != 44100)
-        {
-            sample = new WdlResamplingSampleProvider(sample, 44100);
-        }
+        if (sample.WaveFormat.SampleRate != 44100) sample = new WdlResamplingSampleProvider(sample, 44100);
 
-        if (sample.WaveFormat.Channels == 1)
-        {
-            sample = new MonoToStereoSampleProvider(sample);
-        }
+        if (sample.WaveFormat.Channels == 1) sample = new MonoToStereoSampleProvider(sample);
 
         return sample;
     }
@@ -182,6 +172,4 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
         // which chdman cannot consume in cue WAVE tracks.
         WaveFileWriter.CreateWaveFile16(wavPath, NormalizeForChdman(source));
     }
-
-    private static readonly Lock MediaFoundationLock = new();
 }

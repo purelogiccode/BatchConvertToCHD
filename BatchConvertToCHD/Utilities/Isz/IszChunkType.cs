@@ -1,10 +1,9 @@
 namespace BatchConvertToCHD.Utilities.Isz;
 
 /// <summary>
-/// How one ISZ chunk was stored, taken from the top two bits of its chunk table entry.
-///
-/// The spec names these ADI_ZERO (0x00), ADI_DATA (0x40), ADI_ZLIB (0x80) and ADI_BZ2 (0xC0),
-/// which are the flag byte values before the two bits are shifted down.
+///     How one ISZ chunk was stored, taken from the top two bits of its chunk table entry.
+///     The spec names these ADI_ZERO (0x00), ADI_DATA (0x40), ADI_ZLIB (0x80) and ADI_BZ2 (0xC0),
+///     which are the flag byte values before the two bits are shifted down.
 /// </summary>
 internal enum IszChunkType
 {
@@ -18,5 +17,5 @@ internal enum IszChunkType
     ZLib = 2,
 
     /// <summary>ADI_BZ2: bzip2.</summary>
-    BZip2 = 3,
+    BZip2 = 3
 }

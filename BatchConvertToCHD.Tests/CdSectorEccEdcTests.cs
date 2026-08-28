@@ -14,10 +14,7 @@ public class CdSectorEccEdcTests
 
         // 00 followed by ten FF and a 00 is the mark every raw CD sector opens with.
         Assert.Equal(0x00, sector[0]);
-        for (var i = 1; i <= 10; i++)
-        {
-            Assert.Equal(0xFF, sector[i]);
-        }
+        for (var i = 1; i <= 10; i++) Assert.Equal(0xFF, sector[i]);
 
         Assert.Equal(0x00, sector[11]);
         Assert.Equal(0x02, sector[0x0F]);
@@ -43,10 +40,7 @@ public class CdSectorEccEdcTests
         // The ECM trailer is checked against an EDC accumulated across the whole image in chunks, so
         // a partial fold has to equal the single-shot result.
         var data = new byte[1000];
-        for (var i = 0; i < data.Length; i++)
-        {
-            data[i] = (byte)(i * 13);
-        }
+        for (var i = 0; i < data.Length; i++) data[i] = (byte)(i * 13);
 
         var whole = CdSectorEccEdc.ComputeEdc(0, data);
 
@@ -141,10 +135,7 @@ public class CdSectorEccEdcTests
         sector[0x00D] = 0x02;
         sector[0x00E] = 0x10;
 
-        for (var i = 0; i < payloadLength; i++)
-        {
-            sector[payloadOffset + i] = (byte)(seed + i * 7);
-        }
+        for (var i = 0; i < payloadLength; i++) sector[payloadOffset + i] = (byte)(seed + i * 7);
 
         return sector;
     }

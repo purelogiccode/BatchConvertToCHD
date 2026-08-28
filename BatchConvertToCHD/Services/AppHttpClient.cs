@@ -7,8 +7,8 @@ using Serilog;
 namespace BatchConvertToCHD.Services;
 
 /// <summary>
-/// Provides a thread-safe singleton <see cref="HttpClient"/> configured with TLS 1.2/1.3
-/// and tolerant SSL certificate validation for use across the application.
+///     Provides a thread-safe singleton <see cref="HttpClient" /> configured with TLS 1.2/1.3
+///     and tolerant SSL certificate validation for use across the application.
 /// </summary>
 internal static class AppHttpClient
 {
@@ -18,8 +18,8 @@ internal static class AppHttpClient
     private static readonly ILogger Logger = Log.ForContext(typeof(AppHttpClient));
 
     /// <summary>
-    /// Gets the shared singleton <see cref="HttpClient"/> instance. Creates and configures it
-    /// on first access with double-checked locking for thread safety.
+    ///     Gets the shared singleton <see cref="HttpClient" /> instance. Creates and configures it
+    ///     on first access with double-checked locking for thread safety.
     /// </summary>
     internal static HttpClient Client
     {
@@ -35,9 +35,9 @@ internal static class AppHttpClient
                         {
                             EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
                             RemoteCertificateValidationCallback =
-                                ServerCertificateValidationCallback,
+                                ServerCertificateValidationCallback
                         },
-                        PooledConnectionLifetime = TimeSpan.FromMinutes(10),
+                        PooledConnectionLifetime = TimeSpan.FromMinutes(10)
                     };
                     _client = new HttpClient(_handler);
                     _client.DefaultRequestHeaders.Add("Accept", "application/json");
@@ -77,8 +77,8 @@ internal static class AppHttpClient
     }
 
     /// <summary>
-    /// Disposes the shared <see cref="HttpClient"/> and its underlying handler.
-    /// Subsequent access to <see cref="Client"/> will create a new instance.
+    ///     Disposes the shared <see cref="HttpClient" /> and its underlying handler.
+    ///     Subsequent access to <see cref="Client" /> will create a new instance.
     /// </summary>
     internal static void Dispose()
     {

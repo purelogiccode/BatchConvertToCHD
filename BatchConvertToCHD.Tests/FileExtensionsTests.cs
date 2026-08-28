@@ -91,7 +91,7 @@ public class FileExtensionsTests
             ".raw",
             ".ccd",
             ".mds",
-            ".isz",
+            ".isz"
         };
         Assert.Equal(expected, FileExtensions.PrimaryTargetExtensions);
     }
@@ -156,7 +156,7 @@ public class FileExtensionsTests
             ".7z",
             ".rar",
             ".cso",
-            ".pbp",
+            ".pbp"
         };
         Assert.Equal(expected, FileExtensions.AllSupportedInputExtensionsForConversion);
     }

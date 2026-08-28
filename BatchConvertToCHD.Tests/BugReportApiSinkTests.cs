@@ -5,26 +5,6 @@ namespace BatchConvertToCHD.Tests;
 
 public class BugReportApiSinkTests
 {
-    private sealed class TestBugReportService(string apiUrl, string apiKey, string applicationName)
-        : BugReportService(apiUrl, apiKey, applicationName)
-    {
-        public int CallCount { get; private set; }
-        public string LastMessage { get; private set; } = string.Empty;
-        public Exception? LastException { get; private set; }
-
-        public override Task<bool> SendBugReportAsync(
-            string message,
-            Exception? ex = null,
-            CancellationToken token = default
-        )
-        {
-            CallCount++;
-            LastMessage = message;
-            LastException = ex;
-            return Task.FromResult(true);
-        }
-    }
-
     private static TestBugReportService CreateTestService()
     {
         return new TestBugReportService("http://localhost", "test-key", "test-app");
@@ -135,5 +115,25 @@ public class BugReportApiSinkTests
         Assert.Equal(1, service.CallCount);
         Assert.NotNull(service.LastException);
         Assert.StartsWith("Arg error", service.LastException!.Message, StringComparison.Ordinal);
+    }
+
+    private sealed class TestBugReportService(string apiUrl, string apiKey, string applicationName)
+        : BugReportService(apiUrl, apiKey, applicationName)
+    {
+        public int CallCount { get; private set; }
+        public string LastMessage { get; private set; } = string.Empty;
+        public Exception? LastException { get; private set; }
+
+        public override Task<bool> SendBugReportAsync(
+            string message,
+            Exception? ex = null,
+            CancellationToken token = default
+        )
+        {
+            CallCount++;
+            LastMessage = message;
+            LastException = ex;
+            return Task.FromResult(true);
+        }
     }
 }

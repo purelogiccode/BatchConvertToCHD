@@ -4,15 +4,13 @@ using System.IO;
 namespace BatchConvertToCHD.Utilities;
 
 /// <summary>
-/// Reassembles disc images that were split into numbered pieces.
-///
-/// Two layouts turn up in collections. Alcohol splits a .mdf into ".i00", ".i01" and so on, and
-/// plain byte-splitters produce ".001", ".002" - sometimes wearing an archive extension as well
-/// ("game.rar.001", or even ".rar" parts that were never archives at all). None of these are
-/// readable until the pieces are put back together in order.
-///
-/// A set is only accepted when the successor actually exists, so a lone file that happens to end
-/// in ".001" is left alone.
+///     Reassembles disc images that were split into numbered pieces.
+///     Two layouts turn up in collections. Alcohol splits a .mdf into ".i00", ".i01" and so on, and
+///     plain byte-splitters produce ".001", ".002" - sometimes wearing an archive extension as well
+///     ("game.rar.001", or even ".rar" parts that were never archives at all). None of these are
+///     readable until the pieces are put back together in order.
+///     A set is only accepted when the successor actually exists, so a lone file that happens to end
+///     in ".001" is left alone.
 /// </summary>
 internal static class SplitImageJoiner
 {
@@ -23,35 +21,26 @@ internal static class SplitImageJoiner
     private const int MaxVolumes = 999;
 
     /// <summary>
-    /// When <paramref name="firstVolumePath"/> is the first piece of a split set, returns every
-    /// piece in order. Returns null when the file is not a first volume, or when no second piece
-    /// exists.
+    ///     When <paramref name="firstVolumePath" /> is the first piece of a split set, returns every
+    ///     piece in order. Returns null when the file is not a first volume, or when no second piece
+    ///     exists.
     /// </summary>
     /// <param name="firstVolumePath">Candidate first volume.</param>
     internal static List<string>? TryGetVolumeSet(string firstVolumePath)
     {
         var extension = Path.GetExtension(firstVolumePath);
-        if (extension.Length == 0)
-        {
-            return null;
-        }
+        if (extension.Length == 0) return null;
 
         var stem = firstVolumePath[..^extension.Length];
         var successorFormat = GetSuccessorFormat(extension);
-        if (successorFormat is null)
-        {
-            return null;
-        }
+        if (successorFormat is null) return null;
 
         var parts = new List<string> { firstVolumePath };
         for (var index = 1; index < MaxVolumes; index++)
         {
             var candidate = stem + successorFormat(index);
             var resolved = ResolveCaseInsensitive(candidate);
-            if (resolved is null)
-            {
-                break;
-            }
+            if (resolved is null) break;
 
             parts.Add(resolved);
         }
@@ -61,8 +50,8 @@ internal static class SplitImageJoiner
     }
 
     /// <summary>
-    /// Concatenates <paramref name="parts"/> into <paramref name="destinationPath"/> and returns the
-    /// total bytes written.
+    ///     Concatenates <paramref name="parts" /> into <paramref name="destinationPath" /> and returns the
+    ///     total bytes written.
     /// </summary>
     /// <param name="parts">Volumes in order.</param>
     /// <param name="destinationPath">File to create.</param>
@@ -79,7 +68,7 @@ internal static class SplitImageJoiner
             FileAccess.Write,
             FileShare.None,
             CopyBufferBytes,
-            useAsync: true
+            true
         );
 
         foreach (var part in parts)
@@ -92,7 +81,7 @@ internal static class SplitImageJoiner
                 FileAccess.Read,
                 FileShare.ReadWrite,
                 CopyBufferBytes,
-                useAsync: true
+                true
             );
             await input.CopyToAsync(output, CopyBufferBytes, token).ConfigureAwait(false);
         }
@@ -108,7 +97,6 @@ internal static class SplitImageJoiner
     {
         long total = 0;
         foreach (var part in parts)
-        {
             try
             {
                 total += new FileInfo(part).Length;
@@ -117,14 +105,13 @@ internal static class SplitImageJoiner
             {
                 return 0;
             }
-        }
 
         return total;
     }
 
     /// <summary>
-    /// Returns a function producing the extension of volume <c>n</c> for the numbering style of
-    /// <paramref name="firstExtension"/>, or null when the extension is not a first-volume marker.
+    ///     Returns a function producing the extension of volume <c>n</c> for the numbering style of
+    ///     <paramref name="firstExtension" />, or null when the extension is not a first-volume marker.
     /// </summary>
     private static Func<int, string>? GetSuccessorFormat(string firstExtension)
     {
@@ -146,22 +133,16 @@ internal static class SplitImageJoiner
     }
 
     /// <summary>
-    /// Returns the on-disk path matching <paramref name="candidate"/>, tolerating case differences
-    /// in the file name, or null when nothing matches.
+    ///     Returns the on-disk path matching <paramref name="candidate" />, tolerating case differences
+    ///     in the file name, or null when nothing matches.
     /// </summary>
     private static string? ResolveCaseInsensitive(string candidate)
     {
-        if (File.Exists(candidate))
-        {
-            return candidate;
-        }
+        if (File.Exists(candidate)) return candidate;
 
         var directory = Path.GetDirectoryName(candidate);
         var fileName = Path.GetFileName(candidate);
-        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
-        {
-            return null;
-        }
+        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) return null;
 
         try
         {

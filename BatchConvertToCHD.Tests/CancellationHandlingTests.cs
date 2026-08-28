@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 namespace BatchConvertToCHD.Tests;
 
 public class CancellationHandlingTests
@@ -126,7 +128,7 @@ public class CancellationHandlingTests
     [Fact]
     public void IsCorruptionException_CryptographicException_ReturnsTrue()
     {
-        var ex = new System.Security.Cryptography.CryptographicException("bad data");
+        var ex = new CryptographicException("bad data");
         Assert.True(MainWindow.IsCorruptionException(ex));
     }
 

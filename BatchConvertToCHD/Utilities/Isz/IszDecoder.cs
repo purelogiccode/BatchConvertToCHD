@@ -7,17 +7,15 @@ using SharpCompress.Compressors.BZip2;
 namespace BatchConvertToCHD.Utilities.Isz;
 
 /// <summary>
-/// Decompresses UltraISO ISZ images back to the plain image they were made from.
-///
-/// An ISZ is an image cut into fixed-size chunks, each stored raw, zlib-deflated, bzip2-compressed
-/// or elided when it is all zeros, with a table at the front saying which is which. chdman cannot
-/// read one, so the image has to be restored first. Both compressors are already available - zlib
-/// through <see cref="ZLibStream"/> and bzip2 through SharpCompress, which the archive service
-/// already depends on - so this needs no external tool, unlike ECM.
-///
-/// Written against EZB Systems' ISZ File Format Specification 1.00. Anything the spec leaves
-/// undefined, or that does not add up on the way through, is reported rather than guessed: a
-/// half-decompressed image that chdman happily accepts is the one outcome worth avoiding.
+///     Decompresses UltraISO ISZ images back to the plain image they were made from.
+///     An ISZ is an image cut into fixed-size chunks, each stored raw, zlib-deflated, bzip2-compressed
+///     or elided when it is all zeros, with a table at the front saying which is which. chdman cannot
+///     read one, so the image has to be restored first. Both compressors are already available - zlib
+///     through <see cref="ZLibStream" /> and bzip2 through SharpCompress, which the archive service
+///     already depends on - so this needs no external tool, unlike ECM.
+///     Written against EZB Systems' ISZ File Format Specification 1.00. Anything the spec leaves
+///     undefined, or that does not add up on the way through, is reported rather than guessed: a
+///     half-decompressed image that chdman happily accepts is the one outcome worth avoiding.
 /// </summary>
 internal static class IszDecoder
 {
@@ -31,7 +29,7 @@ internal static class IszDecoder
     private const int ProgressStepPercent = 10;
 
     /// <summary>
-    /// Reads the header of an ISZ file, or returns null when the file does not start with one.
+    ///     Reads the header of an ISZ file, or returns null when the file does not start with one.
     /// </summary>
     /// <param name="path">Path of the .isz file.</param>
     /// <param name="token">Cancellation token.</param>
@@ -47,7 +45,7 @@ internal static class IszDecoder
                 FileShare.ReadWrite
             );
             var read = await stream
-                .ReadAtLeastAsync(buffer, buffer.Length, throwOnEndOfStream: false, token)
+                .ReadAtLeastAsync(buffer, buffer.Length, false, token)
                 .ConfigureAwait(false);
 
             return IszHeader.TryRead(buffer.AsSpan(0, read));
@@ -66,17 +64,14 @@ internal static class IszDecoder
     }
 
     /// <summary>
-    /// Returns the path of segment <paramref name="segmentIndex"/> of a split image, counting the
-    /// .isz itself as segment 0. Later segments are ".i01", ".i02" and so on, per the spec.
+    ///     Returns the path of segment <paramref name="segmentIndex" /> of a split image, counting the
+    ///     .isz itself as segment 0. Later segments are ".i01", ".i02" and so on, per the spec.
     /// </summary>
     /// <param name="firstSegmentPath">Path of the .isz file.</param>
     /// <param name="segmentIndex">Zero-based segment index.</param>
     internal static string GetSegmentPath(string firstSegmentPath, int segmentIndex)
     {
-        if (segmentIndex <= 0)
-        {
-            return firstSegmentPath;
-        }
+        if (segmentIndex <= 0) return firstSegmentPath;
 
         var extension = Path.GetExtension(firstSegmentPath);
         var stem = firstSegmentPath[..^extension.Length];
@@ -85,7 +80,7 @@ internal static class IszDecoder
     }
 
     /// <summary>
-    /// Decompresses <paramref name="iszPath"/> to <paramref name="destinationPath"/>.
+    ///     Decompresses <paramref name="iszPath" /> to <paramref name="destinationPath" />.
     /// </summary>
     /// <param name="iszPath">Path of the .isz file, the first segment when the image is split.</param>
     /// <param name="destinationPath">File to write the restored image to.</param>
@@ -106,19 +101,14 @@ internal static class IszDecoder
         {
             var readHeader = await TryReadHeaderAsync(iszPath, token).ConfigureAwait(false);
             if (readHeader is null)
-            {
                 return IszDecodeResult.Failed(
                     "the file does not start with an ISZ header, so it is not an ISZ image."
                 );
-            }
 
             header = readHeader;
 
             var unusable = header.GetUnusableReason();
-            if (unusable is not null)
-            {
-                return IszDecodeResult.Failed(unusable);
-            }
+            if (unusable is not null) return IszDecodeResult.Failed(unusable);
 
             onLog($" ISZ header: {header.Summary}.");
 
@@ -136,19 +126,14 @@ internal static class IszDecoder
             chunkTable = await ReadChunkTableAsync(first, header, token).ConfigureAwait(false);
 
             var (built, regionFailure) = BuildRegions(iszPath, header, segments, first.Length);
-            if (regionFailure is not null)
-            {
-                return IszDecodeResult.Failed(regionFailure);
-            }
+            if (regionFailure is not null) return IszDecodeResult.Failed(regionFailure);
 
             regions = built;
 
             if (segments.Count > 1)
-            {
                 onLog(
                     $" The image is split across {segments.Count.ToString(CultureInfo.InvariantCulture)} segments; reading them in order."
                 );
-            }
         }
         catch (OperationCanceledException)
         {
@@ -175,11 +160,9 @@ internal static class IszDecoder
             var expected = header.ImageSizeBytes;
 
             if (written != expected)
-            {
                 return IszDecodeResult.Failed(
                     $"the ISZ decompressed to {written.ToString("N0", CultureInfo.InvariantCulture)} bytes but its header declares {expected.ToString("N0", CultureInfo.InvariantCulture)}. The file is truncated or a segment is missing, so the image has not been written."
                 );
-            }
 
             return IszDecodeResult.Succeeded(destinationPath, header.SectorSize);
         }
@@ -200,8 +183,8 @@ internal static class IszDecoder
     }
 
     /// <summary>
-    /// Reads the segment definition table, which the spec places immediately after the header and
-    /// terminates with a zero-size entry.
+    ///     Reads the segment definition table, which the spec places immediately after the header and
+    ///     terminates with a zero-size entry.
     /// </summary>
     private static async Task<List<IszSegment>> ReadSegmentTableAsync(
         FileStream stream,
@@ -217,25 +200,19 @@ internal static class IszDecoder
         for (var index = 0; index <= MaxSegments; index++)
         {
             var read = await stream
-                .ReadAtLeastAsync(entry, entry.Length, throwOnEndOfStream: false, token)
+                .ReadAtLeastAsync(entry, entry.Length, false, token)
                 .ConfigureAwait(false);
-            if (read < entry.Length)
-            {
-                break;
-            }
+            if (read < entry.Length) break;
 
             var segment = new IszSegment(
-                Size: BinaryPrimitives.ReadInt64LittleEndian(entry),
-                ChunkCount: BinaryPrimitives.ReadInt32LittleEndian(entry.AsSpan(8)),
-                FirstChunkNumber: BinaryPrimitives.ReadInt32LittleEndian(entry.AsSpan(12)),
-                ChunkOffset: BinaryPrimitives.ReadInt32LittleEndian(entry.AsSpan(16)),
-                LeftSize: BinaryPrimitives.ReadInt32LittleEndian(entry.AsSpan(20))
+                BinaryPrimitives.ReadInt64LittleEndian(entry),
+                BinaryPrimitives.ReadInt32LittleEndian(entry.AsSpan(8)),
+                BinaryPrimitives.ReadInt32LittleEndian(entry.AsSpan(12)),
+                BinaryPrimitives.ReadInt32LittleEndian(entry.AsSpan(16)),
+                BinaryPrimitives.ReadInt32LittleEndian(entry.AsSpan(20))
             );
 
-            if (segment.IsTerminator)
-            {
-                break;
-            }
+            if (segment.IsTerminator) break;
 
             segments.Add(segment);
         }
@@ -244,8 +221,8 @@ internal static class IszDecoder
     }
 
     /// <summary>
-    /// Reads the chunk definition table whole. It is one entry of <c>PointerLength</c> bytes per
-    /// chunk, so even a large image's table is a few hundred kilobytes.
+    ///     Reads the chunk definition table whole. It is one entry of <c>PointerLength</c> bytes per
+    ///     chunk, so even a large image's table is a few hundred kilobytes.
     /// </summary>
     private static async Task<byte[]> ReadChunkTableAsync(
         FileStream stream,
@@ -258,22 +235,20 @@ internal static class IszDecoder
 
         stream.Position = header.ChunkTableOffset;
         var read = await stream
-            .ReadAtLeastAsync(table, tableBytes, throwOnEndOfStream: false, token)
+            .ReadAtLeastAsync(table, tableBytes, false, token)
             .ConfigureAwait(false);
         if (read < tableBytes)
-        {
             throw new InvalidDataException(
                 $"the chunk table is {read.ToString("N0", CultureInfo.InvariantCulture)} of an expected {tableBytes.ToString("N0", CultureInfo.InvariantCulture)} bytes, so the file is truncated"
             );
-        }
 
         return table;
     }
 
     /// <summary>
-    /// Works out where chunk data lives. Chunks are stored back to back and a single chunk may
-    /// straddle a segment boundary, so the data is treated as one logical stream made of a region
-    /// per file rather than as separate per-segment sequences.
+    ///     Works out where chunk data lives. Chunks are stored back to back and a single chunk may
+    ///     straddle a segment boundary, so the data is treated as one logical stream made of a region
+    ///     per file rather than as separate per-segment sequences.
     /// </summary>
     private static (List<DataRegion> Regions, string? Failure) BuildRegions(
         string iszPath,
@@ -285,9 +260,7 @@ internal static class IszDecoder
         if (segments.Count == 0)
         {
             if (header.DataOffset >= firstSegmentLength)
-            {
                 return ([], "the ISZ header points past the end of the file, so it is truncated.");
-            }
 
             return (
                 [
@@ -295,7 +268,7 @@ internal static class IszDecoder
                         iszPath,
                         header.DataOffset,
                         firstSegmentLength - header.DataOffset
-                    ),
+                    )
                 ],
                 null
             );
@@ -313,12 +286,10 @@ internal static class IszDecoder
             {
                 var info = new FileInfo(path);
                 if (!info.Exists)
-                {
                     return (
                         [],
                         $"the image is split across {segments.Count.ToString(CultureInfo.InvariantCulture)} segments and {Path.GetFileName(path)} is not in the same folder. Put every segment together and try again."
                     );
-                }
 
                 actualLength = info.Length;
             }
@@ -330,10 +301,7 @@ internal static class IszDecoder
             if (index > 0)
             {
                 var mismatch = VerifySegmentBelongs(path, header);
-                if (mismatch is not null)
-                {
-                    return ([], mismatch);
-                }
+                if (mismatch is not null) return ([], mismatch);
             }
 
             // The declared size is what the writer intended; the file on disk is what there is.
@@ -346,10 +314,7 @@ internal static class IszDecoder
                     ? header.DataOffset
                     : (uint)segment.ChunkOffset;
 
-            if (start < usableLength)
-            {
-                regions.Add(new DataRegion(path, start, usableLength - start));
-            }
+            if (start < usableLength) regions.Add(new DataRegion(path, start, usableLength - start));
         }
 
         return regions.Count > 0
@@ -358,8 +323,8 @@ internal static class IszDecoder
     }
 
     /// <summary>
-    /// Confirms a later segment carries the same volume serial number as the first, which is the
-    /// only thing distinguishing the right ".i01" from one belonging to another image.
+    ///     Confirms a later segment carries the same volume serial number as the first, which is the
+    ///     only thing distinguishing the right ".i01" from one belonging to another image.
     /// </summary>
     private static string? VerifySegmentBelongs(string segmentPath, IszHeader header)
     {
@@ -372,20 +337,16 @@ internal static class IszDecoder
                 FileAccess.Read,
                 FileShare.ReadWrite
             );
-            var read = stream.ReadAtLeast(buffer, buffer.Length, throwOnEndOfStream: false);
+            var read = stream.ReadAtLeast(buffer, buffer.Length, false);
             var segmentHeader = IszHeader.TryRead(buffer.AsSpan(0, read));
 
             if (segmentHeader is null)
-            {
                 return
                     $"segment {Path.GetFileName(segmentPath)} does not start with an ISZ header, so it is not part of this image.";
-            }
 
             if (segmentHeader.VolumeSerialNumber != header.VolumeSerialNumber)
-            {
                 return
                     $"segment {Path.GetFileName(segmentPath)} belongs to a different ISZ image (volume serial number does not match). Collect the segments of one image together and try again.";
-            }
 
             return null;
         }
@@ -396,8 +357,8 @@ internal static class IszDecoder
     }
 
     /// <summary>
-    /// Walks the chunk table, decompresses each chunk and writes the image out. Returns the bytes
-    /// written, which the caller checks against the size the header declared.
+    ///     Walks the chunk table, decompresses each chunk and writes the image out. Returns the bytes
+    ///     written, which the caller checks against the size the header declared.
     /// </summary>
     private static async Task<long> WriteImageAsync(
         IszHeader header,
@@ -422,7 +383,7 @@ internal static class IszDecoder
             FileAccess.Write,
             FileShare.None,
             FileBufferBytes,
-            useAsync: true
+            true
         );
 
         long written = 0;
@@ -434,11 +395,9 @@ internal static class IszDecoder
 
             var (type, storedLength) = ReadChunkEntry(chunkTable, (int)index, header.PointerLength);
             if (storedLength > chunkSize)
-            {
                 throw new InvalidDataException(
                     $"chunk {index.ToString("N0", CultureInfo.InvariantCulture)} declares {storedLength.ToString("N0", CultureInfo.InvariantCulture)} stored bytes, more than the {chunkSize.ToString("N0", CultureInfo.InvariantCulture)}-byte chunk size allows"
                 );
-            }
 
             int produced;
             if (type == IszChunkType.Zero)
@@ -449,9 +408,7 @@ internal static class IszDecoder
                     storedLength > 0
                     && !await reader.SkipAsync(storedLength, token).ConfigureAwait(false)
                 )
-                {
                     break;
-                }
 
                 zeros ??= new byte[chunkSize];
                 produced = chunkSize;
@@ -465,9 +422,7 @@ internal static class IszDecoder
                         .ReadExactlyAsync(compressed, storedLength, token)
                         .ConfigureAwait(false)
                 )
-                {
                     break;
-                }
 
                 produced = type switch
                 {
@@ -481,7 +436,7 @@ internal static class IszDecoder
                         )
                         .ConfigureAwait(false),
                     _ => await UnBzip2Async(compressed, storedLength, plain, index, token)
-                        .ConfigureAwait(false),
+                        .ConfigureAwait(false)
                 };
 
                 await WriteCappedAsync(output, plain, produced, expected, written, token)
@@ -506,8 +461,8 @@ internal static class IszDecoder
     }
 
     /// <summary>
-    /// Writes a decompressed chunk, stopping at the image size the header declared so a writer
-    /// that padded its last chunk does not lengthen the image.
+    ///     Writes a decompressed chunk, stopping at the image size the header declared so a writer
+    ///     that padded its last chunk does not lengthen the image.
     /// </summary>
     private static async Task WriteCappedAsync(
         FileStream output,
@@ -520,15 +475,12 @@ internal static class IszDecoder
     {
         var room = expected - written;
         var count = (int)Math.Min(produced, room);
-        if (count > 0)
-        {
-            await output.WriteAsync(buffer.AsMemory(0, count), token).ConfigureAwait(false);
-        }
+        if (count > 0) await output.WriteAsync(buffer.AsMemory(0, count), token).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Splits one chunk table entry into its type and stored length. The entry is a little-endian
-    /// integer <paramref name="pointerLength"/> bytes wide whose top two bits are the type.
+    ///     Splits one chunk table entry into its type and stored length. The entry is a little-endian
+    ///     integer <paramref name="pointerLength" /> bytes wide whose top two bits are the type.
     /// </summary>
     /// <param name="chunkTable">The whole chunk table.</param>
     /// <param name="index">Zero-based chunk index.</param>
@@ -542,10 +494,7 @@ internal static class IszDecoder
         var offset = index * pointerLength;
 
         ulong raw = 0;
-        for (var i = 0; i < pointerLength; i++)
-        {
-            raw |= (ulong)chunkTable[offset + i] << (8 * i);
-        }
+        for (var i = 0; i < pointerLength; i++) raw |= (ulong)chunkTable[offset + i] << (8 * i);
 
         var typeShift = 8 * pointerLength - 2;
         var type = (IszChunkType)(int)((raw >> typeShift) & 0x03);
@@ -569,7 +518,7 @@ internal static class IszDecoder
         CancellationToken token
     )
     {
-        using var input = new MemoryStream(compressed, 0, storedLength, writable: false);
+        using var input = new MemoryStream(compressed, 0, storedLength, false);
         await using var inflate = new ZLibStream(input, CompressionMode.Decompress);
 
         return await FillAsync(inflate, plain, index, token).ConfigureAwait(false);
@@ -583,11 +532,11 @@ internal static class IszDecoder
         CancellationToken token
     )
     {
-        using var input = new MemoryStream(compressed, 0, storedLength, writable: false);
+        using var input = new MemoryStream(compressed, 0, storedLength, false);
         await using var bzip2 = await BZip2Stream.CreateAsync(
             input,
             SharpCompress.Compressors.CompressionMode.Decompress,
-            decompressConcatenated: false,
+            false,
             cancellationToken: token
         );
 
@@ -595,10 +544,10 @@ internal static class IszDecoder
     }
 
     /// <summary>
-    /// Reads a decompressed chunk into <paramref name="plain"/>. A chunk that does not fit is a
-    /// corrupt table rather than a large chunk - the spec caps the decompressed size at the chunk
-    /// size - and it has to be an error, because silently keeping the first part of it would put a
-    /// gap in the middle of the image that still converts.
+    ///     Reads a decompressed chunk into <paramref name="plain" />. A chunk that does not fit is a
+    ///     corrupt table rather than a large chunk - the spec caps the decompressed size at the chunk
+    ///     size - and it has to be an error, because silently keeping the first part of it would put a
+    ///     gap in the middle of the image that still converts.
     /// </summary>
     private static async Task<int> FillAsync(
         Stream source,
@@ -608,20 +557,15 @@ internal static class IszDecoder
     )
     {
         var produced = await source
-            .ReadAtLeastAsync(plain, plain.Length, throwOnEndOfStream: false, token)
+            .ReadAtLeastAsync(plain, plain.Length, false, token)
             .ConfigureAwait(false);
-        if (produced < plain.Length)
-        {
-            return produced;
-        }
+        if (produced < plain.Length) return produced;
 
         var overflow = new byte[1];
         if (await source.ReadAsync(overflow, token).ConfigureAwait(false) > 0)
-        {
             throw new InvalidDataException(
                 $"chunk {index.ToString("N0", CultureInfo.InvariantCulture)} decompresses to more than the chunk size the header declares"
             );
-        }
 
         return produced;
     }
@@ -633,19 +577,28 @@ internal static class IszDecoder
     private sealed record DataRegion(string Path, long Start, long Length);
 
     /// <summary>
-    /// Reads the chunk data as one continuous stream over a list of regions, so a chunk split
-    /// across two segment files is read without the caller knowing about the boundary.
+    ///     Reads the chunk data as one continuous stream over a list of regions, so a chunk split
+    ///     across two segment files is read without the caller knowing about the boundary.
     /// </summary>
     private sealed class SequentialReader(IReadOnlyList<DataRegion> regions) : IAsyncDisposable
     {
         private readonly IReadOnlyList<DataRegion> _regions = regions;
         private int _index = -1;
-        private FileStream? _stream;
         private long _remainingInRegion;
+        private FileStream? _stream;
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_stream is not null)
+            {
+                await _stream.DisposeAsync().ConfigureAwait(false);
+                _stream = null;
+            }
+        }
 
         /// <summary>
-        /// Fills the first <paramref name="count"/> bytes of <paramref name="buffer"/>, crossing
-        /// into later regions as needed. False means the data ran out first.
+        ///     Fills the first <paramref name="count" /> bytes of <paramref name="buffer" />, crossing
+        ///     into later regions as needed. False means the data ran out first.
         /// </summary>
         internal async Task<bool> ReadExactlyAsync(
             byte[] buffer,
@@ -658,10 +611,7 @@ internal static class IszDecoder
             {
                 if (_stream is null || _remainingInRegion <= 0)
                 {
-                    if (!await MoveNextAsync().ConfigureAwait(false))
-                    {
-                        return false;
-                    }
+                    if (!await MoveNextAsync().ConfigureAwait(false)) return false;
 
                     continue;
                 }
@@ -684,7 +634,7 @@ internal static class IszDecoder
             return true;
         }
 
-        /// <summary>Advances past <paramref name="count"/> bytes without keeping them.</summary>
+        /// <summary>Advances past <paramref name="count" /> bytes without keeping them.</summary>
         internal async Task<bool> SkipAsync(long count, CancellationToken token)
         {
             var remaining = count;
@@ -694,10 +644,7 @@ internal static class IszDecoder
 
                 if (_stream is null || _remainingInRegion <= 0)
                 {
-                    if (!await MoveNextAsync().ConfigureAwait(false))
-                    {
-                        return false;
-                    }
+                    if (!await MoveNextAsync().ConfigureAwait(false)) return false;
 
                     continue;
                 }
@@ -711,15 +658,6 @@ internal static class IszDecoder
             return true;
         }
 
-        public async ValueTask DisposeAsync()
-        {
-            if (_stream is not null)
-            {
-                await _stream.DisposeAsync().ConfigureAwait(false);
-                _stream = null;
-            }
-        }
-
         private async Task<bool> MoveNextAsync()
         {
             if (_stream is not null)
@@ -731,10 +669,7 @@ internal static class IszDecoder
             while (++_index < _regions.Count)
             {
                 var region = _regions[_index];
-                if (region.Length <= 0)
-                {
-                    continue;
-                }
+                if (region.Length <= 0) continue;
 
                 _stream = new FileStream(
                     region.Path,
@@ -742,10 +677,10 @@ internal static class IszDecoder
                     FileAccess.Read,
                     FileShare.ReadWrite,
                     FileBufferBytes,
-                    useAsync: true
+                    true
                 )
                 {
-                    Position = region.Start,
+                    Position = region.Start
                 };
                 _remainingInRegion = region.Length;
 

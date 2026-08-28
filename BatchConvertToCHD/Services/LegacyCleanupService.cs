@@ -4,8 +4,8 @@ using Serilog;
 namespace BatchConvertToCHD.Services;
 
 /// <summary>
-/// Removes legacy files and folders left over from previous versions of the application.
-/// Runs once at startup on a background thread to avoid blocking the UI.
+///     Removes legacy files and folders left over from previous versions of the application.
+///     Runs once at startup on a background thread to avoid blocking the UI.
 /// </summary>
 internal static class LegacyCleanupService
 {
@@ -16,7 +16,7 @@ internal static class LegacyCleanupService
     private static readonly string[] FilesToDelete = ["maxcso.exe", "psxpackager.exe"];
 
     /// <summary>
-    /// Runs the cleanup on a background task. Fire-and-forget; all errors are silently ignored.
+    ///     Runs the cleanup on a background task. Fire-and-forget; all errors are silently ignored.
     /// </summary>
     internal static void RunInBackground()
     {
@@ -27,7 +27,6 @@ internal static class LegacyCleanupService
                 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
                 foreach (var folder in FoldersToDelete)
-                {
                     try
                     {
                         var folderPath = Path.Combine(baseDirectory, folder);
@@ -41,10 +40,8 @@ internal static class LegacyCleanupService
                     {
                         /* ignore - file may be in use */
                     }
-                }
 
                 foreach (var file in FilesToDelete)
-                {
                     try
                     {
                         var filePath = Path.Combine(baseDirectory, file);
@@ -58,7 +55,6 @@ internal static class LegacyCleanupService
                     {
                         /* ignore - file may be in use */
                     }
-                }
             }
             catch
             {

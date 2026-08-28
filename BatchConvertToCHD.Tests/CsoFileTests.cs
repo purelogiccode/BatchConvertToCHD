@@ -225,10 +225,8 @@ public class CsoFileTests : IDisposable
         // Index table: all blocks uncompressed, pointing to data right after index
         const uint dataOffset = 24 + indexEntries * 4;
         for (var i = 0; i < indexEntries; i++)
-        {
             // Set high bit to indicate uncompressed
             ms.Write(BitConverter.GetBytes(dataOffset | 0x80000000u));
-        }
 
         // Data: one block of zeros
         ms.Write(new byte[blockSize]);

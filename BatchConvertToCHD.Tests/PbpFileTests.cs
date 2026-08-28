@@ -429,7 +429,7 @@ public class PbpFileTests : IDisposable
 
         var entries = new List<(string Key, ushort Format, byte[] Data)>
         {
-            ("TITLE", 0x0204, "Test Game"u8.ToArray()),
+            ("TITLE", 0x0204, "Test Game"u8.ToArray())
         };
 
         var entryCount = (uint)entries.Count;
@@ -996,7 +996,7 @@ public class PbpFileTests : IDisposable
     }
 
     /// <summary>
-    /// A stream that is not seekable, used to test PbpFile.Open rejection.
+    ///     A stream that is not seekable, used to test PbpFile.Open rejection.
     /// </summary>
     private sealed class NonSeekableStream : MemoryStream
     {
@@ -1009,7 +1009,7 @@ public class PbpFileTests : IDisposable
     }
 
     /// <summary>
-    /// A stream that is not readable, used to test PbpFile.Open rejection.
+    ///     A stream that is not readable, used to test PbpFile.Open rejection.
     /// </summary>
     private sealed class WriteOnlyStream : Stream
     {

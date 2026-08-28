@@ -3,8 +3,8 @@ namespace CHDBattleTest;
 public sealed partial class BattleEngine
 {
     private readonly BattleConfig _cfg;
-    private readonly TextWriter _log;
     private readonly CancellationToken _ct;
+    private readonly TextWriter _log;
 
     public BattleEngine(BattleConfig cfg, TextWriter log, CancellationToken ct)
     {
@@ -22,29 +22,25 @@ public sealed partial class BattleEngine
                 await DecodePhaseAsync(report, workDir).ConfigureAwait(false);
 
             if (_cfg.Encode && report.SkippedReason is null)
-            {
                 await EncodePhaseAsync(report, workDir).ConfigureAwait(false);
-            }
         }
         finally
         {
             if (!_cfg.KeepTemp)
-            {
                 try
                 {
-                    Directory.Delete(workDir, recursive: true);
+                    Directory.Delete(workDir, true);
                 }
                 catch
                 {
                     // ignored
                 }
-            }
         }
     }
 
     internal async Task<ToolRunner.RunResult> RunTool(string toolKey, string battle, string args, FileReport report)
     {
-        string exe = toolKey == "chdman" ? _cfg.ChdmanPath : _cfg.ChdSharpPath;
+        var exe = toolKey == "chdman" ? _cfg.ChdmanPath : _cfg.ChdSharpPath;
         if (_cfg.Verbose) Log($"     $ {Path.GetFileName(exe)} {args}");
         var r = await ToolRunner.RunAsync(exe, args, TimeSpan.FromMinutes(_cfg.TimeoutMinutes), _ct)
             .ConfigureAwait(false);
@@ -113,7 +109,7 @@ public sealed partial class BattleEngine
 
     internal static string Sanitize(string name)
     {
-        foreach (char c in Path.GetInvalidFileNameChars())
+        foreach (var c in Path.GetInvalidFileNameChars())
             name = name.Replace(c, '_');
         return name.Length > 80 ? name[..80] : name;
     }

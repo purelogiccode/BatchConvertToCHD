@@ -12,25 +12,18 @@ using Wpf.Ui.Appearance;
 namespace BatchConvertToCHD;
 
 /// <summary>
-/// Application class for BatchConvertToCHD. Handles startup, exception handling, and service initialization.
+///     Application class for BatchConvertToCHD. Handles startup, exception handling, and service initialization.
 /// </summary>
 public partial class App
 {
-    private Mutex? _singleInstanceMutex;
     private BugReportService? _bugReportService;
+    private Mutex? _singleInstanceMutex;
     private StatsService? _statsService;
 
     /// <summary>
-    /// Provides a shared, static instance of the <see cref="BugReportService"/> for the entire application,
-    /// allowing any component to submit bug reports without needing dependency injection.
-    /// May be null before or after the application lifecycle.
-    /// </summary>
-    internal static BugReportService? SharedBugReportService { get; private set; }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="App"/> class.
-    /// Sets up the shared <see cref="BugReportService"/>, <see cref="StatsService"/>,
-    /// Serilog logging, and global exception handlers for unhandled exceptions.
+    ///     Initializes a new instance of the <see cref="App" /> class.
+    ///     Sets up the shared <see cref="BugReportService" />, <see cref="StatsService" />,
+    ///     Serilog logging, and global exception handlers for unhandled exceptions.
     /// </summary>
     public App()
     {
@@ -60,6 +53,13 @@ public partial class App
         // Register the Exit event handler
         Exit += App_Exit;
     }
+
+    /// <summary>
+    ///     Provides a shared, static instance of the <see cref="BugReportService" /> for the entire application,
+    ///     allowing any component to submit bug reports without needing dependency injection.
+    ///     May be null before or after the application lifecycle.
+    /// </summary>
+    internal static BugReportService? SharedBugReportService { get; private set; }
 
     private void ConfigureSerilog()
     {
@@ -147,7 +147,6 @@ public partial class App
             {
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies();
                 foreach (var assembly in assemblies)
-                {
                     try
                     {
                         assembly.GetTypes();
@@ -156,7 +155,6 @@ public partial class App
                     {
                         // ignored
                     }
-                }
             }
             catch
             {
@@ -175,10 +173,7 @@ public partial class App
             foreach (var dllFile in dllFilesToDelete)
             {
                 var filePath = Path.Combine(baseDirectory, dllFile);
-                if (File.Exists(filePath))
-                {
-                    File.Delete(filePath);
-                }
+                if (File.Exists(filePath)) File.Delete(filePath);
             }
         }
         catch
@@ -285,7 +280,6 @@ public partial class App
         try
         {
             if (string.Equals(source, "AppDomain.UnhandledException", StringComparison.Ordinal))
-            {
                 // Block synchronously — the process is about to terminate.
                 Task.Run(() =>
                         _bugReportService?.SendBugReportAsync(
@@ -295,9 +289,7 @@ public partial class App
                     )
                     .GetAwaiter()
                     .GetResult();
-            }
             else
-            {
                 // Fire-and-forget for dispatcher/task exceptions — blocking would freeze the UI.
                 _ = Task.Run(() =>
                     _bugReportService?.SendBugReportAsync(
@@ -305,7 +297,6 @@ public partial class App
                         exception
                     )
                 );
-            }
         }
         catch
         {

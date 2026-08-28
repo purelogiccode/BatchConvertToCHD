@@ -10,20 +10,20 @@ public class IszHeaderTests
         // The whole format hangs off these offsets. A single wrong one produces a header that parses
         // and an image that is quietly wrong, so each field gets its own recognisable value.
         var bytes = IszImageBuilder.BuildHeader(
-            sectorSize: 2048,
-            totalSectors: 0x00ABCDEF,
-            passwordMode: 0,
-            segmentSize: 0x1122334455667788,
-            chunkCount: 0x00112233,
-            chunkSize: 0x00040000,
-            pointerLength: 3,
-            segmentNumber: 7,
-            chunkTableOffset: 0x00001234,
-            segmentTableOffset: 0x00005678,
-            dataOffset: 0x00009ABC,
-            volumeSerial: 0xDEADBEEF,
-            headerSize: 48,
-            version: 1
+            2048,
+            0x00ABCDEF,
+            0,
+            0x1122334455667788,
+            0x00112233,
+            0x00040000,
+            3,
+            7,
+            0x00001234,
+            0x00005678,
+            0x00009ABC,
+            0xDEADBEEF,
+            48,
+            1
         );
 
         var header = IszHeader.TryRead(bytes);
@@ -185,18 +185,18 @@ public class IszHeaderTests
     )
     {
         return IszImageBuilder.BuildHeader(
-            sectorSize: sectorSize,
-            totalSectors: totalSectors,
-            passwordMode: passwordMode,
-            segmentSize: 0,
-            chunkCount: 2,
-            chunkSize: chunkSize,
-            pointerLength: pointerLength,
-            segmentNumber: 1,
-            chunkTableOffset: chunkTableOffset,
-            segmentTableOffset: segmentTableOffset,
-            dataOffset: 96,
-            volumeSerial: IszImageBuilder.DefaultVolumeSerial
+            sectorSize,
+            totalSectors,
+            passwordMode,
+            0,
+            2,
+            chunkSize,
+            pointerLength,
+            1,
+            chunkTableOffset,
+            segmentTableOffset,
+            96,
+            IszImageBuilder.DefaultVolumeSerial
         );
     }
 }

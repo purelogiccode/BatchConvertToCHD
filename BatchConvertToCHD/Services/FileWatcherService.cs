@@ -5,9 +5,9 @@ using System.IO;
 namespace BatchConvertToCHD.Services;
 
 /// <summary>
-/// Monitors the input folder for file changes (deletes, renames, creates) to
-/// provide diagnostic context when a "File not found" error occurs during
-/// batch processing.
+///     Monitors the input folder for file changes (deletes, renames, creates) to
+///     provide diagnostic context when a "File not found" error occurs during
+///     batch processing.
 /// </summary>
 internal sealed class FileWatcherService : IDisposable
 {
@@ -26,9 +26,14 @@ internal sealed class FileWatcherService : IDisposable
 
     internal string? WatchedFolder { get; private set; }
 
+    public void Dispose()
+    {
+        StopWatching();
+    }
+
     /// <summary>
-    /// Starts monitoring the specified folder for file changes.
-    /// Stops any previous watch first.
+    ///     Starts monitoring the specified folder for file changes.
+    ///     Stops any previous watch first.
     /// </summary>
     /// <param name="folderPath">The root folder to watch (subdirectories included).</param>
     internal void StartWatching(string folderPath)
@@ -44,7 +49,7 @@ internal sealed class FileWatcherService : IDisposable
             {
                 IncludeSubdirectories = true,
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName,
-                InternalBufferSize = BufferSize,
+                InternalBufferSize = BufferSize
             };
 
             watcher.Deleted += OnDeleted;
@@ -69,7 +74,7 @@ internal sealed class FileWatcherService : IDisposable
     }
 
     /// <summary>
-    /// Stops monitoring and clears any pending state.
+    ///     Stops monitoring and clears any pending state.
     /// </summary>
     internal void StopWatching()
     {
@@ -94,9 +99,9 @@ internal sealed class FileWatcherService : IDisposable
     }
 
     /// <summary>
-    /// Queries the watcher history for a given file path and returns a
-    /// human-readable summary of recent events, or <c>null</c> if no
-    /// relevant history was found.
+    ///     Queries the watcher history for a given file path and returns a
+    ///     human-readable summary of recent events, or <c>null</c> if no
+    ///     relevant history was found.
     /// </summary>
     /// <param name="filePath">The full path of the file that could not be found.</param>
     /// <returns>A diagnostic message, or <c>null</c>.</returns>
@@ -150,7 +155,7 @@ internal sealed class FileWatcherService : IDisposable
                 record.Timestamp
             ),
 
-            _ => null,
+            _ => null
         };
     }
 
@@ -203,14 +208,7 @@ internal sealed class FileWatcherService : IDisposable
         _trackedKeys.Enqueue(fullPath);
 
         while (_trackedKeys.Count > MaxFileHistory)
-        {
             if (_trackedKeys.TryDequeue(out var key))
                 _lastEventByFile.TryRemove(key, out _);
-        }
-    }
-
-    public void Dispose()
-    {
-        StopWatching();
     }
 }

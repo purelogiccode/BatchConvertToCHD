@@ -1,11 +1,12 @@
 using System.Net;
+using System.Text;
 
 namespace BatchConvertToCHD.Tests;
 
 public class FakeHttpMessageHandler : HttpMessageHandler
 {
-    private readonly Func<HttpRequestMessage, HttpResponseMessage>? _handler;
     private readonly Func<HttpRequestMessage, Task<HttpResponseMessage>>? _asyncHandler;
+    private readonly Func<HttpRequestMessage, HttpResponseMessage>? _handler;
 
     public FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> handler)
     {
@@ -19,9 +20,14 @@ public class FakeHttpMessageHandler : HttpMessageHandler
     )
         : this(_ => new HttpResponseMessage(statusCode)
         {
-            Content = new StringContent(content, System.Text.Encoding.UTF8, contentType),
+            Content = new StringContent(content, Encoding.UTF8, contentType)
         })
     {
+    }
+
+    private FakeHttpMessageHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> asyncHandler)
+    {
+        _asyncHandler = asyncHandler;
     }
 
     public static FakeHttpMessageHandler WithAsyncHandler(
@@ -29,11 +35,6 @@ public class FakeHttpMessageHandler : HttpMessageHandler
     )
     {
         return new FakeHttpMessageHandler(asyncHandler);
-    }
-
-    private FakeHttpMessageHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> asyncHandler)
-    {
-        _asyncHandler = asyncHandler;
     }
 
     protected override Task<HttpResponseMessage> SendAsync(

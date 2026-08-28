@@ -1,7 +1,7 @@
 namespace BatchConvertToCHD.Utilities.Mds;
 
 /// <summary>
-/// An Alcohol 120% image described by a .mds descriptor and backed by a .mdf data file.
+///     An Alcohol 120% image described by a .mds descriptor and backed by a .mdf data file.
 /// </summary>
 /// <param name="SessionCount">Sessions recorded in the descriptor.</param>
 /// <param name="Tracks">Tracks in descriptor order, lead-in and lead-out entries removed.</param>
@@ -27,8 +27,8 @@ internal sealed record MdsDisc(
     internal const int CookedSectorSize = 2048;
 
     /// <summary>
-    /// Sector size for the image. Taken from the first track: a mixed-size disc is not something
-    /// Alcohol produces, and a single figure is what the stripping and cue writing need.
+    ///     Sector size for the image. Taken from the first track: a mixed-size disc is not something
+    ///     Alcohol produces, and a single figure is what the stripping and cue writing need.
     /// </summary>
     internal int SectorSize => Tracks.Count > 0 ? Tracks[0].SectorSize : 0;
 

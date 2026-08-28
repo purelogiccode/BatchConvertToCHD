@@ -4,8 +4,8 @@ namespace BatchConvertToCHD.Tests;
 
 public class InputFileFilterTests : IDisposable
 {
-    private readonly string _tempDir;
     private readonly List<string> _log = [];
+    private readonly string _tempDir;
 
     public InputFileFilterTests()
     {
@@ -17,10 +17,7 @@ public class InputFileFilterTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
+            if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true);
         }
         catch
         {
@@ -34,10 +31,7 @@ public class InputFileFilterTests : IDisposable
     {
         var path = Path.Combine(_tempDir, relativeName);
         var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
+        if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
 
         File.WriteAllText(path, content);
 

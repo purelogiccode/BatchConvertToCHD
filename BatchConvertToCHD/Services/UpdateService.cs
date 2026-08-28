@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
@@ -8,17 +9,17 @@ using BatchConvertToCHD.Models;
 namespace BatchConvertToCHD.Services;
 
 /// <summary>
-/// Service for checking and notifying about application updates from GitHub releases.
+///     Service for checking and notifying about application updates from GitHub releases.
 /// </summary>
 internal class UpdateService
 {
-    private readonly string _applicationName;
-    private readonly HttpClient _httpClient;
-
     private static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
-        PropertyNameCaseInsensitive = true,
+        PropertyNameCaseInsensitive = true
     };
+
+    private readonly string _applicationName;
+    private readonly HttpClient _httpClient;
 
     internal UpdateService(string applicationName)
         : this(applicationName, AppHttpClient.Client)
@@ -32,7 +33,7 @@ internal class UpdateService
     }
 
     /// <summary>
-    /// Checks GitHub for a newer version of the application and prompts the user to download if available.
+    ///     Checks GitHub for a newer version of the application and prompts the user to download if available.
     /// </summary>
     /// <param name="onLog">Callback for logging messages.</param>
     /// <param name="onStatusUpdate">Callback for status bar updates.</param>
@@ -53,12 +54,12 @@ internal class UpdateService
     }
 
     /// <summary>
-    /// Internal overload for testing that accepts a custom <see cref="HttpClient"/> and version.
-    /// Performs the actual update check against the GitHub API - trying each configured release
-    /// source in order - compares versions, and prompts the user to download if a newer version
-    /// is available.
+    ///     Internal overload for testing that accepts a custom <see cref="HttpClient" /> and version.
+    ///     Performs the actual update check against the GitHub API - trying each configured release
+    ///     source in order - compares versions, and prompts the user to download if a newer version
+    ///     is available.
     /// </summary>
-    /// <param name="httpClient">The <see cref="HttpClient"/> to use for the request.</param>
+    /// <param name="httpClient">The <see cref="HttpClient" /> to use for the request.</param>
     /// <param name="currentVersion">The current application version to compare against.</param>
     /// <param name="onLog">Callback for logging messages.</param>
     /// <param name="onStatusUpdate">Callback for status bar updates.</param>
@@ -107,8 +108,8 @@ internal class UpdateService
 
                 if (
                     response.StatusCode
-                    is System.Net.HttpStatusCode.Forbidden
-                    or System.Net.HttpStatusCode.TooManyRequests
+                    is HttpStatusCode.Forbidden
+                    or HttpStatusCode.TooManyRequests
                 )
                 {
                     // Rate limits are per IP and shared by every api.github.com URL, so trying the
@@ -190,7 +191,6 @@ internal class UpdateService
                 if (normalizedRemote > normalizedCurrent)
                 {
                     if (Application.Current != null)
-                    {
                         await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
                             var result = MessageBox.Show(
@@ -201,13 +201,12 @@ internal class UpdateService
                             );
 
                             if (result == MessageBoxResult.Yes)
-                            {
                                 try
                                 {
                                     Process.Start(
                                         new ProcessStartInfo(latestRelease.HtmlUrl)
                                         {
-                                            UseShellExecute = true,
+                                            UseShellExecute = true
                                         }
                                     );
                                 }
@@ -238,9 +237,7 @@ internal class UpdateService
                                         MessageBoxImage.Information
                                     );
                                 }
-                            }
                         });
-                    }
 
                     onStatusUpdate($"Update available: v{remoteVersionString}");
                 }
@@ -273,9 +270,9 @@ internal class UpdateService
     }
 
     /// <summary>
-    /// Normalizes versions to ensure consistent comparison (handles 2-part vs 4-part versions).
-    /// If Build or Revision is -1 (undefined), defaults to 0 to avoid ArgumentOutOfRangeException.
-    /// Returns false if either version cannot be parsed.
+    ///     Normalizes versions to ensure consistent comparison (handles 2-part vs 4-part versions).
+    ///     If Build or Revision is -1 (undefined), defaults to 0 to avoid ArgumentOutOfRangeException.
+    ///     Returns false if either version cannot be parsed.
     /// </summary>
     internal static bool TryNormalizeVersions(
         Version? current,
@@ -287,10 +284,7 @@ internal class UpdateService
         normalizedCurrent = null;
         normalizedRemote = null;
 
-        if (current == null || !Version.TryParse(remoteTag, out var remoteVersion))
-        {
-            return false;
-        }
+        if (current == null || !Version.TryParse(remoteTag, out var remoteVersion)) return false;
 
         normalizedCurrent = new Version(
             current.Major,
@@ -309,34 +303,26 @@ internal class UpdateService
     }
 
     /// <summary>
-    /// Parses a semantic version string from a GitHub release tag name by stripping
-    /// common prefixes such as "release", "version", or "v", and removing any leading
-    /// non-digit characters.
+    ///     Parses a semantic version string from a GitHub release tag name by stripping
+    ///     common prefixes such as "release", "version", or "v", and removing any leading
+    ///     non-digit characters.
     /// </summary>
     /// <param name="tagName">The raw tag name from the GitHub release (e.g., "v2.11.0").</param>
-    /// <returns>The cleaned version string, or <see cref="string.Empty"/> if the input is null or whitespace.</returns>
+    /// <returns>The cleaned version string, or <see cref="string.Empty" /> if the input is null or whitespace.</returns>
     internal static string ParseVersionFromTag(string tagName)
     {
-        if (string.IsNullOrWhiteSpace(tagName))
-        {
-            return string.Empty;
-        }
+        if (string.IsNullOrWhiteSpace(tagName)) return string.Empty;
 
         var tag = tagName.Trim();
         var prefixes = new[] { "release", "version", "v" };
         foreach (var prefix in prefixes)
-        {
             if (tag.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
                 tag = tag[prefix.Length..];
                 break;
             }
-        }
 
-        while (tag.Length > 0 && !char.IsDigit(tag[0]))
-        {
-            tag = tag[1..];
-        }
+        while (tag.Length > 0 && !char.IsDigit(tag[0])) tag = tag[1..];
 
         return tag;
     }

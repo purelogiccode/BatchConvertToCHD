@@ -1,15 +1,10 @@
 namespace BatchConvertToCHD.Utilities;
 
 /// <summary>
-/// Centralized constants for file extensions used throughout the application.
+///     Centralized constants for file extensions used throughout the application.
 /// </summary>
 internal static class FileExtensions
 {
-    /// <summary>
-    /// String comparer for ordinal case-insensitive extension comparisons.
-    /// </summary>
-    private static readonly StringComparer ExtensionComparer = StringComparer.OrdinalIgnoreCase;
-
     // Disc image formats
     internal const string Cue = ".cue";
     internal const string Iso = ".iso";
@@ -46,13 +41,18 @@ internal static class FileExtensions
     internal const string Avi = ".avi";
 
     /// <summary>
-    /// All supported input extensions for conversion.
+    ///     String comparer for ordinal case-insensitive extension comparisons.
+    /// </summary>
+    private static readonly StringComparer ExtensionComparer = StringComparer.OrdinalIgnoreCase;
+
+    /// <summary>
+    ///     All supported input extensions for conversion.
     /// </summary>
     /// <remarks>
-    /// .bin is included because a disc is often distributed as a bare raw .bin with no cue at all.
-    /// A cue is generated for it at conversion time. When a sibling descriptor does cover the .bin
-    /// it is dropped from the batch by <see cref="InputFileFilter"/>, so split-track sets still
-    /// convert once, through their cue.
+    ///     .bin is included because a disc is often distributed as a bare raw .bin with no cue at all.
+    ///     A cue is generated for it at conversion time. When a sibling descriptor does cover the .bin
+    ///     it is dropped from the batch by <see cref="InputFileFilter" />, so split-track sets still
+    ///     convert once, through their cue.
     /// </remarks>
     internal static readonly string[] AllSupportedInputExtensionsForConversion =
     [
@@ -73,11 +73,11 @@ internal static class FileExtensions
         SevenZip,
         Rar,
         Cso,
-        Pbp,
+        Pbp
     ];
 
     /// <summary>
-    /// HashSet of all supported input extensions for efficient case-insensitive lookups.
+    ///     HashSet of all supported input extensions for efficient case-insensitive lookups.
     /// </summary>
     internal static readonly HashSet<string> AllSupportedInputExtensionsForConversionSet = new(
         AllSupportedInputExtensionsForConversion,
@@ -85,12 +85,12 @@ internal static class FileExtensions
     );
 
     /// <summary>
-    /// Archive file extensions.
+    ///     Archive file extensions.
     /// </summary>
     internal static readonly string[] ArchiveExtensions = [Zip, SevenZip, Rar];
 
     /// <summary>
-    /// HashSet of archive extensions for efficient case-insensitive lookups.
+    ///     HashSet of archive extensions for efficient case-insensitive lookups.
     /// </summary>
     internal static readonly HashSet<string> ArchiveExtensionsSet = new(
         ArchiveExtensions,
@@ -98,11 +98,11 @@ internal static class FileExtensions
     );
 
     /// <summary>
-    /// Primary target extensions for extraction from archives.
+    ///     Primary target extensions for extraction from archives.
     /// </summary>
     /// <remarks>
-    /// .isz is included because an archived ISZ is decompressed in place by the conversion loop, so
-    /// an archive holding one is convertible rather than reported as containing nothing supported.
+    ///     .isz is included because an archived ISZ is decompressed in place by the conversion loop, so
+    ///     an archive holding one is convertible rather than reported as containing nothing supported.
     /// </remarks>
     internal static readonly string[] PrimaryTargetExtensions =
     [
@@ -114,11 +114,11 @@ internal static class FileExtensions
         Raw,
         Ccd,
         Mds,
-        Isz,
+        Isz
     ];
 
     /// <summary>
-    /// HashSet of primary target extensions for efficient case-insensitive lookups.
+    ///     HashSet of primary target extensions for efficient case-insensitive lookups.
     /// </summary>
     internal static readonly HashSet<string> PrimaryTargetExtensionsSet = new(
         PrimaryTargetExtensions,

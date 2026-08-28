@@ -1,20 +1,20 @@
 namespace CCDSharp.Parsers;
 
 /// <summary>
-/// Provides access to subchannel data from CloneCD .sub files.
-/// Each sector has 96 bytes of subchannel data (P, Q, R, S, T, U, V, W channels).
+///     Provides access to subchannel data from CloneCD .sub files.
+///     Each sector has 96 bytes of subchannel data (P, Q, R, S, T, U, V, W channels).
 /// </summary>
 public sealed class SubcodeParser : IDisposable
 {
-    private readonly bool _ownsStream;
-
     /// <summary>
-    /// Size of subchannel data per sector (96 bytes).
+    ///     Size of subchannel data per sector (96 bytes).
     /// </summary>
     public const int SubchannelSize = 96;
 
+    private readonly bool _ownsStream;
+
     /// <summary>
-    /// Initializes a new SubcodeParser from a file path.
+    ///     Initializes a new SubcodeParser from a file path.
     /// </summary>
     /// <param name="subFilePath">Path to the .sub file.</param>
     public SubcodeParser(string subFilePath)
@@ -27,7 +27,7 @@ public sealed class SubcodeParser : IDisposable
     }
 
     /// <summary>
-    /// Initializes a new SubcodeParser from an existing stream.
+    ///     Initializes a new SubcodeParser from an existing stream.
     /// </summary>
     /// <param name="stream">The stream containing subchannel data.</param>
     /// <param name="ownsStream">Whether the parser owns the stream (disposes it when done).</param>
@@ -38,12 +38,23 @@ public sealed class SubcodeParser : IDisposable
     }
 
     /// <summary>
-    /// Gets the total number of sectors in the subchannel file.
+    ///     Gets the total number of sectors in the subchannel file.
     /// </summary>
     public long SectorCount => BaseStream.Length / SubchannelSize;
 
     /// <summary>
-    /// Reads subchannel data for a specific sector.
+    ///     Gets the raw stream for sequential reading.
+    /// </summary>
+    private Stream BaseStream { get; }
+
+    public void Dispose()
+    {
+        if (_ownsStream)
+            BaseStream.Dispose();
+    }
+
+    /// <summary>
+    ///     Reads subchannel data for a specific sector.
     /// </summary>
     /// <param name="sectorIndex">The zero-based sector index.</param>
     /// <returns>A 96-byte array of subchannel data, or null if the sector is out of range.</returns>
@@ -60,7 +71,7 @@ public sealed class SubcodeParser : IDisposable
     }
 
     /// <summary>
-    /// Reads subchannel data for a range of sectors.
+    ///     Reads subchannel data for a range of sectors.
     /// </summary>
     /// <param name="startSector">The zero-based start sector index.</param>
     /// <param name="count">Number of sectors to read.</param>
@@ -86,16 +97,5 @@ public sealed class SubcodeParser : IDisposable
         }
 
         return result;
-    }
-
-    /// <summary>
-    /// Gets the raw stream for sequential reading.
-    /// </summary>
-    private Stream BaseStream { get; }
-
-    public void Dispose()
-    {
-        if (_ownsStream)
-            BaseStream.Dispose();
     }
 }

@@ -4,25 +4,26 @@ using CSOSharp.Models;
 namespace CSOSharp;
 
 /// <summary>
-/// A read-only <see cref="Stream"/> that provides sequential access to the decompressed ISO data
-/// within a CSO/CISO file. Supports seeking.
+///     A read-only <see cref="Stream" /> that provides sequential access to the decompressed ISO data
+///     within a CSO/CISO file. Supports seeking.
 /// </summary>
 public sealed class CsoStream : Stream
 {
-    private readonly CsoFile _csoFile;
     private readonly byte[] _blockBuffer;
-    private long _position;
-    private bool _disposed;
+    private readonly CsoFile _csoFile;
 
     /// <summary>
-    /// The current block index loaded into the buffer.
+    ///     The current block index loaded into the buffer.
     /// </summary>
     private uint _currentBlockIndex;
 
     /// <summary>
-    /// Whether the current block buffer contains valid data.
+    ///     Whether the current block buffer contains valid data.
     /// </summary>
     private bool _currentBlockValid;
+
+    private bool _disposed;
+    private long _position;
 
     internal CsoStream(CsoFile csoFile)
     {
@@ -32,19 +33,19 @@ public sealed class CsoStream : Stream
         _currentBlockValid = false;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public override bool CanRead => true;
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public override bool CanSeek => true;
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public override bool CanWrite => false;
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public override long Length => (long)_csoFile.Header.UncompressedSize;
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public override long Position
     {
         get => _position;
@@ -57,7 +58,7 @@ public sealed class CsoStream : Stream
         }
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public override int Read(byte[] buffer, int offset, int count)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -83,10 +84,7 @@ public sealed class CsoStream : Stream
 
             var available = Math.Min(blockSize - blockOffset, count - totalRead);
             var remainingInFile = Length - _position;
-            if (available > remainingInFile)
-            {
-                available = (int)remainingInFile;
-            }
+            if (available > remainingInFile) available = (int)remainingInFile;
 
             Buffer.BlockCopy(_blockBuffer, blockOffset, buffer, offset + totalRead, available);
 
@@ -98,7 +96,7 @@ public sealed class CsoStream : Stream
     }
 
 #if NETCOREAPP
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public override int Read(Span<byte> buffer)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -120,10 +118,7 @@ public sealed class CsoStream : Stream
 
             var available = Math.Min(blockSize - blockOffset, buffer.Length - totalRead);
             var remainingInFile = Length - _position;
-            if (available > remainingInFile)
-            {
-                available = (int)remainingInFile;
-            }
+            if (available > remainingInFile) available = (int)remainingInFile;
 
             _blockBuffer.AsSpan(blockOffset, available).CopyTo(buffer[totalRead..]);
 
@@ -135,7 +130,7 @@ public sealed class CsoStream : Stream
     }
 #endif
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public override long Seek(long offset, SeekOrigin origin)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -145,7 +140,7 @@ public sealed class CsoStream : Stream
             SeekOrigin.Begin => offset,
             SeekOrigin.Current => _position + offset,
             SeekOrigin.End => Length + offset,
-            _ => throw new ArgumentException("Invalid SeekOrigin.", nameof(origin)),
+            _ => throw new ArgumentException("Invalid SeekOrigin.", nameof(origin))
         };
 
         if (newPosition < 0)
@@ -155,19 +150,19 @@ public sealed class CsoStream : Stream
         return _position;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public override void Flush()
     {
         // Read-only stream, nothing to flush.
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public override void SetLength(long value)
     {
         throw new NotSupportedException("CsoStream is read-only.");
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public override void Write(byte[] buffer, int offset, int count)
     {
         throw new NotSupportedException("CsoStream is read-only.");
@@ -191,7 +186,7 @@ public sealed class CsoStream : Stream
         return CsoError.None;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     protected override void Dispose(bool disposing)
     {
         if (_disposed)
@@ -199,10 +194,7 @@ public sealed class CsoStream : Stream
 
         _disposed = true;
 
-        if (disposing)
-        {
-            ArrayPool<byte>.Shared.Return(_blockBuffer);
-        }
+        if (disposing) ArrayPool<byte>.Shared.Return(_blockBuffer);
 
         base.Dispose(disposing);
     }

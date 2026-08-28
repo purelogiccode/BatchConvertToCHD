@@ -1,4 +1,5 @@
 using System.Net;
+using System.Reflection;
 using BatchConvertToCHD.Services;
 
 namespace BatchConvertToCHD.Tests;
@@ -11,7 +12,7 @@ public class UpdateServiceTests
         var service = new UpdateService("MyApp");
         var field = typeof(UpdateService).GetField(
             "_applicationName",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
         Assert.NotNull(field);
         Assert.Equal("MyApp", field.GetValue(service));
@@ -25,11 +26,11 @@ public class UpdateServiceTests
 
         var nameField = typeof(UpdateService).GetField(
             "_applicationName",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
         var httpField = typeof(UpdateService).GetField(
             "_httpClient",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+            BindingFlags.NonPublic | BindingFlags.Instance
         );
 
         Assert.Equal("MyApp", nameField!.GetValue(service));
@@ -239,13 +240,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -256,9 +257,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;
@@ -293,13 +294,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -310,9 +311,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;
@@ -342,13 +343,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -359,9 +360,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
+                    (Action<string>)logMessages.Add,
                     (Action<string>)(static _ => { }),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;
@@ -380,13 +381,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -397,9 +398,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
+                    (Action<string>)logMessages.Add,
                     (Action<string>)(static _ => { }),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;
@@ -425,13 +426,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -442,9 +443,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;
@@ -472,13 +473,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -489,15 +490,15 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
                     (Func<string, Exception?, Task>)(
                         (msg, _) =>
                         {
                             reportedError = msg;
                             return Task.CompletedTask;
                         }
-                    ),
+                    )
                 ]
             )!;
         await task;
@@ -528,13 +529,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -545,15 +546,15 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
                     (Func<string, Exception?, Task>)(
                         (_, _) =>
                         {
                             bugReportCalled = true;
                             return Task.CompletedTask;
                         }
-                    ),
+                    )
                 ]
             )!;
         await task;
@@ -581,13 +582,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -598,9 +599,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;
@@ -633,13 +634,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -650,9 +651,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;
@@ -685,13 +686,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -702,15 +703,15 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
                     (Func<string, Exception?, Task>)(
                         (_, _) =>
                         {
                             bugReportCalled = true;
                             return Task.CompletedTask;
                         }
-                    ),
+                    )
                 ]
             )!;
         await task;
@@ -742,13 +743,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -759,15 +760,15 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
                     (Func<string, Exception?, Task>)(
                         (msg, _) =>
                         {
                             reportedError = msg;
                             return Task.CompletedTask;
                         }
-                    ),
+                    )
                 ]
             )!;
         await task;
@@ -807,13 +808,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -824,9 +825,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;
@@ -865,13 +866,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -882,9 +883,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;
@@ -919,13 +920,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -936,9 +937,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;
@@ -972,13 +973,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -989,9 +990,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
+                    (Action<string>)logMessages.Add,
                     (Action<string>)(static _ => { }),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;
@@ -1014,13 +1015,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -1031,9 +1032,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;
@@ -1056,13 +1057,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -1073,9 +1074,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     currentVersion,
-                    (Action<string>)(logMessages.Add),
-                    (Action<string>)(statusMessages.Add),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Action<string>)logMessages.Add,
+                    (Action<string>)statusMessages.Add,
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;
@@ -1104,7 +1105,7 @@ public class UpdateServiceTests
             HttpStatusCode.NotFound
         )
         {
-            Content = new StringContent("""{ "message": "Not Found" }"""),
+            Content = new StringContent("""{ "message": "Not Found" }""")
         });
         using var httpClient = new HttpClient(handler);
         var service = new UpdateService("TestApp", httpClient);
@@ -1112,13 +1113,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -1130,14 +1131,14 @@ public class UpdateServiceTests
                     httpClient,
                     new Version(2, 7, 0),
                     (Action<string>)(static _ => { }),
-                    (Action<string>)(statusMessages.Add),
+                    (Action<string>)statusMessages.Add,
                     (Func<string, Exception?, Task>)(
                         (_, _) =>
                         {
                             bugReportCount++;
                             return Task.CompletedTask;
                         }
-                    ),
+                    )
                 ]
             )!;
         await task;
@@ -1157,7 +1158,7 @@ public class UpdateServiceTests
             HttpStatusCode.InternalServerError
         )
         {
-            Content = new StringContent("Server error"),
+            Content = new StringContent("Server error")
         });
         using var httpClient = new HttpClient(handler);
         var service = new UpdateService("TestApp", httpClient);
@@ -1165,13 +1166,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -1183,14 +1184,14 @@ public class UpdateServiceTests
                     httpClient,
                     new Version(2, 7, 0),
                     (Action<string>)(static _ => { }),
-                    (Action<string>)(statusMessages.Add),
+                    (Action<string>)statusMessages.Add,
                     (Func<string, Exception?, Task>)(
                         (_, _) =>
                         {
                             bugReportCount++;
                             return Task.CompletedTask;
                         }
-                    ),
+                    )
                 ]
             )!;
         await task;
@@ -1215,13 +1216,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -1233,14 +1234,14 @@ public class UpdateServiceTests
                     httpClient,
                     new Version(2, 7, 0),
                     (Action<string>)(static _ => { }),
-                    (Action<string>)(statusMessages.Add),
+                    (Action<string>)statusMessages.Add,
                     (Func<string, Exception?, Task>)(
                         (_, _) =>
                         {
                             bugReportCount++;
                             return Task.CompletedTask;
                         }
-                    ),
+                    )
                 ]
             )!;
         await task;
@@ -1265,7 +1266,7 @@ public class UpdateServiceTests
             {
                 Content = new StringContent(
                     """{ "message": "API rate limit exceeded for user." }"""
-                ),
+                )
             };
         });
         using var httpClient = new HttpClient(handler);
@@ -1274,13 +1275,13 @@ public class UpdateServiceTests
 
         var method = typeof(UpdateService).GetMethod(
             "CheckForNewVersionAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            BindingFlags.NonPublic | BindingFlags.Instance,
             [
                 typeof(HttpClient),
                 typeof(Version),
                 typeof(Action<string>),
                 typeof(Action<string>),
-                typeof(Func<string, Exception?, Task>),
+                typeof(Func<string, Exception?, Task>)
             ]
         );
         Assert.NotNull(method);
@@ -1291,9 +1292,9 @@ public class UpdateServiceTests
                 [
                     httpClient,
                     new Version(2, 7, 0),
-                    (Action<string>)(logMessages.Add),
+                    (Action<string>)logMessages.Add,
                     (Action<string>)(static _ => { }),
-                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask),
+                    (Func<string, Exception?, Task>)(static (_, _) => Task.CompletedTask)
                 ]
             )!;
         await task;

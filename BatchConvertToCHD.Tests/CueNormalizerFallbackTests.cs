@@ -3,8 +3,8 @@ using BatchConvertToCHD.Utilities;
 namespace BatchConvertToCHD.Tests;
 
 /// <summary>
-/// Covers the FILE line resolution fallbacks for cues whose recorded name does not match anything
-/// on disk. Every case here is taken from a real conversion failure.
+///     Covers the FILE line resolution fallbacks for cues whose recorded name does not match anything
+///     on disk. Every case here is taken from a real conversion failure.
 /// </summary>
 public class CueNormalizerFallbackTests : IDisposable
 {
@@ -23,10 +23,7 @@ public class CueNormalizerFallbackTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
+            if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true);
         }
         catch
         {
@@ -40,10 +37,7 @@ public class CueNormalizerFallbackTests : IDisposable
     {
         var path = Path.Combine(_tempDir, name);
         var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
+        if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
 
         File.WriteAllText(path, content);
 

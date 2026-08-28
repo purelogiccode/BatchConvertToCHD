@@ -118,9 +118,6 @@ public class AppHttpClientTests
         await Task.WhenAll(tasks);
 
         var first = clients[0];
-        for (var i = 1; i < 10; i++)
-        {
-            Assert.Same(first, clients[i]);
-        }
+        for (var i = 1; i < 10; i++) Assert.Same(first, clients[i]);
     }
 }

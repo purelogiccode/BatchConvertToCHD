@@ -70,10 +70,7 @@ public class CsoStreamTests : IDisposable
     public void ReadReturnsExpectedData()
     {
         var expectedData = new byte[2048];
-        for (var i = 0; i < expectedData.Length; i++)
-        {
-            expectedData[i] = (byte)(i % 256);
-        }
+        for (var i = 0; i < expectedData.Length; i++) expectedData[i] = (byte)(i % 256);
 
         var cso = CreateCsoWithData(expectedData, 1);
         using var stream = cso.OpenStream();
@@ -210,10 +207,7 @@ public class CsoStreamTests : IDisposable
     {
         // Create a 2-block CSO with known data
         var data = new byte[4096];
-        for (var i = 0; i < data.Length; i++)
-        {
-            data[i] = (byte)(i % 256);
-        }
+        for (var i = 0; i < data.Length; i++) data[i] = (byte)(i % 256);
 
         var cso = CreateCsoWithData(data, 1);
         using var stream = cso.OpenStream();
@@ -237,10 +231,7 @@ public class CsoStreamTests : IDisposable
     public void ReadSpanReturnsCorrectData()
     {
         var data = new byte[2048];
-        for (var i = 0; i < data.Length; i++)
-        {
-            data[i] = (byte)(i % 256);
-        }
+        for (var i = 0; i < data.Length; i++) data[i] = (byte)(i % 256);
 
         var cso = CreateCsoWithData(data, 1);
         using var stream = cso.OpenStream();
@@ -257,10 +248,7 @@ public class CsoStreamTests : IDisposable
     public void SeekAndReadMultipleBlocksWorks()
     {
         var data = new byte[6144]; // 3 blocks
-        for (var i = 0; i < data.Length; i++)
-        {
-            data[i] = (byte)(i % 256);
-        }
+        for (var i = 0; i < data.Length; i++) data[i] = (byte)(i % 256);
 
         var cso = CreateCsoWithData(data, 1);
         using var stream = cso.OpenStream();
@@ -304,9 +292,7 @@ public class CsoStreamTests : IDisposable
 
         // For simplicity, store all blocks as uncompressed
         for (var i = 0; i < indexEntries; i++)
-        {
             ms.Write(BitConverter.GetBytes((dataStart + (uint)(i * blockSize)) | 0x80000000u));
-        }
 
         // Write the actual data
         ms.Write(uncompressedData);

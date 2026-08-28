@@ -7,30 +7,15 @@ using K4os.Compression.LZ4;
 namespace CSOSharp;
 
 /// <summary>
-/// Provides functionality to open and read CSO/CISO (Compressed ISO) files.
-/// Supports CSO v1 (deflate/zlib) and CSO v2/ZSO (LZ4) formats.
+///     Provides functionality to open and read CSO/CISO (Compressed ISO) files.
+///     Supports CSO v1 (deflate/zlib) and CSO v2/ZSO (LZ4) formats.
 /// </summary>
 public sealed class CsoFile : IDisposable
 {
-    private Stream _stream;
     private readonly bool _ownsStream;
     private bool _disposed;
     private uint[] _indexTable;
-
-    /// <summary>
-    /// The parsed CSO header containing format metadata.
-    /// </summary>
-    public CsoHeader Header { get; }
-
-    /// <summary>
-    /// Whether this CSO file uses LZ4 compression (CSO v2/ZSO).
-    /// </summary>
-    public bool IsLz4 => Header.IsV2;
-
-    /// <summary>
-    /// Whether this CSO file uses deflate/zlib compression (CSO v1).
-    /// </summary>
-    public bool IsDeflate => Header.IsV1;
+    private Stream _stream;
 
     private CsoFile(Stream stream, bool ownsStream, CsoHeader header, uint[] indexTable)
     {
@@ -41,11 +26,45 @@ public sealed class CsoFile : IDisposable
     }
 
     /// <summary>
-    /// Opens a CSO/CISO file from the specified file path.
+    ///     The parsed CSO header containing format metadata.
+    /// </summary>
+    public CsoHeader Header { get; }
+
+    /// <summary>
+    ///     Whether this CSO file uses LZ4 compression (CSO v2/ZSO).
+    /// </summary>
+    public bool IsLz4 => Header.IsV2;
+
+    /// <summary>
+    ///     Whether this CSO file uses deflate/zlib compression (CSO v1).
+    /// </summary>
+    public bool IsDeflate => Header.IsV1;
+
+    /// <summary>
+    ///     Disposes of the CSO file and releases associated resources.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+
+        if (_ownsStream) _stream.Dispose();
+
+        _stream = null!;
+        _indexTable = [];
+    }
+
+    /// <summary>
+    ///     Opens a CSO/CISO file from the specified file path.
     /// </summary>
     /// <param name="path">The full path to the CSO or CISO file.</param>
-    /// <param name="cso">When this method returns, contains the opened <see cref="CsoFile"/> instance if successful; otherwise, null.</param>
-    /// <returns>A <see cref="CsoError"/> indicating the result of the operation.</returns>
+    /// <param name="cso">
+    ///     When this method returns, contains the opened <see cref="CsoFile" /> instance if successful;
+    ///     otherwise, null.
+    /// </param>
+    /// <returns>A <see cref="CsoError" /> indicating the result of the operation.</returns>
     public static CsoError Open(string path, out CsoFile? cso)
     {
         cso = null;
@@ -57,10 +76,7 @@ public sealed class CsoFile : IDisposable
         {
             var stream = File.OpenRead(path);
             var error = Open(stream, true, out cso);
-            if (error != CsoError.None)
-            {
-                stream.Dispose();
-            }
+            if (error != CsoError.None) stream.Dispose();
 
             return error;
         }
@@ -71,12 +87,15 @@ public sealed class CsoFile : IDisposable
     }
 
     /// <summary>
-    /// Opens a CSO/CISO from an existing stream.
+    ///     Opens a CSO/CISO from an existing stream.
     /// </summary>
     /// <param name="stream">The stream containing CSO data. The stream must be seekable and readable.</param>
     /// <param name="ownsStream">Whether this instance should dispose the stream when disposed.</param>
-    /// <param name="cso">When this method returns, contains the opened <see cref="CsoFile"/> instance if successful; otherwise, null.</param>
-    /// <returns>A <see cref="CsoError"/> indicating the result of the operation.</returns>
+    /// <param name="cso">
+    ///     When this method returns, contains the opened <see cref="CsoFile" /> instance if successful;
+    ///     otherwise, null.
+    /// </param>
+    /// <returns>A <see cref="CsoError" /> indicating the result of the operation.</returns>
     public static CsoError Open(Stream stream, bool ownsStream, out CsoFile? cso)
     {
         cso = null;
@@ -161,25 +180,28 @@ public sealed class CsoFile : IDisposable
     }
 
     /// <summary>
-    /// Reads and decompresses a single block from the CSO file.
+    ///     Reads and decompresses a single block from the CSO file.
     /// </summary>
     /// <param name="blockIndex">The zero-based index of the block to read.</param>
-    /// <param name="buffer">The buffer to receive the decompressed block data. Must be at least <see cref="CsoHeader.BlockSize"/> bytes.</param>
+    /// <param name="buffer">
+    ///     The buffer to receive the decompressed block data. Must be at least
+    ///     <see cref="CsoHeader.BlockSize" /> bytes.
+    /// </param>
     /// <param name="bytesRead">When this method returns, contains the number of bytes actually read into the buffer.</param>
-    /// <returns>A <see cref="CsoError"/> indicating the result of the operation.</returns>
+    /// <returns>A <see cref="CsoError" /> indicating the result of the operation.</returns>
     public CsoError ReadBlock(uint blockIndex, byte[] buffer, out int bytesRead)
     {
         return ReadBlock(blockIndex, buffer, 0, out bytesRead);
     }
 
     /// <summary>
-    /// Reads and decompresses a single block from the CSO file into the specified buffer at the given offset.
+    ///     Reads and decompresses a single block from the CSO file into the specified buffer at the given offset.
     /// </summary>
     /// <param name="blockIndex">The zero-based index of the block to read.</param>
     /// <param name="buffer">The buffer to receive the decompressed block data.</param>
     /// <param name="offset">The byte offset in the buffer at which to begin writing.</param>
     /// <param name="bytesRead">When this method returns, contains the number of bytes actually read into the buffer.</param>
-    /// <returns>A <see cref="CsoError"/> indicating the result of the operation.</returns>
+    /// <returns>A <see cref="CsoError" /> indicating the result of the operation.</returns>
     public CsoError ReadBlock(uint blockIndex, byte[] buffer, int offset, out int bytesRead)
     {
         bytesRead = 0;
@@ -218,10 +240,7 @@ public sealed class CsoFile : IDisposable
                 return CsoError.None;
             }
 
-            if (Header.IsV2)
-            {
-                return DecompressLz4Block(compressedSize, buffer, offset, out bytesRead);
-            }
+            if (Header.IsV2) return DecompressLz4Block(compressedSize, buffer, offset, out bytesRead);
 
             return DecompressDeflateBlock(compressedSize, buffer, offset, out bytesRead);
         }
@@ -252,10 +271,7 @@ public sealed class CsoFile : IDisposable
                 return CsoError.IoError;
 
             var dataOffset = 0;
-            if (actuallyRead >= 2 && (compressedBuffer[0] == 0x78))
-            {
-                dataOffset = 2;
-            }
+            if (actuallyRead >= 2 && compressedBuffer[0] == 0x78) dataOffset = 2;
 
             using var compressedStream = new MemoryStream(
                 compressedBuffer,
@@ -335,9 +351,9 @@ public sealed class CsoFile : IDisposable
     }
 
     /// <summary>
-    /// Creates a <see cref="Stream"/> that provides sequential read access to the decompressed ISO data.
+    ///     Creates a <see cref="Stream" /> that provides sequential read access to the decompressed ISO data.
     /// </summary>
-    /// <returns>A <see cref="CsoStream"/> wrapping this CSO file.</returns>
+    /// <returns>A <see cref="CsoStream" /> wrapping this CSO file.</returns>
     public CsoStream OpenStream()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -345,12 +361,12 @@ public sealed class CsoFile : IDisposable
     }
 
     /// <summary>
-    /// Decompresses the entire CSO file and writes the ISO to the specified output path.
+    ///     Decompresses the entire CSO file and writes the ISO to the specified output path.
     /// </summary>
     /// <param name="outputPath">The path where the decompressed ISO file will be written.</param>
     /// <param name="progress">Optional callback invoked with the number of blocks processed and total blocks.</param>
     /// <param name="cancellationToken">Cancellation token to abort the operation.</param>
-    /// <returns>A <see cref="CsoError"/> indicating the result of the operation.</returns>
+    /// <returns>A <see cref="CsoError" /> indicating the result of the operation.</returns>
     public CsoError ExtractToIso(
         string outputPath,
         Action<uint, uint>? progress = null,
@@ -393,24 +409,5 @@ public sealed class CsoFile : IDisposable
         {
             ArrayPool<byte>.Shared.Return(buffer);
         }
-    }
-
-    /// <summary>
-    /// Disposes of the CSO file and releases associated resources.
-    /// </summary>
-    public void Dispose()
-    {
-        if (_disposed)
-            return;
-
-        _disposed = true;
-
-        if (_ownsStream)
-        {
-            _stream.Dispose();
-        }
-
-        _stream = null!;
-        _indexTable = [];
     }
 }

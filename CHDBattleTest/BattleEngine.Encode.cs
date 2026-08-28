@@ -10,23 +10,23 @@ public sealed partial class BattleEngine
 
     private async Task CopyBattleAsync(FileReport report, string work)
     {
-        string codec = _cfg.CodecRaw;
-        string battle = "copy:" + codec;
+        var codec = _cfg.CodecRaw;
+        var battle = "copy:" + codec;
         Log($"  [encode] copy/recompress battle (codec={codec})");
 
-        string mChd = Path.Combine(work, "copy_m.chd");
-        string sChd = Path.Combine(work, "copy_s.chd");
-        string np = $"-np {_cfg.Workers}";
+        var mChd = Path.Combine(work, "copy_m.chd");
+        var sChd = Path.Combine(work, "copy_s.chd");
+        var np = $"-np {_cfg.Workers}";
 
         var rm = await RunTool("chdman", battle,
             $"copy -i \"{report.SourcePath}\" -o \"{mChd}\" -c {codec} -f {np}", report).ConfigureAwait(false);
         var rs = await RunTool("chdsharp", battle,
             $"copy -i \"{report.SourcePath}\" -o \"{sChd}\" -c {codec} -f {np}", report).ConfigureAwait(false);
 
-        string? mh = rm.ExitCode == 0
+        var mh = rm.ExitCode == 0
             ? (await Hashing.Sha256FileAsync(mChd, _ct).ConfigureAwait(false)).Hash
             : null;
-        string? sh = rs.ExitCode == 0
+        var sh = rs.ExitCode == 0
             ? (await Hashing.Sha256FileAsync(sChd, _ct).ConfigureAwait(false)).Hash
             : null;
 
@@ -37,9 +37,9 @@ public sealed partial class BattleEngine
             sh, rs.ExitCode, Mibs(rs.Seconds, report.LogicalBytes),
             Ratio(rs.ExitCode == 0, FileLen(sChd), report.LogicalBytes), FailMsg(rs)));
 
-        bool parity = mh is not null && sh is not null &&
-                      string.Equals(mh, sh, StringComparison.OrdinalIgnoreCase);
-        bool sizeMatch = rm.ExitCode == 0 && rs.ExitCode == 0 && FileLen(mChd) == FileLen(sChd);
+        var parity = mh is not null && sh is not null &&
+                     string.Equals(mh, sh, StringComparison.OrdinalIgnoreCase);
+        var sizeMatch = rm.ExitCode == 0 && rs.ExitCode == 0 && FileLen(mChd) == FileLen(sChd);
         AddOutcome(report, new StepOutcome(battle + "-parity", "cross", parity, 0, 0,
             parity ? ShortHash(mh!) : null, 0, null, null,
             parity ? null : sizeMatch ? "same size, different bytes" : "products differ"));
@@ -75,7 +75,8 @@ public sealed partial class BattleEngine
 
     private async Task CreateBattleAsync(FileReport report, string work)
     {
-        (string cmd, string? input, string outName) = report.Kind switch
+        // ReSharper disable once UnusedVariable
+        var (cmd, input, outName) = report.Kind switch
         {
             MediaKind.Cd => ("createcd", FindStructuredArtifact(work, ".cue"), "create_m_s.chd"),
             MediaKind.GdRom => ("createcd", FindStructuredArtifact(work, ".gdi"), "create_m_s.chd"),
@@ -114,21 +115,21 @@ public sealed partial class BattleEngine
             Log("  [encode] createraw battle from decoded raw image");
         }
 
-        string codec = _cfg.CodecFor(report.Kind);
-        string mChd = Path.Combine(work, "create_m.chd");
-        string sChd = Path.Combine(work, "create_s.chd");
-        string np = $"-np {_cfg.Workers}";
-        string battle = cmd + ":" + codec;
+        var codec = _cfg.CodecFor(report.Kind);
+        var mChd = Path.Combine(work, "create_m.chd");
+        var sChd = Path.Combine(work, "create_s.chd");
+        var np = $"-np {_cfg.Workers}";
+        var battle = cmd + ":" + codec;
 
         var rm = await RunTool("chdman", battle,
             $"{cmd} -i \"{input}\" -o \"{mChd}\" -c {codec} -f {np}", report).ConfigureAwait(false);
         var rs = await RunTool("chdsharp", battle,
             $"{cmd} -i \"{input}\" -o \"{sChd}\" -c {codec} -f {np}", report).ConfigureAwait(false);
 
-        string? mh = rm.ExitCode == 0
+        var mh = rm.ExitCode == 0
             ? (await Hashing.Sha256FileAsync(mChd, _ct).ConfigureAwait(false)).Hash
             : null;
-        string? sh = rs.ExitCode == 0
+        var sh = rs.ExitCode == 0
             ? (await Hashing.Sha256FileAsync(sChd, _ct).ConfigureAwait(false)).Hash
             : null;
 
@@ -139,9 +140,9 @@ public sealed partial class BattleEngine
             sh, rs.ExitCode, Mibs(rs.Seconds, report.LogicalBytes),
             Ratio(rs.ExitCode == 0, FileLen(sChd), report.LogicalBytes), FailMsg(rs)));
 
-        bool parity = mh is not null && sh is not null &&
-                      string.Equals(mh, sh, StringComparison.OrdinalIgnoreCase);
-        bool sizeMatch = rm.ExitCode == 0 && rs.ExitCode == 0 && FileLen(mChd) == FileLen(sChd);
+        var parity = mh is not null && sh is not null &&
+                     string.Equals(mh, sh, StringComparison.OrdinalIgnoreCase);
+        var sizeMatch = rm.ExitCode == 0 && rs.ExitCode == 0 && FileLen(mChd) == FileLen(sChd);
         AddOutcome(report, new StepOutcome(battle + "-parity", "cross", parity, 0, 0,
             parity ? ShortHash(mh!) : null, 0, null, null,
             parity ? null : sizeMatch ? "same size, different bytes" : "products differ"));
@@ -187,18 +188,18 @@ public sealed partial class BattleEngine
         AddOutcome(report, new StepOutcome($"{battle}:verify-chdsharp[{producer}-product]", "chdsharp",
             sv.ExitCode == 0, sv.Seconds, 0, null, sv.ExitCode, null, null, FailMsg(sv)));
 
-        bool agree = rv.ExitCode == 0 && sv.ExitCode == 0;
+        var agree = rv.ExitCode == 0 && sv.ExitCode == 0;
         Log(
             $"     verify {producer} product: chdman={Ok(rv.ExitCode == 0)} chdsharp={Ok(sv.ExitCode == 0)}{(agree ? "" : "  << VERIFIERS DISAGREE")}");
     }
 
     private static string? FindStructuredArtifact(string work, string extension)
     {
-        foreach (string sub in new[] { "m_struct", "s_struct" })
+        foreach (var sub in new[] { "m_struct", "s_struct" })
         {
-            string dir = Path.Combine(work, sub);
+            var dir = Path.Combine(work, sub);
             if (!Directory.Exists(dir)) continue;
-            string hit = Directory.EnumerateFiles(dir, "*" + extension, SearchOption.AllDirectories).FirstOrDefault();
+            var hit = Directory.EnumerateFiles(dir, "*" + extension, SearchOption.AllDirectories).FirstOrDefault();
             if (hit is not null) return hit;
         }
 
@@ -207,9 +208,9 @@ public sealed partial class BattleEngine
 
     private static string? FindRawArtifact(string work)
     {
-        foreach (string sub in new[] { "m_raw", "s_raw" })
+        foreach (var sub in new[] { "m_raw", "s_raw" })
         {
-            string candidate = Path.Combine(work, sub, "raw.bin");
+            var candidate = Path.Combine(work, sub, "raw.bin");
             if (File.Exists(candidate)) return candidate;
         }
 

@@ -16,10 +16,7 @@ public class RawCdImageDetectorTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
+            if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true);
         }
         catch
         {
@@ -37,10 +34,7 @@ public class RawCdImageDetectorTests : IDisposable
 
         // 12-byte sync: 00 FF x10 00
         data[0] = 0x00;
-        for (var i = 1; i <= 10; i++)
-        {
-            data[i] = 0xFF;
-        }
+        for (var i = 1; i <= 10; i++) data[i] = 0xFF;
 
         data[11] = 0x00;
 

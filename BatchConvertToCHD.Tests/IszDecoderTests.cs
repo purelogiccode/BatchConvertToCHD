@@ -1,3 +1,4 @@
+using System.Text;
 using BatchConvertToCHD.Utilities.Isz;
 
 namespace BatchConvertToCHD.Tests;
@@ -19,10 +20,7 @@ public class IszDecoderTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
+            if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true);
         }
         catch
         {
@@ -30,6 +28,65 @@ public class IszDecoderTests : IDisposable
         }
 
         GC.SuppressFinalize(this);
+    }
+
+    private async Task AssertRoundTripsAsync(
+        byte[] image,
+        Func<int, int> flagForChunk,
+        bool expectCompressed = false
+    )
+    {
+        var iszPath = Path.Combine(_tempDir, $"image_{Guid.NewGuid():N}.isz");
+        var outputPath = Path.ChangeExtension(iszPath, ".iso");
+
+        IszImageBuilder.WriteSingle(iszPath, image, SectorSize, ChunkSize, 3, flagForChunk);
+
+        if (expectCompressed)
+            // Guards against a fixture whose chunks all fell back to being stored verbatim, which
+            // would leave the decompression path untested while the test still passed.
+            Assert.True(
+                new FileInfo(iszPath).Length < image.Length / 2,
+                "the fixture did not actually compress, so the decompression path was not exercised"
+            );
+
+        var result = await IszDecoder.DecodeAsync(iszPath, outputPath, Log, CancellationToken.None);
+
+        Assert.True(result.Success, result.FailureReason);
+        Assert.Equal(outputPath, result.OutputPath);
+        Assert.Equal(image, await File.ReadAllBytesAsync(outputPath));
+    }
+
+    /// <summary>
+    ///     Builds an image of whole sectors. The content has to be compressible, because a chunk that
+    ///     grows under compression is stored verbatim by any real writer and would leave the zlib and
+    ///     bzip2 paths untested, and every sector has to be distinguishable, so a chunk boundary landing
+    ///     in the wrong place shows up as a byte difference rather than a coincidence.
+    /// </summary>
+    private static byte[] BuildImage(int chunks, int extraSectors = 0, int sectorSize = SectorSize)
+    {
+        var length = chunks * ChunkSize + extraSectors * sectorSize;
+        length -= length % sectorSize;
+
+        var image = new byte[length];
+
+        for (var sector = 0; sector * sectorSize < image.Length; sector++)
+        {
+            var start = sector * sectorSize;
+            var end = Math.Min(start + sectorSize, image.Length);
+
+            // A repeating run keyed to the sector number: compressible, and unique per sector.
+            for (var offset = start; offset < end; offset++) image[offset] = (byte)(sector * 7 + (offset - start) % 19);
+
+            var marker = Encoding.ASCII.GetBytes($"SECTOR{sector:D6}");
+            marker.CopyTo(image, start);
+        }
+
+        return image;
+    }
+
+    private static void Log(string message)
+    {
+        /* the decoder's progress output is not under test */
     }
 
     #region Chunk table entries
@@ -44,7 +101,7 @@ public class IszDecoderTests : IDisposable
                 (0x00, IszChunkType.Zero),
                 (0x40, IszChunkType.Stored),
                 (0x80, IszChunkType.ZLib),
-                (0xC0, IszChunkType.BZip2),
+                (0xC0, IszChunkType.BZip2)
             }
         )
         {
@@ -118,7 +175,7 @@ public class IszDecoderTests : IDisposable
         await AssertRoundTripsAsync(
             BuildImage(16),
             static _ => IszImageBuilder.AdiZlib,
-            expectCompressed: true
+            true
         );
     }
 
@@ -128,7 +185,7 @@ public class IszDecoderTests : IDisposable
         await AssertRoundTripsAsync(
             BuildImage(16),
             static _ => IszImageBuilder.AdiBz2,
-            expectCompressed: true
+            true
         );
     }
 
@@ -169,7 +226,7 @@ public class IszDecoderTests : IDisposable
                     0 => IszImageBuilder.AdiZlib,
                     1 => IszImageBuilder.AdiBz2,
                     2 => IszImageBuilder.AdiData,
-                    _ => index == 3 ? IszImageBuilder.AdiZero : IszImageBuilder.AdiZlib,
+                    _ => index == 3 ? IszImageBuilder.AdiZero : IszImageBuilder.AdiZlib
                 }
         );
     }
@@ -179,7 +236,7 @@ public class IszDecoderTests : IDisposable
     {
         // The last chunk of a real image is nearly always short. Writing a whole chunk's worth would
         // lengthen the image and change every hash of it.
-        var image = BuildImage(8, extraSectors: 3);
+        var image = BuildImage(8, 3);
 
         await AssertRoundTripsAsync(image, static _ => IszImageBuilder.AdiZlib);
     }
@@ -230,7 +287,7 @@ public class IszDecoderTests : IDisposable
             ChunkSize,
             3,
             static _ => IszImageBuilder.AdiData,
-            splitAfterBytes: ChunkSize * 4 + 111
+            ChunkSize * 4 + 111
         );
 
         Assert.True(File.Exists(IszImageBuilder.GetSecondSegmentPath(iszPath)));
@@ -254,7 +311,7 @@ public class IszDecoderTests : IDisposable
             ChunkSize,
             3,
             static _ => IszImageBuilder.AdiZlib,
-            splitAfterBytes: 200
+            200
         );
 
         var outputPath = Path.Combine(_tempDir, "splitz.iso");
@@ -276,7 +333,7 @@ public class IszDecoderTests : IDisposable
             ChunkSize,
             3,
             static _ => IszImageBuilder.AdiData,
-            splitAfterBytes: ChunkSize * 4,
+            ChunkSize * 4,
             writeSecondSegment: false
         );
 
@@ -306,8 +363,8 @@ public class IszDecoderTests : IDisposable
             ChunkSize,
             3,
             static _ => IszImageBuilder.AdiData,
-            splitAfterBytes: ChunkSize * 4,
-            secondSegmentVolumeSerial: 0x99887766
+            ChunkSize * 4,
+            0x99887766
         );
 
         var result = await IszDecoder.DecodeAsync(
@@ -362,7 +419,7 @@ public class IszDecoderTests : IDisposable
             ChunkSize,
             3,
             static _ => IszImageBuilder.AdiZlib,
-            passwordMode: 4
+            4
         );
 
         var outputPath = Path.Combine(_tempDir, "locked.iso");
@@ -464,9 +521,7 @@ public class IszDecoderTests : IDisposable
             offset < Math.Min(bytes.Length, bytes.Length / 2 + 64);
             offset++
         )
-        {
             bytes[offset] ^= 0xFF;
-        }
 
         await File.WriteAllBytesAsync(iszPath, bytes);
 
@@ -513,68 +568,4 @@ public class IszDecoderTests : IDisposable
     }
 
     #endregion
-
-    private async Task AssertRoundTripsAsync(
-        byte[] image,
-        Func<int, int> flagForChunk,
-        bool expectCompressed = false
-    )
-    {
-        var iszPath = Path.Combine(_tempDir, $"image_{Guid.NewGuid():N}.isz");
-        var outputPath = Path.ChangeExtension(iszPath, ".iso");
-
-        IszImageBuilder.WriteSingle(iszPath, image, SectorSize, ChunkSize, 3, flagForChunk);
-
-        if (expectCompressed)
-        {
-            // Guards against a fixture whose chunks all fell back to being stored verbatim, which
-            // would leave the decompression path untested while the test still passed.
-            Assert.True(
-                new FileInfo(iszPath).Length < image.Length / 2,
-                "the fixture did not actually compress, so the decompression path was not exercised"
-            );
-        }
-
-        var result = await IszDecoder.DecodeAsync(iszPath, outputPath, Log, CancellationToken.None);
-
-        Assert.True(result.Success, result.FailureReason);
-        Assert.Equal(outputPath, result.OutputPath);
-        Assert.Equal(image, await File.ReadAllBytesAsync(outputPath));
-    }
-
-    /// <summary>
-    /// Builds an image of whole sectors. The content has to be compressible, because a chunk that
-    /// grows under compression is stored verbatim by any real writer and would leave the zlib and
-    /// bzip2 paths untested, and every sector has to be distinguishable, so a chunk boundary landing
-    /// in the wrong place shows up as a byte difference rather than a coincidence.
-    /// </summary>
-    private static byte[] BuildImage(int chunks, int extraSectors = 0, int sectorSize = SectorSize)
-    {
-        var length = chunks * ChunkSize + extraSectors * sectorSize;
-        length -= length % sectorSize;
-
-        var image = new byte[length];
-
-        for (var sector = 0; sector * sectorSize < image.Length; sector++)
-        {
-            var start = sector * sectorSize;
-            var end = Math.Min(start + sectorSize, image.Length);
-
-            // A repeating run keyed to the sector number: compressible, and unique per sector.
-            for (var offset = start; offset < end; offset++)
-            {
-                image[offset] = (byte)(sector * 7 + (offset - start) % 19);
-            }
-
-            var marker = System.Text.Encoding.ASCII.GetBytes($"SECTOR{sector:D6}");
-            marker.CopyTo(image, start);
-        }
-
-        return image;
-    }
-
-    private static void Log(string message)
-    {
-        /* the decoder's progress output is not under test */
-    }
 }

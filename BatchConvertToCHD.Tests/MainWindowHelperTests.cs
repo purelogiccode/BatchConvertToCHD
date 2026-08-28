@@ -1,7 +1,9 @@
+using System.Text;
+
 namespace BatchConvertToCHD.Tests;
 
 /// <summary>
-/// Tests for MainWindow helper methods used by the conversion pipeline.
+///     Tests for MainWindow helper methods used by the conversion pipeline.
 /// </summary>
 public class MainWindowHelperTests : IDisposable
 {
@@ -17,10 +19,7 @@ public class MainWindowHelperTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
+            if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true);
         }
         catch
         {
@@ -34,7 +33,7 @@ public class MainWindowHelperTests : IDisposable
     public async Task StripUtf8BomIfPresentAsync_RemovesBom()
     {
         var path = Path.Combine(_tempDir, "bom.cue");
-        await File.WriteAllTextAsync(path, "FILE \"track1.bin\" BINARY", System.Text.Encoding.UTF8);
+        await File.WriteAllTextAsync(path, "FILE \"track1.bin\" BINARY", Encoding.UTF8);
 
         Assert.Equal(0xEF, (await File.ReadAllBytesAsync(path))[0]);
 
@@ -44,7 +43,7 @@ public class MainWindowHelperTests : IDisposable
         Assert.False(bytes is [0xEF, 0xBB, 0xBF, ..], "BOM must be removed");
         Assert.StartsWith(
             "FILE \"track1.bin\" BINARY",
-            System.Text.Encoding.UTF8.GetString(bytes),
+            Encoding.UTF8.GetString(bytes),
             StringComparison.Ordinal
         );
     }
@@ -54,7 +53,7 @@ public class MainWindowHelperTests : IDisposable
     {
         var path = Path.Combine(_tempDir, "plain.cue");
         const string content = "FILE \"track1.bin\" BINARY";
-        await File.WriteAllTextAsync(path, content, new System.Text.UTF8Encoding(false));
+        await File.WriteAllTextAsync(path, content, new UTF8Encoding(false));
 
         await MainWindow.StripUtf8BomIfPresentAsync(path, CancellationToken.None);
 

@@ -16,8 +16,8 @@ public class CueSheetWriterTests
                 TrackNo = 1,
                 Minutes = 0,
                 Seconds = 2,
-                Frames = 0,
-            },
+                Frames = 0
+            }
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
@@ -38,8 +38,8 @@ public class CueSheetWriterTests
                 TrackNo = 2,
                 Minutes = 4,
                 Seconds = 30,
-                Frames = 25,
-            },
+                Frames = 25
+            }
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
@@ -61,7 +61,7 @@ public class CueSheetWriterTests
                 TrackNo = 1,
                 Minutes = 0,
                 Seconds = 2,
-                Frames = 0,
+                Frames = 0
             },
             new()
             {
@@ -69,7 +69,7 @@ public class CueSheetWriterTests
                 TrackNo = 2,
                 Minutes = 4,
                 Seconds = 30,
-                Frames = 0,
+                Frames = 0
             },
             new()
             {
@@ -77,8 +77,8 @@ public class CueSheetWriterTests
                 TrackNo = 3,
                 Minutes = 8,
                 Seconds = 15,
-                Frames = 50,
-            },
+                Frames = 50
+            }
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("disc.bin", toc);
@@ -103,8 +103,8 @@ public class CueSheetWriterTests
                 TrackNo = 1,
                 Minutes = 0,
                 Seconds = 2,
-                Frames = 0,
-            },
+                Frames = 0
+            }
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
@@ -134,8 +134,8 @@ public class CueSheetWriterTests
                 TrackNo = 1,
                 Minutes = 0,
                 Seconds = 2,
-                Frames = 0,
-            },
+                Frames = 0
+            }
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
@@ -164,8 +164,8 @@ public class CueSheetWriterTests
                 TrackNo = 1,
                 Minutes = 0,
                 Seconds = 2,
-                Frames = 0,
-            },
+                Frames = 0
+            }
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("My Game (USA).bin", toc);
@@ -183,8 +183,8 @@ public class CueSheetWriterTests
                 TrackNo = 1,
                 Minutes = 1,
                 Seconds = 2,
-                Frames = 3,
-            },
+                Frames = 3
+            }
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
@@ -203,8 +203,8 @@ public class CueSheetWriterTests
                 TrackNo = 2,
                 Minutes = 0,
                 Seconds = 2,
-                Frames = 0,
-            },
+                Frames = 0
+            }
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
@@ -227,8 +227,8 @@ public class CueSheetWriterTests
                 TrackNo = 2,
                 Minutes = 0,
                 Seconds = 1,
-                Frames = 0,
-            },
+                Frames = 0
+            }
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);
@@ -248,8 +248,8 @@ public class CueSheetWriterTests
                 TrackNo = 1,
                 Minutes = 0,
                 Seconds = 2,
-                Frames = 0,
-            },
+                Frames = 0
+            }
         };
 
         var cue = CueSheetWriter.GenerateCueSheet("game.bin", toc);

@@ -5,20 +5,19 @@ using BatchConvertToCHD.Utilities.Mds;
 namespace BatchConvertToCHD.Tests;
 
 /// <summary>
-/// Covers Alcohol 120% .mds parsing and the preparation of a chdman-readable input. The synthetic
-/// descriptors here reproduce the layouts and sector sizes seen in real rips.
+///     Covers Alcohol 120% .mds parsing and the preparation of a chdman-readable input. The synthetic
+///     descriptors here reproduce the layouts and sector sizes seen in real rips.
 /// </summary>
 public class MdsTests : IDisposable
 {
-    private readonly string _tempDir;
-    private readonly List<string> _log = [];
-
     // Offsets in the Alcohol descriptor, mirroring MdsParser.
     private const int SessionCountOffset = 0x14;
     private const int SessionBlockOffsetOffset = 0x50;
     private const int SessionBlockStart = 0x60;
     private const int TrackBlockStart = 0x100;
     private const int TrackBlockSize = 80;
+    private readonly List<string> _log = [];
+    private readonly string _tempDir;
 
     public MdsTests()
     {
@@ -30,10 +29,7 @@ public class MdsTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(_tempDir))
-            {
-                Directory.Delete(_tempDir, true);
-            }
+            if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, true);
         }
         catch
         {
@@ -49,7 +45,7 @@ public class MdsTests : IDisposable
         params (byte Mode, byte Point, ushort SectorSize, uint StartLba)[] tracks
     )
     {
-        var bytes = new byte[TrackBlockStart + (TrackBlockSize * Math.Max(tracks.Length, 1))];
+        var bytes = new byte[TrackBlockStart + TrackBlockSize * Math.Max(tracks.Length, 1)];
         "MEDIA DESCRIPTOR"u8.ToArray().CopyTo(bytes, 0);
         BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(SessionCountOffset), 1);
         BinaryPrimitives.WriteUInt32LittleEndian(
@@ -65,7 +61,7 @@ public class MdsTests : IDisposable
 
         for (var i = 0; i < tracks.Length; i++)
         {
-            var offset = TrackBlockStart + (i * TrackBlockSize);
+            var offset = TrackBlockStart + i * TrackBlockSize;
             bytes[offset + 0x00] = tracks[i].Mode;
             bytes[offset + 0x04] = tracks[i].Point;
             BinaryPrimitives.WriteUInt16LittleEndian(
@@ -95,9 +91,7 @@ public class MdsTests : IDisposable
         {
             var start = sector * sectorSize;
             for (var i = 0; i < sectorSize; i++)
-            {
                 data[start + i] = i < MdsDisc.RawSectorSize ? (byte)(sector + 1) : (byte)0xFF;
-            }
         }
 
         File.WriteAllBytes(path, data);
@@ -244,7 +238,7 @@ public class MdsTests : IDisposable
             Assert.Equal((byte)(sector + 1), bytes[sector * MdsDisc.RawSectorSize]);
             Assert.Equal(
                 (byte)(sector + 1),
-                bytes[(sector * MdsDisc.RawSectorSize) + MdsDisc.RawSectorSize - 1]
+                bytes[sector * MdsDisc.RawSectorSize + MdsDisc.RawSectorSize - 1]
             );
         }
 

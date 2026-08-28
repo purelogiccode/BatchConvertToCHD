@@ -4,19 +4,19 @@ using System.Text;
 namespace BatchConvertToCHD.Utilities;
 
 /// <summary>
-/// Provides methods for parsing game file formats (CUE, GDI, TOC) to extract referenced files.
+///     Provides methods for parsing game file formats (CUE, GDI, TOC) to extract referenced files.
 /// </summary>
 internal static class GameFileParser
 {
     private static readonly char[] Separator = [' ', '\t'];
 
     /// <summary>
-    /// Code pages tried when a file is not valid UTF-8. Ordered by likelihood for game rips.
+    ///     Code pages tried when a file is not valid UTF-8. Ordered by likelihood for game rips.
     /// </summary>
     internal static readonly int[] FallbackCodePages = [932, 949, 936, 1251, 866, 1252];
 
     /// <summary>
-    /// Extracts referenced file paths from a CUE sheet file.
+    ///     Extracts referenced file paths from a CUE sheet file.
     /// </summary>
     /// <param name="cuePath">Path to the CUE file to parse.</param>
     /// <param name="onLog">Callback for logging messages.</param>
@@ -32,7 +32,7 @@ internal static class GameFileParser
     }
 
     /// <summary>
-    /// Extracts referenced file paths from a GDI (Dreamcast GD-ROM) file.
+    ///     Extracts referenced file paths from a GDI (Dreamcast GD-ROM) file.
     /// </summary>
     /// <param name="gdiPath">Path to the GDI file to parse.</param>
     /// <param name="onLog">Callback for logging messages.</param>
@@ -54,10 +54,7 @@ internal static class GameFileParser
             for (var i = 1; i < lines.Length; i++)
             {
                 var trimmedLine = lines[i].Trim();
-                if (string.IsNullOrWhiteSpace(trimmedLine))
-                {
-                    continue;
-                }
+                if (string.IsNullOrWhiteSpace(trimmedLine)) continue;
 
                 var firstQuote = trimmedLine.IndexOf('"');
                 var lastQuote = trimmedLine.LastIndexOf('"');
@@ -73,10 +70,7 @@ internal static class GameFileParser
                 else
                 {
                     var parts = trimmedLine.Split(Separator, StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length < 5)
-                    {
-                        continue;
-                    }
+                    if (parts.Length < 5) continue;
 
                     string fileName;
                     if (parts.Length > 6)
@@ -110,7 +104,7 @@ internal static class GameFileParser
     }
 
     /// <summary>
-    /// Extracts referenced file paths from a TOC (Table of Contents) file.
+    ///     Extracts referenced file paths from a TOC (Table of Contents) file.
     /// </summary>
     /// <param name="tocPath">Path to the TOC file to parse.</param>
     /// <param name="onLog">Callback for logging messages.</param>
@@ -126,16 +120,16 @@ internal static class GameFileParser
     }
 
     /// <summary>
-    /// Reads a CUE/TOC file and returns its lines together with the encoding that was detected
-    /// as the most plausible one, and whether the file started with an explicit BOM.
-    /// Detection order: BOM, strict UTF-8, then <see cref="FallbackCodePages"/>
-    /// filtered to losslessly decodable code pages and scored by how many referenced file names
-    /// actually resolve to files in the same directory (ties broken by declared order).
+    ///     Reads a CUE/TOC file and returns its lines together with the encoding that was detected
+    ///     as the most plausible one, and whether the file started with an explicit BOM.
+    ///     Detection order: BOM, strict UTF-8, then <see cref="FallbackCodePages" />
+    ///     filtered to losslessly decodable code pages and scored by how many referenced file names
+    ///     actually resolve to files in the same directory (ties broken by declared order).
     /// </summary>
     /// <remarks>
-    /// The returned <c>HasBom</c> flag matters because chdman's cue parser does not skip a
-    /// UTF-8 BOM: the first token becomes "\uFEFFFILE" and the FILE directive is never parsed,
-    /// which makes chdman report "couldn't find bin file []" even when every bin exists.
+    ///     The returned <c>HasBom</c> flag matters because chdman's cue parser does not skip a
+    ///     UTF-8 BOM: the first token becomes "\uFEFFFILE" and the FILE directive is never parsed,
+    ///     which makes chdman report "couldn't find bin file []" even when every bin exists.
     /// </remarks>
     internal static async Task<(
         string[] Lines,
@@ -189,10 +183,7 @@ internal static class GameFileParser
         // declared order (most likely first).
         var directory = Path.GetDirectoryName(filePath) ?? string.Empty;
         string[]? onDiskFiles = null;
-        if (Directory.Exists(directory))
-        {
-            onDiskFiles = Directory.GetFiles(directory);
-        }
+        if (Directory.Exists(directory)) onDiskFiles = Directory.GetFiles(directory);
 
         string[]? bestLines = null;
         Encoding? bestEncoding = null;
@@ -226,7 +217,6 @@ internal static class GameFileParser
 
             var score = 0;
             if (onDiskFiles is { Length: > 0 })
-            {
                 foreach (var line in decoded)
                 {
                     var trimmedLine = line.Trim();
@@ -234,7 +224,6 @@ internal static class GameFileParser
                         TryGetFileNameFromFileLine(trimmedLine, out var fileName)
                         && fileName is not null
                     )
-                    {
                         if (
                             onDiskFiles.Any(f =>
                                 string.Equals(
@@ -244,12 +233,8 @@ internal static class GameFileParser
                                 )
                             )
                         )
-                        {
                             score += 10;
-                        }
-                    }
                 }
-            }
 
             if (score > bestScore)
             {
@@ -259,18 +244,15 @@ internal static class GameFileParser
             }
         }
 
-        if (bestLines is not null && bestEncoding is not null)
-        {
-            return (bestLines, bestEncoding, false);
-        }
+        if (bestLines is not null && bestEncoding is not null) return (bestLines, bestEncoding, false);
 
         // 4) Last resort
         return (DecodeLines(bytes, Encoding.Default), Encoding.Default, false);
     }
 
     /// <summary>
-    /// Extracts the referenced file name from a single "FILE ..." line (quoted or unquoted form).
-    /// Returns false when the line is not a usable FILE line.
+    ///     Extracts the referenced file name from a single "FILE ..." line (quoted or unquoted form).
+    ///     Returns false when the line is not a usable FILE line.
     /// </summary>
     /// <param name="trimmedLine">The trimmed FILE line to parse.</param>
     /// <param name="fileName">The extracted referenced file name, or null when the line is unusable.</param>
@@ -287,10 +269,7 @@ internal static class GameFileParser
         else
         {
             var parts = trimmedLine.Split(Separator, 2, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length < 2)
-            {
-                return false;
-            }
+            if (parts.Length < 2) return false;
 
             var rest = parts[1].TrimEnd();
             var lastSpace = rest.LastIndexOf(' ');
@@ -305,13 +284,9 @@ internal static class GameFileParser
                     || afterFilename.Equals("MOTOROLA", StringComparison.OrdinalIgnoreCase)
                     || afterFilename.Equals("AUDIO", StringComparison.OrdinalIgnoreCase)
                 )
-                {
                     fileName = rest[..lastSpace];
-                }
                 else
-                {
                     fileName = rest;
-                }
             }
             else
             {
@@ -339,15 +314,9 @@ internal static class GameFileParser
             foreach (var line in lines)
             {
                 var trimmedLine = line.Trim();
-                if (!trimmedLine.StartsWith("FILE ", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
+                if (!trimmedLine.StartsWith("FILE ", StringComparison.OrdinalIgnoreCase)) continue;
 
-                if (!TryGetFileNameFromFileLine(trimmedLine, out var fileName) || fileName is null)
-                {
-                    continue;
-                }
+                if (!TryGetFileNameFromFileLine(trimmedLine, out var fileName) || fileName is null) continue;
 
                 referencedFiles.Add(Path.Combine(directory, fileName));
             }

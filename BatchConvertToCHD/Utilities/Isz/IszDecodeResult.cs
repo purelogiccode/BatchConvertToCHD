@@ -1,9 +1,9 @@
 namespace BatchConvertToCHD.Utilities.Isz;
 
 /// <summary>
-/// Outcome of decompressing an ISZ image.
+///     Outcome of decompressing an ISZ image.
 /// </summary>
-/// <param name="Success">True when <paramref name="OutputPath"/> holds the complete image.</param>
+/// <param name="Success">True when <paramref name="OutputPath" /> holds the complete image.</param>
 /// <param name="OutputPath">The written image, or null on failure.</param>
 /// <param name="SectorSize">Sector size the header declared, useful for classifying the output.</param>
 /// <param name="FailureReason">User-facing explanation, or null on success.</param>

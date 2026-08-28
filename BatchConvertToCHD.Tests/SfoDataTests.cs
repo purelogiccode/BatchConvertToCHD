@@ -26,7 +26,7 @@ public class SfoDataTests
             Version = 1,
             KeyTableOffset = 100,
             DataTableOffset = 200,
-            Size = 1024,
+            Size = 1024
         };
 
         Assert.Equal(0x46535000u, sfo.Magic);
@@ -54,9 +54,9 @@ public class SfoDataTests
                 {
                     Key = "TITLE",
                     Format = 0x0204,
-                    Value = "Test Game",
-                },
-            },
+                    Value = "Test Game"
+                }
+            }
         };
 
         Assert.Equal("Test Game", sfo.GetString("TITLE"));
@@ -73,9 +73,9 @@ public class SfoDataTests
                 {
                     Key = "BOOTABLE",
                     Format = 0x0404,
-                    Value = 1u,
-                },
-            },
+                    Value = 1u
+                }
+            }
         };
 
         Assert.Null(sfo.GetString("BOOTABLE"));
@@ -99,9 +99,9 @@ public class SfoDataTests
                 {
                     Key = "BOOTABLE",
                     Format = 0x0404,
-                    Value = 1u,
-                },
-            },
+                    Value = 1u
+                }
+            }
         };
 
         Assert.Equal(1u, sfo.GetUInt32("BOOTABLE"));
@@ -118,9 +118,9 @@ public class SfoDataTests
                 {
                     Key = "TITLE",
                     Format = 0x0204,
-                    Value = "Test Game",
-                },
-            },
+                    Value = "Test Game"
+                }
+            }
         };
 
         Assert.Null(sfo.GetUInt32("TITLE"));
@@ -137,15 +137,15 @@ public class SfoDataTests
                 {
                     Key = "TITLE",
                     Format = 0x0204,
-                    Value = "First",
+                    Value = "First"
                 },
                 new()
                 {
                     Key = "TITLE",
                     Format = 0x0204,
-                    Value = "Second",
-                },
-            },
+                    Value = "Second"
+                }
+            }
         };
 
         Assert.Equal("First", sfo.GetString("TITLE"));
@@ -173,7 +173,7 @@ public class SfoDataTests
 
         sfo.Entries = new List<SfoEntry>
         {
-            new() { Key = "TEST", Value = "value" },
+            new() { Key = "TEST", Value = "value" }
         };
 
         Assert.Single(sfo.Entries);

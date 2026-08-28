@@ -6,9 +6,9 @@ using System.Text.RegularExpressions;
 namespace BatchConvertToCHD.Utilities;
 
 /// <summary>
-/// Parses a CUE sheet with encoding detection, resolves every referenced file against the filesystem
-/// (exact match, then case-insensitive, then zero-padding-tolerant like "(Track 2)" vs "(Track 02)"),
-/// and produces a canonical UTF-8 rewrite of the cue that chdman can consume reliably.
+///     Parses a CUE sheet with encoding detection, resolves every referenced file against the filesystem
+///     (exact match, then case-insensitive, then zero-padding-tolerant like "(Track 2)" vs "(Track 02)"),
+///     and produces a canonical UTF-8 rewrite of the cue that chdman can consume reliably.
 /// </summary>
 internal static class CueNormalizer
 {
@@ -24,7 +24,7 @@ internal static class CueNormalizer
         "MP3",
         "AIFF",
         "MOTOROLA",
-        "AUDIO",
+        "AUDIO"
     ];
 
     /// <summary>Extensions a cue's data track can legitimately be stored under.</summary>
@@ -34,7 +34,7 @@ internal static class CueNormalizer
     );
 
     /// <summary>
-    /// Normalizes the cue at <paramref name="cuePath"/>.
+    ///     Normalizes the cue at <paramref name="cuePath" />.
     /// </summary>
     /// <param name="cuePath">Path of the .cue or .toc descriptor to normalize.</param>
     /// <param name="token">Cancellation token.</param>
@@ -78,10 +78,7 @@ internal static class CueNormalizer
             var reference = ResolveReference(directory, referencedName, trackType, isSingleFileCue);
             references.Add(reference);
 
-            if (!reference.IsResolved)
-            {
-                unresolved.Add(referencedName);
-            }
+            if (!reference.IsResolved) unresolved.Add(referencedName);
 
             var lineName = reference.ResolvedName ?? referencedName;
             var lineType = reference.TrackType;
@@ -96,16 +93,10 @@ internal static class CueNormalizer
                 }
             }
 
-            if (reference.WasNameCorrected)
-            {
-                referencesChanged = true;
-            }
+            if (reference.WasNameCorrected) referencesChanged = true;
 
             var canonicalLine = BuildCanonicalFileLine(lineName, lineType);
-            if (!string.Equals(canonicalLine, trimmedLine, StringComparison.Ordinal))
-            {
-                needsRewrite = true;
-            }
+            if (!string.Equals(canonicalLine, trimmedLine, StringComparison.Ordinal)) needsRewrite = true;
 
             canonicalLines.Add(canonicalLine);
         }
@@ -122,7 +113,7 @@ internal static class CueNormalizer
     }
 
     /// <summary>
-    /// Writes the canonical cue content to <paramref name="outputPath"/> as UTF-8 (no BOM, CRLF line endings).
+    ///     Writes the canonical cue content to <paramref name="outputPath" /> as UTF-8 (no BOM, CRLF line endings).
     /// </summary>
     /// <param name="outputPath">Destination file path for the canonical cue.</param>
     /// <param name="result">The normalization result whose canonical content is written.</param>
@@ -172,10 +163,7 @@ internal static class CueNormalizer
         )
         {
             match = FindMatch(cueDirectoryFiles, referencedFileName, out wasNameCorrected);
-            if (match is not null)
-            {
-                wasNameCorrected = true;
-            }
+            if (match is not null) wasNameCorrected = true;
         }
 
         // Strategy 3: same base name, different extension. Rips get re-saved between .bin, .img and
@@ -203,7 +191,6 @@ internal static class CueNormalizer
         }
 
         if (match is null)
-        {
             return new CueFileReference(
                 referencedName,
                 null,
@@ -212,7 +199,6 @@ internal static class CueNormalizer
                 false,
                 directory
             );
-        }
 
         // Anchor the record on the file that was actually found, so a redirected reference reports
         // the real path rather than the one the cue asked for.
@@ -237,9 +223,7 @@ internal static class CueNormalizer
                 && GameFileParser.TryGetFileNameFromFileLine(trimmed, out var name)
                 && name is not null
             )
-            {
                 count++;
-            }
         }
 
         return count;
@@ -258,16 +242,13 @@ internal static class CueNormalizer
     }
 
     /// <summary>
-    /// Resolves <paramref name="fileName"/> against <paramref name="files"/> by exact name, then
-    /// case-insensitively, then tolerating zero-padding differences in a "(Track N)" suffix.
+    ///     Resolves <paramref name="fileName" /> against <paramref name="files" /> by exact name, then
+    ///     case-insensitively, then tolerating zero-padding differences in a "(Track N)" suffix.
     /// </summary>
     private static string? FindMatch(string[] files, string fileName, out bool wasNameCorrected)
     {
         wasNameCorrected = false;
-        if (files.Length == 0)
-        {
-            return null;
-        }
+        if (files.Length == 0) return null;
 
         var match =
             files.FirstOrDefault(f =>
@@ -276,10 +257,7 @@ internal static class CueNormalizer
             ?? files.FirstOrDefault(f =>
                 string.Equals(Path.GetFileName(f), fileName, StringComparison.OrdinalIgnoreCase)
             );
-        if (match is not null)
-        {
-            return match;
-        }
+        if (match is not null) return match;
 
         match = FindPadTolerantMatch(files, fileName);
         wasNameCorrected = match is not null;
@@ -288,16 +266,13 @@ internal static class CueNormalizer
     }
 
     /// <summary>
-    /// Finds a file with the same base name as <paramref name="fileName"/> but a different disc
-    /// image extension.
+    ///     Finds a file with the same base name as <paramref name="fileName" /> but a different disc
+    ///     image extension.
     /// </summary>
     private static string? FindExtensionSwapMatch(string[] files, string fileName)
     {
         var baseName = Path.GetFileNameWithoutExtension(fileName);
-        if (baseName.Length == 0)
-        {
-            return null;
-        }
+        if (baseName.Length == 0) return null;
 
         return files.FirstOrDefault(f =>
             DataFileExtensions.Contains(Path.GetExtension(f))
@@ -317,10 +292,7 @@ internal static class CueNormalizer
     private static string? FindPadTolerantMatch(string[] files, string fileName)
     {
         var match = TrackNumberRegex.Match(fileName);
-        if (!match.Success)
-        {
-            return null;
-        }
+        if (!match.Success) return null;
 
         if (
             !int.TryParse(
@@ -330,15 +302,13 @@ internal static class CueNormalizer
                 out var trackNumber
             )
         )
-        {
             return null;
-        }
 
         var variants = new[]
         {
             trackNumber.ToString(CultureInfo.InvariantCulture),
             trackNumber.ToString("D2", CultureInfo.InvariantCulture),
-            trackNumber.ToString("D3", CultureInfo.InvariantCulture),
+            trackNumber.ToString("D3", CultureInfo.InvariantCulture)
         };
 
         foreach (var variant in variants)
@@ -352,10 +322,7 @@ internal static class CueNormalizer
                     StringComparison.OrdinalIgnoreCase
                 )
             );
-            if (found is not null)
-            {
-                return found;
-            }
+            if (found is not null) return found;
         }
 
         return null;
@@ -373,23 +340,15 @@ internal static class CueNormalizer
 
         string tail;
         if (firstQuote != -1 && lastQuote > firstQuote)
-        {
             tail = trimmedFileLine[(lastQuote + 1)..].Trim();
-        }
         else
-        {
             tail = trimmedFileLine;
-        }
 
         // The track type is the first known type token anywhere in the tail — some descriptors
         // (e.g. cdrdao TOCs) append extra columns after the type.
         foreach (var token in tail.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
-        {
             if (KnownTrackTypes.Contains(token, StringComparer.OrdinalIgnoreCase))
-            {
                 return token.ToUpperInvariant();
-            }
-        }
 
         return null;
     }
