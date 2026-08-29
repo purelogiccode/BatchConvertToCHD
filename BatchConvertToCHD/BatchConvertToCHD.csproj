@@ -46,8 +46,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="CHDSharp" Version="1.4.1" />
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.190">
+        <PackageReference Include="CHDSharp" Version="1.4.2" />
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.192">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>

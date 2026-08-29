@@ -19,7 +19,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="CHDSharp" Version="1.4.1" />
+        <PackageReference Include="CHDSharp" Version="1.4.2" />
     </ItemGroup>
 
     <ItemGroup>
