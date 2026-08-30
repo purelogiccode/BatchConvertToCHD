@@ -21,9 +21,7 @@ public class IszHeaderTests
             0x00001234,
             0x00005678,
             0x00009ABC,
-            0xDEADBEEF,
-            48,
-            1
+            0xDEADBEEF
         );
 
         var header = IszHeader.TryRead(bytes);

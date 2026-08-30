@@ -40,7 +40,7 @@ public sealed partial class BattleEngine
 
     internal async Task<ToolRunner.RunResult> RunTool(string toolKey, string battle, string args, FileReport report)
     {
-        var exe = toolKey == "chdman" ? _cfg.ChdmanPath : _cfg.ChdSharpPath;
+        var exe = string.Equals(toolKey, "chdman", StringComparison.OrdinalIgnoreCase) ? _cfg.ChdmanPath : _cfg.ChdSharpPath;
         if (_cfg.Verbose) Log($"     $ {Path.GetFileName(exe)} {args}");
         var r = await ToolRunner.RunAsync(exe, args, TimeSpan.FromMinutes(_cfg.TimeoutMinutes), _ct)
             .ConfigureAwait(false);
@@ -49,7 +49,7 @@ public sealed partial class BattleEngine
         return r;
     }
 
-    internal void AddOutcome(FileReport report, StepOutcome o)
+    internal static void AddOutcome(FileReport report, StepOutcome o)
     {
         report.Steps.Add(o);
     }

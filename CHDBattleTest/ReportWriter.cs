@@ -62,17 +62,16 @@ public static class ReportWriter
         sb.AppendLine("# chdman vs CHDSharp - Battleground Results");
         sb.AppendLine();
         sb.AppendLine($"- Input: `{inputDir}`");
-        sb.AppendLine($"- Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        sb.AppendLine($"- Files run: {reports.Count(r => r.SkippedReason is null)} / {reports.Count}");
-        sb.AppendLine(
-            $"- Workers (-np): {cfg.Workers} | Codecs: raw/copy/dvd/hd=`{cfg.CodecRaw}`, cd/gd=`{cfg.CodecCd}`");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- Files run: {reports.Count(r => r.SkippedReason is null)} / {reports.Count}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"- Workers (-np): {cfg.Workers} | Codecs: raw/copy/dvd/hd=`{cfg.CodecRaw}`, cd/gd=`{cfg.CodecCd}`");
         sb.AppendLine($"- chdman: `{cfg.ChdmanPath}` | CHDSharp: `{cfg.ChdSharpPath}`");
         sb.AppendLine();
 
         foreach (var g in reports.SelectMany(r => r.Steps)
-                     .Where(s => s.Tool != "cross")
-                     .GroupBy(s => s.Battle)
-                     .OrderBy(g => g.Key))
+                     .Where(s => !string.Equals(s.Tool, "cross", StringComparison.OrdinalIgnoreCase))
+                     .GroupBy(s => s.Battle, StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase))
             AppendBattleSummary(sb, g.Key, g.ToList());
 
         sb.AppendLine("## Parity (cross-tool agreement)");
@@ -80,13 +79,12 @@ public static class ReportWriter
         sb.AppendLine("| battle | result | files |");
         sb.AppendLine("|---|---|---|");
         foreach (var g in reports.SelectMany(r => r.Steps)
-                     .Where(s => s.Tool == "cross")
-                     .GroupBy(s => s.Battle)
-                     .OrderBy(g => g.Key))
+                     .Where(s => string.Equals(s.Tool, "cross", StringComparison.OrdinalIgnoreCase))
+                     .GroupBy(s => s.Battle, StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase))
         {
             var ok = g.Count(s => s.Success);
-            sb.AppendLine(
-                $"| {g.Key} | {ok}/{g.Count()} {(ok == g.Count() ? "MATCH" : "MISMATCH/FAIL")} | {g.Count()} |");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"| {g.Key} | {ok}/{g.Count()} {(ok == g.Count() ? "MATCH" : "MISMATCH/FAIL")} | {g.Count()} |");
         }
 
         sb.AppendLine();
@@ -107,11 +105,11 @@ public static class ReportWriter
             sb.AppendLine("| battle | tool | ok | seconds | MiB/s | out bytes | ratio | hash12 | error |");
             sb.AppendLine("|---|---|---|---|---|---|---|---|---|");
             foreach (var s in r.Steps)
-                sb.AppendLine($"| {s.Battle} | {s.Tool} | {(s.Success ? "OK" : "FAIL")} | " +
-                              $"{(s.Seconds > 0 ? s.Seconds.ToString("F2") : "")} | " +
-                              $"{s.MibPerSecond?.ToString("F1") ?? ""} | " +
+                sb.AppendLine(CultureInfo.InvariantCulture, $"| {s.Battle} | {s.Tool} | {(s.Success ? "OK" : "FAIL")} | " +
+                              $"{(s.Seconds > 0 ? s.Seconds.ToString("F2", CultureInfo.InvariantCulture) : "")} | " +
+                              $"{s.MibPerSecond?.ToString("F1", CultureInfo.InvariantCulture) ?? ""} | " +
                               $"{(s.OutputBytes > 0 ? s.OutputBytes : "")} | " +
-                              $"{s.Ratio?.ToString("F4") ?? ""} | {s.Hash ?? ""} | " +
+                              $"{s.Ratio?.ToString("F4", CultureInfo.InvariantCulture) ?? ""} | {s.Hash ?? ""} | " +
                               $"{(s.Error ?? "").Replace('|', '/')} |");
 
             sb.AppendLine();
@@ -124,7 +122,7 @@ public static class ReportWriter
 
     private static void AppendBattleSummary(StringBuilder sb, string battle, List<StepOutcome> steps)
     {
-        var byTool = steps.GroupBy(s => s.Tool).Where(g => g.Key != "cross").ToList();
+        var byTool = steps.GroupBy(s => s.Tool, StringComparer.OrdinalIgnoreCase).Where(g => !string.Equals(g.Key, "cross", StringComparison.OrdinalIgnoreCase)).ToList();
         if (byTool.Count == 0) return;
 
         sb.AppendLine($"## Battle: {battle}");
@@ -140,17 +138,17 @@ public static class ReportWriter
                 var bytes = g.Sum(s => (double)s.OutputBytes);
                 var wMibs = secs > 0 ? bytes / 1048576.0 / secs : 0;
                 return (Runs: g.Count(), Ok: g.Count(s => s.Success), Secs: secs, Mibs: wMibs);
-            });
+            }, StringComparer.OrdinalIgnoreCase);
 
         string? winner = null;
         var valid = stats.Where(kv => kv.Value.Ok > 0 && kv.Value.Mibs > 0).ToList();
         if (valid.Count == 2)
             winner = valid[0].Value.Mibs > valid[1].Value.Mibs ? valid[0].Key : valid[1].Key;
 
-        foreach (var (tool, st) in stats.OrderBy(kv => kv.Key))
+        foreach (var (tool, st) in stats.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase))
         {
-            var wins = winner == tool && valid.Count == 2 ? st.Ok : 0;
-            sb.AppendLine($"| {tool} | {st.Runs} | {st.Ok} | {st.Secs:F1} | {st.Mibs:F1} | {wins} |");
+            var wins = string.Equals(winner, tool, StringComparison.OrdinalIgnoreCase) && valid.Count == 2 ? st.Ok : 0;
+            sb.AppendLine(CultureInfo.InvariantCulture, $"| {tool} | {st.Runs} | {st.Ok} | {st.Secs:F1} | {st.Mibs:F1} | {wins} |");
         }
 
         sb.AppendLine();

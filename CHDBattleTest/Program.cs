@@ -37,7 +37,7 @@ internal static class Program
 
         if (string.IsNullOrEmpty(cfg.OutputRoot))
             cfg.OutputRoot = Path.Combine(AppContext.BaseDirectory, "BattleResults",
-                DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+                DateTime.Now.ToString("yyyyMMdd_HHmmss", System.Globalization.CultureInfo.InvariantCulture));
         Directory.CreateDirectory(cfg.OutputRoot);
         Directory.CreateDirectory(cfg.WorkRoot);
 
@@ -209,12 +209,12 @@ internal static class Program
                 case "-o":
                 case "--out": cfg.OutputRoot = Next(); break;
                 case "--filter": cfg.Filter = Next(); break;
-                case "--max-files": cfg.MaxFiles = int.Parse(Next()); break;
-                case "--min-mb": cfg.MinMb = double.Parse(Next()); break;
-                case "--max-mb": cfg.MaxMb = double.Parse(Next()); break;
+                case "--max-files": cfg.MaxFiles = int.Parse(Next(), System.Globalization.CultureInfo.InvariantCulture); break;
+                case "--min-mb": cfg.MinMb = double.Parse(Next(), System.Globalization.CultureInfo.InvariantCulture); break;
+                case "--max-mb": cfg.MaxMb = double.Parse(Next(), System.Globalization.CultureInfo.InvariantCulture); break;
                 case "--codec-raw": cfg.CodecRaw = Next(); break;
                 case "--codec-cd": cfg.CodecCd = Next(); break;
-                case "--workers": cfg.Workers = int.Parse(Next()); break;
+                case "--workers": cfg.Workers = int.Parse(Next(), System.Globalization.CultureInfo.InvariantCulture); break;
                 case "--phases":
                     foreach (var p in Next().Split(','))
                         if (p.Equals("decode", StringComparison.OrdinalIgnoreCase)) cfg.Decode = true;
@@ -226,7 +226,7 @@ internal static class Program
                 case "--no-encode": cfg.Encode = false; break;
                 case "--include-av": cfg.IncludeAv = true; break;
                 case "--lib-decode": cfg.LibDecode = true; break;
-                case "--timeout-min": cfg.TimeoutMinutes = int.Parse(Next()); break;
+                case "--timeout-min": cfg.TimeoutMinutes = int.Parse(Next(), System.Globalization.CultureInfo.InvariantCulture); break;
                 case "--keep-temp":
                     cfg.KeepTemp = true;
                     _cfgKeepWork = true;
