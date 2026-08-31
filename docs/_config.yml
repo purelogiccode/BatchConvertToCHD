@@ -1,10 +1,14 @@
 # Jekyll configuration for the docs/ wiki site (GitHub Pages).
 # Reference: https://jekyllrb.com/docs/configuration/
 # Theme: just-the-docs provides the left-hand navigation menu on every page.
-# It ships with the github-pages gem, so no plugin installation is needed.
+# It must be loaded via remote_theme: the legacy Pages builder's github-pages
+# gem set does not include just-the-docs as an installable theme, so a plain
+# `theme:` entry fails the build with "The just-the-docs theme could not be
+# found". jekyll-remote-theme ships inside the github-pages gem and fetches
+# the theme from GitHub at build time.
 title: BatchConvertToCHD — Wiki
 description: Official documentation for Batch Convert to CHD — user guide, architecture, developer references, and troubleshooting.
-theme: just-the-docs
+remote_theme: just-the-docs/just-the-docs
 
 color_scheme: light
 
