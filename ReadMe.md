@@ -77,7 +77,7 @@ A file's extension is the least reliable thing about it. Every input is identifi
 *   **Real-time Telemetry**: Monitor disk write/read speeds and elapsed time during operations.
 *   **Optimized Logging**: High-performance logging system with automatic truncation to keep the application responsive during long-running tasks.
 *   **AppData Storage**: Logs and F8 screenshots are stored under `%LocalAppData%\BatchConvertToCHD` (`logs` / `screenshots`); the title-bar **AppData** button opens the folder.
-*   **WPF-UI Theming**: Modern dark-themed UI powered by [WPF-UI](https://github.com/lepoco/wpfui) with Mica backdrop, rounded corners, and native Windows 11 aesthetics.
+*   **WPF-UI Theming**: Modern dark-themed UI powered by [WPF-UI](https://github.com/lepoco/wpfui) with a static dark background, rounded corners, and native Windows 11 aesthetics.
 
 ### 🔄 Updates & Stability
 *   **Automatic Update Checks**: Notifies you immediately if a newer version is available on GitHub at startup.

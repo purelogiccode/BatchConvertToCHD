@@ -10,7 +10,8 @@
     MinWidth="700"
     Closing="Window_Closing"
     WindowStartupLocation="CenterScreen"
-    WindowBackdropType="Mica"
+    WindowBackdropType="None"
+    Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
     WindowCornerPreference="Round"
     ExtendsContentIntoTitleBar="True"
     x:ClassModifier="internal">

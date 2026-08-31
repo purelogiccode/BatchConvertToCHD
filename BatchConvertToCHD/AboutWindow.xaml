@@ -10,7 +10,8 @@
     Height="700"
     MinHeight="500"
     WindowStartupLocation="CenterScreen"
-    WindowBackdropType="Mica"
+    WindowBackdropType="None"
+    Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
     WindowCornerPreference="Round"
     ExtendsContentIntoTitleBar="True">
     <Grid>

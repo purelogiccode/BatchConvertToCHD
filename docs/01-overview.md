@@ -71,7 +71,7 @@ A file's extension is the least reliable thing about it. Every input's leading b
 ### Performance & UI
 - **Real-time telemetry** — disk write/read speeds and elapsed time during operations.
 - **High-performance logging** — Serilog with UI log truncation at 100,000 characters.
-- **WPF-UI theming** — dark Fluent theme with Mica backdrop and rounded corners on Windows 11.
+- **WPF-UI theming** — dark Fluent theme with a static dark background and rounded corners on Windows 11.
 
 ### Updates & Stability
 - **Automatic update checks** — GitHub releases are checked at startup; the user is offered the download page.
