@@ -58,13 +58,13 @@ The solution contains five projects:
 | `CSOSharp` | class library (CSO decompression) | `net10.0;net8.0` |
 | `PBPSharp` | class library (PBP/SFO parsing) | `net10.0;net8.0` |
 
-> **Note**: `chdman.exe` and `7za.exe` are copied to the output directory by the build (`BatchConvertToCHD.csproj:26–40`). The libraries are referenced as project references, not NuGet packages, except `CHDSharp` (NuGet 1.2.0) and other packages listed below.
+> **Note**: `chdman.exe` and `7za.exe` are copied to the output directory by the build (`BatchConvertToCHD.csproj:26–40`). The libraries are referenced as project references, not NuGet packages, except `CHDSharp` (NuGet 1.4.3) and other packages listed below.
 
 ### NuGet dependencies (application)
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| CHDSharp | 1.2.0 | Pure C# CHD reading, verification, extraction |
+| CHDSharp | 1.4.3 | Pure C# CHD reading, verification, extraction, and creation (chdman byte-identical output) |
 | WPF-UI | 4.3.0 | Fluent Design theming and controls |
 | SharpCompress | 0.50.x | Archive extraction (7z/rar), and bzip2 decompression for ISZ chunks |
 | NAudio | 3.0.1 | MP3 decoding via Media Foundation |

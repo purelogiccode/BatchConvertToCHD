@@ -79,7 +79,7 @@ CSharp_BatchConvertToCHD.sln
         ┌────────────▼──┐  ┌──▼────────▼─────┐
         │    CCDSharp    │  │  CSOSharp       │  PBPSharp
         └───────────────┘  └─────────────────┘
-     NuGet: CHDSharp 1.2.0, WPF-UI, SharpCompress, NAudio, Serilog
+     NuGet: CHDSharp 1.4.3, WPF-UI, SharpCompress, NAudio, Serilog
 ```
 
 - The app references `CCDSharp`, `CSOSharp`, `PBPSharp` as project references (`BatchConvertToCHD.csproj:58–60`).

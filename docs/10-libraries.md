@@ -5,7 +5,7 @@ nav_order: 11
 
 # 10. Embedded Libraries
 
-The solution ships three in-house libraries that replace external tools (maxcso, psxpackager) and add CloneCD support. All three multi-target `net10.0;net8.0`, are packable, and expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`.
+The solution ships three in-house libraries that replace external tools (maxcso, psxpackager) and add CloneCD support. All three multi-target `net10.0;net8.0`, are packable, and expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`. A fourth in-house library, **CHDSharp**, is consumed as a NuGet package and is covered in [§10.4](#104-chdsharp-nuget).
 
 | Library | Purpose | Replaces |
 |---------|---------|----------|
@@ -49,3 +49,12 @@ The solution ships three in-house libraries that replace external tools (maxcso,
 - `PbpError` enum: `None=0, InvalidHeader=1, FileNotFound=2, IoError=3, CorruptFile=4, InvalidPsarHeader=5, DiscOutOfRange=6, ResourceNotFound=7, DecompressionError=8, TruncatedPsar=9, InvalidSfo=10`. `TruncatedPsar` is returned when the PSAR container parses but no ISO index follows (see `NoIsoIndexException`); `InvalidSfo` when the PARAM.SFO region lacks the `\0PSF` signature. The app maps these to targeted guidance ("most likely truncated or incomplete — re-download") instead of a generic corrupt-file message.
 - Integration: `ExtractPbpToCueBinAsync` (`MainWindow.xaml.cs:2918`) — multi-disc PBPs produce `"{name} - Disc N.bin/.cue"` sets; the result (`PbpExtractionResult`) carries `ErrorCode` + a human-readable `Error` so the caller can distinguish skippable conditions from real failures.
 - Tests: `PbpFileTests`, `PbpHeaderTests`, `SfoDataTests`, `SfoEntryTests`, `TocEntryTests`, `CueSheetWriterTests`, plus real-file integration tests (`PbpFileIntegrationTests`).
+
+## 10.4 CHDSharp (NuGet)
+
+**Purpose**: pure C# CHD (Compressed Hunks of Data) reading, verification, extraction, and **creation** — the engine behind the app's extraction and verification tabs.
+
+- Consumed as a NuGet package (`CHDSharp` v1.4.3), not a project reference; the app also bundles the project's CLI (`CHDSharp.exe`) and MAME's `chdman.exe` side by side, preferring the native-architecture binary on ARM64.
+- Capabilities: CHD V1–V5, all 10 compression codecs (zlib, lzma, huffman, flac, zstd, avhu + CD variants), parent/child chaining, parallel verification, and full CHD creation (`createcd`/`createdvd`/`createhd`/`copy`) with output that is **byte-identical to `chdman`**.
+- The byte-parity claim is validated by the `CHDBattleTest` battleground project (see [Testing §11.6](11-testing.md#116-chdbattletest-battleground)), which on the current corpus reports zero mismatches against `chdman` 0.289 across decode, encode, and cross-verification battles.
+- When the library cannot decode a CHD (corrupt file, A/V laserdisc), the app falls back to `chdman` for extraction — see [Extraction & Verification](06-extraction-and-verification.md).

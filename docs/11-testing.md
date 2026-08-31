@@ -121,3 +121,18 @@ On a machine without the integration sample folders, these 15 fail rather than s
 | 15 | `PbpFileIntegrationTests.*` | They need a real `.pbp` sample that is not in the repository. Unlike the CSO integration tests, they assert on the discovered-sample collection before checking whether it is empty, so an absent sample surfaces as `Assert.NotEmpty() Failure: Collection was empty` instead of an early return. |
 
 The PBP group is worth fixing — by adopting the CSO tests' early-return pattern — but it does not indicate a defect in the application.
+
+---
+
+## 11.6 CHDBattleTest Battleground
+
+`CHDBattleTest` is a separate console harness (`chdbattle`) that pits the bundled tools against each other on a corpus of real CHDs (default `H:\CHDTest`): **`chdman` (MAME) vs `CHDSharp.exe`** (the CLI shipped with the app), plus the `CHDSharp` NuGet library in-process for decode timing.
+
+Per file it runs timed decode battles (`extractraw`, `extractcd`, `extractdvd`, `extracthd`), encode battles (`copy`, `createcd`, `createdvd`, `createhd` with a chosen codec), SHA-256 product-parity checks, and 224+ cross-verifications (each tool verifying both products). Results land as `results.csv`, `report.md`, `battle.log`, `console.log` in the output root, and are resume-safe.
+
+```bash
+dotnet run -c Release --project CHDBattleTest -- -i H:\CHDTest -o H:\CHDBattleResults --lib-decode
+dotnet run -c Release --project CHDBattleTest -- --list        # classify only
+```
+
+**Current status (CHDSharp 1.4.3, corpus of 56 discs — 43 CD + 3 GD-ROM, 10 DVD, 3 HDD): zero mismatches.** Every parity battle passes byte-identically and all cross-verifications agree, i.e. the bundled `CHDSharp.exe` produces byte-identical CHDs to `chdman` 0.289 on this corpus. History: 1.4.1 had 46 parity fails (`createdvd` 10, `copy:zstd` 18, `createcd:cdzl` 18), 1.4.2 fixed the DVD group (36 remaining), and 1.4.3's stale work-buffer + LZMA match-finder fix closed the rest. The latest run lives in `H:\CHDBattleResults_143`.
