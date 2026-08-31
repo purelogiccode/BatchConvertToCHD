@@ -11,7 +11,8 @@ nav_order: 3
 - **OS**: Windows 10 / 11, x64 or ARM64
 - **Runtime**: [.NET 10.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)
 - **Bundled executables** (shipped with the app, must stay next to `BatchConvertToCHD.exe`):
-  - `chdman.exe` / `chdman_arm64.exe` — MAME CHD tool (conversion only)
+  - `CHDSharp.exe` / `CHDSharp_arm64.exe` — primary encoder (chdman byte-identical output)
+  - `chdman.exe` / `chdman_arm64.exe` (0.289) — MAME CHD tool (conversion fallback, and extraction fallback)
   - `7za.exe` / `7za_arm64.exe` — 7-Zip fallback extractor
 - **Nothing else to install** — CSO, ISZ, ECM, Alcohol `.mds`/`.mdf` and split volume sets are all handled inside the application, so x64 and ARM64 get the same feature set.
 
@@ -89,7 +90,7 @@ The path is applied in `MainWindow_LoadedAsync` via `SetInputFolder` (`MainWindo
 
 ### First launch
 
-1. The app verifies that `chdman.exe` is present and shows a warning if not (status bar indicator "Dependencies: CHDMAN" + a message box).
+1. The app checks the bundled encoders: it warns when `CHDSharp.exe` — the primary encoder — is missing, and only refuses a batch when neither `CHDSharp.exe` nor `chdman.exe` is present (status bar indicators + a message box).
 2. Usage statistics are recorded once (anonymous `{ applicationId, version }` POST — see [Services Reference](07-services-reference.md#stats-service)).
 3. An update check against GitHub releases runs in the background.
 4. Leftover temp directories from crashed sessions and legacy files are cleaned up after a short delay.

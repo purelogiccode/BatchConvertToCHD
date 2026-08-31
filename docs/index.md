@@ -32,12 +32,13 @@ This documentation covers the project from both a user and a developer perspecti
 | Fact | Value |
 |------|-------|
 | **Application name** | `BatchConvertToCHD` |
-| **Latest version** | 3.4.2 |
+| **Latest version** | 3.5.0 |
 | **Target framework** | .NET 10.0 (`net10.0-windows`), WPF |
 | **Platform** | Windows 10 / 11, x64 and ARM64 |
 | **License** | GPL v3.0 |
-| **Primary binary** | `chdman` (MAME Project), bundled as `chdman.exe` / `chdman_arm64.exe` |
-| **External tools needed** | None beyond the bundled `chdman` and `7za` — every input format is handled in-process |
+| **Primary encoder** | `CHDSharp` (PureLogicCode), bundled as `CHDSharp.exe` / `CHDSharp_arm64.exe` — chdman byte-identical output |
+| **Fallback encoder** | `chdman` (MAME Project, 0.289), bundled as `chdman.exe` / `chdman_arm64.exe` |
+| **External tools needed** | None beyond the bundled `CHDSharp`, `chdman` and `7za` — every input format is handled in-process |
 | **Output format** | `.chd` (Compressed Hunks of Data) |
 | **Logs** | `%LocalAppData%\BatchConvertToCHD\logs` |
 | **Screenshots** | `%LocalAppData%\BatchConvertToCHD\screenshots` (F8 hotkey) |

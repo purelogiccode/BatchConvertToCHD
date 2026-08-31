@@ -113,7 +113,7 @@ OnStartup
  └─ type preloading on background thread
 
 MainWindow ctor
- ├─ probe chdman/7za in BaseDirectory
+ ├─ probe CHDSharp/chdman/7za in BaseDirectory
  ├─ construct services (ArchiveService, ScreenshotService, FileWatcherService)
  ├─ RegisterHotKey (F8) on SourceInitialized
  ├─ InitializeStatusBar
@@ -123,7 +123,7 @@ MainWindow ctor
 MainWindow Loaded
  ├─ create performance counters (write/read speed)
  ├─ apply CLI folder argument if present
- ├─ CheckDependenciesAndNotifyUser (chdman presence)
+ ├─ CheckDependenciesAndNotifyUser (CHDSharp + chdman presence)
  └─ UpdateService.CheckForNewVersionAsync (background)
 ```
 
@@ -141,7 +141,7 @@ User clicks Start Conversion
        ├─ RenewCancellationTokenSource
        ├─ SetControlsState(false)
        └─ PerformBatchConversionAsync              (:1292)
-            ├─ validate chdman access + compatibility
+            ├─ validate encoder access + compatibility (CHDSharp, chdman)
             ├─ optional sort by size (smaller first)
             ├─ CheckDiskSpace (free space warnings)
             ├─ InputFileFilter + WarnAboutOutputCollisions (batch preflight)
