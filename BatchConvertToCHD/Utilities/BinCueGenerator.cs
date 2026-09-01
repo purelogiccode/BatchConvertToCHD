@@ -65,7 +65,9 @@ internal static class BinCueGenerator
                 }
             }
         }
+#pragma warning disable RCS1075
         catch (Exception)
+#pragma warning restore RCS1075
         {
             // ignored
         }
@@ -116,7 +118,9 @@ internal static class BinCueGenerator
                     return fileName;
             }
         }
+#pragma warning disable RCS1075
         catch (Exception)
+#pragma warning restore RCS1075
         {
             // ignored
         }

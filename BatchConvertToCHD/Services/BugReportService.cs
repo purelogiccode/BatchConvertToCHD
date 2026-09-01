@@ -218,11 +218,8 @@ internal class BugReportService
     private static void AppendExceptionDetails(StringBuilder sb, Exception exception, int level = 0)
     {
         const int maxDepth = 5;
-        while (true)
+        while (level < maxDepth)
         {
-            if (level >= maxDepth)
-                break;
-
             var indent = new string(' ', level * 2);
 
             sb.AppendLine(
@@ -257,7 +254,7 @@ internal class BugReportService
                 sb.AppendLine();
                 sb.AppendLine(CultureInfo.InvariantCulture, $"{indent}Inner Exception:");
                 exception = exception.InnerException;
-                level += 1;
+                level++;
                 continue;
             }
 

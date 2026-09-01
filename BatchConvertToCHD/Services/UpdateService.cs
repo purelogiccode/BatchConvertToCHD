@@ -158,8 +158,7 @@ internal class UpdateService
                     JsonSerializerOptions
                 );
                 if (
-                    latestRelease == null
-                    || latestRelease.Draft
+                    latestRelease?.Draft != false
                     || latestRelease.Prerelease
                     || string.IsNullOrWhiteSpace(latestRelease.TagName)
                 )

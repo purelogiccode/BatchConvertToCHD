@@ -423,7 +423,7 @@ public class MdsTests : IDisposable
         Assert.False(result.Success);
         Assert.Contains(
             ".mdf data file was not found",
-            result.FailureReason!,
+            result.FailureReason,
             StringComparison.Ordinal
         );
     }
@@ -445,7 +445,7 @@ public class MdsTests : IDisposable
         );
 
         Assert.False(result.Success);
-        Assert.Contains("cannot express in a cue", result.FailureReason!, StringComparison.Ordinal);
+        Assert.Contains("cannot express in a cue", result.FailureReason, StringComparison.Ordinal);
     }
 
     [Theory]

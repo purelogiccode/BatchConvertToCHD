@@ -60,7 +60,7 @@ public class PathUtilsTests
         var result = PathUtils.ValidateAndNormalizePath(
             "",
             "test folder",
-            msg => { capturedError = msg; },
+            msg => capturedError = msg,
             static _ => { }
         );
         Assert.Null(result);
@@ -75,7 +75,7 @@ public class PathUtilsTests
         var result = PathUtils.ValidateAndNormalizePath(
             nonExistent,
             "test folder",
-            msg => { capturedError = msg; },
+            msg => capturedError = msg,
             static _ => { }
         );
         Assert.Null(result);
@@ -103,7 +103,7 @@ public class PathUtilsTests
         var result = PathUtils.ValidateAndNormalizePath(
             null,
             "test folder",
-            msg => { capturedError = msg; },
+            msg => capturedError = msg,
             static _ => { }
         );
         Assert.Null(result);
@@ -117,7 +117,7 @@ public class PathUtilsTests
         var result = PathUtils.ValidateAndNormalizePath(
             "\0invalid",
             "invalid path",
-            msg => { capturedError = msg; },
+            msg => capturedError = msg,
             static _ => { }
         );
         Assert.Null(result);
@@ -131,7 +131,7 @@ public class PathUtilsTests
         var result = PathUtils.ValidateAndNormalizePath(
             "   ",
             "test folder",
-            msg => { capturedError = msg; },
+            msg => capturedError = msg,
             static _ => { }
         );
         Assert.Null(result);

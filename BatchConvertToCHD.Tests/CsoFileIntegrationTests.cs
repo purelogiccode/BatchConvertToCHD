@@ -295,7 +295,7 @@ public class CsoFileIntegrationTests : IDisposable
         Assert.Equal(CsoError.None, error);
         Assert.True(File.Exists(outputPath));
         Assert.NotEmpty(progressCalls);
-        Assert.Equal(cso.Header.TotalBlocks, progressCalls.Last().Total);
+        Assert.Equal(cso.Header.TotalBlocks, progressCalls[^1].Total);
 
         var originalSize = new FileInfo(isoPath).Length;
         var extractedSize = new FileInfo(outputPath).Length;

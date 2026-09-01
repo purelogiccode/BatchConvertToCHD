@@ -170,10 +170,9 @@ public class ArchiveServiceTests : IDisposable
     [Fact]
     public async Task ExtractCsoAsyncMissingCsoFileReturnsFailure()
     {
-        var service = new ArchiveService("7za.exe", false);
         var tempIso = Path.Combine(_tempDir, "out.iso");
 
-        var result = await service.ExtractCsoAsync(
+        var result = await ArchiveService.ExtractCsoAsync(
             "input.cso",
             tempIso,
             _tempDir,
@@ -804,7 +803,6 @@ public class ArchiveServiceTests : IDisposable
     [Fact]
     public async Task ExtractArchiveAsyncCsoAsyncWithCancellationThrows()
     {
-        var service = new ArchiveService("7za.exe", false);
         var csoPath = Path.Combine(_tempDir, "test.cso");
         File.WriteAllBytes(csoPath, new byte[] { 0x01 });
         var tempIso = Path.Combine(_tempDir, "out.iso");
@@ -813,7 +811,7 @@ public class ArchiveServiceTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            service.ExtractCsoAsync(csoPath, tempIso, _tempDir, static _ => { }, cts.Token)
+            ArchiveService.ExtractCsoAsync(csoPath, tempIso, _tempDir, static _ => { }, cts.Token)
         );
     }
 
@@ -1041,7 +1039,7 @@ public class ArchiveServiceTests : IDisposable
     private static void ThrowNullReference()
     {
         // Simulates what SharpCompress does internally with corrupt RAR data
-        string? s = null;
+        const string? s = null;
         _ = s!.Length;
     }
 }

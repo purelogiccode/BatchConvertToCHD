@@ -318,7 +318,7 @@ internal sealed class PbpTestFileBuilder
             for (var i = 0; i < BlockSize; i++)
                 data[i] = (byte)((i + blockIndex) & 0xFF);
 
-            if (_customIsoBlock1Data != null && _customIsoBlock1Data.Length <= BlockSize)
+            if (_customIsoBlock1Data?.Length <= BlockSize)
             {
                 Buffer.BlockCopy(_customIsoBlock1Data, 0, data, 0, _customIsoBlock1Data.Length);
             }

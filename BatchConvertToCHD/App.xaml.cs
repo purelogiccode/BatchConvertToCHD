@@ -81,12 +81,12 @@ public partial class App
             .WriteTo.Debug(LogEventLevel.Debug, formatProvider: CultureInfo.InvariantCulture)
             .WriteTo.File(
                 Path.Combine(logDir, "BatchConvertToCHD-.log"),
+                LogEventLevel.Debug,
+                "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
+                CultureInfo.InvariantCulture
+                ,
                 rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 7,
-                restrictedToMinimumLevel: LogEventLevel.Debug,
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
-                formatProvider: CultureInfo.InvariantCulture
-            )
+                retainedFileCountLimit: 7)
             .WriteTo.Sink(new BugReportApiSink(_bugReportService!))
             .CreateLogger();
 
@@ -282,21 +282,39 @@ public partial class App
             if (string.Equals(source, "AppDomain.UnhandledException", StringComparison.Ordinal))
                 // Block synchronously — the process is about to terminate.
                 Task.Run(() =>
-                        _bugReportService?.SendBugReportAsync(
-                            $"Unhandled Exception from {source}",
-                            exception
-                        )
-                    )
+                {
+                    BugReportService? x = _bugReportService;
+                    if (x != null)
+                    {
+                        return x.SendBugReportAsync(
+                                                           $"Unhandled Exception from {source}",
+                                                           exception
+                                                       );
+                    }
+                    else
+                    {
+                        return Task.FromResult(false);
+                    }
+                })
                     .GetAwaiter()
                     .GetResult();
             else
                 // Fire-and-forget for dispatcher/task exceptions — blocking would freeze the UI.
                 _ = Task.Run(() =>
-                    _bugReportService?.SendBugReportAsync(
-                        $"Unhandled Exception from {source}",
-                        exception
-                    )
-                );
+                {
+                    BugReportService? x = _bugReportService;
+                    if (x != null)
+                    {
+                        return x.SendBugReportAsync(
+                                                           $"Unhandled Exception from {source}",
+                                                           exception
+                                                       );
+                    }
+                    else
+                    {
+                        return Task.FromResult(false);
+                    }
+                });
         }
         catch
         {

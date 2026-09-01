@@ -519,7 +519,7 @@ public static class IszDecoder
         CancellationToken token
     )
     {
-        using var input = new MemoryStream(compressed, 0, storedLength, false);
+        await using var input = new MemoryStream(compressed, 0, storedLength, false);
         await using var inflate = new ZLibStream(input, CompressionMode.Decompress);
 
         return await FillAsync(inflate, plain, index, token).ConfigureAwait(false);
@@ -533,7 +533,7 @@ public static class IszDecoder
         CancellationToken token
     )
     {
-        using var input = new MemoryStream(compressed, 0, storedLength, false);
+        await using var input = new MemoryStream(compressed, 0, storedLength, false);
         await using var bzip2 = await BZip2Stream.CreateAsync(
             input,
             SharpCompress.Compressors.CompressionMode.Decompress,

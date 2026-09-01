@@ -84,8 +84,7 @@ public static class CcdConverter
         {
             using var reader = new StreamReader(filePath);
             var firstLine = reader.ReadLine();
-            return firstLine != null
-                   && firstLine.Trim().Equals("[CloneCD]", StringComparison.OrdinalIgnoreCase);
+            return firstLine?.Trim().Equals("[CloneCD]", StringComparison.OrdinalIgnoreCase) == true;
         }
         catch
         {

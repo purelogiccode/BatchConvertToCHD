@@ -61,7 +61,7 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
                 }
                 catch (Exception mfEx)
                 {
-                    if (token.IsCancellationRequested) throw new OperationCanceledException(token);
+                    token.ThrowIfCancellationRequested();
 
                     primaryError = mfEx;
 
@@ -91,7 +91,7 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
                 }
                 catch (Exception builtInEx)
                 {
-                    if (token.IsCancellationRequested) throw new OperationCanceledException(token);
+                    token.ThrowIfCancellationRequested();
 
                     // Chain the original Media Foundation error so the root cause (missing codec vs
                     // corrupt MP3) stays diagnosable.

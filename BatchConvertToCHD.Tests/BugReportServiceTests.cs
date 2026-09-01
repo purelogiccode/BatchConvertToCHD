@@ -265,7 +265,7 @@ public class BugReportServiceTests
         Assert.NotNull(method);
 
         var sb = new StringBuilder();
-        var ex = Record.Exception(() => { method.Invoke(null, [sb, new InvalidOperationException(), 0]); });
+        var ex = Record.Exception(() => method.Invoke(null, [sb, new InvalidOperationException(), 0]));
 
         Assert.Null(ex);
         Assert.Contains("InvalidOperationException", sb.ToString(), StringComparison.Ordinal);

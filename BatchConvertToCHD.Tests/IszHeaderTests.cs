@@ -46,7 +46,7 @@ public class IszHeaderTests
     [Fact]
     public void ImageSizeIsSectorsTimesSectorSize()
     {
-        var header = IszHeader.TryRead(BuildValid(totalSectors: 337_216, sectorSize: 2048));
+        var header = IszHeader.TryRead(BuildValid(2048, 337_216));
 
         Assert.NotNull(header);
         Assert.Equal(337_216L * 2048, header.ImageSizeBytes);
@@ -57,7 +57,7 @@ public class IszHeaderTests
     {
         // 8.5 GB of 2048-byte sectors overflows a 32-bit product, which would make the size check
         // reject a perfectly good image.
-        var header = IszHeader.TryRead(BuildValid(totalSectors: 4_173_824, sectorSize: 2048));
+        var header = IszHeader.TryRead(BuildValid(2048, 4_173_824));
 
         Assert.NotNull(header);
         Assert.Equal(8_547_991_552L, header.ImageSizeBytes);

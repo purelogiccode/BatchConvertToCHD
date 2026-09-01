@@ -34,7 +34,7 @@ public class FileItemTests
     {
         var item = new FileItem { IsSelected = true };
         var fired = false;
-        item.PropertyChanged += (_, _) => { fired = true; };
+        item.PropertyChanged += (_, _) => fired = true;
 
         item.IsSelected = true;
 

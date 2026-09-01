@@ -279,7 +279,7 @@ internal partial class MainWindow : IDisposable
         {
             try
             {
-                var filePath = _screenshotService.TakeScreenshot();
+                var filePath = ScreenshotService.TakeScreenshot();
                 if (filePath != null)
                 {
                     LogMessage($"Screenshot saved: {filePath}");
@@ -335,11 +335,11 @@ internal partial class MainWindow : IDisposable
         if (missingDeps.Count > 0)
         {
             var msg =
-                $"CRITICAL ERROR: The following required component is missing:\n\n"
+                "CRITICAL ERROR: The following required component is missing:\n\n"
                 + $"{string.Join("\n", missingDeps)}\n\n"
-                + $"Please ensure it is placed in the application folder.\n"
-                + $"Download chdman from: https://github.com/rtissera/chdman/releases\n\n"
-                + $"Conversion will NOT work without it.";
+                + "Please ensure it is placed in the application folder.\n"
+                + "Download chdman from: https://github.com/rtissera/chdman/releases\n\n"
+                + "Conversion will NOT work without it.";
 
             LogError(" " + msg.Replace("\n", " "));
             ShowMessageBox(msg, "Missing Dependency", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -1052,14 +1052,14 @@ internal partial class MainWindow : IDisposable
                 );
 
                 var files = paths
-                    .Select(f => new FileItem
-                    {
-                        FileName = Path.GetRelativePath(inputFolder, f),
-                        FullPath = f,
-                        FileSize = new FileInfo(f).Length,
-                        IsSelected = true
-                    })
-                    .ToList();
+                        .ConvertAll(f => new FileItem
+                        {
+                            FileName = Path.GetRelativePath(inputFolder, f),
+                            FullPath = f,
+                            FileSize = new FileInfo(f).Length,
+                            IsSelected = true
+                        })
+                    ;
 
                 Application.Current.Dispatcher.Invoke(() => _conversionFiles.Clear());
 
@@ -2136,14 +2136,18 @@ internal partial class MainWindow : IDisposable
 
             long total = 0;
             foreach (var file in referenced.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
                 try
                 {
                     total += new FileInfo(file).Length;
                 }
+#pragma warning disable RCS1075
                 catch (Exception)
+#pragma warning restore RCS1075
                 {
                     /* a missing reference is reported elsewhere */
                 }
+            }
 
             return total;
         }
@@ -2693,7 +2697,7 @@ internal partial class MainWindow : IDisposable
         await Task.Run(() => Directory.CreateDirectory(tempDir), token);
         var tempIso = PathUtils.GetSafeTempFileName(originalName, "iso", tempDir);
 
-        var result = await _archiveService.ExtractCsoAsync(
+        var result = await ArchiveService.ExtractCsoAsync(
             inputFile,
             tempIso,
             tempDir,
@@ -3701,11 +3705,8 @@ internal partial class MainWindow : IDisposable
                 token
             );
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!IsCancellationException(ex))
         {
-            if (IsCancellationException(ex))
-                throw;
-
             if (IsDiskSpaceException(ex))
                 LogError(
                     $" Not enough disk space to convert {originalName}. Free up disk space and try again."
@@ -3868,11 +3869,8 @@ internal partial class MainWindow : IDisposable
                 token
             );
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!IsCancellationException(ex))
         {
-            if (IsCancellationException(ex))
-                throw;
-
             if (IsDiskSpaceException(ex))
                 LogError(
                     $" Not enough disk space to convert {originalName} (via temp). Free up disk space and try again."
@@ -4285,7 +4283,7 @@ internal partial class MainWindow : IDisposable
         {
             token.ThrowIfCancellationRequested();
             var toRead = (int)Math.Min((ulong)buffer.Length, remaining);
-            chd.Read(offset, buffer, 0, toRead);
+            chd.Read(offset, buffer, 0, toRead, token);
             fs.Write(buffer, 0, toRead);
             offset += (ulong)toRead;
             remaining -= (ulong)toRead;
@@ -4560,11 +4558,8 @@ internal partial class MainWindow : IDisposable
                 token
             );
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!IsCancellationException(ex))
         {
-            if (IsCancellationException(ex))
-                throw;
-
             // chdman cannot read MP3 tracks at all, so a failed work-dir preparation for an MP3
             // cue must not fall through to a direct chdman attempt ("Unhandled track type MP3").
             if (await CueHasMp3TracksAsync(cuePath, token))
@@ -4666,10 +4661,8 @@ internal partial class MainWindow : IDisposable
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!IsCancellationException(ex))
         {
-            if (IsCancellationException(ex))
-                throw;
             LogError($" Failed to start {toolLabel}: {ex.Message}");
             return false;
         }
@@ -5121,11 +5114,8 @@ internal partial class MainWindow : IDisposable
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!IsCancellationException(ex))
         {
-            if (IsCancellationException(ex))
-                throw;
-
             TryCleanupAsciiTemp();
             LogError($" Failed to start chdman: {ex.Message}");
             return false;
@@ -5183,6 +5173,7 @@ internal partial class MainWindow : IDisposable
                 LogMessage(
                     $"TIMEOUT: Conversion of '{Path.GetFileName(inputFile)}' exceeded {timeoutMinutes.Value} minute(s). Marking as failed."
                 );
+
             cleanupAfterProcessKill = true;
             return false;
         }

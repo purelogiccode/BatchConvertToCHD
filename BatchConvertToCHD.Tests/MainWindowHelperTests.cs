@@ -87,7 +87,7 @@ public class MainWindowHelperTests : IDisposable
     public void SelectChdmanErrorLine_ProgressOnly_ReturnsLastLine()
     {
         const string errorText =
-            "Compressing, 10.0% complete... (ratio=95.0%)\n" + "Converting, 20.0% complete...";
+            "Compressing, 10.0% complete... (ratio=95.0%)\nConverting, 20.0% complete...";
 
         var line = MainWindow.SelectChdmanErrorLine(errorText);
 
@@ -129,7 +129,7 @@ public class MainWindowHelperTests : IDisposable
     public void SelectChdmanErrorLine_FatalSummaryOnly_ReturnsDescriptiveMessage()
     {
         const string errorText =
-            "Compressing, 0.0% complete... (ratio=100.0%)\n" + "Fatal error occurred: 1";
+            "Compressing, 0.0% complete... (ratio=100.0%)\nFatal error occurred: 1";
 
         var line = MainWindow.SelectChdmanErrorLine(errorText);
 

@@ -15,7 +15,7 @@ namespace BatchConvertToCHD.Services;
 /// </summary>
 internal class BugReportApiSink : ILogEventSink
 {
-    private static readonly object DedupeLock = new();
+    private static readonly Lock DedupeLock = new();
     private static readonly TimeSpan DuplicateWindow = TimeSpan.FromMinutes(10);
     private static string? _lastSentMessage;
     private static DateTimeOffset _lastSentAt;
@@ -69,7 +69,7 @@ internal class BugReportApiSink : ILogEventSink
             _ = _bugReportService
                 .SendBugReportAsync(message, ex)
                 .ContinueWith(
-                    static _ => { Interlocked.Exchange(ref _isSending, 0); },
+                    static _ => Interlocked.Exchange(ref _isSending, 0),
                     TaskContinuationOptions.ExecuteSynchronously
                 );
 
@@ -78,7 +78,7 @@ internal class BugReportApiSink : ILogEventSink
             // not awaited — it runs as an independent fire-and-forget timer.
             _ = Task.Delay(TimeSpan.FromSeconds(12))
                 .ContinueWith(
-                    static _ => { Volatile.Write(ref _isSending, 0); },
+                    static _ => Volatile.Write(ref _isSending, 0),
                     TaskContinuationOptions.ExecuteSynchronously
                 );
         }

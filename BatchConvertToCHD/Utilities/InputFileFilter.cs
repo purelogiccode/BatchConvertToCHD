@@ -170,12 +170,6 @@ internal static class InputFileFilter
         ];
     }
 
-    /// <summary>One input dropped from the batch because another input already targets its output.</summary>
-    /// <param name="SkippedFile">Full path of the input that will not be converted.</param>
-    /// <param name="KeptFile">Full path of the input that will produce the shared output.</param>
-    /// <param name="OutputPath">The CHD path both inputs would have written.</param>
-    internal sealed record SkippedDuplicate(string SkippedFile, string KeptFile, string OutputPath);
-
     /// <summary>
     ///     Removes inputs whose output CHD path is already produced by another input in the same
     ///     batch. Converting both would only overwrite one product with the other, and the archive
@@ -237,6 +231,12 @@ internal static class InputFileFilter
             return string.Empty;
         }
     }
+
+    /// <summary>One input dropped from the batch because another input already targets its output.</summary>
+    /// <param name="SkippedFile">Full path of the input that will not be converted.</param>
+    /// <param name="KeptFile">Full path of the input that will produce the shared output.</param>
+    /// <param name="OutputPath">The CHD path both inputs would have written.</param>
+    internal sealed record SkippedDuplicate(string SkippedFile, string KeptFile, string OutputPath);
 
     /// <summary>One input dropped from the batch, with the descriptor that covers it.</summary>
     /// <param name="DataFile">Full path of the raw data file being suppressed.</param>

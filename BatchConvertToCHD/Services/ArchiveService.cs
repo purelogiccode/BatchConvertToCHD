@@ -49,7 +49,7 @@ internal class ArchiveService
     ///     A tuple containing success status, the output ISO file path, the temp directory root,
     ///     and an error message string (empty on success).
     /// </returns>
-    internal async Task<(
+    internal static async Task<(
         bool Success,
         string FilePath,
         string TempDir,

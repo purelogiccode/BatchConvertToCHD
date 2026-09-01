@@ -64,7 +64,7 @@ internal class ScreenshotService
     ///     and saves it as a PNG in the screenshots folder under
     ///     %LocalAppData%\BatchConvertToCHD\screenshots.
     /// </summary>
-    internal string? TakeScreenshot()
+    internal static string? TakeScreenshot()
     {
         try
         {

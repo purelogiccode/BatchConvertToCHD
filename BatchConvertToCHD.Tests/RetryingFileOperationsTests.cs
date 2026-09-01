@@ -93,7 +93,7 @@ public class RetryingFileOperationsTests : IDisposable
         var deleted = await RetryingFileOperations.TryDeleteAsync(
             path,
             CancellationToken.None,
-            _ => { retries++; },
+            _ => retries++,
             static _ => 1
         );
 
@@ -198,7 +198,7 @@ public class RetryingFileOperationsTests : IDisposable
             source,
             dest,
             CancellationToken.None,
-            _ => { retries++; },
+            _ => retries++,
             static _ => 1
         );
 
