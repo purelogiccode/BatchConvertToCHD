@@ -76,7 +76,7 @@ public sealed partial class BattleEngine
         Directory.CreateDirectory(work);
         report.Kind = MediaKind.Dvd;
         report.Version = 5;
-        report.LogicalBytes = (ulong)ProbeBytes;
+        report.LogicalBytes = ProbeBytes;
 
         Log("  [probe] synthetic partial-last-hunk DVD image (32 MiB + 2 KiB; last hunk 2048/4096 B)");
         var input = Path.Combine(work, "probe.iso");
