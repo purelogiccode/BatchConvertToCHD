@@ -40,6 +40,9 @@ internal class BugReportService
         // their maintainer wants extraction bugs (with debug details) in the bug API.
         "Fatal error occurred",
         "cannot create std::vector",
+        // chdman.cpp:1517 wraps every failure inside its compression phase ("Error during
+        // compression: <OS error>"); the message is the user's storage failing, not app logic.
+        "Error during compression",
         "CRITICAL ERROR: The following required component is missing",
         "referenced files are missing",
         "could not be resolved",

@@ -163,6 +163,51 @@ internal static class Program
                 $@"  >> progress: {doneBytes / 1048576.0:0} MiB done, elapsed {overallSw.Elapsed:hh\:mm\:ss}");
         }
 
+        // Synthetic regression probe: raw DVD image with a partial last hunk (> 256 hunks).
+        // This is the input class behind the stale work-buffer ring corruption that produced
+        // tiny, self-consistent but garbage CHDs (see FailingParity.md); the corpus DVD CHDs
+        // are all exact hunk multiples, so without the probe the path was never exercised.
+        // probe-createdvd:<codec> must be BYTE-IDENTICAL; probe-createdvd:default may show a
+        // known FLAC encoder divergence (still verified + round-tripped).
+        if (cfg.Encode)
+        {
+            cts.Token.ThrowIfCancellationRequested();
+            var probeReport = new FileReport
+            {
+                FileName = BattleEngine.ProbeReportName,
+                SourcePath = "(synthetic)",
+                ChdBytes = BattleEngine.ProbeBytes
+            };
+            reports.Add(probeReport);
+            Console.WriteLine();
+            Console.WriteLine($"[{reports.Count}/{files.Count + 1}] {BattleEngine.ProbeReportName}");
+            if (!BattleEngine.EnoughSpaceFor(cfg.OutputRoot, BattleEngine.ProbeBytes * 3))
+            {
+                probeReport.SkippedReason = "skipped: insufficient free disk space";
+                Console.WriteLine("  !! insufficient free disk space for the synthetic probe");
+            }
+            else
+            {
+                try
+                {
+                    var engine = new BattleEngine(cfg, log, cts.Token);
+                    await engine.RunSyntheticProbeAsync(probeReport, Path.Combine(cfg.WorkRoot, "synthetic_probe"))
+                        .ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    probeReport.SkippedReason = "cancelled";
+                }
+                catch (Exception ex)
+                {
+                    probeReport.SkippedReason = "probe error: " + ex.Message;
+                    Console.WriteLine($"  !! probe error: {ex.Message}");
+                }
+            }
+
+            ReportWriter.AppendCsv(cfg.CsvPath, probeReport);
+        }
+
         Console.WriteLine();
         Console.WriteLine("writing markdown report...");
         ReportWriter.WriteMarkdown(cfg.MdPath, cfg.InputDir, reports, cfg);

@@ -1617,7 +1617,7 @@ internal partial class MainWindow : IDisposable
             )
         ];
 
-        WarnAboutOutputCollisions(filesToConvert, inputFolder, outputFolder);
+        filesToConvert = ResolveOutputCollisions(filesToConvert, inputFolder, outputFolder);
 
         _totalFilesProcessed = filesToConvert.Length;
         UpdateStatsDisplay();
@@ -2568,8 +2568,10 @@ internal partial class MainWindow : IDisposable
             // alternate-mode retry settles it. Audio tracks cannot be recovered without a cue or
             // TOC, so a multi-track disc converted this way will be missing its CDDA.
             trackMode = BinCueGenerator.Mode2;
-            LogWarning(
-                $" {originalName} has no cue and no readable sector header; assuming a single {trackMode} data track. Any CDDA audio tracks cannot be recovered without a cue."
+            // Informational, not a malfunction: this is the user's data shape (e.g. a console BIOS
+            // dropped into the input folder), so it goes to the UI log only - no bug report.
+            LogMessage(
+                $" {originalName} has no cue and no readable sector header; assuming a single {trackMode} data track. Any CDDA audio tracks cannot be recovered without a cue. If this file is not a disc image (e.g. a console BIOS), remove it from the input folder."
             );
         }
         else
@@ -2609,31 +2611,31 @@ internal partial class MainWindow : IDisposable
     }
 
     /// <summary>
-    ///     Reports inputs that would all be written to the same CHD path. They are still converted -
-    ///     the user may have intended a re-run - but whichever finishes last wins, so the ambiguity is
-    ///     surfaced before a long batch rather than discovered afterwards.
+    ///     Drops inputs whose output CHD path is already produced by another input in the batch,
+    ///     keeping the first non-archive input of each colliding group. Converting both would only
+    ///     overwrite one product with the other, so the redundant conversion (and, for archives,
+    ///     the redundant extraction) is skipped up front and the resolution is logged.
     /// </summary>
     /// <param name="filesToConvert">The inputs about to be processed.</param>
     /// <param name="inputFolder">Root of the conversion input folder.</param>
     /// <param name="outputFolder">Root of the conversion output folder.</param>
-    private void WarnAboutOutputCollisions(
+    private string[] ResolveOutputCollisions(
         string[] filesToConvert,
         string inputFolder,
         string outputFolder
     )
     {
-        var collisions = InputFileFilter.FindOutputCollisions(
+        var (kept, skipped) = InputFileFilter.ResolveOutputCollisions(
             filesToConvert,
             f => ComputeOutputChdPath(f, inputFolder, outputFolder)
         );
 
-        foreach (var collision in collisions)
-        {
-            var inputNames = string.Join(", ", collision.Select(Path.GetFileName));
-            LogWarning(
-                $" {collision.Count()} inputs target the same output file {Path.GetFileName(collision.Key)}: {inputNames}. Only the last one converted will be kept."
+        foreach (var duplicate in skipped)
+            LogMessage(
+                $" {Path.GetFileName(duplicate.SkippedFile)} also converts to {Path.GetFileName(duplicate.OutputPath)}; skipping it because {Path.GetFileName(duplicate.KeptFile)} already targets the same output file."
             );
-        }
+
+        return kept;
     }
 
     private static string ComputeOutputChdPathForExtractedFile(
@@ -4672,6 +4674,30 @@ internal partial class MainWindow : IDisposable
             return false;
         }
 
+        // Sample the system-wide write speed for as long as the encoder runs, so the speed
+        // stat card shows live MB/s regardless of which CLI engine is driving the conversion.
+        // (The chdman path in ConvertToChdAsync does the same; this shared runner used to skip
+        // it, which froze the display at 0.0 MB/s while CHDSharp was converting.)
+        using var ctsSpeed = CancellationTokenSource.CreateLinkedTokenSource(token);
+        var speedToken = ctsSpeed.Token;
+        var speedMonitoringTask = Task.Run(
+            async () =>
+            {
+                try
+                {
+                    while (!speedToken.IsCancellationRequested)
+                    {
+                        UpdateWriteSpeedFromPerformanceCounter();
+                        await Task.Delay(AppConfig.WriteSpeedUpdateIntervalMs, speedToken);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            },
+            speedToken
+        );
+
         try
         {
             token.ThrowIfCancellationRequested();
@@ -4712,6 +4738,8 @@ internal partial class MainWindow : IDisposable
                 await Task.Run(() => process.WaitForExit(5000), CancellationToken.None);
             }
 
+            ctsSpeed.Cancel();
+            await Task.WhenAny(speedMonitoringTask, Task.Delay(500, CancellationToken.None));
             process.CancelOutputRead();
             process.CancelErrorRead();
         }
@@ -5362,6 +5390,11 @@ internal partial class MainWindow : IDisposable
                 if (errorLine.Contains("Unknown error", StringComparison.OrdinalIgnoreCase))
                     LogMessage(
                         "       'Unknown error' from chdman typically indicates a corrupt source file, an unsupported disc format, or an I/O issue. Try converting the file from a local drive."
+                    );
+
+                if (errorLine.Contains("Input/output error", StringComparison.OrdinalIgnoreCase))
+                    LogMessage(
+                        "       An input/output error while reading the source usually means a failing or disconnected drive, a file locked by antivirus or cloud sync, or a damaged disc image. Check the drive for errors and try converting from a local drive."
                     );
             }
             else if (exitCode < 0)

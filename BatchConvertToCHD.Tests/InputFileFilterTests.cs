@@ -259,4 +259,80 @@ public class InputFileFilterTests : IDisposable
 
         Assert.Single(collisions);
     }
+
+    [Fact]
+    public void CollidingArchiveIsSkippedInFavorOfTheOriginalImage()
+    {
+        // The NRG report: Game.7z and Game.iso both convert to Game.chd. The archive
+        // extraction is redundant when the same image sits beside it, so the .iso wins.
+        string[] inputs = [@"C:\in\Game.7z", @"C:\in\Game.iso"];
+
+        var (kept, skipped) = InputFileFilter.ResolveOutputCollisions(
+            inputs,
+            f => Path.Combine("C:\\out", Path.GetFileNameWithoutExtension(f) + ".chd")
+        );
+
+        Assert.Equal([@"C:\in\Game.iso"], kept);
+        var duplicate = Assert.Single(skipped);
+        Assert.Equal(@"C:\in\Game.7z", duplicate.SkippedFile);
+        Assert.Equal(@"C:\in\Game.iso", duplicate.KeptFile);
+        Assert.Equal(@"C:\out\Game.chd", duplicate.OutputPath);
+    }
+
+    [Fact]
+    public void CollidingArchiveIsSkippedRegardlessOfInputOrder()
+    {
+        string[] inputs = [@"C:\in\Game.iso", @"C:\in\Game.7z"];
+
+        var (kept, skipped) = InputFileFilter.ResolveOutputCollisions(
+            inputs,
+            f => Path.Combine("C:\\out", Path.GetFileNameWithoutExtension(f) + ".chd")
+        );
+
+        Assert.Equal([@"C:\in\Game.iso"], kept);
+        Assert.Single(skipped);
+    }
+
+    [Fact]
+    public void CollisionBetweenTwoArchivesKeepsTheFirst()
+    {
+        string[] inputs = [@"C:\in\Game.zip", @"C:\in\Game.rar"];
+
+        var (kept, skipped) = InputFileFilter.ResolveOutputCollisions(
+            inputs,
+            f => Path.Combine("C:\\out", Path.GetFileNameWithoutExtension(f) + ".chd")
+        );
+
+        Assert.Equal([@"C:\in\Game.zip"], kept);
+        Assert.Equal(@"C:\in\Game.rar", Assert.Single(skipped).SkippedFile);
+    }
+
+    [Fact]
+    public void NonCollidingInputsPassThroughUnchanged()
+    {
+        string[] inputs = [@"C:\in\A.iso", @"C:\in\B.cue", @"C:\in\C.bin"];
+
+        var (kept, skipped) = InputFileFilter.ResolveOutputCollisions(
+            inputs,
+            f => Path.Combine("C:\\out", Path.GetFileNameWithoutExtension(f) + ".chd")
+        );
+
+        Assert.Equal(inputs, kept);
+        Assert.Empty(skipped);
+    }
+
+    [Fact]
+    public void ThreeWayCollisionKeepsOneAndSkipsTwo()
+    {
+        string[] inputs = [@"C:\in\Game.7z", @"C:\in\Game.iso", @"C:\in\GAME.ZIP"];
+
+        var (kept, skipped) = InputFileFilter.ResolveOutputCollisions(
+            inputs,
+            f => Path.Combine("C:\\out", Path.GetFileNameWithoutExtension(f) + ".chd")
+        );
+
+        Assert.Equal([@"C:\in\Game.iso"], kept);
+        Assert.Equal(2, skipped.Count);
+        Assert.All(skipped, s => Assert.Equal(@"C:\in\Game.iso", s.KeptFile));
+    }
 }

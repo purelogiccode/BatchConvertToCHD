@@ -170,6 +170,55 @@ internal static class InputFileFilter
         ];
     }
 
+    /// <summary>One input dropped from the batch because another input already targets its output.</summary>
+    /// <param name="SkippedFile">Full path of the input that will not be converted.</param>
+    /// <param name="KeptFile">Full path of the input that will produce the shared output.</param>
+    /// <param name="OutputPath">The CHD path both inputs would have written.</param>
+    internal sealed record SkippedDuplicate(string SkippedFile, string KeptFile, string OutputPath);
+
+    /// <summary>
+    ///     Removes inputs whose output CHD path is already produced by another input in the same
+    ///     batch. Converting both would only overwrite one product with the other, and the archive
+    ///     copy costs an extraction on top, so each collision is resolved by keeping the first
+    ///     non-archive input (the original image the user kept next to its archived copy) or, when
+    ///     every member is an archive, the first input. The input order is preserved otherwise.
+    /// </summary>
+    /// <param name="files">Candidate input paths.</param>
+    /// <param name="outputPathSelector">Maps an input path to the CHD path it would produce.</param>
+    /// <returns>The inputs to convert, and one <see cref="SkippedDuplicate" /> per dropped input.</returns>
+    internal static (string[] Kept, List<SkippedDuplicate> Skipped) ResolveOutputCollisions(
+        IEnumerable<string> files,
+        Func<string, string> outputPathSelector
+    )
+    {
+        var all = files.ToArray();
+        var collisions = FindOutputCollisions(all, outputPathSelector);
+        if (collisions.Count == 0)
+            return (all, []);
+
+        var skipped = new List<SkippedDuplicate>();
+        var skippedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var collision in collisions)
+        {
+            var keeper =
+                collision.FirstOrDefault(f =>
+                    !FileExtensions.ArchiveExtensionsSet.Contains(Path.GetExtension(f))
+                ) ?? collision.First();
+
+            foreach (var file in collision)
+            {
+                if (string.Equals(file, keeper, StringComparison.Ordinal))
+                    continue;
+
+                skippedFiles.Add(file);
+                skipped.Add(new SkippedDuplicate(file, keeper, collision.Key));
+            }
+        }
+
+        return ([.. all.Where(f => !skippedFiles.Contains(f))], skipped);
+    }
+
     private static async Task<string> ReadDescriptorTextAsync(
         string descriptorPath,
         CancellationToken token

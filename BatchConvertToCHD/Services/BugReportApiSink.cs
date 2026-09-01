@@ -10,9 +10,15 @@ namespace BatchConvertToCHD.Services;
 ///     known informational patterns are excluded via <see cref="BugReportService.IsExcludedFromBugReport" />.
 ///     Uses an interlocked flag to prevent concurrent API flood when many warnings fire rapidly.
 ///     A 10-second send timeout prevents the throttle flag from being held indefinitely.
+///     An identical message repeated inside <see cref="DuplicateWindow" /> (a failing batch
+///     retries the same input, or a loop logs the same warning per file) is sent only once.
 /// </summary>
 internal class BugReportApiSink : ILogEventSink
 {
+    private static readonly object DedupeLock = new();
+    private static readonly TimeSpan DuplicateWindow = TimeSpan.FromMinutes(10);
+    private static string? _lastSentMessage;
+    private static DateTimeOffset _lastSentAt;
     private static int _isSending;
     private readonly BugReportService _bugReportService;
 
@@ -28,7 +34,8 @@ internal class BugReportApiSink : ILogEventSink
     /// <summary>
     ///     Emits the provided log event to the sink. Only events at or above
     ///     <see cref="LogEventLevel.Warning" /> are forwarded to the bug report API.
-    ///     Messages matching informational exclusion patterns are dropped.
+    ///     Messages matching informational exclusion patterns are dropped, as is an
+    ///     identical message that was already forwarded within the duplicate window.
     /// </summary>
     /// <param name="logEvent">The log event to emit.</param>
     public void Emit(LogEvent logEvent)
@@ -40,6 +47,18 @@ internal class BugReportApiSink : ILogEventSink
 
         if (BugReportService.IsExcludedFromBugReport(message))
             return;
+
+        lock (DedupeLock)
+        {
+            if (
+                string.Equals(message, _lastSentMessage, StringComparison.Ordinal)
+                && DateTimeOffset.UtcNow - _lastSentAt < DuplicateWindow
+            )
+                return;
+
+            _lastSentMessage = message;
+            _lastSentAt = DateTimeOffset.UtcNow;
+        }
 
         var ex = logEvent.Exception;
 
