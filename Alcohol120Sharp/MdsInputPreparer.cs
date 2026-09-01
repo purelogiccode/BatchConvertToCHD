@@ -1,8 +1,7 @@
 using System.Globalization;
-using System.IO;
 using System.Text;
 
-namespace BatchConvertToCHD.Utilities.Mds;
+namespace Alcohol120Sharp;
 
 /// <summary>
 ///     Turns an Alcohol .mds/.mdf pair into something chdman can actually convert.
@@ -12,10 +11,13 @@ namespace BatchConvertToCHD.Utilities.Mds;
 ///     tail is stripped into a new image and a cue is written for that.
 ///     - 2048-byte sectors: the .mdf is really an ISO, so it converts as a DVD image with no cue.
 /// </summary>
-internal static class MdsInputPreparer
+public static class MdsInputPreparer
 {
     /// <summary>Sectors repacked per read. A write per sector is far too slow at disc scale.</summary>
     private const int StripChunkSectors = 2048;
+
+    private const string BinExtension = ".bin";
+    private const string CueExtension = ".cue";
 
     /// <summary>
     ///     Prepares <paramref name="disc" /> for conversion, writing any generated files into
@@ -25,7 +27,7 @@ internal static class MdsInputPreparer
     /// <param name="workDir">Existing directory for generated files.</param>
     /// <param name="onLog">Optional logging callback.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<Result> PrepareAsync(
+    public static async Task<Result> PrepareAsync(
         MdsDisc disc,
         string workDir,
         Action<string>? onLog,
@@ -46,7 +48,7 @@ internal static class MdsInputPreparer
             );
             dataFilePath = Path.Combine(
                 workDir,
-                Path.GetFileNameWithoutExtension(disc.MdsPath) + FileExtensions.Bin
+                Path.GetFileNameWithoutExtension(disc.MdsPath) + BinExtension
             );
             await SplitImageJoiner.JoinAsync(volumeSet, dataFilePath, token).ConfigureAwait(false);
         }
@@ -73,7 +75,7 @@ internal static class MdsInputPreparer
         {
             var strippedPath = Path.Combine(
                 workDir,
-                Path.GetFileNameWithoutExtension(dataFilePath) + ".stripped" + FileExtensions.Bin
+                Path.GetFileNameWithoutExtension(dataFilePath) + ".stripped" + BinExtension
             );
             onLog?.Invoke(
                 $" {Path.GetFileName(dataFilePath)} stores {disc.SectorSize}-byte sectors; stripping subchannel data down to {MdsDisc.RawSectorSize} bytes so chdman can read it."
@@ -124,7 +126,7 @@ internal static class MdsInputPreparer
     /// <param name="destinationPath">Where the 2352-byte image is written.</param>
     /// <param name="sectorSize">Bytes per sector in the source.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<string?> StripSubchannelAsync(
+    public static async Task<string?> StripSubchannelAsync(
         string sourcePath,
         string destinationPath,
         int sectorSize,
@@ -190,7 +192,7 @@ internal static class MdsInputPreparer
     /// <param name="workDir">Directory the cue is written into.</param>
     /// <param name="dataFileReference">FILE entry to record, relative to <paramref name="workDir" />.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<string> WriteCueAsync(
+    public static async Task<string> WriteCueAsync(
         MdsDisc disc,
         string workDir,
         string dataFileReference,
@@ -216,7 +218,7 @@ internal static class MdsInputPreparer
 
         var cuePath = Path.Combine(
             workDir,
-            Path.GetFileNameWithoutExtension(disc.MdsPath) + FileExtensions.Cue
+            Path.GetFileNameWithoutExtension(disc.MdsPath) + CueExtension
         );
 
         // No BOM: chdman's cue parser does not skip one.
@@ -228,7 +230,7 @@ internal static class MdsInputPreparer
 
     /// <summary>Formats an absolute sector count as the MM:SS:FF a cue INDEX expects.</summary>
     /// <param name="lba">Absolute sector number.</param>
-    internal static string FormatMsf(long lba)
+    public static string FormatMsf(long lba)
     {
         const int framesPerSecond = 75;
         const int framesPerMinute = framesPerSecond * 60;
@@ -288,21 +290,21 @@ internal static class MdsInputPreparer
     /// <param name="CuePath">Cue to convert as a CD, or null.</param>
     /// <param name="DvdImagePath">Image to convert as a DVD, or null.</param>
     /// <param name="FailureReason">Why nothing could be prepared, or null on success.</param>
-    internal sealed record Result(string? CuePath, string? DvdImagePath, string? FailureReason)
+    public sealed record Result(string? CuePath, string? DvdImagePath, string? FailureReason)
     {
-        internal bool Success => FailureReason is null;
+        public bool Success => FailureReason is null;
 
-        internal static Result Cue(string cuePath)
+        public static Result Cue(string cuePath)
         {
             return new Result(cuePath, null, null);
         }
 
-        internal static Result Dvd(string imagePath)
+        public static Result Dvd(string imagePath)
         {
             return new Result(null, imagePath, null);
         }
 
-        internal static Result Failed(string reason)
+        public static Result Failed(string reason)
         {
             return new Result(null, null, reason);
         }

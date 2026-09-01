@@ -1,10 +1,9 @@
 using System.Buffers.Binary;
 using System.Globalization;
-using System.IO;
 using System.IO.Compression;
 using SharpCompress.Compressors.BZip2;
 
-namespace BatchConvertToCHD.Utilities.Isz;
+namespace UltraIsoSharp;
 
 /// <summary>
 ///     Decompresses UltraISO ISZ images back to the plain image they were made from.
@@ -17,7 +16,7 @@ namespace BatchConvertToCHD.Utilities.Isz;
 ///     undefined, or that does not add up on the way through, is reported rather than guessed: a
 ///     half-decompressed image that chdman happily accepts is the one outcome worth avoiding.
 /// </summary>
-internal static class IszDecoder
+public static class IszDecoder
 {
     /// <summary>Read and write buffer for the output image.</summary>
     private const int FileBufferBytes = 1024 * 1024;
@@ -28,12 +27,14 @@ internal static class IszDecoder
     /// <summary>How often decoding progress is logged, as a fraction of the image.</summary>
     private const int ProgressStepPercent = 10;
 
+    private const string IsoExtension = ".iso";
+
     /// <summary>
     ///     Reads the header of an ISZ file, or returns null when the file does not start with one.
     /// </summary>
     /// <param name="path">Path of the .isz file.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<IszHeader?> TryReadHeaderAsync(string path, CancellationToken token)
+    public static async Task<IszHeader?> TryReadHeaderAsync(string path, CancellationToken token)
     {
         try
         {
@@ -58,9 +59,9 @@ internal static class IszDecoder
 
     /// <summary>The name the decompressed image should be given.</summary>
     /// <param name="iszPath">Path of the .isz file.</param>
-    internal static string GetDecodedFileName(string iszPath)
+    public static string GetDecodedFileName(string iszPath)
     {
-        return Path.GetFileNameWithoutExtension(iszPath) + FileExtensions.Iso;
+        return Path.GetFileNameWithoutExtension(iszPath) + IsoExtension;
     }
 
     /// <summary>
@@ -69,7 +70,7 @@ internal static class IszDecoder
     /// </summary>
     /// <param name="firstSegmentPath">Path of the .isz file.</param>
     /// <param name="segmentIndex">Zero-based segment index.</param>
-    internal static string GetSegmentPath(string firstSegmentPath, int segmentIndex)
+    public static string GetSegmentPath(string firstSegmentPath, int segmentIndex)
     {
         if (segmentIndex <= 0) return firstSegmentPath;
 
@@ -86,7 +87,7 @@ internal static class IszDecoder
     /// <param name="destinationPath">File to write the restored image to.</param>
     /// <param name="onLog">Log callback.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<IszDecodeResult> DecodeAsync(
+    public static async Task<IszDecodeResult> DecodeAsync(
         string iszPath,
         string destinationPath,
         Action<string> onLog,
@@ -485,7 +486,7 @@ internal static class IszDecoder
     /// <param name="chunkTable">The whole chunk table.</param>
     /// <param name="index">Zero-based chunk index.</param>
     /// <param name="pointerLength">Bytes per entry.</param>
-    internal static (IszChunkType Type, int StoredLength) ReadChunkEntry(
+    public static (IszChunkType Type, int StoredLength) ReadChunkEntry(
         byte[] chunkTable,
         int index,
         int pointerLength
@@ -600,7 +601,7 @@ internal static class IszDecoder
         ///     Fills the first <paramref name="count" /> bytes of <paramref name="buffer" />, crossing
         ///     into later regions as needed. False means the data ran out first.
         /// </summary>
-        internal async Task<bool> ReadExactlyAsync(
+        public async Task<bool> ReadExactlyAsync(
             byte[] buffer,
             int count,
             CancellationToken token
@@ -635,7 +636,7 @@ internal static class IszDecoder
         }
 
         /// <summary>Advances past <paramref name="count" /> bytes without keeping them.</summary>
-        internal async Task<bool> SkipAsync(long count, CancellationToken token)
+        public async Task<bool> SkipAsync(long count, CancellationToken token)
         {
             var remaining = count;
             while (remaining > 0)

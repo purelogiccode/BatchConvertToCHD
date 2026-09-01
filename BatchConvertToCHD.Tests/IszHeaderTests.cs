@@ -1,4 +1,4 @@
-using BatchConvertToCHD.Utilities.Isz;
+using UltraIsoSharp;
 
 namespace BatchConvertToCHD.Tests;
 

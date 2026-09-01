@@ -60,9 +60,11 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Alcohol120Sharp\Alcohol120Sharp.csproj" />
         <ProjectReference Include="..\CCDSharp\CCDSharp.csproj" />
         <ProjectReference Include="..\CSOSharp\CSOSharp.csproj" />
         <ProjectReference Include="..\PBPSharp\PBPSharp.csproj" />
+        <ProjectReference Include="..\UltraIsoSharp\UltraIsoSharp.csproj" />
     </ItemGroup>
 
     <ItemGroup>

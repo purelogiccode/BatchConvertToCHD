@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using System.Globalization;
 using System.Text;
 
-namespace BatchConvertToCHD.Utilities.Isz;
+namespace UltraIsoSharp;
 
 /// <summary>
 ///     The header at the front of every ISZ segment file, as defined by EZB Systems' ISZ File Format
@@ -26,7 +26,7 @@ namespace BatchConvertToCHD.Utilities.Isz;
 /// <param name="ChunkTableOffset">Offset of the chunk table, or 0 when there is none.</param>
 /// <param name="SegmentTableOffset">Offset of the segment table, or 0 when the image is whole.</param>
 /// <param name="DataOffset">Offset of the first chunk's data in this file.</param>
-internal sealed record IszHeader(
+public sealed record IszHeader(
     int HeaderSize,
     int Version,
     uint VolumeSerialNumber,
@@ -44,10 +44,10 @@ internal sealed record IszHeader(
 )
 {
     /// <summary>The four bytes every ISZ file opens with.</summary>
-    internal const string Signature = "IsZ!";
+    public const string Signature = "IsZ!";
 
     /// <summary>Header length for version 1, and the number of bytes <see cref="TryRead" /> needs.</summary>
-    internal const int Length = 48;
+    public const int Length = 48;
 
     /// <summary>Largest chunk table entry width that can be read into a 32-bit value.</summary>
     private const int MaxPointerLength = 4;
@@ -59,16 +59,16 @@ internal sealed record IszHeader(
     private const uint MaxChunkSize = 64 * 1024 * 1024;
 
     /// <summary>Uncompressed size of the image this header describes.</summary>
-    internal long ImageSizeBytes => TotalSectors * SectorSize;
+    public long ImageSizeBytes => TotalSectors * SectorSize;
 
     /// <summary>True when chunk data is encrypted and cannot be read without the password.</summary>
-    internal bool IsEncrypted => PasswordMode != 0;
+    public bool IsEncrypted => PasswordMode != 0;
 
     /// <summary>True when the image was split across several files.</summary>
-    internal bool IsSegmented => SegmentTableOffset != 0;
+    public bool IsSegmented => SegmentTableOffset != 0;
 
     /// <summary>How the encryption in use should be described to the user.</summary>
-    internal string EncryptionDescription =>
+    public string EncryptionDescription =>
         PasswordMode switch
         {
             0 => "none",
@@ -82,12 +82,12 @@ internal sealed record IszHeader(
         };
 
     /// <summary>A one-line summary for the log.</summary>
-    internal string Summary =>
+    public string Summary =>
         $"version {Version.ToString(CultureInfo.InvariantCulture)}, {TotalSectors.ToString("N0", CultureInfo.InvariantCulture)} x {SectorSize.ToString(CultureInfo.InvariantCulture)}-byte sectors = {ImageSizeBytes.ToString("N0", CultureInfo.InvariantCulture)} bytes, {ChunkCount.ToString("N0", CultureInfo.InvariantCulture)} chunks of {ChunkSize.ToString("N0", CultureInfo.InvariantCulture)} bytes";
 
     /// <summary>True when <paramref name="header" /> opens with the ISZ signature.</summary>
     /// <param name="header">Leading bytes of a file.</param>
-    internal static bool HasSignature(ReadOnlySpan<byte> header)
+    public static bool HasSignature(ReadOnlySpan<byte> header)
     {
         return header.Length >= Signature.Length
                && Encoding
@@ -100,7 +100,7 @@ internal sealed record IszHeader(
     ///     ISZ header at all.
     /// </summary>
     /// <param name="header">At least <see cref="Length" /> bytes from the front of the file.</param>
-    internal static IszHeader? TryRead(ReadOnlySpan<byte> header)
+    public static IszHeader? TryRead(ReadOnlySpan<byte> header)
     {
         if (header.Length < Length || !HasSignature(header)) return null;
 
@@ -126,7 +126,7 @@ internal sealed record IszHeader(
     ///     Returns why this header cannot be decompressed, or null when it can. The reason is written
     ///     for the log, so it says what the user has to do about it.
     /// </summary>
-    internal string? GetUnusableReason()
+    public string? GetUnusableReason()
     {
         if (IsEncrypted)
             return

@@ -1,3 +1,4 @@
+using Alcohol120Sharp;
 using BatchConvertToCHD.Utilities;
 
 namespace BatchConvertToCHD.Tests;

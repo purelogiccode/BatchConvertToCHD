@@ -1,8 +1,7 @@
 using System.Buffers.Binary;
-using System.IO;
 using System.Text;
 
-namespace BatchConvertToCHD.Utilities.Mds;
+namespace Alcohol120Sharp;
 
 /// <summary>
 ///     Reads the track table out of an Alcohol 120% .mds descriptor.
@@ -21,7 +20,7 @@ namespace BatchConvertToCHD.Utilities.Mds;
 ///     0x10  u16       sector size
 ///     0x24  u32       start LBA
 /// </summary>
-internal static class MdsParser
+public static class MdsParser
 {
     private const string Signature = "MEDIA DESCRIPTOR";
     private const int SignatureLength = 16;
@@ -42,9 +41,12 @@ internal static class MdsParser
     /// <summary>Sessions beyond this mean the bytes are not a real descriptor.</summary>
     private const int MaxPlausibleSessions = 99;
 
+    private const string MdfExtension = ".mdf";
+    private const string SplitFirstAlcoholExtension = ".i00";
+
     /// <summary>True when <paramref name="path" /> starts with the Alcohol descriptor signature.</summary>
     /// <param name="path">File to test.</param>
-    internal static bool IsMdsFile(string path)
+    public static bool IsMdsFile(string path)
     {
         try
         {
@@ -73,7 +75,7 @@ internal static class MdsParser
     /// </summary>
     /// <param name="mdsPath">Path of the .mds descriptor.</param>
     /// <exception cref="InvalidDataException">The file is not a usable descriptor.</exception>
-    internal static MdsDisc Parse(string mdsPath)
+    public static MdsDisc Parse(string mdsPath)
     {
         var info = new FileInfo(mdsPath);
         if (!info.Exists) throw new FileNotFoundException("MDS descriptor not found.", mdsPath);
@@ -168,7 +170,7 @@ internal static class MdsParser
                     .GetFiles(directory)
                     .Where(static f =>
                         Path.GetExtension(f)
-                            .Equals(FileExtensions.Mdf, StringComparison.OrdinalIgnoreCase)
+                            .Equals(MdfExtension, StringComparison.OrdinalIgnoreCase)
                     )
             ];
         }
@@ -198,7 +200,7 @@ internal static class MdsParser
                 .FirstOrDefault(f =>
                     Path.GetExtension(f)
                         .Equals(
-                            FileExtensions.SplitFirstAlcohol,
+                            SplitFirstAlcoholExtension,
                             StringComparison.OrdinalIgnoreCase
                         )
                 );

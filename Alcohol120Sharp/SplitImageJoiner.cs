@@ -1,7 +1,6 @@
 using System.Globalization;
-using System.IO;
 
-namespace BatchConvertToCHD.Utilities;
+namespace Alcohol120Sharp;
 
 /// <summary>
 ///     Reassembles disc images that were split into numbered pieces.
@@ -12,7 +11,7 @@ namespace BatchConvertToCHD.Utilities;
 ///     A set is only accepted when the successor actually exists, so a lone file that happens to end
 ///     in ".001" is left alone.
 /// </summary>
-internal static class SplitImageJoiner
+public static class SplitImageJoiner
 {
     /// <summary>Copy buffer for concatenation. Disc-sized files, so keep it large.</summary>
     private const int CopyBufferBytes = 4 * 1024 * 1024;
@@ -26,7 +25,7 @@ internal static class SplitImageJoiner
     ///     exists.
     /// </summary>
     /// <param name="firstVolumePath">Candidate first volume.</param>
-    internal static List<string>? TryGetVolumeSet(string firstVolumePath)
+    public static List<string>? TryGetVolumeSet(string firstVolumePath)
     {
         var extension = Path.GetExtension(firstVolumePath);
         if (extension.Length == 0) return null;
@@ -56,7 +55,7 @@ internal static class SplitImageJoiner
     /// <param name="parts">Volumes in order.</param>
     /// <param name="destinationPath">File to create.</param>
     /// <param name="token">Cancellation token.</param>
-    internal static async Task<long> JoinAsync(
+    public static async Task<long> JoinAsync(
         IReadOnlyList<string> parts,
         string destinationPath,
         CancellationToken token
@@ -93,7 +92,7 @@ internal static class SplitImageJoiner
 
     /// <summary>Total size of a volume set, or 0 when it cannot be measured.</summary>
     /// <param name="parts">Volumes in the set.</param>
-    internal static long GetTotalBytes(IEnumerable<string> parts)
+    public static long GetTotalBytes(IEnumerable<string> parts)
     {
         long total = 0;
         foreach (var part in parts)

@@ -1,5 +1,5 @@
 using System.Text;
-using BatchConvertToCHD.Utilities.Isz;
+using UltraIsoSharp;
 
 namespace BatchConvertToCHD.Tests;
 

@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
+using Alcohol120Sharp;
 using BatchConvertToCHD.Utilities;
-using BatchConvertToCHD.Utilities.Mds;
 
 namespace BatchConvertToCHD.Tests;
 

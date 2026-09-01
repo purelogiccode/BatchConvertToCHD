@@ -1,4 +1,4 @@
-namespace BatchConvertToCHD.Utilities.Isz;
+namespace UltraIsoSharp;
 
 /// <summary>
 ///     One entry of an ISZ segment definition table, describing a single file of a split image.
@@ -10,7 +10,7 @@ namespace BatchConvertToCHD.Utilities.Isz;
 /// <param name="FirstChunkNumber">Index of the first chunk in this segment.</param>
 /// <param name="ChunkOffset">Offset within this segment where its first chunk starts.</param>
 /// <param name="LeftSize">Bytes of a chunk that spill over into the next segment.</param>
-internal sealed record IszSegment(
+public sealed record IszSegment(
     long Size,
     int ChunkCount,
     int FirstChunkNumber,
@@ -19,11 +19,11 @@ internal sealed record IszSegment(
 )
 {
     /// <summary>Bytes per entry in the segment definition table.</summary>
-    internal const int EntryLength = 24;
+    public const int EntryLength = 24;
 
     /// <summary>
     ///     A terminating entry, which the spec defines as one with a zero size. A table holds one of
     ///     these after the real entries, so the reader knows where the list ends.
     /// </summary>
-    internal bool IsTerminator => Size == 0;
+    public bool IsTerminator => Size == 0;
 }
