@@ -898,13 +898,13 @@
                             Text="CHDSharp"
                             Foreground="{StaticResource SuccessTextBrush}"
                             Margin="0,0,5,0"
-                            ToolTip="Status of CHDSharp.exe (primary encoder)" />
+                            ToolTip="Status of CHDSharp.exe (fallback encoder)" />
                         <TextBlock
                             x:Name="StatusBarChdman"
                             Text="CHDMAN"
                             Foreground="{StaticResource SuccessTextBrush}"
                             Margin="0"
-                            ToolTip="Status of chdman.exe (fallback encoder)" />
+                            ToolTip="Status of chdman.exe (primary encoder)" />
                     </StackPanel>
                 </Grid>
             </Border>

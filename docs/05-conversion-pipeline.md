@@ -85,15 +85,15 @@ If the direct conversion of the original file fails, `TryRetryConversionViaTempC
 
 **Deleting originals** — `DeleteOriginalGameFilesAsync` (`:3134`): for `.cue`/`.gdi`/`.toc` it also deletes every referenced data file (`GameFileParser`); for `.ccd` it deletes the `.img`/`.sub`/`.cdt` companions. All deletions go through `RetryingFileOperations.TryDeleteAsync` via `TryDeleteFileAsync` (`:3362`), which additionally kills stray chdman processes after the second failed attempt (`KillChdmanProcesses`, `:3380`).
 
-## 5.3 ConvertToChdAsync — Encoder Selection (CHDSharp first, chdman fallback)
+## 5.3 ConvertToChdAsync — Encoder Selection (chdman first, CHDSharp fallback)
 
-`ConvertToChdAsync` is the single funnel for every conversion. Command and arguments are built once (below) and the same command line is offered to both encoders: `CHDSharp.exe` (or `CHDSharp_arm64.exe` on ARM64) as the primary encoder, bundled `chdman` as the automatic fallback.
+`ConvertToChdAsync` is the single funnel for every conversion. Command and arguments are built once (below) and the same command line is offered to both encoders: bundled `chdman` as the primary encoder, `CHDSharp.exe` (or `CHDSharp_arm64.exe` on ARM64) as the automatic fallback.
 
-### Primary encoder: CHDSharp
+### Primary encoder: chdman
 
-When the tool was resolved at startup (`_isChdSharpAvailable`), the run is handed to `CHDSharp.exe` (`:4914`): `RunEncoderProcessAsync` (`:4597`) drives the process with the shared arguments, the exit code is trusted because CHDSharp validates its own output before returning, and the staged `.chdtmp` file is moved into place on success. The log line reads `CHDSharp: createcd game.cue`, mirroring the chdman invocation it replaces.
+The chdman process-execution path below runs first. On success the staged `.chdtmp` file is moved into place and the conversion is done.
 
-If CHDSharp is missing or fails, the run falls back to chdman (`:4967` logs `CHDSharp failed ... Falling back to chdman...`) and continues through the chdman process-execution path below. At startup the app warns when `CHDSharp.exe` is not found ("CHDSharp is the primary encoder"), and a batch is refused only when neither encoder is present — the status bar carries an indicator for each.
+If chdman is missing or fails, the run falls back to CHDSharp (`chdman failed ... Falling back to CHDSharp...`): `RunEncoderProcessAsync` (`:4597`) drives the process with the same command line, the exit code is trusted because CHDSharp validates its own output before returning, and the staged output is moved into place on success. The log line reads `CHDSharp: createcd game.cue`, mirroring the chdman invocation it replaces. At startup the app warns when `chdman.exe` is not found ("chdman is the primary encoder"), and a file is refused only when neither encoder is present — the status bar carries an indicator for each.
 
 ### Output staging
 
@@ -121,7 +121,7 @@ command = forceCd || hasCue || (!forceDvd && !isIso && !isImg && !isRaw) ? "crea
 2. **Cue work-dir preparation** for `.cue`/`.toc` (`:2503–2527`): `PrepareCueWorkDirAsync` (`:2417`) → `CueWorkDirectory.PrepareAsync` (see [Utilities](08-utilities-reference.md#cueworkdirectory)). If MP3 tracks exist and decoding failed, conversion is aborted with a clear message instead of handing chdman an MP3 cue. Overlong paths (descriptor or referenced files at or beyond MAX_PATH) also trigger the copy-based work directory.
 3. **ASCII temp work dir** (`:2508–2546`): if any part of the input or output path is unsafe for chdman — non-ASCII characters *anywhere along the path* (an accented user name, a non-Latin folder name) or a total length at or beyond MAX_PATH (260) — the input is copied into an ASCII-safe GUID-named staging directory and the output is written there too; after success the output is moved to the real destination with `RetryingFileOperations.TryMoveAsync`. Only an unsafe *input* is staged: an input chdman can read in place (e.g. an ASCII cue whose destination path is overlong) keeps resolving its `FILE` entries against its original directory. The staging location itself is chosen by `PathUtils.CreateAsciiSafeTempDirectory`, because the system temp folder lives under the user profile and can contain exactly the characters this fallback exists to avoid (`C:\Users\Kauê Chacon\...`).
 
-### Process execution (chdman fallback)
+### Process execution (chdman primary)
 
 - `ProcessStartInfo` with redirected stdout/stderr, `UseShellExecute=false`, `CreateNoWindow=true`.
 - Output handlers classify lines: "Compression complete"/"final ratio" → success lines; `% complete`/`Compressing`/`Output bytes`/`Compression ratio` → filtered as progress; everything else → `[CHDMAN]` log lines.

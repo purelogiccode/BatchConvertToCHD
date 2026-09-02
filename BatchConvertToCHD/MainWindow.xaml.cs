@@ -84,6 +84,7 @@ internal partial class MainWindow : IDisposable
     private readonly bool _isChdSharpAvailable;
     private readonly bool _isChdmanAvailable;
     private readonly Stopwatch _operationTimer = new();
+    private readonly DispatcherTimer _elapsedTimeTimer;
     private readonly Lock _performanceCounterLock = new();
     private readonly ScreenshotService _screenshotService;
     private readonly string _sevenZipExePath;
@@ -116,6 +117,15 @@ internal partial class MainWindow : IDisposable
     {
         InitializeComponent();
         _cts = new CancellationTokenSource();
+
+        // Ticks once a second while an operation runs so the elapsed-time stat card keeps
+        // counting during long single-file conversions (e.g. a CHDSharp run), which produce
+        // no per-file UI updates for the batch loops to refresh from.
+        _elapsedTimeTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromSeconds(1)
+        };
+        _elapsedTimeTimer.Tick += (_, _) => UpdateProcessingTimeDisplay();
 
         ConversionFilesDataGrid.ItemsSource = _conversionFiles;
         VerificationFilesDataGrid.ItemsSource = _verificationFiles;
@@ -210,6 +220,7 @@ internal partial class MainWindow : IDisposable
         _readBytesCounter?.Dispose();
         _fileWatcher.Dispose();
         _operationTimer.Stop();
+        _elapsedTimeTimer.Stop();
 
         KillOrphanedProcesses();
     }
@@ -709,14 +720,14 @@ internal partial class MainWindow : IDisposable
     private void DisplayConversionInstructionsInLog()
     {
         LogMessage($"Welcome to {AppConfig.ApplicationName}. (Conversion Mode)");
-        if (!_isChdSharpAvailable)
-            LogWarning(
-                " CHDSharp.exe not found! CHDSharp is the primary encoder. Place it in the application folder."
-            );
-
         if (!_isChdmanAvailable)
             LogWarning(
-                " chdman.exe not found! chdman is used as a fallback encoder. Download it from https://github.com/rtissera/chdman/releases and place it in the application folder."
+                " chdman.exe not found! chdman is the primary encoder. Download it from https://github.com/rtissera/chdman/releases and place it in the application folder."
+            );
+
+        if (!_isChdSharpAvailable)
+            LogWarning(
+                " CHDSharp.exe not found! CHDSharp is used as a fallback encoder. Place it in the application folder."
             );
 
         LogMessage("--- Ready for Conversion ---");
@@ -933,7 +944,7 @@ internal partial class MainWindow : IDisposable
             ResetOperationStats();
             SetControlsState(false);
             await Task.Yield();
-            _operationTimer.Restart();
+            StartOperationTimer();
             ResetSpeedCounters();
 
             var deleteOriginal = DeleteOriginalChdCheckBox.IsChecked ?? false;
@@ -1304,7 +1315,7 @@ internal partial class MainWindow : IDisposable
             ResetOperationStats();
             SetControlsState(false);
             await Task.Yield();
-            _operationTimer.Restart();
+            StartOperationTimer();
             ResetSpeedCounters();
 
             var deleteFiles = DeleteOriginalsCheckBox.IsChecked ?? false;
@@ -1398,7 +1409,7 @@ internal partial class MainWindow : IDisposable
             ResetOperationStats();
             SetControlsState(false);
             await Task.Yield();
-            _operationTimer.Restart();
+            StartOperationTimer();
             ResetSpeedCounters();
 
             var includeSubfolders = SearchSubfoldersVerificationCheckBox.IsChecked ?? false;
@@ -1462,6 +1473,7 @@ internal partial class MainWindow : IDisposable
     private void FinishOperation(string opName)
     {
         _operationTimer.Stop();
+        _elapsedTimeTimer.Stop();
         UpdateProcessingTimeDisplay();
         UpdateWriteSpeedDisplay(0);
         UpdateReadSpeedDisplay(0);
@@ -4750,7 +4762,9 @@ internal partial class MainWindow : IDisposable
         int recursionDepth = 0
     )
     {
-        if (!File.Exists(chdmanPath))
+        // chdman is the primary encoder and CHDSharp.exe the automatic fallback, so a missing
+        // chdman.exe must not refuse the file outright — refuse only when neither encoder exists.
+        if (!File.Exists(chdmanPath) && !(_isChdSharpAvailable && File.Exists(_chdSharpExePath)))
         {
             LogError(
                 $" chdman.exe not found at '{chdmanPath}'. Download it from https://github.com/rtissera/chdman/releases and place it in the application folder."
@@ -4811,7 +4825,6 @@ internal partial class MainWindow : IDisposable
         string? asciiOutputFile = null;
         var originalInputFile = inputFile;
         var originalOutputFile = outputFile;
-        var usedAsciiStaging = false;
 
         // Warn early about likely-corrupt disc images, but still let chdman try: some
         // legitimate images use non-standard sector layouts (e.g. 2448-byte sectors with
@@ -4865,7 +4878,6 @@ internal partial class MainWindow : IDisposable
             // which would reproduce the very failure this fallback exists to avoid.
             asciiTempDir = PathUtils.CreateAsciiSafeTempDirectory(TempDirPrefix);
             Directory.CreateDirectory(asciiTempDir);
-            usedAsciiStaging = true;
 
             // Only the input needs staging when its own path is unsafe; an input chdman can read
             // in place (e.g. an ASCII cue whose destination path is overlong) keeps resolving its
@@ -4930,124 +4942,27 @@ internal partial class MainWindow : IDisposable
             return false;
         }
 
-        // --- Primary encoder: CHDSharp ---
-        if (_isChdSharpAvailable && File.Exists(_chdSharpExePath))
+        // --- Primary encoder: chdman ---
+        if (!File.Exists(chdmanPath))
         {
-            LogMessage($"CHDSharp: {command} {Path.GetFileName(originalInputFile)}");
-
-            var chdSharpSuccess = await RunEncoderProcessAsync(
-                _chdSharpExePath,
-                args,
-                "CHDSharp",
-                timeoutMinutes,
-                token
+            // chdman is missing but the CHDSharp fallback exists (checked at the top of this
+            // method): skip the chdman run and hand the file straight to the fallback.
+            LogMessage(
+                $" chdman.exe not found; converting {Path.GetFileName(originalInputFile)} with CHDSharp."
             );
-
-            if (chdSharpSuccess)
+            if (await TryChdSharpFallbackAsync())
             {
-                // CHDSharp internally validates its output; trust the exit code.
-                if (asciiOutputFile != null)
-                    try
-                    {
-                        var targetDir = Path.GetDirectoryName(originalOutputFile);
-                        if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
-                            Directory.CreateDirectory(targetDir);
-                        if (File.Exists(originalOutputFile))
-                        {
-                            var deleted = await RetryingFileOperations
-                                .TryDeleteAsync(originalOutputFile, token)
-                                .ConfigureAwait(false);
-                            if (!deleted)
-                                throw new IOException(
-                                    $"Could not delete existing destination '{originalOutputFile}'."
-                                );
-                        }
-
-                        var moved = await RetryingFileOperations
-                            .TryMoveAsync(outputFile, originalOutputFile, token)
-                            .ConfigureAwait(false);
-                        if (!moved)
-                            throw new IOException(
-                                $"Could not move temp output '{outputFile}' to '{originalOutputFile}'."
-                            );
-                    }
-                    catch (Exception ex)
-                    {
-                        LogError($" Failed to move CHDSharp output to destination: {ex.Message}");
-                        TryCleanupAsciiTemp();
-                        return false;
-                    }
-
                 TryCleanupAsciiTemp();
                 return true;
             }
 
-            LogWarning(
-                $"CHDSharp failed for '{Path.GetFileName(originalInputFile)}'. Falling back to chdman..."
+            LogError(
+                $" Failed to convert '{Path.GetFileName(originalInputFile)}': the CHDSharp fallback did not produce a usable output."
             );
             TryCleanupAsciiTemp();
-
-            // Re-create staging for chdman fallback
-            if (usedAsciiStaging)
-            {
-                asciiTempDir = PathUtils.CreateAsciiSafeTempDirectory(TempDirPrefix);
-                Directory.CreateDirectory(asciiTempDir);
-                if (pathNeedsAscii)
-                {
-                    asciiInputFile = Path.Combine(
-                        asciiTempDir,
-                        Guid.NewGuid().ToString("N") + Path.GetExtension(originalInputFile)
-                    );
-                    File.Copy(originalInputFile, asciiInputFile);
-                    inputFile = asciiInputFile;
-                }
-
-                asciiOutputFile = Path.Combine(
-                    asciiTempDir,
-                    Guid.NewGuid().ToString("N") + FileExtensions.Chd
-                );
-                outputFile = asciiOutputFile;
-            }
-            else
-            {
-                var stagingDir = Path.GetDirectoryName(originalOutputFile);
-                if (!string.IsNullOrEmpty(stagingDir))
-                {
-                    if (!Directory.Exists(stagingDir))
-                        Directory.CreateDirectory(stagingDir);
-                    asciiOutputFile = Path.Combine(
-                        stagingDir,
-                        Path.GetFileNameWithoutExtension(originalOutputFile)
-                        + "."
-                        + Guid.NewGuid().ToString("N")[..8]
-                        + StagingExtension
-                    );
-                    outputFile = asciiOutputFile;
-                }
-            }
-
-            args = $"{command} -i \"{inputFile}\" -o \"{outputFile}\" -f -np {cores}";
-            if (isRaw)
-            {
-                args += " -us 2352";
-            }
-            else if (
-                string.Equals(command, "createcd", StringComparison.Ordinal) && isCueDescriptor
-            )
-            {
-                var refs = await GameFileParser
-                    .GetReferencedFilesFromCueAsync(inputFile, static _ => { }, token)
-                    .ConfigureAwait(false);
-                if (
-                    refs.Any(static r =>
-                        r.EndsWith(FileExtensions.Raw, StringComparison.OrdinalIgnoreCase)
-                    )
-                )
-                    args += " -us 2352";
-            }
+            return false;
         }
 
-        // --- Fallback encoder: chdman ---
         LogMessage($"CHDMAN: {command} {Path.GetFileName(originalInputFile)}");
 
         using var process = new Process();
@@ -5288,7 +5203,7 @@ internal partial class MainWindow : IDisposable
                     catch (Exception ex)
                     {
                         LogError($" Failed to move temp output to destination: {ex.Message}");
-                        success = false;
+                        return false;
                     }
 
                 if (success)
@@ -5297,6 +5212,14 @@ internal partial class MainWindow : IDisposable
 
             if (token.IsCancellationRequested) return false;
 
+            // --- Fallback encoder: CHDSharp ---
+            LogWarning(
+                $"chdman failed for '{Path.GetFileName(originalInputFile)}'. Falling back to CHDSharp..."
+            );
+            if (await TryChdSharpFallbackAsync())
+                return true;
+
+            // --- Both encoders failed: report the chdman diagnostics ---
             var errorTextFinal = errorBuffer.ToString().TrimEnd();
 
             try
@@ -5447,6 +5370,115 @@ internal partial class MainWindow : IDisposable
             {
                 // ignored
             }
+        }
+
+        // Runs CHDSharp against the same command the primary chdman attempt used, on a fresh
+        // output staging path. The prepared input (ASCII copy or cue work directory) is kept —
+        // only the stale output staging is replaced — so the fallback never re-prepares and a
+        // cue's work set stays valid. Mutates asciiOutputFile/outputFile so the cleanup above
+        // removes the path the fallback actually wrote to.
+        async Task<bool> TryChdSharpFallbackAsync()
+        {
+            if (asciiOutputFile != null)
+                try
+                {
+                    if (File.Exists(asciiOutputFile))
+                        File.Delete(asciiOutputFile);
+                }
+                catch
+                {
+                    // ignored
+                }
+
+            if (asciiTempDir != null)
+            {
+                asciiOutputFile = Path.Combine(
+                    asciiTempDir,
+                    Guid.NewGuid().ToString("N") + FileExtensions.Chd
+                );
+            }
+            else
+            {
+                var stagingDir = Path.GetDirectoryName(originalOutputFile);
+                if (string.IsNullOrEmpty(stagingDir))
+                    return false;
+
+                if (!Directory.Exists(stagingDir))
+                    Directory.CreateDirectory(stagingDir);
+                asciiOutputFile = Path.Combine(
+                    stagingDir,
+                    Path.GetFileNameWithoutExtension(originalOutputFile)
+                    + "."
+                    + Guid.NewGuid().ToString("N")[..8]
+                    + StagingExtension
+                );
+            }
+
+            outputFile = asciiOutputFile;
+
+            var fallbackArgs = $"{command} -i \"{inputFile}\" -o \"{outputFile}\" -f -np {cores}";
+            if (isRaw)
+            {
+                fallbackArgs += " -us 2352";
+            }
+            else if (string.Equals(command, "createcd", StringComparison.Ordinal) && isCueDescriptor)
+            {
+                var refs = await GameFileParser
+                    .GetReferencedFilesFromCueAsync(inputFile, static _ => { }, token)
+                    .ConfigureAwait(false);
+                if (
+                    refs.Any(static r =>
+                        r.EndsWith(FileExtensions.Raw, StringComparison.OrdinalIgnoreCase)
+                    )
+                )
+                    fallbackArgs += " -us 2352";
+            }
+
+            LogMessage($"CHDSharp: {command} {Path.GetFileName(originalInputFile)}");
+
+            if (
+                !await RunEncoderProcessAsync(
+                    _chdSharpExePath,
+                    fallbackArgs,
+                    "CHDSharp",
+                    timeoutMinutes,
+                    token
+                )
+            )
+                return false;
+
+            // CHDSharp internally validates its output; trust the exit code.
+            try
+            {
+                var targetDir = Path.GetDirectoryName(originalOutputFile);
+                if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
+                    Directory.CreateDirectory(targetDir);
+                if (File.Exists(originalOutputFile))
+                {
+                    var deleted = await RetryingFileOperations
+                        .TryDeleteAsync(originalOutputFile, token)
+                        .ConfigureAwait(false);
+                    if (!deleted)
+                        throw new IOException(
+                            $"Could not delete existing destination '{originalOutputFile}'."
+                        );
+                }
+
+                var moved = await RetryingFileOperations
+                    .TryMoveAsync(outputFile, originalOutputFile, token)
+                    .ConfigureAwait(false);
+                if (!moved)
+                    throw new IOException(
+                        $"Could not move temp output '{outputFile}' to '{originalOutputFile}'."
+                    );
+            }
+            catch (Exception ex)
+            {
+                LogError($" Failed to move CHDSharp output to destination: {ex.Message}");
+                return false;
+            }
+
+            return true;
         }
     }
 
@@ -5959,6 +5991,16 @@ internal partial class MainWindow : IDisposable
         UpdateProcessingTimeDisplay();
         ResetSpeedCounters();
         ClearProgressDisplay();
+    }
+
+    /// <summary>
+    ///     Starts the operation stopwatch and the one-second UI tick that keeps the elapsed-time
+    ///     stat card counting while the operation runs.
+    /// </summary>
+    private void StartOperationTimer()
+    {
+        _operationTimer.Restart();
+        _elapsedTimeTimer.Start();
     }
 
     private void UpdateStatsDisplay()
