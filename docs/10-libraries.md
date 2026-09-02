@@ -5,13 +5,15 @@ nav_order: 11
 
 # 10. Embedded Libraries
 
-The solution ships three in-house libraries that replace external tools (maxcso, psxpackager) and add CloneCD support. All three multi-target `net10.0;net8.0`, are packable, and expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`. A fourth in-house library, **CHDSharp**, is consumed as a NuGet package and is covered in [§10.4](#104-chdsharp-nuget).
+The solution ships five in-house libraries that replace external tools (maxcso, psxpackager), add CloneCD support, and cover Alcohol 120% and UltraISO images. All five multi-target `net10.0;net8.0`, are packable, and expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`. A sixth in-house library, **CHDSharp**, is consumed as a NuGet package and is covered in [§10.4](#104-chdsharp-nuget).
 
 | Library | Purpose | Replaces |
 |---------|---------|----------|
 | **CCDSharp** | CloneCD `.ccd`/`.img`/`.sub` parsing + CUE/BIN conversion | — (new capability) |
 | **CSOSharp** | CSO/CISO decompression (deflate/zlib + LZ4) | `maxcso.exe` |
 | **PBPSharp** | PlayStation PBP extraction + SFO/TOC parsing | `psxpackager.exe` |
+| **Alcohol120Sharp** | Alcohol 120% `.mds`/`.mdf` parsing, subchannel stripping, split-volume joining, cue writing | — (new capability) |
+| **UltraIsoSharp** | UltraISO ISZ decompression back to the plain image | — (new capability) |
 
 ---
 
@@ -47,7 +49,8 @@ The solution ships three in-house libraries that replace external tools (maxcso,
 - `CueSheetWriter.GenerateCueSheet(binFileName, tocEntries)` — emits `FILE ... BINARY`, `TRACK nn MODE2/2352` (data) / `AUDIO` (audio), with `INDEX 00` for audio tracks computed as track start **minus 150-frame lead-in** (clamped ≥ 0).
 - SFO model: `SfoData` (magic `0x46535000`; `GetString`/`GetUInt32`; static `Keys` with `BOOTABLE`, `CATEGORY`, `DISC_ID`, `DISC_VERSION`, `LICENSE`, `PARENTAL_LEVEL`, `PSP_SYSTEM_VER`, `REGION`, `TITLE`), `SfoEntry` (formats 0x0204 string / 0x0404 uint32), `TocEntry`, `TrackType { Data = 0x41, Audio = 0x01 }`.
 - `PbpError` enum: `None=0, InvalidHeader=1, FileNotFound=2, IoError=3, CorruptFile=4, InvalidPsarHeader=5, DiscOutOfRange=6, ResourceNotFound=7, DecompressionError=8, TruncatedPsar=9, InvalidSfo=10`. `TruncatedPsar` is returned when the PSAR container parses but no ISO index follows (see `NoIsoIndexException`); `InvalidSfo` when the PARAM.SFO region lacks the `\0PSF` signature. The app maps these to targeted guidance ("most likely truncated or incomplete — re-download") instead of a generic corrupt-file message.
-- Integration: `ExtractPbpToCueBinAsync` (`MainWindow.xaml.cs:2918`) — multi-disc PBPs produce `"{name} - Disc N.bin/.cue"` sets; the result (`PbpExtractionResult`) carries `ErrorCode` + a human-readable `Error` so the caller can distinguish skippable conditions from real failures.
+- **Block decompression** uses SharpZipLib's raw `Inflater` (the same decompressor the popstation reference implementation uses for PSAR blocks), which tolerates a few streams the stricter .NET `DeflateStream` rejects; a failed block surfaces as `PbpError.DecompressionError`.
+- Integration: `ExtractPbpToCueBinAsync` (`MainWindow.xaml.cs:2959`) — multi-disc PBPs produce `"{name} - Disc N.bin/.cue"` sets; the result (`PbpExtractionResult`) carries `ErrorCode` + a human-readable `Error` so the caller can distinguish skippable conditions from real failures.
 - Tests: `PbpFileTests`, `PbpHeaderTests`, `SfoDataTests`, `SfoEntryTests`, `TocEntryTests`, `CueSheetWriterTests`, plus real-file integration tests (`PbpFileIntegrationTests`).
 
 ## 10.4 CHDSharp (NuGet)
@@ -56,5 +59,24 @@ The solution ships three in-house libraries that replace external tools (maxcso,
 
 - Consumed as a NuGet package (`CHDSharp` v1.4.3), not a project reference; the app also bundles the project's CLI (`CHDSharp.exe`) and MAME's `chdman.exe` side by side, preferring the native-architecture binary on ARM64.
 - Capabilities: CHD V1–V5, all 10 compression codecs (zlib, lzma, huffman, flac, zstd, avhu + CD variants), parent/child chaining, parallel verification, and full CHD creation (`createcd`/`createdvd`/`createhd`/`copy`) with output that is **byte-identical to `chdman`**.
-- The byte-parity claim is validated by the `CHDBattleTest` battleground project (see [Testing §11.6](11-testing.md#116-chdbattletest-battleground)), which on the current corpus reports zero mismatches against `chdman` 0.289 across decode, encode, and cross-verification battles.
+- The byte-parity claim was validated by the (since-removed) `CHDBattleTest` battleground project — see [Testing §11.6](11-testing.md#116-chdbattletest-battleground-historical) — which reported zero mismatches against `chdman` 0.289 across decode, encode, and cross-verification battles on a 56-disc corpus.
+- In the conversion pipeline CHDSharp is the **automatic fallback**: the bundled `chdman` is the primary encoder, and a file that chdman cannot convert is retried with `CHDSharp.exe` — see [Conversion Pipeline §5.3](05-conversion-pipeline.md#53-converttochdasync--encoder-selection-chdman-first-chdsharp-fallback).
 - When the library cannot decode a CHD (corrupt file, A/V laserdisc), the app falls back to `chdman` for extraction — see [Extraction & Verification](06-extraction-and-verification.md).
+
+## 10.5 Alcohol120Sharp
+
+**Purpose**: turn an Alcohol 120% image (`.mds` descriptor + `.mdf` data, including split `.i00`/`.i01` volumes) into something the encoder can read.
+
+- Main types: `MdsParser` (`IsMdsFile`, `Parse`), `MdsDisc`/`MdsTrack` (parsed model with sector-size classification), `MdsInputPreparer` (`PrepareAsync` → cue / DVD image / failure; `StripSubchannelAsync`, `WriteCueAsync`, `FormatMsf`), and `SplitImageJoiner` (`TryGetVolumeSet`, `JoinAsync`, `GetTotalBytes` for `.001`/`.i00` volume sets).
+- The three preparation shapes (plain 2352, subchannel strip, ISO-as-DVD) and the recovered `.mds` layout are documented in [Utilities Reference §8.12](08-utilities-reference.md#812-alcohol-120-support-alcohol120sharp).
+- Integration: `ProcessMdsFileForConversionAsync` prepares the work set, then the conversion funnel takes the cue (or DVD image).
+- Tests: `MdsTests.cs`, `SplitImageJoinerTests.cs`.
+
+## 10.6 UltraIsoSharp
+
+**Purpose**: decompress UltraISO `.isz` images back to the plain images they were made from, per EZB Systems' ISZ File Format Specification 1.00.
+
+- Main types: `IszHeader` (packed 48-byte header with `TryRead` validation), `IszDecoder` (`TryReadHeaderAsync`, `DecodeAsync`), `IszSegment`/`IszChunkType`/`IszDecodeResult`.
+- Supports whole and multi-segment images, zlib / bzip2 / stored / zero-elided chunks; encryption is refused by name, truncation and damaged tables are reported rather than guessed at.
+- Integration: `ResolveIszAsync` decodes the ISZ to a temp image, which is then classified and converted like any other image.
+- Tests: `IszHeaderTests.cs`, `IszDecoderTests.cs`.

@@ -55,6 +55,7 @@ Environment Details includes: date/time, app name + version, OS version, archite
 ## 9.3 Flood Control & Failure Semantics
 
 - Only **one** bug report is in flight at a time (`BugReportApiSink` interlocked flag); bursts of warnings are coalesced. A 12-second safety timer clears the flag even if the HTTP call hangs, preventing indefinite throttling.
+- **Duplicate suppression**: an identical message already forwarded within the last 10 minutes (`DuplicateWindow`) is dropped — a failing batch that retries the same input, or a loop logging the same warning per file, sends one report instead of one per occurrence.
 - Sending is fire-and-forget from the sink; failures are logged at `Debug` and never surface to the user.
 - Cancellation tokens are respected; `OperationCanceledException` is rethrown only when the caller's token is cancelled.
 
@@ -67,7 +68,7 @@ Environment Details includes: date/time, app name + version, OS version, archite
 | **Stats noise** | `"Failed to record usage statistics"` |
 | **Drive / temp-space info** | `"Temp drive ("`, `"Output drive ("`, `"drive has "`, `"drive ("`, `"input files total"`, `"CHD files total"`, `"You may run out of disk space"`, `"disk space"`, `"disk full"` |
 | **Extraction outcomes** | `"No supported primary files found in archive"`, `"Partial extraction:"`, `"File not found, skipping:"` |
-| **Tooling** | `"chdman.exe not found"`, `"CRITICAL ERROR: The following required component is missing"` |
+| **Tooling** | `"chdman.exe not found"`, `"CRITICAL ERROR: The following required component"` |
 | **Corrupt/unopenable CHD data** | `"Not a valid CHD file"`, `"Invalid or corrupt data"`, `"Cannot open file"` |
 | **chdman output (user data)** | `"Fatal error occurred"` (chdman exit summary), `"cannot create std::vector"` (chdman C++ crash on user input) |
 | **Cue/dependency validation** | `"referenced files are missing"`, `"could not be resolved"`, `"could not validate referenced files"`, `"MP3 audio track could not be decoded"`, `"is not divisible by"`, `"The file or directory is corrupted and unreadable"`, `"Retry via temp failed"` |

@@ -67,7 +67,7 @@ The source and output folders may be the same, and the output may sit inside the
 
 ### Batch preflight
 
-Before the per-file loop, `WarnAboutOutputCollisions` reports inputs that would map to the same output `.chd` (the name comes from the input's base name alone, so `Game.cue`, `Game.zip` and `Game.ccd` in one folder all target `Game.chd`). This is a warning, not a block — but combined with the staging file in §5.3 it means the second conversion can no longer destroy the first one's output.
+Before the per-file loop, `ResolveOutputCollisions` drops inputs that would map to the same output `.chd` (the name comes from the input's base name alone, so `Game.cue`, `Game.zip` and `Game.ccd` in one folder all target `Game.chd`). The first non-archive input of each colliding group is kept — the original image beats an archived copy of the same disc — and every dropped input is logged with the reason. Combined with the staging file in §5.3 this means a duplicate can neither destroy a finished CHD nor waste an extraction.
 
 ### Retry-via-temp-copy fallback
 
@@ -83,17 +83,21 @@ If the direct conversion of the original file fails, `TryRetryConversionViaTempC
 
 > **Why the destination is no longer deleted on failure.** chdman is invoked with `-f` and truncates its output file *before* it can fail, so a second input mapping to the same output name used to wipe out a working CHD. Conversions now write to a `<name>.<8hex>.chdtmp` staging file and are moved into place only after success (see §5.3), and the old unconditional "delete the partial output" calls were removed.
 
-**Deleting originals** — `DeleteOriginalGameFilesAsync` (`:3134`): for `.cue`/`.gdi`/`.toc` it also deletes every referenced data file (`GameFileParser`); for `.ccd` it deletes the `.img`/`.sub`/`.cdt` companions. All deletions go through `RetryingFileOperations.TryDeleteAsync` via `TryDeleteFileAsync` (`:3362`), which additionally kills stray chdman processes after the second failed attempt (`KillChdmanProcesses`, `:3380`).
+**Deleting originals** — `DeleteOriginalGameFilesAsync` (`:6131`): for `.cue`/`.gdi`/`.toc` it also deletes every referenced data file (`GameFileParser`); for `.ccd` it deletes the `.img`/`.sub`/`.cdt` companions. All deletions go through `RetryingFileOperations.TryDeleteAsync` via `TryDeleteFileAsync` (`:6470`), which additionally kills stray chdman processes after the second failed attempt (`KillChdmanProcesses`, `:6488`).
 
 ## 5.3 ConvertToChdAsync — Encoder Selection (chdman first, CHDSharp fallback)
 
-`ConvertToChdAsync` is the single funnel for every conversion. Command and arguments are built once (below) and the same command line is offered to both encoders: bundled `chdman` as the primary encoder, `CHDSharp.exe` (or `CHDSharp_arm64.exe` on ARM64) as the automatic fallback.
+`ConvertToChdAsync` (`:4806`) is the single funnel for every conversion. Command and arguments are built once (below) and the same command line is offered to both encoders: bundled `chdman` as the primary encoder, `CHDSharp.exe` (or `CHDSharp_arm64.exe` on ARM64) as the automatic fallback.
 
 ### Primary encoder: chdman
 
 The chdman process-execution path below runs first. On success the staged `.chdtmp` file is moved into place and the conversion is done.
 
-If chdman is missing or fails, the run falls back to CHDSharp (`chdman failed ... Falling back to CHDSharp...`): `RunEncoderProcessAsync` (`:4597`) drives the process with the same command line, the exit code is trusted because CHDSharp validates its own output before returning, and the staged output is moved into place on success. The log line reads `CHDSharp: createcd game.cue`, mirroring the chdman invocation it replaces. At startup the app warns when `chdman.exe` is not found ("chdman is the primary encoder"), and a file is refused only when neither encoder is present — the status bar carries an indicator for each.
+If chdman is missing or fails, the run falls back to CHDSharp (`chdman failed ... Falling back to CHDSharp...`): the local `TryChdSharpFallbackAsync` (`:5433`) re-runs the same command line through `RunEncoderProcessAsync` (`:4660`) on a fresh output staging path, keeping the already-prepared input (ASCII copy or cue work directory) so the fallback never re-prepares and a cue's work set stays valid. The exit code is trusted because CHDSharp validates its own output before returning, and the staged output is moved into place on success. The log line reads `CHDSharp: createcd game.cue`, mirroring the chdman invocation it replaces. At startup the app warns when `chdman.exe` is not found ("chdman is the primary encoder"), and a file is refused only when neither encoder is present — the status bar carries an indicator for each.
+
+### Batch preflight
+
+`PerformBatchConversionAsync` (`:1606`) probes chdman once before the loop: an executable the OS cannot start, or one that crashes the `chdman help` compatibility check, is stopped here with a single actionable message instead of once per file. When the CHDSharp fallback is available, however, the batch is **not** refused — a missing chdman routes every file through the fallback (`:5004`), and a chdman that crashes the startup probe continues with a warning, because each file still converts via CHDSharp. Duplicate output targets are resolved up front by `ResolveOutputCollisions` (`:1685`): the first non-archive input of each colliding group is kept and the rest are skipped with a log line (see [Utilities Reference](08-utilities-reference.md#inputfilefilter)).
 
 ### Output staging
 
@@ -111,15 +115,15 @@ command = forceCd || hasCue || (!forceDvd && !isIso && !isImg && !isRaw) ? "crea
 - `hasCue = isImg && File.Exists(Path.ChangeExtension(input, ".cue"))` — an `.img` with a sibling `.cue` is treated as a CD image.
 - **Verb choice is still extension-driven here**, but this code is now only reached for images that content inspection (§5.2) did not claim. So `Data size ... is not divisible by sector size` should now mean a genuinely broken file rather than a mislabelled one.
 - Base args: `{command} -i "<in>" -o "<out>" -f -np {cores}`.
-- **`.raw` inputs get `-us 2352`** (`:2478–2481`) — chdman's `createraw` requires an explicit unit size when no parent CHD is supplied ("Unit size must be specified if no output parent CHD is supplied").
+- **`.raw` inputs get `-us 2352`** (`:4846–4853`) — chdman's `createraw` requires an explicit unit size when no parent CHD is supplied ("Unit size must be specified if no output parent CHD is supplied").
 - **`.cue`/`.toc` descriptors referencing `.raw` tracks also get `-us 2352`** — when a cue file references raw audio tracks (e.g. `track02.raw`), the `createcd` command also needs an explicit unit size. `GameFileParser.GetReferencedFilesFromCueAsync` is called to check for `.raw` references, and `-us 2352` is appended to the arguments.
 - `-np` (processors) comes from a UI/core setting.
 
 ### Pre-flight validations
 
 1. **Sector-size warning for DVD**: `IsoSectorValidator.GetSectorSizeWarning` flags sizes not divisible by 2352/2048/2336/2324/2448/2368, but conversion proceeds — the hard gate is the post-failure check (some legitimate images use non-standard layouts).
-2. **Cue work-dir preparation** for `.cue`/`.toc` (`:2503–2527`): `PrepareCueWorkDirAsync` (`:2417`) → `CueWorkDirectory.PrepareAsync` (see [Utilities](08-utilities-reference.md#cueworkdirectory)). If MP3 tracks exist and decoding failed, conversion is aborted with a clear message instead of handing chdman an MP3 cue. Overlong paths (descriptor or referenced files at or beyond MAX_PATH) also trigger the copy-based work directory.
-3. **ASCII temp work dir** (`:2508–2546`): if any part of the input or output path is unsafe for chdman — non-ASCII characters *anywhere along the path* (an accented user name, a non-Latin folder name) or a total length at or beyond MAX_PATH (260) — the input is copied into an ASCII-safe GUID-named staging directory and the output is written there too; after success the output is moved to the real destination with `RetryingFileOperations.TryMoveAsync`. Only an unsafe *input* is staged: an input chdman can read in place (e.g. an ASCII cue whose destination path is overlong) keeps resolving its `FILE` entries against its original directory. The staging location itself is chosen by `PathUtils.CreateAsciiSafeTempDirectory`, because the system temp folder lives under the user profile and can contain exactly the characters this fallback exists to avoid (`C:\Users\Kauê Chacon\...`).
+2. **Cue work-dir preparation** for `.cue`/`.toc` (`:4900–4916`): `PrepareCueWorkDirAsync` (`:4608`) → `CueWorkDirectory.PrepareAsync` (see [Utilities](08-utilities-reference.md#cueworkdirectory)). If MP3 tracks exist and decoding failed, conversion is aborted with a clear message instead of handing chdman an MP3 cue. Overlong paths (descriptor or referenced files at or beyond MAX_PATH) also trigger the copy-based work directory.
+3. **ASCII temp work dir** (`:4924–4966`): if any part of the input or output path is unsafe for chdman — non-ASCII characters *anywhere along the path* (an accented user name, a non-Latin folder name) or a total length at or beyond MAX_PATH (260) — the input is copied into an ASCII-safe GUID-named staging directory and the output is written there too; after success the output is moved to the real destination with `RetryingFileOperations.TryMoveAsync`. Only an unsafe *input* is staged: an input chdman can read in place (e.g. an ASCII cue whose destination path is overlong) keeps resolving its `FILE` entries against its original directory. The staging location itself is chosen by `PathUtils.CreateAsciiSafeTempDirectory`, because the system temp folder lives under the user profile and can contain exactly the characters this fallback exists to avoid (`C:\Users\Kauê Chacon\...`).
 
 ### Process execution (chdman primary)
 
@@ -132,13 +136,13 @@ command = forceCd || hasCue || (!forceDvd && !isIso && !isImg && !isRaw) ? "crea
 ### Exit-code handling
 
 - Success = exit code 0 and no cancellation.
-- **createdvd fallback**: if the error output contains "Unrecognized track type" and the command was `createcd` without user-forced CD, the app recurses with `forceDvd=true` (`:2694–2699`). A recursion depth guard limits this to one retry; exceeding it logs `Retry limit reached` instead of recursing further.
-- **Valid-output tolerance**: a non-zero exit that still produced a >0-byte output file is treated as success (`:2701–2716`).
-- **Sector-size hard check** (`:2761–2794`): for non-descriptor inputs, if the file size is not divisible by any of 2352/2048/2336/2324, the conversion fails with "file size ... is not divisible by any standard sector size ... The file may be corrupt or truncated."
-- **Disk-space detection** (`IsDiskSpaceError`, `:3281`): keywords "not enough space", "not enough disk space", "disk full", "no space left", "insufficient disk space".
-- **Error line selection** (`SelectChdmanErrorLine`, `:2860`): scans the stderr buffer from the **last** line upward, skipping progress lines (`% complete`, `Compressing,`, `Converting,`, `Output bytes`, `Compression ratio`, `ratio=`) and the `Fatal error occurred: N` exit summary, and returns the last real error line. This fixed the class of bugs where the first line of stderr was a progress line ("Compressing, 0.0% complete... (ratio=100.0%)"). When the only output is a fatal error summary, a descriptive message is returned instead of the cryptic exit code.
-- **Abnormal-termination decoding** (`DescribeChdmanCrash`): a negative exit code means Windows killed chdman before it printed anything. Common NTSTATUS codes are named (e.g. `-1073741795` → `0xC000001D, STATUS_ILLEGAL_INSTRUCTION - the CPU executed an unsupported instruction`) with guidance to replace `chdman.exe` with a CPU-appropriate build and check antivirus quarantine. The startup compatibility check (`ValidateChdmanCompatibilityAsync`) runs `chdman help` first and refuses to start a batch when even that crashes, so one clear message replaces a run of per-file failures.
-- **Path substitution via quoted matching** (`:3474,3494,3501,3520`): argument paths are replaced using `$"\"{originalPath}\""` quoted-pattern matching instead of bare `string.Replace`, preventing a path that is a substring of another argument from causing corruption.
+- **createdvd fallback**: if the error output contains "Unrecognized track type" and the command was `createcd` without user-forced CD, the app recurses with `forceDvd=true` (`:5173–5194`). A recursion depth guard limits this to one retry; exceeding it logs `Retry limit reached` instead of recursing further.
+- **Valid-output tolerance**: a non-zero exit that still produced a >0-byte output file is treated as success (`:5210–5226`).
+- **Sector-size hard check** (`:5290–5310`): for non-descriptor inputs, if the file size is not divisible by any of 2352/2048/2336/2324, the conversion fails with "file size ... is not divisible by any standard sector size ... The file may be corrupt or truncated."
+- **Disk-space detection** (`IsDiskSpaceError`, `:6313`): keywords "not enough space", "not enough disk space", "disk full", "no space left", "insufficient disk space".
+- **Error line selection** (`SelectChdmanErrorLine`, `:5546`): scans the stderr buffer from the **last** line upward, skipping progress lines (`% complete`, `Compressing,`, `Converting,`, `Output bytes`, `Compression ratio`, `ratio=`) and the `Fatal error occurred: N` exit summary, and returns the last real error line. This fixed the class of bugs where the first line of stderr was a progress line ("Compressing, 0.0% complete... (ratio=100.0%)"). When the only output is a fatal error summary, a descriptive message is returned instead of the cryptic exit code. `Input/output error` lines get extra guidance (failing or disconnected drive, antivirus/cloud-sync locks, damaged image).
+- **Abnormal-termination decoding** (`DescribeChdmanCrash`): a negative exit code means Windows killed chdman before it printed anything. Common NTSTATUS codes are named (e.g. `-1073741795` → `0xC000001D, STATUS_ILLEGAL_INSTRUCTION - the CPU executed an unsupported instruction`) with guidance to replace `chdman.exe` with a CPU-appropriate build and check antivirus quarantine. The batch preflight (`ValidateChdmanCompatibilityAsync`) runs `chdman help` first; when the CHDSharp fallback is available a crash there logs a warning and the batch continues (each file converts via the fallback), otherwise the batch is refused up front so one clear message replaces a run of per-file failures.
+- **Path substitution via quoted matching** (`:4906,4953,4964,4988`): argument paths are replaced using `$"\"{originalPath}\""` quoted-pattern matching instead of bare `string.Replace`, preventing a path that is a substring of another argument from causing corruption.
 - **Diagnostics on unexplained errors**: when the selected error line contains "couldn't find bin file" or "Unknown error", a capped, sorted directory listing of the input folder is logged (`GetDirectoryDiagnostics`).
 
 ## 5.4 Cue Normalization & Work Directories
@@ -180,11 +184,11 @@ See [Services Reference → ArchiveService](07-services-reference.md#archive-ser
 
 These all converge on `ClassifyRecoveredImageAsync` (§5.2) once the image has been reconstructed.
 
-### Split volume sets — `SplitImageJoiner`
+### Split volume sets — `SplitImageJoiner` (Alcohol120Sharp)
 
 `.001`/`.002`… and `.i00`/`.i01`… sets are concatenated into one temp file. Only the **first** volume is a registered input, so a set is offered once rather than once per piece. A multi-part *archive* is detected and refused separately, with instructions, since that needs different tooling. A set whose parts do not join to a whole number of sectors is reported as needing re-download rather than converted.
 
-### ISZ — `Utilities/Isz/`
+### ISZ — `UltraIsoSharp`
 
 Written against EZB Systems' ISZ File Format Specification 1.00. `IszHeader` parses the packed 48-byte header; `IszDecoder` walks the chunk table, splitting each entry's top two bits into the storage kind (`ADI_ZERO`, `ADI_DATA`, `ADI_ZLIB`, `ADI_BZ2`) and the remainder into the stored length, then decompresses through `ZLibStream` and SharpCompress's `BZip2Stream`.
 
@@ -204,7 +208,7 @@ ECM shrinks a raw CD image by discarding each sector's EDC checksum and Reed-Sol
 - Mode 1 parity covers the sector address; **Mode 2 Form 1 parity is computed over a zeroed address** so it stays valid when the sector is read without its header. That is exactly what lets ECM store Mode 2 sectors as 2336 bytes and emit the 16-byte sync and header as a literal run.
 - Every ECM file ends with a checksum of the whole restored image, which is always validated — a damaged file is reported rather than turned into a plausible one.
 
-### Alcohol 120% — `Utilities/Mds/`
+### Alcohol 120% — `Alcohol120Sharp`
 
 `MdsParser` reads the descriptor's session and track tables; `MdsInputPreparer` picks one of three shapes:
 

@@ -22,7 +22,7 @@ This documentation covers the project from both a user and a developer perspecti
 | 7 | [Services Reference](07-services-reference.md) | Developers | ArchiveService, UpdateService, StatsService, FileWatcherService, AppHttpClient, more |
 | 8 | [Utilities Reference](08-utilities-reference.md) | Developers | PathUtils, CueNormalizer, CueWorkDirectory, GameFileParser, BinCueGenerator, content detection, ISZ/ECM/Alcohol, more |
 | 9 | [Bug Reporting System](09-bug-reporting.md) | Developers | Bug report API contract, sink, exclusion patterns, environment details |
-| 10 | [Embedded Libraries](10-libraries.md) | Developers | CCDSharp, CSOSharp, PBPSharp: purpose, API, integration |
+| 10 | [Embedded Libraries](10-libraries.md) | Developers | CCDSharp, CSOSharp, PBPSharp, Alcohol120Sharp, UltraIsoSharp: purpose, API, integration |
 | 11 | [Testing](11-testing.md) | Developers | Test project layout, coverage by file, integration tests, how to run |
 | 12 | [Application Data](12-application-data.md) | Users & devs | AppData layout: logs, screenshots, temp directories, cleanup |
 | 13 | [Troubleshooting](13-troubleshooting.md) | Users & devs | Common errors, their meaning, and how to resolve them |
@@ -32,12 +32,12 @@ This documentation covers the project from both a user and a developer perspecti
 | Fact | Value |
 |------|-------|
 | **Application name** | `BatchConvertToCHD` |
-| **Latest version** | 3.5.0 |
+| **Latest version** | 3.5.1 |
 | **Target framework** | .NET 10.0 (`net10.0-windows`), WPF |
 | **Platform** | Windows 10 / 11, x64 and ARM64 |
 | **License** | GPL v3.0 |
-| **Primary encoder** | `CHDSharp` (PureLogicCode), bundled as `CHDSharp.exe` / `CHDSharp_arm64.exe` — chdman byte-identical output |
-| **Fallback encoder** | `chdman` (MAME Project, 0.289), bundled as `chdman.exe` / `chdman_arm64.exe` |
+| **Primary encoder** | `chdman` (MAME Project, 0.289), bundled as `chdman.exe` / `chdman_arm64.exe` |
+| **Fallback encoder** | `CHDSharp` (PureLogicCode), bundled as `CHDSharp.exe` / `CHDSharp_arm64.exe` — chdman byte-identical output |
 | **External tools needed** | None beyond the bundled `CHDSharp`, `chdman` and `7za` — every input format is handled in-process |
 | **Output format** | `.chd` (Compressed Hunks of Data) |
 | **Logs** | `%LocalAppData%\BatchConvertToCHD\logs` |
@@ -48,23 +48,23 @@ This documentation covers the project from both a user and a developer perspecti
 
 ```
 CSharp_BatchConvertToCHD/
-├── BatchConvertToCHD/            # WPF application (net10.0-windows)
-│   ├── MainWindow.xaml(.cs)      # Main UI + conversion/extraction/verification logic
-│   ├── App.xaml(.cs)             # Startup, Serilog, exception handlers
-│   ├── AppConfig.cs              # Central configuration constants
-│   ├── Models/                   # FileItem, GitHubRelease, PbpExtractionResult
-│   ├── Services/                 # Archive, BugReport, FileWatcher, Stats, Update, ...
-│   └── Utilities/                # PathUtils, CueNormalizer, GameFileParser, ...
-│       ├── Ecm/                  # in-process ECM decoding
-│       ├── Isz/                  # in-process ISZ decompression
-│       └── Mds/                  # Alcohol 120% .mds/.mdf support
-├── BatchConvertToCHD.Tests/      # xUnit test suite (777 tests)
-├── CCDSharp/                     # CloneCD (.ccd/.img/.sub) parsing library
-├── CSOSharp/                     # CSO/CISO decompression library (deflate + LZ4)
-├── PBPSharp/                     # PlayStation PBP extraction + SFO parsing library
-├── docs/                         # This wiki
-├── References/                   # Third-party reference sources (not part of the build)
-└── CSharp_BatchConvertToCHD.sln  # Solution
+├── Alcohol120Sharp/                # Alcohol 120% (.mds/.mdf) parsing library
+├── BatchConvertToCHD/              # WPF application (net10.0-windows)
+│   ├── MainWindow.xaml(.cs)        # Main UI + conversion/extraction/verification logic
+│   ├── App.xaml(.cs)               # Startup, Serilog, exception handlers
+│   ├── AppConfig.cs                # Central configuration constants
+│   ├── Models/                     # FileItem, GitHubRelease, PbpExtractionResult
+│   ├── Services/                   # Archive, BugReport, FileWatcher, Stats, Update, ...
+│   └── Utilities/                  # PathUtils, CueNormalizer, GameFileParser, ...
+│       └── Ecm/                    # in-process ECM decoding
+├── BatchConvertToCHD.Tests/        # xUnit test suite (813 tests)
+├── CCDSharp/                       # CloneCD (.ccd/.img/.sub) parsing library
+├── CSOSharp/                       # CSO/CISO decompression library (deflate + LZ4)
+├── PBPSharp/                       # PlayStation PBP extraction + SFO parsing library
+├── UltraIsoSharp/                  # UltraISO ISZ decompression library
+├── docs/                           # This wiki
+├── References/                     # Third-party reference sources (not part of the build)
+└── CSharp_BatchConvertToCHD.sln    # Solution
 ```
 
 ## 🚀 Where to Start

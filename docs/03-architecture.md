@@ -48,45 +48,41 @@ CSharp_BatchConvertToCHD.sln
 │       ├── PathUtils.cs                   → temp dirs, path sanitizing, relative paths
 │       ├── RawCdImageDetector.cs          → raw 2352 sector sniffing + cue staging
 │       ├── RetryingFileOperations.cs      → retry-with-backoff delete/move
-│       ├── SplitImageJoiner.cs            → rejoins .001/.002 and .i00/.i01 sets
 │       ├── TrackBinCueBuilder.cs          → multi-FILE cue for "(Track N)" bin sets
-│       ├── Ecm/                           → in-process ECM decoding
-│       │   ├── CdSectorEccEdc.cs          → regenerates sector EDC + Reed-Solomon parity
-│       │   ├── EcmImageDecoder.cs         → ECM block-stream decoder
-│       │   └── EcmDecodeResult.cs
-│       ├── Isz/                           → in-process ISZ decompression
-│       │   ├── IszHeader.cs               → the packed 48-byte header
-│       │   ├── IszDecoder.cs              → chunk table + zlib/bzip2/stored/zero chunks
-│       │   ├── IszSegment.cs / IszChunkType.cs / IszDecodeResult.cs
-│       └── Mds/                           → Alcohol 120% support
-│           ├── MdsParser.cs               → .mds session/track table parsing
-│           ├── MdsInputPreparer.cs        → cue / subchannel strip / DVD decision
-│           └── MdsDisc.cs / MdsTrack.cs
-├── BatchConvertToCHD.Tests/               (xUnit, 777 tests; Fixtures/ holds ecm-sample.ecm)
-├── CCDSharp/                              (CloneCD .ccd/.img/.sub parsing; net10.0;net8.0)
-├── CSOSharp/                              (CSO/CISO decompression; net10.0;net8.0)
-├── PBPSharp/                              (PBP/SFO parsing; net10.0;net8.0)
-└── References/                            (third-party sources — not part of the build)
+│       └── Ecm/                           → in-process ECM decoding
+│           ├── CdSectorEccEdc.cs          → regenerates sector EDC + Reed-Solomon parity
+│           ├── EcmImageDecoder.cs         → ECM block-stream decoder
+│           └── EcmDecodeResult.cs
+├── BatchConvertToCHD.Tests/               (xUnit, 813 tests; Fixtures/ holds ecm-sample.ecm)
+├── Alcohol120Sharp/                         (Alcohol 120% .mds/.mdf parsing; net10.0;net8.0)
+├── CCDSharp/                                (CloneCD .ccd/.img/.sub parsing; net10.0;net8.0)
+├── CSOSharp/                                (CSO/CISO decompression; net10.0;net8.0)
+├── PBPSharp/                                (PBP/SFO parsing; net10.0;net8.0)
+├── UltraIsoSharp/                           (UltraISO ISZ decompression; net10.0;net8.0)
+└── References/                              (third-party sources — not part of the build)
 ```
 
 ### Dependency graph
 
 ```
-                 ┌─────────────────────────────┐
-                 │      BatchConvertToCHD      │  (WPF app)
-                 └───┬────────┬────────┬───────┘
-     Project refs    │        │        │
-        ┌────────────▼──┐  ┌──▼────────▼─────┐
-        │    CCDSharp    │  │  CSOSharp       │  PBPSharp
-        └───────────────┘  └─────────────────┘
+                 ┌──────────────────────────────────┐
+                 │         BatchConvertToCHD        │  (WPF app)
+                 └───┬───────┬───────┬───────┬──────┘
+      Project refs   │       │       │       │
+         ┌───────────▼─┐ ┌───▼──────▼──┐ ┌──▼──────────┐
+         │  CCDSharp    │ │  CSOSharp   │ │  PBPSharp   │
+         └──────────────┘ └─────────────┘ └─────────────┘
+         ┌──────────────────────┐  ┌─────────────────────┐
+         │    Alcohol120Sharp   │  │    UltraIsoSharp    │
+         └──────────────────────┘  └─────────────────────┘
      NuGet: CHDSharp 1.4.3, WPF-UI, SharpCompress, NAudio, Serilog
 ```
 
-- The app references `CCDSharp`, `CSOSharp`, `PBPSharp` as project references (`BatchConvertToCHD.csproj:58–60`).
-- All three libraries multi-target `net10.0;net8.0`, are packable, and expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`.
-- `BatchConvertToCHD.Tests` references the app (internals visible) plus `CSOSharp` and `PBPSharp` — but **not** `CCDSharp` (there are no CCDSharp unit tests today; see [Testing](11-testing.md)).
+- The app references `Alcohol120Sharp`, `CCDSharp`, `CSOSharp`, `PBPSharp` and `UltraIsoSharp` as project references.
+- All five libraries multi-target `net10.0;net8.0`, are packable, and expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`.
+- `BatchConvertToCHD.Tests` references the app (internals visible) plus `Alcohol120Sharp`, `CSOSharp`, `PBPSharp` and `UltraIsoSharp` — but **not** `CCDSharp` (there are no CCDSharp unit tests today; see [Testing](11-testing.md)).
 
-> **Why ISZ, ECM and Alcohol support are not libraries.** CCDSharp, CSOSharp and PBPSharp are separate packable projects, but `Utilities/Isz`, `Utilities/Ecm` and `Utilities/Mds` live inside the app. The deciding factor is testability: the test project references the app and sees its internals, but does not reference `CCDSharp`, so a new library project would need solution and csproj wiring before a single test could run against it. Nothing about these three needs to be redistributable on its own.
+> **Why ISZ and Alcohol support moved into libraries.** `UltraIsoSharp` and `Alcohol120Sharp` were split out of the app's utilities into standalone packable projects (they are self-contained formats with redistributable value), while ECM decoding remains in-app because it is tightly coupled to the cue staging flow. The test project references both new libraries directly.
 
 ---
 
@@ -135,55 +131,57 @@ Line references: `App.xaml.cs:35–145`, `MainWindow.xaml.cs:87–172`.
 
 ```
 User clicks Start Conversion
-  └─ StartConversionButton_ClickAsync              (MainWindow.xaml.cs:1025)
+  └─ StartConversionButton_ClickAsync              (MainWindow.xaml.cs:1275)
        ├─ validate paths (ValidateAndNormalizePath)
        ├─ read options (delete originals, smaller-first, force CD/DVD, timeout)
        ├─ RenewCancellationTokenSource
        ├─ SetControlsState(false)
-       └─ PerformBatchConversionAsync              (:1292)
-            ├─ validate encoder access + compatibility (CHDSharp, chdman)
-            ├─ optional sort by size (smaller first)
-            ├─ CheckDiskSpace (free space warnings)
-            ├─ InputFileFilter + WarnAboutOutputCollisions (batch preflight)
-            └─ per file: ProcessSingleFileForConversionAsync
-                 ├─ missing file? → FileWatcherService diagnostics
-                 ├─ TryResolveByContentAsync  ← content before extension
-                 │    ├─ split volume set → SplitImageJoiner → classify
-                 │    ├─ Isz  → ResolveIszAsync   (Utilities/Isz)  → classify
-                 │    ├─ Ecm  → ResolveEcmAsync   (Utilities/Ecm)  → classify
-                 │    ├─ Chd  → skip ("already a CHD")
-                 │    └─ container extension, plain image inside → generated cue
-                 ├─ else route by extension:
-                 │    .cso   → ProcessCsoFileForConversionAsync
-                 │    archive→ ProcessArchiveFileForConversionAsync
-                 │    .pbp   → ProcessPbpFileForConversionAsync
-                 │    .ccd   → ProcessCcdFileForConversionAsync
-                 │    .mds   → ProcessMdsFileForConversionAsync   (Utilities/Mds)
-                 │    other  → TryStageCueForRawImageAsync → direct conversion
-                 ├─ ValidateDependentFilesAsync (cue/gdi/toc)
-                 ├─ TryDirectConversionAsync
-                 │    └─ ConvertToChdAsync  → writes <name>.<hex>.chdtmp, moves on success
-                 ├─ fallback: TryRetryConversionViaTempCopyAsync
-                 └─ HandleConversionResultAsync
-                      ├─ success → optionally delete originals + prune empty dirs
-                      └─ failure → leave the destination alone, keep source
+       └─ PerformBatchConversionAsync              (:1606)
+             ├─ encoder preflight: probe chdman access + compatibility; continue on
+             │   the CHDSharp fallback when chdman is missing or fails the probe
+             ├─ optional sort by size (smaller first)
+             ├─ CheckDiskSpace (free space warnings)
+             ├─ InputFileFilter + ResolveOutputCollisions (batch preflight)
+             └─ per file: ProcessSingleFileForConversionAsync
+                  ├─ missing file? → FileWatcherService diagnostics
+                  ├─ TryResolveByContentAsync  ← content before extension
+                  │    ├─ split volume set → SplitImageJoiner (Alcohol120Sharp) → classify
+                  │    ├─ Isz  → ResolveIszAsync   (UltraIsoSharp)  → classify
+                  │    ├─ Ecm  → ResolveEcmAsync   (Utilities/Ecm)  → classify
+                  │    ├─ Chd  → skip ("already a CHD")
+                  │    └─ container extension, plain image inside → generated cue
+                  ├─ else route by extension:
+                  │    .cso   → ProcessCsoFileForConversionAsync
+                  │    archive→ ProcessArchiveFileForConversionAsync
+                  │    .pbp   → ProcessPbpFileForConversionAsync
+                  │    .ccd   → ProcessCcdFileForConversionAsync
+                  │    .mds   → ProcessMdsFileForConversionAsync   (Alcohol120Sharp)
+                  │    other  → TryStageCueForRawImageAsync → direct conversion
+                  ├─ ValidateDependentFilesAsync (cue/gdi/toc)
+                  ├─ TryDirectConversionAsync
+                  │    └─ ConvertToChdAsync  → chdman primary, CHDSharp fallback;
+                  │                             writes <name>.<hex>.chdtmp, moves on success
+                  ├─ fallback: TryRetryConversionViaTempCopyAsync
+                  └─ HandleConversionResultAsync
+                       ├─ success → optionally delete originals + prune empty dirs
+                       └─ failure → leave the destination alone, keep source
 ```
 
 ## 3.4 Runtime Data Flow — Extraction & Verification
 
 ```
-Extraction: StartExtractionButton_ClickAsync (:693)
-  └─ PerformBatchExtractionAsync (:1355)
-       └─ per file: ExtractChdAsync (:2123)
+Extraction: StartExtractionButton_ClickAsync (:915)
+  └─ PerformBatchExtractionAsync (:1761)
+       └─ per file: ExtractChdAsync (:4142)
             ├─ pick command: auto-detect via CHD metadata, or explicit CD/DVD/HDD
             ├─ ChdFile.Open (CHDSharp) — corrupt CHD → clear error, continue
             ├─ DVD/HDD → ExtractChdToSingleFile (streamed 4 MB buffer)
             └─ CD/GDI → ExtractChdTracksToDirectory (temp dir → retrying moves)
 
-Verification: StartVerificationButton_ClickAsync (:1110)
-  └─ PerformBatchVerificationAsync (:2011)
-       └─ per file: VerifyChdAsync (:3020) — CHDSharp Chd.CheckFile
-            └─ optional move to Success/Failed via MoveVerifiedFileAsync (:2076)
+Verification: StartVerificationButton_ClickAsync (:1413)
+  └─ PerformBatchVerificationAsync (:4005)
+       └─ per file: VerifyChdAsync (:6004) — CHDSharp Chd.CheckFile
+            └─ optional move to Success/Failed via MoveVerifiedFileAsync (:4086)
                  └─ RetryingFileOperations.TryMoveAsync (retries ~45 s on locks)
 ```
 

@@ -191,7 +191,7 @@ Recognises raw 2352-byte CD sectors and stages a cue for them.
 - `DetectTrackMode(path)` — checks the sync mark, reads the mode byte, and confirms the file is a whole number of 2352-byte sectors; returns `MODE1/2352`, `MODE2/2352` or `null` (a cooked 2048-byte image, a DVD image, or an unknown layout).
 - `TryWriteCueAsync(imagePath, trackMode, workDir, token)` — writes a cue in `workDir` that references the image **in place** via a relative path, returning `null` when the image cannot be reached relatively (different volume). BOM-free UTF-8, as always.
 
-### SplitImageJoiner (`SplitImageJoiner.cs`)
+### SplitImageJoiner (`Alcohol120Sharp`)
 
 - `TryGetVolumeSet(firstVolumePath)` — finds a numbered volume set (`.001`/`.002`…, `.i00`/`.i01`…) in order, or `null`.
 - `GetTotalBytes(set)` / `JoinAsync(set, destination, token)` — concatenates the parts into one image and returns the byte count, so the caller can check it against a sector boundary.
@@ -206,12 +206,13 @@ Recognises raw 2352-byte CD sectors and stages a cue for them.
 ### InputFileFilter (`InputFileFilter.cs`)
 
 - `RemoveCompanionDataFilesAsync(paths, onLog, token)` — drops a raw `.bin`/`.img`/`.iso`/`.raw` when a descriptor in the **same directory** covers it, matched by base name and then by the descriptor's text. Applied at the folder scan, at batch start, and in the archive loop, so a cue/bin or CloneCD set converts once through its descriptor instead of once per file with both attempts aimed at the same output name.
+- `ResolveOutputCollisions(files, outputPathSelector)` — groups inputs that would all be written to the same output `.chd` and keeps only the **first non-archive input** of each colliding group (or the first input when every member is an archive). Returns the kept inputs plus one `SkippedDuplicate(SkippedFile, KeptFile, OutputPath)` per dropped input so the caller can log the resolution. Converting both would only overwrite one product with the other, so the redundant conversion — and, for archives, the redundant extraction — is skipped up front.
 
 ---
 
-## 8.10 ISZ Support (`Utilities/Isz/`)
+## 8.10 ISZ Support (`UltraIsoSharp`)
 
-Decompresses UltraISO `.isz` images. Written against EZB Systems' ISZ File Format Specification 1.00.
+Decompresses UltraISO `.isz` images. Lives in the standalone `UltraIsoSharp` library (multi-targeted `net10.0;net8.0`, MIT-licensed, packable) and is written against EZB Systems' ISZ File Format Specification 1.00.
 
 | Type | Role |
 |------|------|
@@ -251,7 +252,9 @@ The format: after the 4-byte signature comes a sequence of blocks, each introduc
 
 ---
 
-## 8.12 Alcohol 120% Support (`Utilities/Mds/`)
+## 8.12 Alcohol 120% Support (`Alcohol120Sharp`)
+
+Lives in the standalone `Alcohol120Sharp` library (multi-targeted `net10.0;net8.0`, MIT-licensed, packable) together with `SplitImageJoiner`.
 
 | Type | Role |
 |------|------|

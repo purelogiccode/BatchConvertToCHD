@@ -41,7 +41,7 @@ Decompresses archives and compressed images for the conversion pipeline.
 
 | Member | Purpose |
 |--------|---------|
-| `ExtractCsoAsync(originalCsoPath, tempOutputIsoPath, tempDirectoryRoot, onLog, token)` | Decompresses a `.cso`/`.ciso` to an ISO via CSOSharp (`CsoFile.Open` → `ExtractToIso`). Returns `(Success, FilePath, TempDir, ErrorMessage)`. |
+| `ExtractCsoAsync(...)` (static) | Decompresses a `.cso`/`.ciso` to an ISO via CSOSharp (`CsoFile.Open` → `ExtractToIso`). Returns `(Success, FilePath, TempDir, ErrorMessage)`. |
 | `ExtractArchiveAsync(originalArchivePath, tempDirectoryRoot, onLog, token)` | Dispatches by extension: `.zip` → `ExtractZipWith7ZaFallbackAsync`; `.7z` → `ExtractSevenZipArchiveAsync`; `.rar` → `ExtractRarArchive`. Returns `(Success, List<string> FilePaths, TempDir, ErrorMessage)`. |
 | `ExtractArchiveWithFallback<TArchive>(...)` (static) | Shared SharpCompress extraction with temp-copy fallback; `TArchive : IArchive, IDisposable`. |
 | `IsMultiPartRarError(Exception)` (static) | True for SharpCompress multi-part RAR messages. |
@@ -121,7 +121,7 @@ Captures the foreground window via GDI (`GetForegroundWindow` → `GetWindowRect
 
 - Location: `%LocalAppData%\BatchConvertToCHD\screenshots` (created on demand).
 - Filename: `screenshot_yyyy-MM-dd_HH-mm-ss-fff.png`.
-- `TakeScreenshot()` returns the saved path, or `null` (no foreground window / zero-size / failure).
+- `TakeScreenshot()` (static) returns the saved path, or `null` (no foreground window / zero-size / failure).
 - Triggered by the global F8 hotkey (see [User Guide](04-user-guide.md#44-global-hotkey--screenshot-f8)).
 
 ---

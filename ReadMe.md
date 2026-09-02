@@ -134,6 +134,8 @@ Generated cue sheets reference the disc image where it already lies rather than 
     * [CSOSharp](https://) (v1.0.0) — Pure C# CSO/CISO decompression (deflate + LZ4)
     * [PBPSharp](https://) (v1.0.0) — Pure C# PBP extraction and SFO parsing
     * [CCDSharp](https://) (v1.0.0) — Pure C# CloneCD (.ccd/.img/.sub) parsing and conversion
+    * [Alcohol120Sharp](https://) (v1.0.0) — Pure C# Alcohol 120% (.mds/.mdf) parsing and cue preparation
+    * [UltraIsoSharp](https://) (v1.0.0) — Pure C# UltraISO ISZ decompression
     * [SharpCompress](https://github.com/adamhathcock/sharpcompress) (v0.50.4) — Archive extraction, and bzip2 decompression for ISZ images
     * [NAudio](https://github.com/naudio/NAudio) (v3.0.1) — MP3 audio track decoding (Media Foundation)
     * [Serilog](https://serilog.net/) (v4.4.0) — Structured diagnostic logging
@@ -220,7 +222,7 @@ This project is licensed under the **GNU General Public License v3.0**. See the 
 
 **Acknowledgements:**
 *   [MAME Team](https://www.mamedev.org/) for `chdman`.
-*   [CHDSharp](https://www.nuget.org/packages/CHDSharp) by Peterson Fernandes — Pure C# CHD library supporting V1-V5, all 10 codecs, parent/child chaining, parallel verification, and CHD creation that is byte-identical to `chdman` (verified by the `CHDBattleTest` battleground across a 56-disc corpus).
+*   [CHDSharp](https://www.nuget.org/packages/CHDSharp) by Peterson Fernandes — Pure C# CHD library supporting V1-V5, all 10 codecs, parent/child chaining, parallel verification, and CHD creation that is byte-identical to `chdman` (verified across a 56-disc battle corpus).
 *   [WPF-UI](https://github.com/lepoco/wpfui) by lepoco — Modern Windows 11 Fluent Design theming and controls.
 *   [CSOSharp](https://) by Peterson Fernandes — Pure C# CSO/CISO decompression library.
 *   [PBPSharp](https://) by Peterson Fernandes — Pure C# PlayStation PBP extraction library.

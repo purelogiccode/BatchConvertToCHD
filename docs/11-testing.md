@@ -5,7 +5,7 @@ nav_order: 12
 
 # 11. Testing
 
-The solution contains a single test project, `BatchConvertToCHD.Tests` (xUnit, `net10.0-windows`), with **777 tests** across 44 test classes, plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
+The solution contains a single test project, `BatchConvertToCHD.Tests` (xUnit, `net10.0-windows`), with **813 tests across 43 test classes** (a handful of PBP integration tests need a local sample folder — see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
 
 > **Expected result on a clean machine: 762 passed, 15 failed.** The 15 failures are a fixture problem, not a regression — see [§11.5](#115-the-15-expected-failures). A change that leaves exactly those 15 failing has broken nothing.
 
@@ -63,7 +63,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 |------|-------|
 | `DiscImageSignatureTests.cs` | Magic-byte identification of every `DiscImageKind`, `IsArchive` grouping, `Describe` phrasing, unknown/short/missing files |
 | `RawCdImageDetectorTests.cs` | Sync-mark and mode-byte sniffing (MODE1/MODE2), rejection of cooked 2048-byte images and non-sector-aligned files, candidate extensions, generated cue content, and the cross-volume refusal that returns `null` |
-| `InputFileFilterTests.cs` | A raw image is dropped when a sibling descriptor covers it (by base name and by cue text), kept when nothing covers it, and matching is directory-scoped and case-insensitive |
+| `InputFileFilterTests.cs` | A raw image is dropped when a sibling descriptor covers it (by base name and by cue text), kept when nothing covers it, matching is directory-scoped and case-insensitive — and `ResolveOutputCollisions` keeps the first non-archive input of each colliding output group, order-independently, including three-way collisions and all-archive groups |
 | `SplitImageJoinerTests.cs` | `.001`/`.002` and `.i00`/`.i01` set discovery and ordering, gaps, single-file non-sets, byte totals, and join output equality |
 | `TrackBinCueBuilderTests.cs` | `(Track N)` set recognition and ordering, multi-FILE cue content, data track mode vs. AUDIO tracks, non-track-set rejection |
 | `MdsTests.cs` | `.mds` header/session/track parsing, mode-to-cue-track mapping, sector-size classification (2352 / 2448 / 2368 / 2048), implausible session counts, `.mdf` lookup, subchannel stripping, MSF formatting, and the three `MdsInputPreparer` shapes |
@@ -75,7 +75,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 
 > **How the ECM decoder is verified.** `EcmImageDecoderTests.BuildReferenceImage()` rebuilds, in code, the 12-sector image (4 Mode 1, 4 Mode 2 Form 1, 4 Mode 2 Form 2) that `Fixtures/ecm-sample.ecm` was encoded from by Neill Corlett's own encoder. Decoding the fixture and comparing proves both the block parsing and the regenerated EDC/parity match the reference implementation. The fixture was produced in a run that also confirmed the reverse direction: the real encoder reported stripping the parity from all twelve sectors — which it only does for sectors whose parity it agrees with — and the real decoder produced the identical SHA1. Regenerating the fixture requires that tool and is documented in the repository's working notes; the guard test exists so a regeneration from a simpler image cannot quietly stop exercising the Mode 2 branches.
 
-### Library tests (CSOSharp / PBPSharp)
+### Library tests (Alcohol120Sharp / CSOSharp / PBPSharp / UltraIsoSharp)
 
 | File | Focus |
 |------|-------|
@@ -99,7 +99,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 4. For chdman-dependent tests, early-return when `chdman.exe` is absent from `AppContext.BaseDirectory`.
 5. Prefer building binary fixtures in code (see `IszImageBuilder`) over committing them. Commit one only when the format cannot be generated trustworthily in-repo, as with `ecm-sample.ecm`.
 6. When a fixture asserts agreement with an outside implementation, add a **guard test** that the fixture still covers the cases it is meant to. A fixture can be regenerated more simply and silently stop testing anything.
-7. Run the full suite before pushing. A good run is **762 passed / 15 failed**, with the failures being exactly the ones in §11.5.
+7. Run the full suite before pushing. On a machine with the PBP integration samples present a good run is **813 passed / 0 failed**; without them, the PBP integration group fails as described in §11.5.
 
 ### Analyzer constraints worth knowing
 
@@ -112,27 +112,14 @@ The test project runs `Meziantou.Analyzer` too, and a few rules bite:
 
 ---
 
-## 11.5 The 15 Expected Failures
+## 11.5 The PBP Integration Sample Folder
 
-On a machine without the integration sample folders, these 15 fail rather than skip. They are pre-existing and unrelated to the conversion pipeline:
-
-| Count | Tests | Why |
-|-------|-------|-----|
-| 15 | `PbpFileIntegrationTests.*` | They need a real `.pbp` sample that is not in the repository. Unlike the CSO integration tests, they assert on the discovered-sample collection before checking whether it is empty, so an absent sample surfaces as `Assert.NotEmpty() Failure: Collection was empty` instead of an early return. |
-
-The PBP group is worth fixing — by adopting the CSO tests' early-return pattern — but it does not indicate a defect in the application.
+`PbpFileIntegrationTests` reads real `.pbp` files from a local sample folder (`D:\Emulators\...\PsxPackager` on the maintainer's machine). When that folder is absent the group fails rather than skips — the tests assert on the discovered-sample collection before checking whether it is empty, so an absent sample surfaces as `Assert.NotEmpty() Failure: Collection was empty` instead of an early return. These failures do not indicate a defect in the application; adopting the CSO tests' early-return pattern would fix the ergonomics.
 
 ---
 
-## 11.6 CHDBattleTest Battleground
+## 11.6 CHDBattleTest Battleground (historical)
 
-`CHDBattleTest` is a separate console harness (`chdbattle`) that pits the bundled tools against each other on a corpus of real CHDs (default `H:\CHDTest`): **`chdman` (MAME) vs `CHDSharp.exe`** (the CLI shipped with the app), plus the `CHDSharp` NuGet library in-process for decode timing.
+The `CHDBattleTest` console harness (`chdbattle`) that pitted **`chdman` (MAME)** against **`CHDSharp.exe`** on a corpus of real CHDs was removed from the solution in 3.5.1 — its purpose was fulfilled. Per file it ran timed decode battles (`extractraw`, `extractcd`, `extractdvd`, `extracthd`), encode battles (`copy`, `createcd`, `createdvd`, `createhd` with a chosen codec), SHA-256 product-parity checks, and 224+ cross-verifications. Results landed as `results.csv`, `report.md`, `battle.log`, `console.log` in the output root, resume-safe.
 
-Per file it runs timed decode battles (`extractraw`, `extractcd`, `extractdvd`, `extracthd`), encode battles (`copy`, `createcd`, `createdvd`, `createhd` with a chosen codec), SHA-256 product-parity checks, and 224+ cross-verifications (each tool verifying both products). Results land as `results.csv`, `report.md`, `battle.log`, `console.log` in the output root, and are resume-safe.
-
-```bash
-dotnet run -c Release --project CHDBattleTest -- -i H:\CHDTest -o H:\CHDBattleResults --lib-decode
-dotnet run -c Release --project CHDBattleTest -- --list        # classify only
-```
-
-**Current status (CHDSharp 1.4.3, corpus of 56 discs — 43 CD + 3 GD-ROM, 10 DVD, 3 HDD): zero mismatches.** Every parity battle passes byte-identically and all cross-verifications agree, i.e. the bundled `CHDSharp.exe` produces byte-identical CHDs to `chdman` 0.289 on this corpus. History: 1.4.1 had 46 parity fails (`createdvd` 10, `copy:zstd` 18, `createcd:cdzl` 18), 1.4.2 fixed the DVD group (36 remaining), and 1.4.3's stale work-buffer + LZMA match-finder fix closed the rest. The latest run lives in `H:\CHDBattleResults_143`.
+**Final status (CHDSharp 1.4.3, corpus of 56 discs — 43 CD + 3 GD-ROM, 10 DVD, 3 HDD): zero mismatches.** Every parity battle passed byte-identically and all cross-verifications agreed, i.e. `CHDSharp.exe` produces byte-identical CHDs to `chdman` 0.289 on this corpus. History: 1.4.1 had 46 parity fails (`createdvd` 10, `copy:zstd` 18, `createcd:cdzl` 18), 1.4.2 fixed the DVD group (36 remaining), and 1.4.3's stale work-buffer + LZMA match-finder fix closed the rest.
