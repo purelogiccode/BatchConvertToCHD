@@ -282,38 +282,30 @@ public partial class App
             if (string.Equals(source, "AppDomain.UnhandledException", StringComparison.Ordinal))
                 // Block synchronously — the process is about to terminate.
                 Task.Run(() =>
-                {
-                    BugReportService? x = _bugReportService;
-                    if (x != null)
                     {
-                        return x.SendBugReportAsync(
-                                                           $"Unhandled Exception from {source}",
-                                                           exception
-                                                       );
-                    }
-                    else
-                    {
+                        var x = _bugReportService;
+                        if (x != null)
+                            return x.SendBugReportAsync(
+                                $"Unhandled Exception from {source}",
+                                exception
+                            );
+
                         return Task.FromResult(false);
-                    }
-                })
+                    })
                     .GetAwaiter()
                     .GetResult();
             else
                 // Fire-and-forget for dispatcher/task exceptions — blocking would freeze the UI.
                 _ = Task.Run(() =>
                 {
-                    BugReportService? x = _bugReportService;
+                    var x = _bugReportService;
                     if (x != null)
-                    {
                         return x.SendBugReportAsync(
-                                                           $"Unhandled Exception from {source}",
-                                                           exception
-                                                       );
-                    }
-                    else
-                    {
-                        return Task.FromResult(false);
-                    }
+                            $"Unhandled Exception from {source}",
+                            exception
+                        );
+
+                    return Task.FromResult(false);
                 });
         }
         catch

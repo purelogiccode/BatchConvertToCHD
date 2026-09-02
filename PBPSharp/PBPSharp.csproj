@@ -31,6 +31,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="SharpZipLib" Version="1.4.2" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Meziantou.Analyzer" Version="3.0.200">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>

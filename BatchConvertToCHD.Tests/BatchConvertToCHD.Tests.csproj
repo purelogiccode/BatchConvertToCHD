@@ -5,8 +5,8 @@
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
         <Company>PureLogicCode.com</Company>
-        <AssemblyVersion>3.5.0</AssemblyVersion>
-        <FileVersion>3.5.0</FileVersion>
+        <AssemblyVersion>3.5.1</AssemblyVersion>
+        <FileVersion>3.5.1</FileVersion>
         <NeutralLanguage>en</NeutralLanguage>
     </PropertyGroup>
 

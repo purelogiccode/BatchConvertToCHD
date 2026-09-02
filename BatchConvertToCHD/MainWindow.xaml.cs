@@ -2136,7 +2136,6 @@ internal partial class MainWindow : IDisposable
 
             long total = 0;
             foreach (var file in referenced.Distinct(StringComparer.OrdinalIgnoreCase))
-            {
                 try
                 {
                     total += new FileInfo(file).Length;
@@ -2147,7 +2146,6 @@ internal partial class MainWindow : IDisposable
                 {
                     /* a missing reference is reported elsewhere */
                 }
-            }
 
             return total;
         }

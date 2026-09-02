@@ -1,7 +1,9 @@
 using System.Buffers;
 using System.Buffers.Binary;
-using System.IO.Compression;
 using System.Text;
+using ICSharpCode.SharpZipLib;
+using ICSharpCode.SharpZipLib.Zip.Compression;
+using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using PBPSharp.Models;
 
 namespace PBPSharp;
@@ -298,6 +300,11 @@ public sealed class PbpDiscInfo
         {
             return PbpError.DecompressionError;
         }
+        catch (SharpZipBaseException)
+        {
+            // A block failed to inflate in the reference-compatible SharpZipLib inflater.
+            return PbpError.DecompressionError;
+        }
         catch (NotSupportedException)
         {
             // A corrupt block inflated beyond the fixed output buffer capacity.
@@ -324,18 +331,20 @@ public sealed class PbpDiscInfo
 
     private static int DecompressBlock(byte[] compressed, int compressedLength, byte[] output)
     {
+        // SharpZipLib's raw Inflater is the same decompressor the popstation reference
+        // implementation uses for PSAR blocks; it tolerates a few streams that the
+        // stricter .NET DeflateStream rejects with InvalidDataException.
         using var compressedStream = new MemoryStream(compressed, 0, compressedLength);
-        using var deflateStream = new DeflateStream(
+        using var inflaterStream = new InflaterInputStream(
             compressedStream,
-            CompressionMode.Decompress,
-            false
+            new Inflater(true)
         );
         using var outputMs = new MemoryStream(output);
 
         var writeBuffer = new byte[4096];
         while (true)
         {
-            var totalRead = deflateStream.Read(writeBuffer, 0, writeBuffer.Length);
+            var totalRead = inflaterStream.Read(writeBuffer, 0, writeBuffer.Length);
             if (totalRead <= 0)
                 break;
 
