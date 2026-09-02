@@ -51,7 +51,7 @@ public static class SectorConstants
     public const int LeadInSectors = 150;
 
     /// <summary>
-    ///     Sync mark pattern: 12 bytes (00 FF 00).
+    ///     Sync mark pattern: 12 bytes (00 FF FF FF FF FF FF FF FF FF FF 00).
     /// </summary>
     public static readonly byte[] SyncMark =
     [

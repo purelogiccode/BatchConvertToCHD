@@ -43,7 +43,7 @@ internal class BugReportService
         // chdman.cpp:1517 wraps every failure inside its compression phase ("Error during
         // compression: <OS error>"); the message is the user's storage failing, not app logic.
         "Error during compression",
-        "CRITICAL ERROR: The following required component is missing",
+        "CRITICAL ERROR: The following required component",
         "referenced files are missing",
         "could not be resolved",
         "MP3 audio track could not be decoded",

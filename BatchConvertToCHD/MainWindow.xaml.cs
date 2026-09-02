@@ -337,23 +337,44 @@ internal partial class MainWindow : IDisposable
 
     private void CheckDependenciesAndNotifyUser()
     {
-        var missingDeps = new List<string>();
-        if (!_isChdSharpAvailable) missingDeps.Add(_chdSharpResolvedName);
+        var chdmanMissing = !_isChdmanAvailable;
+        var chdSharpMissing = !_isChdSharpAvailable;
 
-        if (!_isChdmanAvailable) missingDeps.Add(_chdmanResolvedName);
-
-        // Critical dependency check
-        if (missingDeps.Count > 0)
+        // chdman is the primary encoder and CHDSharp the automatic fallback, so only the loss of
+        // both is fatal. A single missing encoder downgrades the conversion path and gets a warning.
+        if (chdmanMissing && chdSharpMissing)
         {
             var msg =
-                "CRITICAL ERROR: The following required component is missing:\n\n"
-                + $"{string.Join("\n", missingDeps)}\n\n"
-                + "Please ensure it is placed in the application folder.\n"
+                "CRITICAL ERROR: The following required components are missing:\n\n"
+                + $"{_chdmanResolvedName}\n"
+                + $"{_chdSharpResolvedName}\n\n"
+                + "Please place at least one encoder in the application folder.\n"
                 + "Download chdman from: https://github.com/rtissera/chdman/releases\n\n"
-                + "Conversion will NOT work without it.";
+                + "Conversion will NOT work without an encoder.";
 
             LogError(" " + msg.Replace("\n", " "));
             ShowMessageBox(msg, "Missing Dependency", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        if (chdmanMissing)
+        {
+            var msg =
+                "chdman.exe was not found, so conversions will run on the CHDSharp fallback.\n\n"
+                + "Download chdman from https://github.com/rtissera/chdman/releases and place it in "
+                + "the application folder to restore the primary encoder.";
+
+            LogWarning(" " + msg.Replace("\n", " "));
+            ShowMessageBox(msg, "Encoder Notice", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        else if (chdSharpMissing)
+        {
+            var msg =
+                "CHDSharp.exe was not found, so conversions run on chdman without an automatic fallback.\n\n"
+                + "Place CHDSharp.exe in the application folder to restore the fallback encoder.";
+
+            LogWarning(" " + msg.Replace("\n", " "));
+            ShowMessageBox(msg, "Encoder Notice", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -1595,11 +1616,43 @@ internal partial class MainWindow : IDisposable
         CancellationToken token
     )
     {
-        if (!await ValidateExecutableAccessAsync(chdmanPath, "chdman.exe"))
-            return;
+        // chdman is the primary encoder, so it is probed once up front: an executable the OS
+        // cannot start must fail here with one actionable message, not once per file. A chdman
+        // that launches but crashes the CPU-compatibility probe is a different case — when the
+        // CHDSharp fallback is available the batch still runs, because ConvertToChdAsync falls
+        // back to CHDSharp per file. The batch is refused only when neither encoder is usable.
+        var chdSharpUsable = _isChdSharpAvailable && File.Exists(_chdSharpExePath);
 
-        if (!await ValidateChdmanCompatibilityAsync(chdmanPath, token))
+        if (File.Exists(chdmanPath))
+        {
+            if (!await ValidateExecutableAccessAsync(chdmanPath, "chdman.exe"))
+                return;
+
+            if (!await ValidateChdmanCompatibilityAsync(chdmanPath, token))
+            {
+                if (!chdSharpUsable)
+                    return;
+
+                LogWarning(
+                    " Continuing without chdman: CHDSharp.exe is available and takes over whenever chdman fails."
+                );
+            }
+        }
+        else if (!chdSharpUsable)
+        {
+            LogError($" chdman.exe not found at: {chdmanPath}");
+            ShowError(
+                "chdman.exe was not found, and CHDSharp.exe is not available as a fallback.\n\n"
+                + "Place at least one encoder in the application folder."
+            );
             return;
+        }
+        else
+        {
+            LogMessage(
+                " chdman.exe not found; every file will be converted with the CHDSharp fallback."
+            );
+        }
 
         var filesToConvert = selectedFiles;
 
