@@ -31,6 +31,10 @@ internal class BugReportService
         "disk full",
         "No supported primary files found in archive",
         "chdman.exe not found",
+        // Encoder-presence notices depend on the user's installation, not app logic.
+        "CHDSharp.exe not found",
+        "CHDSharp.exe was not found",
+        "chdman.exe was not found",
         "Not a valid CHD file",
         "Invalid or corrupt data",
         "Cannot open file",
@@ -43,6 +47,14 @@ internal class BugReportService
         // chdman.cpp:1517 wraps every failure inside its compression phase ("Error during
         // compression: <OS error>"); the message is the user's storage failing, not app logic.
         "Error during compression",
+        // chdman rejecting the user's cue/image with a parse error ("Error parsing input file
+        // (...: Unsupported format / Invalid data)") and I/O failures on failing disks are
+        // user-data/environment problems; the app already shows per-cause guidance.
+        "Error parsing input file",
+        "failed due to an I/O error",
+        // Skip notices for files whose content does not match their extension (incomplete
+        // downloads etc.); skipping is the intended behaviour.
+        "and it is not a usable disc image",
         "CRITICAL ERROR: The following required component",
         "referenced files are missing",
         "could not be resolved",

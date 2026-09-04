@@ -348,8 +348,7 @@ internal partial class MainWindow : IDisposable
                 "CRITICAL ERROR: The following required components are missing:\n\n"
                 + $"{_chdmanResolvedName}\n"
                 + $"{_chdSharpResolvedName}\n\n"
-                + "Please place at least one encoder in the application folder.\n"
-                + "Download chdman from: https://github.com/rtissera/chdman/releases\n\n"
+                + "Please place at least one encoder in the application folder.\n\n"
                 + "Conversion will NOT work without an encoder.";
 
             LogError(" " + msg.Replace("\n", " "));
@@ -360,9 +359,7 @@ internal partial class MainWindow : IDisposable
         if (chdmanMissing)
         {
             var msg =
-                "chdman.exe was not found, so conversions will run on the CHDSharp fallback.\n\n"
-                + "Download chdman from https://github.com/rtissera/chdman/releases and place it in "
-                + "the application folder to restore the primary encoder.";
+                "chdman.exe was not found, so conversions will run on the CHDSharp fallback.";
 
             LogWarning(" " + msg.Replace("\n", " "));
             ShowMessageBox(msg, "Encoder Notice", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -622,10 +619,10 @@ internal partial class MainWindow : IDisposable
                     $" chdman.exe terminated abnormally during the startup check (exit code {process.ExitCode}{DescribeChdmanCrash(process.ExitCode)})."
                 );
                 LogWarning(
-                    "       The bundled chdman.exe is likely incompatible with this computer's CPU or was damaged/quarantined by antivirus software."
+                    "       The bundled chdman.exe is likely incompatible with this computer's CPU or Windows version, or was damaged/quarantined by antivirus software."
                 );
                 LogMessage(
-                    "       Replace chdman.exe with a build that matches your CPU (e.g. an official MAME tools release) and add an antivirus exclusion for it."
+                    "       Replace chdman.exe with a build that matches your CPU and Windows version (e.g. an official MAME tools release) and add an antivirus exclusion for it."
                 );
                 ShowError(
                     $"chdman.exe crashed during the startup check (exit code {process.ExitCode}).\n\n"
@@ -743,7 +740,7 @@ internal partial class MainWindow : IDisposable
         LogMessage($"Welcome to {AppConfig.ApplicationName}. (Conversion Mode)");
         if (!_isChdmanAvailable)
             LogWarning(
-                " chdman.exe not found! chdman is the primary encoder. Download it from https://github.com/rtissera/chdman/releases and place it in the application folder."
+                " chdman.exe not found! chdman is the primary encoder."
             );
 
         if (!_isChdSharpAvailable)
@@ -2577,7 +2574,9 @@ internal partial class MainWindow : IDisposable
         );
         if (tempDir is null)
         {
-            LogWarning(
+            // Informational: the image sits on read-only media, but the conversion still
+            // proceeds with the image as-is, so this is not an error condition.
+            LogMessage(
                 $" {originalName}: no writable location on the same volume for a generated cue; converting the image as-is."
             );
             return null;
@@ -2592,7 +2591,7 @@ internal partial class MainWindow : IDisposable
             token
         );
         if (cuePath is null)
-            LogWarning(
+            LogMessage(
                 $" {originalName}: a generated cue could not reference the image relatively; converting the image as-is."
             );
 
@@ -4820,7 +4819,7 @@ internal partial class MainWindow : IDisposable
         if (!File.Exists(chdmanPath) && !(_isChdSharpAvailable && File.Exists(_chdSharpExePath)))
         {
             LogError(
-                $" chdman.exe not found at '{chdmanPath}'. Download it from https://github.com/rtissera/chdman/releases and place it in the application folder."
+                $" chdman.exe not found at '{chdmanPath}'."
             );
             return false;
         }
@@ -5266,7 +5265,9 @@ internal partial class MainWindow : IDisposable
             if (token.IsCancellationRequested) return false;
 
             // --- Fallback encoder: CHDSharp ---
-            LogWarning(
+            // Informational only: chdman failing on a user file is routine and the fallback
+            // usually succeeds. When both encoders fail, the classified LogError below reports.
+            LogMessage(
                 $"chdman failed for '{Path.GetFileName(originalInputFile)}'. Falling back to CHDSharp..."
             );
             if (await TryChdSharpFallbackAsync())
@@ -5372,10 +5373,10 @@ internal partial class MainWindow : IDisposable
                     $" Failed to convert '{Path.GetFileName(originalInputFile)}': chdman terminated abnormally (exit code {exitCode}{DescribeChdmanCrash(exitCode)})."
                 );
                 LogWarning(
-                    "       The bundled chdman.exe may be incompatible with this computer's CPU or was damaged/quarantined by antivirus software."
+                    "       The bundled chdman.exe may be incompatible with this computer's CPU or Windows version, or was damaged/quarantined by antivirus software."
                 );
                 LogMessage(
-                    "       Replace chdman.exe with a build that matches your CPU (e.g. an official MAME tools release) and add an antivirus exclusion for it."
+                    "       Replace chdman.exe with a build that matches your CPU and Windows version (e.g. an official MAME tools release) and add an antivirus exclusion for it."
                 );
             }
             else
@@ -5591,6 +5592,8 @@ internal partial class MainWindow : IDisposable
             -1073741676 => "; 0xC0000094, integer divide by zero",
             -1073741571 => "; 0xC00000FD, stack overflow",
             -1073741515 => "; 0xC0000135, a required DLL could not be found",
+            -1073741511 =>
+                "; 0xC0000139, STATUS_ENTRYPOINT_NOT_FOUND - a required DLL entry point is missing (the build is incompatible with this Windows version; install Windows updates / the latest Visual C++ redistributable or use a chdman build for your OS)",
             -1073740791 => "; 0xC0000409, stack buffer overrun / fail fast",
             _ => string.Empty
         };

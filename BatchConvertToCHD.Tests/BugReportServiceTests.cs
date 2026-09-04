@@ -381,6 +381,12 @@ public class BugReportServiceTests
 
     [Theory]
     [InlineData("chdman.exe not found")]
+    [InlineData("CHDSharp.exe not found! CHDSharp is used as a fallback encoder. Place it in the application folder.")]
+    [InlineData("CHDSharp.exe was not found, so conversions run on chdman without an automatic fallback.")]
+    [InlineData("chdman.exe was not found, so conversions will run on the CHDSharp fallback.")]
+    [InlineData("Conversion of 'game.cue' failed due to an I/O error. The source file may be on a failing disk, a disconnected network drive, or the file may be corrupt.")]
+    [InlineData(@"Failed to convert 'game.cue': Error parsing input file (C:\temp\game.cue: Unsupported format)")]
+    [InlineData("game.zip: the extension says an archive but the content is an unrecognised format, and it is not a usable disc image. The download is probably incomplete.")]
     [InlineData("CRITICAL ERROR: The following required component is missing")]
     [InlineData("Failed to record usage statistics")]
     [InlineData("Not a valid CHD file")]
