@@ -29,6 +29,7 @@ internal class BugReportService
         "Extracted files are typically larger",
         "disk space",
         "disk full",
+        "free on",
         "No supported primary files found in archive",
         "chdman.exe not found",
         // Encoder-presence notices depend on the user's installation, not app logic.
@@ -39,6 +40,10 @@ internal class BugReportService
         "Invalid or corrupt data",
         "Cannot open file",
         "Partial extraction:",
+        // chdman failing on a user file is routine and the CHDSharp fallback usually succeeds.
+        // When both encoders fail, the classified LogError below reports the real cause.
+        "chdman failed for",
+        "Falling back to CHDSharp",
         // chdman-side failures on user data: its exit summary and C++ runtime crashes.
         // CHDSharp and PBPSharp extraction failures are intentionally NOT excluded —
         // their maintainer wants extraction bugs (with debug details) in the bug API.
@@ -73,7 +78,15 @@ internal class BugReportService
         "Archive is encrypted",
         "compression method that is not supported",
         "CCDSharp: Conversion error",
-        "File not found, skipping:"
+        "File not found, skipping:",
+        // CHD open/read failures during extraction are user-data problems (corrupt CHD files).
+        "Failed to open '",
+        // File move failures after conversion are environment issues (locked files, permissions).
+        "Failed to move temp output to destination",
+        "Failed to move CHDSharp output to destination",
+        // Encoder start failures depend on the user's installation.
+        "Failed to start chdman",
+        "Failed to start CHDSharp"
     ];
 
     private readonly string _apiKey;
@@ -103,8 +116,10 @@ internal class BugReportService
     internal static bool IsExcludedFromBugReport(string message)
     {
         foreach (var pattern in ExcludedMessagePatterns)
+        {
             if (message.Contains(pattern, StringComparison.OrdinalIgnoreCase))
                 return true;
+        }
 
         return false;
     }
