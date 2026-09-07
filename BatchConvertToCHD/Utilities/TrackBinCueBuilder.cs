@@ -50,7 +50,9 @@ internal static class TrackBinCueBuilder
                     out var number
                 )
             )
+            {
                 continue;
+            }
 
             // Everything before "(Track N)" must agree, so two different games in one folder are
             // never merged into a single disc.

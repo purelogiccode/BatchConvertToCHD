@@ -147,6 +147,7 @@ public partial class App
             {
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies();
                 foreach (var assembly in assemblies)
+                {
                     try
                     {
                         assembly.GetTypes();
@@ -155,6 +156,7 @@ public partial class App
                     {
                         // ignored
                     }
+                }
             }
             catch
             {
@@ -280,33 +282,41 @@ public partial class App
         try
         {
             if (string.Equals(source, "AppDomain.UnhandledException", StringComparison.Ordinal))
+            {
                 // Block synchronously — the process is about to terminate.
                 Task.Run(() =>
                     {
                         var x = _bugReportService;
                         if (x != null)
+                        {
                             return x.SendBugReportAsync(
                                 $"Unhandled Exception from {source}",
                                 exception
                             );
+                        }
 
                         return Task.FromResult(false);
                     })
                     .GetAwaiter()
                     .GetResult();
+            }
             else
+            {
                 // Fire-and-forget for dispatcher/task exceptions — blocking would freeze the UI.
                 _ = Task.Run(() =>
                 {
                     var x = _bugReportService;
                     if (x != null)
+                    {
                         return x.SendBugReportAsync(
                             $"Unhandled Exception from {source}",
                             exception
                         );
+                    }
 
                     return Task.FromResult(false);
                 });
+            }
         }
         catch
         {

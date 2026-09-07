@@ -59,7 +59,7 @@ public class IsoSectorValidatorTests : IDisposable
     [Fact]
     public void MisalignedIsoReturnsWarning()
     {
-        var path = CreateFile("game.iso", 2048 * 100 + 1);
+        var path = CreateFile("game.iso", (2048 * 100) + 1);
 
         var warning = IsoSectorValidator.GetSectorSizeWarning(path);
 

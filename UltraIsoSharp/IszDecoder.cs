@@ -102,9 +102,11 @@ public static class IszDecoder
         {
             var readHeader = await TryReadHeaderAsync(iszPath, token).ConfigureAwait(false);
             if (readHeader is null)
+            {
                 return IszDecodeResult.Failed(
                     "the file does not start with an ISZ header, so it is not an ISZ image."
                 );
+            }
 
             header = readHeader;
 
@@ -132,9 +134,11 @@ public static class IszDecoder
             regions = built;
 
             if (segments.Count > 1)
+            {
                 onLog(
                     $" The image is split across {segments.Count.ToString(CultureInfo.InvariantCulture)} segments; reading them in order."
                 );
+            }
         }
         catch (OperationCanceledException)
         {
@@ -161,9 +165,11 @@ public static class IszDecoder
             var expected = header.ImageSizeBytes;
 
             if (written != expected)
+            {
                 return IszDecodeResult.Failed(
                     $"the ISZ decompressed to {written.ToString("N0", CultureInfo.InvariantCulture)} bytes but its header declares {expected.ToString("N0", CultureInfo.InvariantCulture)}. The file is truncated or a segment is missing, so the image has not been written."
                 );
+            }
 
             return IszDecodeResult.Succeeded(destinationPath, header.SectorSize);
         }
@@ -239,9 +245,11 @@ public static class IszDecoder
             .ReadAtLeastAsync(table, tableBytes, false, token)
             .ConfigureAwait(false);
         if (read < tableBytes)
+        {
             throw new InvalidDataException(
                 $"the chunk table is {read.ToString("N0", CultureInfo.InvariantCulture)} of an expected {tableBytes.ToString("N0", CultureInfo.InvariantCulture)} bytes, so the file is truncated"
             );
+        }
 
         return table;
     }
@@ -287,10 +295,12 @@ public static class IszDecoder
             {
                 var info = new FileInfo(path);
                 if (!info.Exists)
+                {
                     return (
                         [],
                         $"the image is split across {segments.Count.ToString(CultureInfo.InvariantCulture)} segments and {Path.GetFileName(path)} is not in the same folder. Put every segment together and try again."
                     );
+                }
 
                 actualLength = info.Length;
             }
@@ -342,12 +352,16 @@ public static class IszDecoder
             var segmentHeader = IszHeader.TryRead(buffer.AsSpan(0, read));
 
             if (segmentHeader is null)
+            {
                 return
                     $"segment {Path.GetFileName(segmentPath)} does not start with an ISZ header, so it is not part of this image.";
+            }
 
             if (segmentHeader.VolumeSerialNumber != header.VolumeSerialNumber)
+            {
                 return
                     $"segment {Path.GetFileName(segmentPath)} belongs to a different ISZ image (volume serial number does not match). Collect the segments of one image together and try again.";
+            }
 
             return null;
         }
@@ -396,9 +410,11 @@ public static class IszDecoder
 
             var (type, storedLength) = ReadChunkEntry(chunkTable, (int)index, header.PointerLength);
             if (storedLength > chunkSize)
+            {
                 throw new InvalidDataException(
                     $"chunk {index.ToString("N0", CultureInfo.InvariantCulture)} declares {storedLength.ToString("N0", CultureInfo.InvariantCulture)} stored bytes, more than the {chunkSize.ToString("N0", CultureInfo.InvariantCulture)}-byte chunk size allows"
                 );
+            }
 
             int produced;
             if (type == IszChunkType.Zero)
@@ -409,7 +425,9 @@ public static class IszDecoder
                     storedLength > 0
                     && !await reader.SkipAsync(storedLength, token).ConfigureAwait(false)
                 )
+                {
                     break;
+                }
 
                 zeros ??= new byte[chunkSize];
                 produced = chunkSize;
@@ -423,7 +441,9 @@ public static class IszDecoder
                         .ReadExactlyAsync(compressed, storedLength, token)
                         .ConfigureAwait(false)
                 )
+                {
                     break;
+                }
 
                 produced = type switch
                 {
@@ -452,7 +472,7 @@ public static class IszDecoder
                 onLog(
                     $" Decompressed {percent.ToString(CultureInfo.InvariantCulture)}% of the ISZ image."
                 );
-                nextProgressPercent = percent - percent % ProgressStepPercent + ProgressStepPercent;
+                nextProgressPercent = percent - (percent % ProgressStepPercent) + ProgressStepPercent;
             }
         }
 
@@ -497,7 +517,7 @@ public static class IszDecoder
         ulong raw = 0;
         for (var i = 0; i < pointerLength; i++) raw |= (ulong)chunkTable[offset + i] << (8 * i);
 
-        var typeShift = 8 * pointerLength - 2;
+        var typeShift = (8 * pointerLength) - 2;
         var type = (IszChunkType)(int)((raw >> typeShift) & 0x03);
         var length = (int)(raw & ((1UL << typeShift) - 1));
 
@@ -564,9 +584,11 @@ public static class IszDecoder
 
         var overflow = new byte[1];
         if (await source.ReadAsync(overflow, token).ConfigureAwait(false) > 0)
+        {
             throw new InvalidDataException(
                 $"chunk {index.ToString("N0", CultureInfo.InvariantCulture)} decompresses to more than the chunk size the header declares"
             );
+        }
 
         return produced;
     }

@@ -119,8 +119,10 @@ public class RetryingFileOperationsTests : IDisposable
                 {
                     attempts++;
                     if (attempts == 2)
+                    {
                         // Release the lock so the next attempt succeeds.
                         lockStream.Dispose();
+                    }
                 },
                 static _ => 1
             );
@@ -227,8 +229,10 @@ public class RetryingFileOperationsTests : IDisposable
                 {
                     attempts++;
                     if (attempts == 2)
+                    {
                         // Release the lock so the next attempt succeeds.
                         lockStream.Dispose();
+                    }
                 },
                 static _ => 1
             );

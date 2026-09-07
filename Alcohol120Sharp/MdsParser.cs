@@ -81,9 +81,11 @@ public static class MdsParser
         if (!info.Exists) throw new FileNotFoundException("MDS descriptor not found.", mdsPath);
 
         if (info.Length > MaxDescriptorBytes)
+        {
             throw new InvalidDataException(
                 $"{info.Length:N0} bytes is too large to be an MDS descriptor."
             );
+        }
 
         var bytes = File.ReadAllBytes(mdsPath);
         if (
@@ -92,9 +94,11 @@ public static class MdsParser
                 .ASCII.GetString(bytes, 0, SignatureLength)
                 .Equals(Signature, StringComparison.Ordinal)
         )
+        {
             throw new InvalidDataException(
                 "Not an Alcohol MDS descriptor (missing \"MEDIA DESCRIPTOR\" signature)."
             );
+        }
 
         var sessionCount = BinaryPrimitives.ReadUInt16LittleEndian(
             bytes.AsSpan(SessionCountOffset)
@@ -103,9 +107,11 @@ public static class MdsParser
         // A corrupt or truncated descriptor produces nonsense here - one real example reported 8233
         // sessions - and walking that many offsets would just read garbage.
         if (sessionCount is 0 or > MaxPlausibleSessions)
+        {
             throw new InvalidDataException(
                 $"Descriptor reports {sessionCount} sessions, so it is corrupt or truncated."
             );
+        }
 
         var sessionBlockOffset = (long)
             BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(SessionBlockOffsetOffset));
@@ -113,7 +119,7 @@ public static class MdsParser
 
         for (var session = 0; session < sessionCount; session++)
         {
-            var sessionBase = sessionBlockOffset + (long)session * SessionBlockSize;
+            var sessionBase = sessionBlockOffset + ((long)session * SessionBlockSize);
             if (sessionBase < 0 || sessionBase + SessionBlockSize > bytes.Length) break;
 
             var trackCount = bytes[sessionBase + SessionTrackCountOffset];
@@ -124,7 +130,7 @@ public static class MdsParser
 
             for (var track = 0; track < trackCount; track++)
             {
-                var trackBase = trackBlockOffset + (long)track * TrackBlockSize;
+                var trackBase = trackBlockOffset + ((long)track * TrackBlockSize);
                 if (trackBase < 0 || trackBase + TrackBlockSize > bytes.Length) break;
 
                 var point = bytes[trackBase + TrackPointOffset];

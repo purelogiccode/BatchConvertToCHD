@@ -104,7 +104,7 @@ internal static class IszImageBuilder
         var chunkTable = BuildChunkTable(chunks, pointerLength);
         var data = Concat(chunks);
 
-        const int chunkTableOffset = HeaderLength + 3 * SegmentEntryLength;
+        const int chunkTableOffset = HeaderLength + (3 * SegmentEntryLength);
         var dataOffset = chunkTableOffset + chunkTable.Length;
 
         var firstData = data.AsSpan(0, splitAfterBytes).ToArray();
@@ -304,7 +304,7 @@ internal static class IszImageBuilder
     )
     {
         var chunks = new List<Chunk>();
-        var maxStored = (1 << (8 * pointerLength - 2)) - 1;
+        var maxStored = (1 << ((8 * pointerLength) - 2)) - 1;
 
         for (var offset = 0; offset < image.Length; offset += chunkSize)
         {
@@ -323,9 +323,11 @@ internal static class IszImageBuilder
             }
 
             if (stored.Length > maxStored)
+            {
                 throw new InvalidOperationException(
                     $"chunk {chunks.Count} stores {stored.Length} bytes, more than a {pointerLength}-byte pointer can express"
                 );
+            }
 
             chunks.Add(new Chunk(flag, stored));
         }
@@ -344,9 +346,9 @@ internal static class IszImageBuilder
             // The flag occupies the top two bits of the whole entry, so it lands in the top two bits
             // of the last byte of a little-endian value.
             var entry =
-                (uint)chunk.Stored.Length | ((ulong)(chunk.Flag >> 6) << (8 * pointerLength - 2));
+                (uint)chunk.Stored.Length | ((ulong)(chunk.Flag >> 6) << ((8 * pointerLength) - 2));
 
-            for (var b = 0; b < pointerLength; b++) table[index * pointerLength + b] = (byte)(entry >> (8 * b));
+            for (var b = 0; b < pointerLength; b++) table[(index * pointerLength) + b] = (byte)(entry >> (8 * b));
         }
 
         return table;

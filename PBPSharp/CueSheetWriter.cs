@@ -53,7 +53,7 @@ public static class CueSheetWriter
         int leadinFrames
     )
     {
-        var totalFrames = (long)minutes * 60 * 75 + (long)seconds * 75 + frames - leadinFrames;
+        var totalFrames = ((long)minutes * 60 * 75) + ((long)seconds * 75) + frames - leadinFrames;
         if (totalFrames < 0) totalFrames = 0;
 
         var m = (int)(totalFrames / (60 * 75));

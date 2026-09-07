@@ -45,7 +45,7 @@ public class MdsTests : IDisposable
         params (byte Mode, byte Point, ushort SectorSize, uint StartLba)[] tracks
     )
     {
-        var bytes = new byte[TrackBlockStart + TrackBlockSize * Math.Max(tracks.Length, 1)];
+        var bytes = new byte[TrackBlockStart + (TrackBlockSize * Math.Max(tracks.Length, 1))];
         "MEDIA DESCRIPTOR"u8.ToArray().CopyTo(bytes, 0);
         BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(SessionCountOffset), 1);
         BinaryPrimitives.WriteUInt32LittleEndian(
@@ -61,7 +61,7 @@ public class MdsTests : IDisposable
 
         for (var i = 0; i < tracks.Length; i++)
         {
-            var offset = TrackBlockStart + i * TrackBlockSize;
+            var offset = TrackBlockStart + (i * TrackBlockSize);
             bytes[offset + 0x00] = tracks[i].Mode;
             bytes[offset + 0x04] = tracks[i].Point;
             BinaryPrimitives.WriteUInt16LittleEndian(
@@ -238,7 +238,7 @@ public class MdsTests : IDisposable
             Assert.Equal((byte)(sector + 1), bytes[sector * MdsDisc.RawSectorSize]);
             Assert.Equal(
                 (byte)(sector + 1),
-                bytes[sector * MdsDisc.RawSectorSize + MdsDisc.RawSectorSize - 1]
+                bytes[(sector * MdsDisc.RawSectorSize) + MdsDisc.RawSectorSize - 1]
             );
         }
 

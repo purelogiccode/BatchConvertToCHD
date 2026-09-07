@@ -135,7 +135,7 @@ public class CdSectorEccEdcTests
         sector[0x00D] = 0x02;
         sector[0x00E] = 0x10;
 
-        for (var i = 0; i < payloadLength; i++) sector[payloadOffset + i] = (byte)(seed + i * 7);
+        for (var i = 0; i < payloadLength; i++) sector[payloadOffset + i] = (byte)(seed + (i * 7));
 
         return sector;
     }

@@ -29,8 +29,10 @@ internal static class PathUtils
     internal static bool IsAsciiPath(string path)
     {
         foreach (var c in path)
+        {
             if (c > 127)
                 return false;
+        }
 
         return true;
     }
@@ -115,10 +117,12 @@ internal static class PathUtils
 
         var sb = new StringBuilder(name.Length);
         foreach (var c in name)
+        {
             if (Array.IndexOf(InvalidFileNameChars, c) >= 0)
                 sb.Append('_');
             else
                 sb.Append(c);
+        }
 
         // Windows silently strips trailing periods from file names, so make the last character a
         // safe underscore instead. Replacing (rather than trimming all of them) keeps the name as
@@ -207,6 +211,7 @@ internal static class PathUtils
             candidates.Add(systemTempRoot);
 
         foreach (var drive in DriveInfo.GetDrives())
+        {
             try
             {
                 if (drive is { IsReady: true, DriveType: DriveType.Fixed })
@@ -216,6 +221,7 @@ internal static class PathUtils
             {
                 // ignored
             }
+        }
 
         string? bestRoot = null;
         long bestFree = 0;
@@ -223,6 +229,7 @@ internal static class PathUtils
         long bestFreeMeetingRequirement = 0;
 
         foreach (var root in candidates)
+        {
             try
             {
                 var drive = new DriveInfo(root);
@@ -253,6 +260,7 @@ internal static class PathUtils
                     root
                 );
             }
+        }
 
         var selectedRoot = bestRootMeetingRequirement ?? bestRoot;
         var selectedFree =
@@ -273,6 +281,7 @@ internal static class PathUtils
         string basePath;
 
         if (selectedRoot != null && selectedFree >= minFreeBytes)
+        {
             // Prefer the system temp folder when it sits on the selected volume AND its own path
             // is safe to hand to chdman. %TEMP% lives under the user profile and can contain
             // non-ASCII characters (e.g. "C:\Users\Kauê Chacon\...") or approach MAX_PATH, which
@@ -289,8 +298,11 @@ internal static class PathUtils
                         ),
                         "BatchConvertToCHD_Temp"
                     );
+        }
         else
+        {
             basePath = Path.GetTempPath();
+        }
 
         return Path.Combine(basePath, $"{tempDirPrefix}{guid}");
 
@@ -501,6 +513,7 @@ internal static class PathUtils
         var paths = new List<string> { Path.GetTempPath() };
 
         foreach (var drive in DriveInfo.GetDrives())
+        {
             try
             {
                 if (drive is { IsReady: true, DriveType: DriveType.Fixed })
@@ -520,6 +533,7 @@ internal static class PathUtils
             {
                 Logger.Verbose(ex, "Failed to enumerate drive during temp-path discovery");
             }
+        }
 
         return paths;
     }

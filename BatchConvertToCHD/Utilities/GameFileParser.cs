@@ -217,6 +217,7 @@ internal static class GameFileParser
 
             var score = 0;
             if (onDiskFiles is { Length: > 0 })
+            {
                 foreach (var line in decoded)
                 {
                     var trimmedLine = line.Trim();
@@ -224,6 +225,7 @@ internal static class GameFileParser
                         TryGetFileNameFromFileLine(trimmedLine, out var fileName)
                         && fileName is not null
                     )
+                    {
                         if (
                             onDiskFiles.Any(f =>
                                 string.Equals(
@@ -233,8 +235,12 @@ internal static class GameFileParser
                                 )
                             )
                         )
+                        {
                             score += 10;
+                        }
+                    }
                 }
+            }
 
             if (score > bestScore)
             {
@@ -284,9 +290,13 @@ internal static class GameFileParser
                     || afterFilename.Equals("MOTOROLA", StringComparison.OrdinalIgnoreCase)
                     || afterFilename.Equals("AUDIO", StringComparison.OrdinalIgnoreCase)
                 )
+                {
                     fileName = rest[..lastSpace];
+                }
                 else
+                {
                     fileName = rest;
+                }
             }
             else
             {

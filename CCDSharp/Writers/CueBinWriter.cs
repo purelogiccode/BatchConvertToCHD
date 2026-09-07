@@ -157,6 +157,7 @@ internal static class CueBinWriter
     private static void CopyWithRetry(string source, string dest)
     {
         for (var attempt = 0; attempt < MaxCopyRetries; attempt++)
+        {
             try
             {
                 File.Copy(source, dest, true);
@@ -166,5 +167,6 @@ internal static class CueBinWriter
             {
                 Thread.Sleep(300 * (attempt + 1));
             }
+        }
     }
 }

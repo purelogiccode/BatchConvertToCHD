@@ -115,7 +115,9 @@ internal static class BinCueGenerator
                     && GameFileParser.TryGetFileNameFromFileLine(trimmed, out var fileName)
                     && fileName is not null
                 )
+                {
                     return fileName;
+                }
             }
         }
 #pragma warning disable RCS1075

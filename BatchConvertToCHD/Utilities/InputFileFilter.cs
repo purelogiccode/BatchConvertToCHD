@@ -98,7 +98,9 @@ internal static class InputFileFilter
                         Path.GetExtension(descriptor)
                         .Equals(FileExtensions.Ccd, StringComparison.OrdinalIgnoreCase)
                     )
+                    {
                         continue;
+                    }
 
                     if (!descriptorText.TryGetValue(descriptor, out var text))
                     {
@@ -143,9 +145,11 @@ internal static class InputFileFilter
         );
 
         foreach (var suppression in suppressions)
+        {
             onLog?.Invoke(
                 $" Skipping {Path.GetFileName(suppression.DataFile)} - {suppression.Reason}."
             );
+        }
 
         return [.. ordered.Where(f => !suppressed.Contains(f))];
     }

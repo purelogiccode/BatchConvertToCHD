@@ -118,8 +118,10 @@ internal static class CueWorkDirectory
                 var baseName = workName;
                 var suffix = 1;
                 while (!usedNames.Add(workName))
+                {
                     workName =
                         $"{Path.GetFileNameWithoutExtension(baseName)}_{suffix++}{Path.GetExtension(baseName)}";
+                }
 
                 workNames[reference.FullPath] = workName;
             }
@@ -135,6 +137,7 @@ internal static class CueWorkDirectory
                     mp3Decoder is not null
                     && string.Equals(reference.TrackType, "MP3", StringComparison.Ordinal)
                 )
+                {
                     await mp3Decoder
                         .DecodeAsync(
                             reference.ResolvedFullPath,
@@ -143,13 +146,16 @@ internal static class CueWorkDirectory
                             token
                         )
                         .ConfigureAwait(false);
+                }
                 else
+                {
                     await CopyWithRetryAsync(
                             reference.ResolvedFullPath,
                             Path.Combine(workDir, workName),
                             token
                         )
                         .ConfigureAwait(false);
+                }
             }
 
             var normalized = await CueNormalizer
@@ -212,7 +218,9 @@ internal static class CueWorkDirectory
                     Path.IsPathRooted(Path.GetRelativePath(workDir, r.ResolvedFullPath))
                 )
             )
+            {
                 return null;
+            }
         }
         catch (ArgumentException)
         {

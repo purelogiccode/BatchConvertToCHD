@@ -288,7 +288,7 @@ public class CsoStreamTests : IDisposable
         ms.Write(new byte[2]);
 
         // Data starts right after index
-        var dataStart = 24 + indexEntries * 4;
+        var dataStart = 24 + (indexEntries * 4);
 
         // For simplicity, store all blocks as uncompressed
         for (var i = 0; i < indexEntries; i++)

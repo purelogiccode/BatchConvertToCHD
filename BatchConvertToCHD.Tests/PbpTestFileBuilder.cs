@@ -176,10 +176,12 @@ internal sealed class PbpTestFileBuilder
         var positions = _multiDiscPositions ?? [0x200000];
         Span<byte> posBytes = stackalloc byte[20];
         for (var i = 0; i < 5; i++)
+        {
             BinaryPrimitives.WriteUInt32LittleEndian(
                 posBytes[(i * 4)..],
                 i < positions.Count ? (uint)positions[i] : 0u
             );
+        }
 
         stream.Write(posBytes);
 
@@ -337,7 +339,7 @@ internal sealed class PbpTestFileBuilder
         // Other blocks: fill with pattern
         var block = new byte[BlockSize];
         for (var i = 0; i < BlockSize; i++)
-            block[i] = (byte)((i + blockIndex * 17) & 0xFF);
+            block[i] = (byte)((i + (blockIndex * 17)) & 0xFF);
         return block;
     }
 
@@ -399,7 +401,7 @@ internal sealed class PbpTestFileBuilder
         foreach (var dirEntry in dirEntries)
             ms.Write(dirEntry);
 
-        var keyTableOffset = (uint)(20 + entries.Count * 16);
+        var keyTableOffset = (uint)(20 + (entries.Count * 16));
         var dataTableOffset = (uint)(keyTableOffset + keyTable.Length);
 
         ms.Write(keyTable.ToArray());

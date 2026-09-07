@@ -36,10 +36,12 @@ internal partial class AboutWindow
         {
             // Notify developer
             if (App.SharedBugReportService != null)
+            {
                 _ = App.SharedBugReportService.SendBugReportAsync(
                     $"Error opening URL: {e.Uri.AbsoluteUri}",
                     ex
                 );
+            }
 
             // Notify user
             MessageBox.Show(

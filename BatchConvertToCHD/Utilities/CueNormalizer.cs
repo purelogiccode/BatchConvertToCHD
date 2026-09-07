@@ -191,6 +191,7 @@ internal static class CueNormalizer
         }
 
         if (match is null)
+        {
             return new CueFileReference(
                 referencedName,
                 null,
@@ -199,6 +200,7 @@ internal static class CueNormalizer
                 false,
                 directory
             );
+        }
 
         // Anchor the record on the file that was actually found, so a redirected reference reports
         // the real path rather than the one the cue asked for.
@@ -223,7 +225,9 @@ internal static class CueNormalizer
                 && GameFileParser.TryGetFileNameFromFileLine(trimmed, out var name)
                 && name is not null
             )
+            {
                 count++;
+            }
         }
 
         return count;
@@ -302,7 +306,9 @@ internal static class CueNormalizer
                 out var trackNumber
             )
         )
+        {
             return null;
+        }
 
         var variants = new[]
         {
@@ -347,8 +353,10 @@ internal static class CueNormalizer
         // The track type is the first known type token anywhere in the tail — some descriptors
         // (e.g. cdrdao TOCs) append extra columns after the type.
         foreach (var token in tail.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+        {
             if (KnownTrackTypes.Contains(token, StringComparer.OrdinalIgnoreCase))
                 return token.ToUpperInvariant();
+        }
 
         return null;
     }

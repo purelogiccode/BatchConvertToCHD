@@ -86,20 +86,24 @@ internal class ArchiveService
                 .ConfigureAwait(false);
 
             if (error != CsoError.None)
+            {
                 return (
                     false,
                     string.Empty,
                     tempDirectoryRoot,
                     $"CSOSharp failed to decompress {csoFileName}: {error}"
                 );
+            }
 
             if (!File.Exists(tempOutputIsoPath))
+            {
                 return (
                     false,
                     string.Empty,
                     tempDirectoryRoot,
                     $"CSOSharp extraction produced no output file for {csoFileName}"
                 );
+            }
 
             onLog($"Successfully decompressed {csoFileName}");
             return (true, tempOutputIsoPath, tempDirectoryRoot, string.Empty);
@@ -171,6 +175,7 @@ internal class ArchiveService
             onLog($"Extracting {archiveFileName} to: {tempDirectoryRoot}");
 
             if (extension.Equals(FileExtensions.Zip, StringComparison.OrdinalIgnoreCase))
+            {
                 await ExtractZipWith7ZaFallbackAsync(
                         originalArchivePath,
                         tempDirectoryRoot,
@@ -178,7 +183,9 @@ internal class ArchiveService
                         token
                     )
                     .ConfigureAwait(false);
+            }
             else if (extension.Equals(FileExtensions.SevenZip, StringComparison.OrdinalIgnoreCase))
+            {
                 await ExtractSevenZipArchiveAsync(
                         originalArchivePath,
                         tempDirectoryRoot,
@@ -186,15 +193,20 @@ internal class ArchiveService
                         token
                     )
                     .ConfigureAwait(false);
+            }
             else if (extension.Equals(FileExtensions.Rar, StringComparison.OrdinalIgnoreCase))
+            {
                 await Task.Run(
                         () =>
                             ExtractRarArchive(originalArchivePath, tempDirectoryRoot, onLog, token),
                         token
                     )
                     .ConfigureAwait(false);
+            }
             else
+            {
                 return (false, [], tempDirectoryRoot, $"Unsupported archive type: {extension}");
+            }
 
             token.ThrowIfCancellationRequested();
 
@@ -263,9 +275,11 @@ internal class ArchiveService
                             .OrderByDescending(f => new FileInfo(f).Length)
                             .First();
                         if (binFiles.Count > 1)
+                        {
                             onLog(
                                 $"WARNING: Archive contains {binFiles.Count} .bin files but no descriptor (.cue/.iso/.img) and no recognisable track numbering. Converting the largest one ({Path.GetFileName(largestBin)}) as a single data track; any other tracks will be missing."
                             );
+                        }
 
                         var cuePath = BinCueGenerator.GetAutoCuePath(largestBin);
                         await File.WriteAllTextAsync(
@@ -306,12 +320,14 @@ internal class ArchiveService
                     StringComparison.OrdinalIgnoreCase
                 )
             )
+            {
                 return (
                     false,
                     [],
                     tempDirectoryRoot,
                     "The archive file uses a compression method that is not supported by the built-in ZIP extractor (e.g., Deflate64, LZMA, PPMd). Try re-compressing the archive with standard Deflate compression, or extract it manually with 7-Zip or WinRAR and add the extracted files for conversion."
                 );
+            }
 
             return (
                 false,
@@ -498,6 +514,7 @@ internal class ArchiveService
     {
         const int maxRetries = 3;
         for (var attempt = 1; attempt <= maxRetries; attempt++)
+        {
             try
             {
                 using var archive = ZipFile.OpenRead(archivePath);
@@ -515,9 +532,11 @@ internal class ArchiveService
                         !Path.GetFullPath(destinationPath)
                             .StartsWith(fullOutputDirectory, StringComparison.OrdinalIgnoreCase)
                     )
+                    {
                         throw new SecurityException(
                             "Attempted to extract file outside of the target directory."
                         );
+                    }
 
                     entry.ExtractToFile(destinationPath, true);
                 }
@@ -529,6 +548,7 @@ internal class ArchiveService
             {
                 Thread.Sleep(attempt * 1000);
             }
+        }
     }
 
     private async Task ExtractSevenZipArchiveAsync(
@@ -594,18 +614,22 @@ internal class ArchiveService
             process.OutputDataReceived += (_, args) =>
             {
                 if (args.Data != null)
+                {
                     lock (outputLock)
                     {
                         outputBuilder.AppendLine(args.Data);
                     }
+                }
             };
             process.ErrorDataReceived += (_, args) =>
             {
                 if (args.Data != null)
+                {
                     lock (outputLock)
                     {
                         outputBuilder.AppendLine(args.Data);
                     }
+                }
             };
             process.Start();
             process.BeginOutputReadLine();
@@ -625,9 +649,11 @@ internal class ArchiveService
                     || outputText.Contains("Is not archive", StringComparison.OrdinalIgnoreCase)
                     || outputText.Contains("Cannot open", StringComparison.OrdinalIgnoreCase)
                 )
+                {
                     throw new InvalidDataException(
                         $"7za.exe: archive is invalid or corrupt ({Path.GetFileName(archivePath)}). Output: {outputText}"
                     );
+                }
 
                 throw new InvalidOperationException(
                     $"7za.exe extraction failed with exit code {process.ExitCode}. Output: {outputText}"
@@ -735,7 +761,9 @@ internal class ArchiveService
                     StringComparison.Ordinal
                 )
             )
+            {
                 throw;
+            }
 
             Logger.Error(ex, "Direct extraction failed");
         }
@@ -781,9 +809,11 @@ internal class ArchiveService
                 !Path.GetFullPath(destinationPath)
                     .StartsWith(fullOutputDirectory, StringComparison.OrdinalIgnoreCase)
             )
+            {
                 throw new SecurityException(
                     "Attempted to extract file outside of the target directory."
                 );
+            }
 
             WriteEntryWithRetry(entry, destinationPath);
         }
@@ -793,6 +823,7 @@ internal class ArchiveService
     {
         const int maxRetries = 3;
         for (var attempt = 1;; attempt++)
+        {
             try
             {
                 entry.WriteToFile(destinationPath);
@@ -802,6 +833,7 @@ internal class ArchiveService
             {
                 Thread.Sleep(attempt * 1000);
             }
+        }
     }
 
     private static void TryDeleteFile(string filePath)

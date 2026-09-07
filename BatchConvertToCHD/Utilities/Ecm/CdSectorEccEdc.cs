@@ -175,7 +175,7 @@ internal static class CdSectorEccEdc
 
         for (var major = 0; major < majorCount; major++)
         {
-            var index = (major >> 1) * majorMult + (major & 1);
+            var index = ((major >> 1) * majorMult) + (major & 1);
             byte eccA = 0;
             byte eccB = 0;
 

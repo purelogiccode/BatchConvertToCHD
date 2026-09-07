@@ -190,6 +190,7 @@ internal class UpdateService
                 if (normalizedRemote > normalizedCurrent)
                 {
                     if (Application.Current != null)
+                    {
                         await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
                             var result = MessageBox.Show(
@@ -200,6 +201,7 @@ internal class UpdateService
                             );
 
                             if (result == MessageBoxResult.Yes)
+                            {
                                 try
                                 {
                                     Process.Start(
@@ -236,7 +238,9 @@ internal class UpdateService
                                         MessageBoxImage.Information
                                     );
                                 }
+                            }
                         });
+                    }
 
                     onStatusUpdate($"Update available: v{remoteVersionString}");
                 }
@@ -315,11 +319,13 @@ internal class UpdateService
         var tag = tagName.Trim();
         var prefixes = new[] { "release", "version", "v" };
         foreach (var prefix in prefixes)
+        {
             if (tag.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
                 tag = tag[prefix.Length..];
                 break;
             }
+        }
 
         while (tag.Length > 0 && !char.IsDigit(tag[0])) tag = tag[1..];
 

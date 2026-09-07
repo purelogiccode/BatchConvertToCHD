@@ -356,9 +356,11 @@ public class PathUtilsTests
 
             var created = PathUtils.CreateTempDirectoryOnSameVolume(reference, "SameVolume_");
             if (created is null)
+            {
                 // A volume that refuses a directory is reported by returning null, which the caller
                 // handles; there is nothing to assert about it beyond that.
                 continue;
+            }
 
             try
             {

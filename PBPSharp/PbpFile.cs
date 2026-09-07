@@ -226,7 +226,7 @@ public sealed class PbpFile : IDisposable
         for (var i = 0; i < entryCount; i++)
         {
             var dirBuffer = new byte[16];
-            stream.Seek(header.SfoOffset + 20 + i * 16, SeekOrigin.Begin);
+            stream.Seek(header.SfoOffset + 20 + (i * 16), SeekOrigin.Begin);
             stream.ReadExactly(dirBuffer, 0, 16);
 
             // Layout: KeyOffset(2) + Format(2) + Length(4) + MaxLength(4) + DataOffset(4)
@@ -297,7 +297,9 @@ public sealed class PbpFile : IDisposable
                 || BitConverter.ToUInt32(magicBuffer, 8) != 0x06F6B4B3
                 || BitConverter.ToUInt32(magicBuffer, 12) != 0xB25945BA
             )
+            {
                 return PbpError.InvalidPsarHeader;
+            }
 
             // Skip 0x76 uint32 values
             var dummyBuffer = new byte[4];

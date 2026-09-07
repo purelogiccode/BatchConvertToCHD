@@ -144,12 +144,12 @@ public class EcmImageDecoderTests : IDisposable
 
     private static void FillPayload(Span<byte> payload, int lba)
     {
-        for (var i = 0; i < payload.Length; i++) payload[i] = (byte)(lba * 31 + i * 7 + (i >> 5));
+        for (var i = 0; i < payload.Length; i++) payload[i] = (byte)((lba * 31) + (i * 7) + (i >> 5));
     }
 
     private static byte ToBcd(int value)
     {
-        return (byte)(value / 10 * 16 + value % 10);
+        return (byte)((value / 10 * 16) + (value % 10));
     }
 
     #region The reference fixture

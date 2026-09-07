@@ -231,22 +231,26 @@ public class FileExtensionsTests
     public void ArchiveExtensionsAreSubsetOfAllSupported()
     {
         foreach (var ext in FileExtensions.ArchiveExtensions)
+        {
             Assert.Contains(
                 ext,
                 FileExtensions.AllSupportedInputExtensionsForConversion,
                 StringComparer.Ordinal
             );
+        }
     }
 
     [Fact]
     public void PrimaryTargetExtensionsAreSubsetOfAllSupported()
     {
         foreach (var ext in FileExtensions.PrimaryTargetExtensions)
+        {
             Assert.Contains(
                 ext,
                 FileExtensions.AllSupportedInputExtensionsForConversion,
                 StringComparer.Ordinal
             );
+        }
     }
 
     [Fact]

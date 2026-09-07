@@ -54,7 +54,9 @@ internal class BugReportApiSink : ILogEventSink
                 string.Equals(message, _lastSentMessage, StringComparison.Ordinal)
                 && DateTimeOffset.UtcNow - _lastSentAt < DuplicateWindow
             )
+            {
                 return;
+            }
 
             _lastSentMessage = message;
             _lastSentAt = DateTimeOffset.UtcNow;

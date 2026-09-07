@@ -27,6 +27,7 @@ internal static class LegacyCleanupService
                 var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
                 foreach (var folder in FoldersToDelete)
+                {
                     try
                     {
                         var folderPath = Path.Combine(baseDirectory, folder);
@@ -40,8 +41,10 @@ internal static class LegacyCleanupService
                     {
                         /* ignore - file may be in use */
                     }
+                }
 
                 foreach (var file in FilesToDelete)
+                {
                     try
                     {
                         var filePath = Path.Combine(baseDirectory, file);
@@ -55,6 +58,7 @@ internal static class LegacyCleanupService
                     {
                         /* ignore - file may be in use */
                     }
+                }
             }
             catch
             {

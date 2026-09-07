@@ -51,10 +51,12 @@ internal class StatsService
             }
 
             if (!response.IsSuccessStatusCode)
+            {
                 Logger.Information(
                     "Failed to record usage statistics: HTTP {StatusCode}",
                     statusCode
                 );
+            }
         }
         catch (Exception ex)
         {

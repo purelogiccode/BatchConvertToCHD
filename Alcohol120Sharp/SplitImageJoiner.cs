@@ -96,6 +96,7 @@ public static class SplitImageJoiner
     {
         long total = 0;
         foreach (var part in parts)
+        {
             try
             {
                 total += new FileInfo(part).Length;
@@ -104,6 +105,7 @@ public static class SplitImageJoiner
             {
                 return 0;
             }
+        }
 
         return total;
     }

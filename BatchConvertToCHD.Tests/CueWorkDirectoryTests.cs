@@ -113,6 +113,7 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
+            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -121,6 +122,7 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
+            }
         }
     }
 
@@ -154,6 +156,7 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
+            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -162,6 +165,7 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
+            }
         }
     }
 
@@ -301,6 +305,7 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
+            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -309,6 +314,7 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
+            }
         }
     }
 
@@ -346,6 +352,7 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
+            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -354,6 +361,7 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
+            }
         }
     }
 
@@ -397,6 +405,7 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
+            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -405,6 +414,7 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
+            }
         }
     }
 
@@ -450,6 +460,7 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
+            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -458,6 +469,7 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
+            }
         }
     }
 
@@ -512,6 +524,7 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
+            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -520,6 +533,7 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
+            }
         }
     }
 
@@ -579,6 +593,7 @@ public class CueWorkDirectoryTests : IDisposable
         finally
         {
             if (workDir is not null)
+            {
                 try
                 {
                     Directory.Delete(workDir, true);
@@ -587,6 +602,7 @@ public class CueWorkDirectoryTests : IDisposable
                 {
                     /* ignore */
                 }
+            }
         }
     }
 

@@ -213,7 +213,7 @@ public class PbpFileTests : IDisposable
         ms.Write(new byte[24]);
 
         // Raw ISO data for the two valid blocks (starts at psarOffset + 0x100000).
-        while (ms.Position < 0x200 + 0x100000 + 2 * 0x9300)
+        while (ms.Position < 0x200 + 0x100000 + (2 * 0x9300))
             ms.WriteByte(0);
 
         File.WriteAllBytes(path, ms.ToArray());
@@ -460,7 +460,7 @@ public class PbpFileTests : IDisposable
         foreach (var dirEntry in dirEntries)
             ms.Write(dirEntry);
 
-        var keyTableOffset = 16 + entryCount * 16;
+        var keyTableOffset = 16 + (entryCount * 16);
         var dataTableOffset = (uint)(keyTableOffset + keyTable.Length);
 
         ms.Write(keyTable.ToArray());
@@ -945,7 +945,7 @@ public class PbpFileTests : IDisposable
             if (b == 1)
                 continue;
             for (var i = 0; i < blockSize; i++)
-                expected[b * blockSize + i] = (byte)((i + b * 17) & 0xFF);
+                expected[(b * blockSize) + i] = (byte)((i + (b * 17)) & 0xFF);
         }
 
         using var outputStream = new MemoryStream();

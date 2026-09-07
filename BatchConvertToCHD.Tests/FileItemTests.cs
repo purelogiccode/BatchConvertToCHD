@@ -85,7 +85,9 @@ public class FileItemTests
                     StringComparison.Ordinal
                 )
             )
+            {
                 fired = true;
+            }
         };
 
         item.FileSize = 1536; // 1.5 KB
@@ -137,7 +139,9 @@ public class FileItemTests
                     StringComparison.Ordinal
                 )
             )
+            {
                 displaySizeChanged = true;
+            }
         };
 
         item.FileSize = 1024;

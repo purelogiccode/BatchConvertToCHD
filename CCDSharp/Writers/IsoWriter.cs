@@ -76,9 +76,11 @@ public static class IsoWriter
         // Find the first data track
         var dataTrack = disc.Tracks.FirstOrDefault(t => !t.IsAudio);
         if (dataTrack == null)
+        {
             throw new InvalidOperationException(
                 "No data track found in the disc image. ISO extraction requires a data track."
             );
+        }
 
         var imgLength = new FileInfo(disc.ImgFilePath).Length;
         var totalSectors = imgLength / SectorConstants.RawSectorSize;
@@ -117,9 +119,11 @@ public static class IsoWriter
                 break;
 
             if (bytesRead < SectorConstants.RawSectorSize)
+            {
                 throw new InvalidOperationException(
                     $"Incomplete sector at index {sectorIndex}: expected {SectorConstants.RawSectorSize} bytes, got {bytesRead}."
                 );
+            }
 
             var extracted = ExtractUserData(sectorBuffer, userDataBuffer);
             if (extracted > 0)
@@ -152,11 +156,13 @@ public static class IsoWriter
         // Check for sync mark
         var hasSync = true;
         for (var i = 0; i < SectorConstants.SyncMark.Length; i++)
+        {
             if (rawSector[i] != SectorConstants.SyncMark[i])
             {
                 hasSync = false;
                 break;
             }
+        }
 
         if (!hasSync)
             return 0;

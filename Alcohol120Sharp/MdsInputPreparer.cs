@@ -96,9 +96,11 @@ public static class MdsInputPreparer
         }
 
         if (!disc.IsPlainRawCd)
+        {
             return Result.Failed(
                 $"the descriptor reports {disc.SectorSize} bytes per sector, which is neither a raw CD ({MdsDisc.RawSectorSize}), a subchannel-bearing CD ({MdsDisc.RawPlusSubchannelSize}) nor a DVD image ({MdsDisc.CookedSectorSize})"
             );
+        }
 
         // Already 2352: reference the data file where it is rather than duplicating a whole disc.
         var reference = GetReferencePath(workDir, dataFilePath);
@@ -137,8 +139,10 @@ public static class MdsInputPreparer
 
         var length = new FileInfo(sourcePath).Length;
         if (length == 0 || length % sectorSize != 0)
+        {
             return
                 $"{Path.GetFileName(sourcePath)} is {length:N0} bytes, which is not a whole number of {sectorSize}-byte sectors, so it is truncated or the descriptor is wrong";
+        }
 
         var readBuffer = new byte[sectorSize * StripChunkSectors];
         var writeBuffer = new byte[MdsDisc.RawSectorSize * StripChunkSectors];
@@ -171,9 +175,11 @@ public static class MdsInputPreparer
 
             var sectors = read / sectorSize;
             for (var sector = 0; sector < sectors; sector++)
+            {
                 readBuffer
                     .AsSpan(sector * sectorSize, MdsDisc.RawSectorSize)
                     .CopyTo(writeBuffer.AsSpan(sector * MdsDisc.RawSectorSize));
+            }
 
             await output
                 .WriteAsync(writeBuffer.AsMemory(0, sectors * MdsDisc.RawSectorSize), token)

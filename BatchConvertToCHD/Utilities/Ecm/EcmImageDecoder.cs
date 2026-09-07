@@ -100,9 +100,11 @@ internal static class EcmImageDecoder
                 input.ReadAtLeast(header, header.Length, false) < header.Length
                 || !header.AsSpan().SequenceEqual(Signature)
             )
+            {
                 return EcmDecodeResult.Failed(
                     "the file does not start with an ECM header, so it is not an ECM file."
                 );
+            }
 
             var sector = new byte[CdSectorEccEdc.SectorSize];
             var inputLength = input.Length;
@@ -166,7 +168,7 @@ internal static class EcmImageDecoder
                             $" Decoded {percent.ToString(CultureInfo.InvariantCulture)}% of the ECM file."
                         );
                         nextProgressPercent =
-                            percent - percent % ProgressStepPercent + ProgressStepPercent;
+                            percent - (percent % ProgressStepPercent) + ProgressStepPercent;
                     }
                 }
             }
@@ -178,13 +180,17 @@ internal static class EcmImageDecoder
                 input.ReadAtLeast(trailer, trailer.Length, false)
                 < trailer.Length
             )
+            {
                 return TruncatedFailure();
+            }
 
             var expectedEdc = BinaryPrimitives.ReadUInt32LittleEndian(trailer);
             if (expectedEdc != runningEdc)
+            {
                 return EcmDecodeResult.Failed(
                     $"the ECM file's checksum does not match the data it decoded to (expected {expectedEdc.ToString("X8", CultureInfo.InvariantCulture)}, got {runningEdc.ToString("X8", CultureInfo.InvariantCulture)}), so the file is damaged."
                 );
+            }
 
             output.Flush();
 
@@ -279,7 +285,9 @@ internal static class EcmImageDecoder
                 !TryReadExactly(input, sector.AsSpan(0x00C, 0x003))
                 || !TryReadExactly(input, sector.AsSpan(0x010, 0x800))
             )
+            {
                 return false;
+            }
 
             CdSectorEccEdc.GenerateMode1(sector);
 

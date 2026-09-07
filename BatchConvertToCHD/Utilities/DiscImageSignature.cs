@@ -73,7 +73,9 @@ internal static class DiscImageSignature
             header.Length >= CdSyncMark.Length
             && header[..CdSyncMark.Length].SequenceEqual(CdSyncMark)
         )
+        {
             return DiscImageKind.RawCd;
+        }
 
         if (StartsWithAscii(header, "MEDIA DESCRIPTOR")) return DiscImageKind.AlcoholDescriptor;
 
@@ -104,7 +106,9 @@ internal static class DiscImageSignature
             && header[2] == 0x4D
             && header[3] == 0x00
         )
+        {
             return DiscImageKind.Ecm;
+        }
 
         if (StartsWithAscii(header, "CISO") || StartsWithAscii(header, "ZISO")) return DiscImageKind.Cso;
 
@@ -115,7 +119,9 @@ internal static class DiscImageSignature
             && header[2] == 0x42
             && header[3] == 0x50
         )
+        {
             return DiscImageKind.Pbp;
+        }
 
         if (StartsWithAscii(header, "MComprHD")) return DiscImageKind.Chd;
 
