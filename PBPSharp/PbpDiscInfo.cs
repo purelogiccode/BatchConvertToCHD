@@ -305,6 +305,11 @@ public sealed class PbpDiscInfo
             // A block failed to inflate in the reference-compatible SharpZipLib inflater.
             return PbpError.DecompressionError;
         }
+        catch (IndexOutOfRangeException)
+        {
+            // Corrupt deflate stream surfaced as a raw array error by the Inflater.
+            return PbpError.DecompressionError;
+        }
         catch (NotSupportedException)
         {
             // A corrupt block inflated beyond the fixed output buffer capacity.
@@ -341,14 +346,24 @@ public sealed class PbpDiscInfo
         );
         using var outputMs = new MemoryStream(output);
 
-        var writeBuffer = new byte[4096];
-        while (true)
+        try
         {
-            var totalRead = inflaterStream.Read(writeBuffer, 0, writeBuffer.Length);
-            if (totalRead <= 0)
-                break;
+            var writeBuffer = new byte[4096];
+            while (true)
+            {
+                var totalRead = inflaterStream.Read(writeBuffer, 0, writeBuffer.Length);
+                if (totalRead <= 0)
+                    break;
 
-            outputMs.Write(writeBuffer, 0, totalRead);
+                outputMs.Write(writeBuffer, 0, totalRead);
+            }
+        }
+        catch (IndexOutOfRangeException)
+        {
+            // A malformed deflate stream can drive SharpZipLib's Inflater into a raw
+            // IndexOutOfRangeException instead of its own exception type. Normalize it so
+            // callers classify the failure as decompression data rather than an app bug.
+            throw new InvalidDataException("Corrupt deflate stream in PSAR block.");
         }
 
         return (int)outputMs.Position;

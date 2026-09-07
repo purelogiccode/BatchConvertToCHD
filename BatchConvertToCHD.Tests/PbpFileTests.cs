@@ -233,6 +233,71 @@ public class PbpFileTests : IDisposable
         }
     }
 
+    [Fact]
+    public void ExtractToBinCueWithGarbageCompressedBlockReturnsDecompressionError()
+    {
+        // Regression: malformed deflate data could drive the SharpZipLib Inflater into a raw
+        // IndexOutOfRangeException, which previously escaped ExtractToBinCue's typed catches
+        // and surfaced as an unclassified "Index was outside the bounds of the array" error
+        // in the caller instead of a decompression failure.
+        var path = Path.Combine(_tempDir, $"garbageblock_{Guid.NewGuid():N}.pbp");
+
+        using var ms = new MemoryStream();
+        WriteStandardPbpHeader(ms);
+        ms.Write(BuildMinimalSfo());
+
+        while (ms.Position < 0x200)
+            ms.WriteByte(0);
+
+        ms.Write("PSISOIMG0000"u8.ToArray());
+
+        while (ms.Position < 0x200 + 0x4000)
+            ms.WriteByte(0);
+
+        // Two valid raw blocks, then a block with a valid but tiny length whose data is
+        // pseudo-random garbage that no inflater can decode.
+        for (var i = 0; i < 2; i++)
+        {
+            ms.Write(BitConverter.GetBytes((uint)(i * 0x9300)));
+            ms.Write(BitConverter.GetBytes(0x9300));
+            ms.Write(new byte[24]);
+        }
+
+        ms.Write(BitConverter.GetBytes(2u * 0x9300));
+        ms.Write(BitConverter.GetBytes(0x40));
+        ms.Write(new byte[24]);
+
+        // Raw ISO data for the two valid blocks (starts at psarOffset + 0x100000).
+        while (ms.Position < 0x200 + 0x100000 + (2 * 0x9300))
+            ms.WriteByte(0);
+
+        var garbage = new byte[0x40];
+        var seed = 0x12345678;
+        for (var i = 0; i < garbage.Length; i++)
+        {
+            seed = (seed * 1103515245) + 12345;
+            garbage[i] = (byte)((seed >> 16) & 0xFF);
+        }
+
+        ms.Write(garbage);
+
+        File.WriteAllBytes(path, ms.ToArray());
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        using (pbp)
+        {
+            Assert.Equal(3, pbp.Discs[0].BlockCount);
+
+            var binPath = Path.Combine(_tempDir, $"garbage_{Guid.NewGuid():N}.bin");
+            var cuePath = Path.ChangeExtension(binPath, ".cue");
+            var result = pbp.Discs[0].ExtractToBinCue(binPath, cuePath);
+            Assert.Equal(PbpError.DecompressionError, result);
+        }
+    }
+
     private static void WriteStandardPbpHeader(
         Stream ms,
         int sfoOffset = 0x28,

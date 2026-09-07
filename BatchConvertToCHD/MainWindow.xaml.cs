@@ -269,6 +269,12 @@ internal partial class MainWindow : IDisposable
                 )
             );
         }
+        catch (OperationCanceledException)
+        {
+            // The window was closed while startup work was still pending (OnClosed cancels
+            // _cts), so cancellation here is the normal shutdown path, not an error.
+            Log.Debug("MainWindow_LoadedAsync cancelled - window closed during startup");
+        }
         catch (Exception ex)
         {
             LogError("MainWindow_Loaded error", ex);
