@@ -61,18 +61,22 @@ Environment Details includes: date/time, app name + version, OS version, archite
 
 ## 9.4 Exclusion Patterns
 
-`IsExcludedFromBugReport` (`BugReportService.cs:63`) performs a case-insensitive substring match against `ExcludedMessagePatterns` (`:21–61`). Any match → the report is **dropped entirely** (no HTTP call). The categories:
+`IsExcludedFromBugReport` (`BugReportService.cs:116`) performs a case-insensitive substring match against `ExcludedMessagePatterns` (`:17–91`). Any match → the report is **dropped entirely** (no HTTP call). The categories:
 
 | Category | Example patterns |
 |----------|------------------|
 | **Stats noise** | `"Failed to record usage statistics"` |
-| **Drive / temp-space info** | `"Temp drive ("`, `"Output drive ("`, `"drive has "`, `"drive ("`, `"input files total"`, `"CHD files total"`, `"You may run out of disk space"`, `"disk space"`, `"disk full"` |
+| **Drive / temp-space info** | `"Temp drive ("`, `"Output drive ("`, `"drive has "`, `"drive ("`, `"input files total"`, `"CHD files total"`, `"You may run out of disk space"`, `"disk space"`, `"disk full"`, `"free on"` |
+| **Encoder presence / start** | `"chdman.exe not found"`, `"CHDSharp.exe not found"`, `"CHDSharp.exe was not found"`, `"chdman.exe was not found"`, `"Failed to start chdman"`, `"Failed to start CHDSharp"` |
 | **Extraction outcomes** | `"No supported primary files found in archive"`, `"Partial extraction:"`, `"File not found, skipping:"` |
-| **Tooling** | `"chdman.exe not found"`, `"CRITICAL ERROR: The following required component"` |
-| **Corrupt/unopenable CHD data** | `"Not a valid CHD file"`, `"Invalid or corrupt data"`, `"Cannot open file"` |
-| **chdman output (user data)** | `"Fatal error occurred"` (chdman exit summary), `"cannot create std::vector"` (chdman C++ crash on user input) |
+| **Tooling** | `"CRITICAL ERROR: The following required component"` |
+| **Corrupt/unopenable CHD data** | `"Not a valid CHD file"`, `"Invalid or corrupt data"`, `"Cannot open file"`, `"Failed to open '"` (CHD open/read failures during extraction) |
+| **chdman output (user data)** | `"Fatal error occurred"` (chdman exit summary), `"cannot create std::vector"` (chdman C++ crash on user input), `"Error during compression"`, `"Error parsing input file"`, `"failed due to an I/O error"` |
+| **Encoder fallback (routine)** | `"chdman failed for"`, `"Falling back to CHDSharp"` — when both encoders fail, the classified error reported afterwards still reaches the API |
+| **File moves (environment)** | `"Failed to move temp output to destination"`, `"Failed to move CHDSharp output to destination"` |
 | **Cue/dependency validation** | `"referenced files are missing"`, `"could not be resolved"`, `"could not validate referenced files"`, `"MP3 audio track could not be decoded"`, `"is not divisible by"`, `"The file or directory is corrupted and unreadable"`, `"Retry via temp failed"` |
 | **Archive errors** | `"archive file may be corrupted"`, `"archive is invalid or corrupt"`, `"archive file appears to be incomplete"`, `"multi-part RAR with a missing volume"`, `"unavailable network location"`, `"Archive is encrypted"`, `"compression method that is not supported"`, `"CCDSharp: Conversion error"` |
+| **Extension mismatch (skip by design)** | `"and it is not a usable disc image"` |
 
 **Design intent**: the exclusion list only contains messages that describe **user-data or environmental conditions** (corrupt files, full disks, missing volumes, rate limits) — conditions the application handles gracefully and that would otherwise flood the bug database. Genuine code defects (exceptions, unexpected failures) still reach the API — including **CHDSharp and PBPSharp extraction failures**, which are reported by design (with debug details such as file size, disc index/count, and numeric error codes) so the library maintainer can fix them. Every exclusion is covered by unit tests (`BugReportServiceTests`).
 

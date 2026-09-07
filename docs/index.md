@@ -26,13 +26,14 @@ This documentation covers the project from both a user and a developer perspecti
 | 11 | [Testing](11-testing.md) | Developers | Test project layout, coverage by file, integration tests, how to run |
 | 12 | [Application Data](12-application-data.md) | Users & devs | AppData layout: logs, screenshots, temp directories, cleanup |
 | 13 | [Troubleshooting](13-troubleshooting.md) | Users & devs | Common errors, their meaning, and how to resolve them |
+| 14 | [What's New](WhatsNew.md) | Everyone | The changelog for each release |
 
 ## 🔑 Quick Facts
 
 | Fact | Value |
 |------|-------|
 | **Application name** | `BatchConvertToCHD` |
-| **Latest version** | 3.5.1 |
+| **Latest version** | 3.6.0 |
 | **Target framework** | .NET 10.0 (`net10.0-windows`), WPF |
 | **Platform** | Windows 10 / 11, x64 and ARM64 |
 | **License** | GPL v3.0 |
@@ -57,7 +58,7 @@ CSharp_BatchConvertToCHD/
 │   ├── Services/                   # Archive, BugReport, FileWatcher, Stats, Update, ...
 │   └── Utilities/                  # PathUtils, CueNormalizer, GameFileParser, ...
 │       └── Ecm/                    # in-process ECM decoding
-├── BatchConvertToCHD.Tests/        # xUnit test suite (813 tests)
+├── BatchConvertToCHD.Tests/        # xUnit test suite (820 tests)
 ├── CCDSharp/                       # CloneCD (.ccd/.img/.sub) parsing library
 ├── CSOSharp/                       # CSO/CISO decompression library (deflate + LZ4)
 ├── PBPSharp/                       # PlayStation PBP extraction + SFO parsing library
@@ -70,6 +71,7 @@ CSharp_BatchConvertToCHD/
 ## 🚀 Where to Start
 
 - **I just want to use the app** → [Getting Started](02-getting-started.md) and [User Guide](04-user-guide.md)
+- **I want to know what changed** → [What's New](WhatsNew.md)
 - **I want to build from source** → [Getting Started → Building from Source](02-getting-started.md#building-from-source)
 - **I want to understand the internals** → [Architecture](03-architecture.md) → [Conversion Pipeline](05-conversion-pipeline.md)
 - **I want to contribute or add tests** → [Testing](11-testing.md)

@@ -137,7 +137,7 @@ Generated cue sheets reference the disc image where it already lies rather than 
     * [Alcohol120Sharp](https://) (v1.0.0) — Pure C# Alcohol 120% (.mds/.mdf) parsing and cue preparation
     * [UltraIsoSharp](https://) (v1.0.0) — Pure C# UltraISO ISZ decompression
     * [SharpCompress](https://github.com/adamhathcock/sharpcompress) (v0.50.4) — Archive extraction, and bzip2 decompression for ISZ images
-    * [NAudio](https://github.com/naudio/NAudio) (v3.0.1) — MP3 audio track decoding (Media Foundation)
+    * [NAudio](https://github.com/naudio/NAudio) (v3.1.0) — MP3 audio track decoding (Media Foundation)
     * [Serilog](https://serilog.net/) (v4.4.0) — Structured diagnostic logging
 
 ---
@@ -202,6 +202,8 @@ The full project documentation (user guide, architecture, developer references, 
 * [Testing](docs/11-testing.md)
 * [Application Data](docs/12-application-data.md)
 * [Troubleshooting](docs/13-troubleshooting.md)
+
+The changelog for each release lives in [WhatsNew.md](WhatsNew.md).
 
 ---
 
