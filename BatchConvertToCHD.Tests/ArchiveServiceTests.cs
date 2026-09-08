@@ -1074,7 +1074,7 @@ public class ArchiveServiceTests : IDisposable
     // --- Tests for ExtractSplitArchiveWith7ZaAsync ---
 
     [Fact]
-    public async Task ExtractSplitArchiveWith7ZaAsyncMissing7zaReturnsFailure()
+    public async Task ExtractSplitArchiveWith7ZaAsyncMissing7ZaReturnsFailure()
     {
         var service = new ArchiveService("7za.exe", false);
         var volume = CreateDummyFile("game.7z.001");
@@ -1111,7 +1111,7 @@ public class ArchiveServiceTests : IDisposable
 
         var splitDir = Path.Combine(_tempDir, "split");
         Directory.CreateDirectory(splitDir);
-        Run7za(sevenZipPath, $"a -v4k \"{Path.Combine(splitDir, "game.7z")}\" \"{sourceIso}\"");
+        Run7Za(sevenZipPath, $"a -v4k \"{Path.Combine(splitDir, "game.7z")}\" \"{sourceIso}\"");
         Assert.True(File.Exists(Path.Combine(splitDir, "game.7z.001")), "volume 1 was not created");
         Assert.True(File.Exists(Path.Combine(splitDir, "game.7z.002")), "volume 2 was not created");
 
@@ -1156,7 +1156,7 @@ public class ArchiveServiceTests : IDisposable
 
         var splitDir = Path.Combine(_tempDir, "split_missing");
         Directory.CreateDirectory(splitDir);
-        Run7za(sevenZipPath, $"a -v4k \"{Path.Combine(splitDir, "game.7z")}\" \"{Path.Combine(sourceDir, "game.iso")}\"");
+        Run7Za(sevenZipPath, $"a -v4k \"{Path.Combine(splitDir, "game.7z")}\" \"{Path.Combine(sourceDir, "game.iso")}\"");
         File.Delete(Path.Combine(splitDir, "game.7z.002"));
 
         var service = new ArchiveService(sevenZipPath, true);
@@ -1185,7 +1185,7 @@ public class ArchiveServiceTests : IDisposable
         return bytes;
     }
 
-    private static void Run7za(string sevenZipPath, string arguments)
+    private static void Run7Za(string sevenZipPath, string arguments)
     {
         using var process = new System.Diagnostics.Process();
         process.StartInfo = new System.Diagnostics.ProcessStartInfo
