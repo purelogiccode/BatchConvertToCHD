@@ -2375,12 +2375,25 @@ internal partial class MainWindow : IDisposable
     {
         var firstVolume = volumeSet[0];
 
-        // A multi-part archive is a different thing entirely and needs its own tooling.
+        // A multi-part archive is a different thing entirely. 7-Zip and ZIP volume sets are
+        // byte-splits of one archive stream, which the bundled 7za reads straight from the first
+        // volume, so they convert end to end. Multi-part RAR needs tooling the app does not carry.
         var firstKind = DiscImageSignature.Detect(firstVolume);
         if (DiscImageSignature.IsArchive(firstKind))
         {
-            return ResolvedInput.Skip(
-                $"this is part 1 of a {volumeSet.Count}-part {DiscImageSignature.Describe(firstKind)}. Extract the set manually and convert the extracted image."
+            if (firstKind is DiscImageKind.Rar)
+            {
+                return ResolvedInput.Skip(
+                    $"this is part 1 of a {volumeSet.Count}-part RAR archive. Extract the set manually and convert the extracted image."
+                );
+            }
+
+            return await ResolveSplitArchiveSetAsync(
+                volumeSet,
+                originalName,
+                outputFolder,
+                tempDirs,
+                token
             );
         }
 
@@ -2409,6 +2422,102 @@ internal partial class MainWindow : IDisposable
             tempDir,
             "Joined image",
             $"the {volumeSet.Count} parts join to {joinedBytes:N0} bytes, which is not a whole number of 2352-byte CD sectors or 2048-byte data sectors. A part is missing or truncated, so the set needs re-downloading.",
+            token
+        );
+    }
+
+    /// <summary>
+    ///     Extracts a numbered archive volume set (.7z.001/.002 or .zip.001/.002 style) with the
+    ///     bundled 7za and decides how the extracted disc image should be converted.
+    /// </summary>
+    /// <param name="volumeSet">Volumes in order, first part first.</param>
+    /// <param name="originalName">File name used in log messages.</param>
+    /// <param name="outputFolder">Conversion output folder, used to pick a temp location.</param>
+    /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
+    /// <param name="token">Cancellation token.</param>
+    private async Task<ResolvedInput> ResolveSplitArchiveSetAsync(
+        List<string> volumeSet,
+        string originalName,
+        string outputFolder,
+        List<string> tempDirs,
+        CancellationToken token
+    )
+    {
+        var firstVolume = volumeSet[0];
+        var totalBytes = SplitImageJoiner.GetTotalBytes(volumeSet);
+        LogMessage(
+            $" {originalName} is part 1 of a {volumeSet.Count}-part archive ({totalBytes:N0} bytes total); extracting the set with 7za.exe."
+        );
+
+        var tempDir = PathUtils.GetBestTempDirectory(
+            firstVolume,
+            outputFolder,
+            TempDirPrefix,
+            totalBytes
+        );
+        await Task.Run(() => Directory.CreateDirectory(tempDir), token);
+        tempDirs.Add(tempDir);
+
+        var extraction = await _archiveService.ExtractSplitArchiveWith7ZaAsync(
+            firstVolume,
+            tempDir,
+            LogMessage,
+            token
+        );
+        if (!extraction.Success)
+        {
+            return ResolvedInput.Skip(extraction.ErrorMessage);
+        }
+
+        var found = await ArchiveService.CollectExtractedPrimaryFilesAsync(tempDir, LogMessage, token);
+        if (!found.Success)
+        {
+            return ResolvedInput.Skip(found.ErrorMessage);
+        }
+
+        // Drop raw images that a descriptor in the archive already covers, mirroring the loose
+        // archive path, so a cue/bin set converts once, through its cue.
+        var primaries = await InputFileFilter.RemoveCompanionDataFilesAsync(
+            found.FilePaths,
+            LogMessage,
+            token
+        );
+        if (primaries.Count == 0)
+        {
+            return ResolvedInput.Skip("the extracted set contained no supported disc image or descriptor.");
+        }
+
+        if (primaries.Count > 1)
+        {
+            LogWarning(
+                $" The extracted set contains {primaries.Count} convertible files; converting {Path.GetFileName(primaries[0])} only. Extract the set manually to convert the others."
+            );
+        }
+
+        var selected = primaries[0];
+        var selectedExt = Path.GetExtension(selected);
+        switch (selectedExt)
+        {
+            // An archived ISZ is decompressed exactly like a loose one before anything can read it.
+            case FileExtensions.Isz:
+                return await ResolveIszAsync(selected, originalName, outputFolder, tempDirs, token);
+            // chdman cannot read these descriptors directly and their resolvers need a conversion
+            // loop this single-path resolution cannot run, so they stay a manual job.
+            case FileExtensions.Ccd or FileExtensions.Mds:
+                return ResolvedInput.Skip(
+                    $"the extracted set contains a {selectedExt.TrimStart('.')} descriptor. Extract the set manually and add the descriptor directly."
+                );
+            case FileExtensions.Cue or FileExtensions.Gdi or FileExtensions.Toc:
+                return ResolvedInput.Convert(selected, false);
+        }
+
+        // A bare image needs the same treatment a joined one gets: a cue for raw sectors, or a
+        // DVD classification for cooked ones.
+        return await ClassifyRecoveredImageAsync(
+            selected,
+            tempDir,
+            "Extracted image",
+            "the extracted image is not a whole number of 2352-byte CD sectors or 2048-byte data sectors, so the archive is probably damaged.",
             token
         );
     }

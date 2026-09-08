@@ -1029,6 +1029,184 @@ public class ArchiveServiceTests : IDisposable
         return path;
     }
 
+    // --- Tests for CollectExtractedPrimaryFilesAsync ---
+
+    [Fact]
+    public async Task CollectExtractedPrimaryFilesAsyncEmptyDirectoryReturnsFailure()
+    {
+        var extractDir = Path.Combine(_tempDir, "empty_extract");
+        Directory.CreateDirectory(extractDir);
+
+        var result = await ArchiveService.CollectExtractedPrimaryFilesAsync(
+            extractDir,
+            static _ => { },
+            CancellationToken.None
+        );
+
+        Assert.False(result.Success);
+        Assert.Empty(result.FilePaths);
+        Assert.Contains(
+            "No supported primary files found",
+            result.ErrorMessage,
+            StringComparison.Ordinal
+        );
+    }
+
+    [Fact]
+    public async Task CollectExtractedPrimaryFilesAsyncFindsDescriptorAndSkipsBin()
+    {
+        var extractDir = Path.Combine(_tempDir, "descriptor_extract");
+        Directory.CreateDirectory(extractDir);
+        File.WriteAllText(Path.Combine(extractDir, "game.cue"), "FILE \"game.bin\" BINARY");
+        await File.WriteAllBytesAsync(Path.Combine(extractDir, "game.bin"), new byte[] { 0x00 });
+
+        var result = await ArchiveService.CollectExtractedPrimaryFilesAsync(
+            extractDir,
+            static _ => { },
+            CancellationToken.None
+        );
+
+        Assert.True(result.Success);
+        var cue = Assert.Single(result.FilePaths);
+        Assert.EndsWith("game.cue", cue, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // --- Tests for ExtractSplitArchiveWith7ZaAsync ---
+
+    [Fact]
+    public async Task ExtractSplitArchiveWith7ZaAsyncMissing7zaReturnsFailure()
+    {
+        var service = new ArchiveService("7za.exe", false);
+        var volume = CreateDummyFile("game.7z.001");
+        var outDir = Path.Combine(_tempDir, "split_out");
+
+        var result = await service.ExtractSplitArchiveWith7ZaAsync(
+            volume,
+            outDir,
+            static _ => { },
+            CancellationToken.None
+        );
+
+        Assert.False(result.Success);
+        Assert.Contains(
+            "7za.exe is missing",
+            result.ErrorMessage,
+            StringComparison.OrdinalIgnoreCase
+        );
+    }
+
+    [Fact]
+    public async Task ExtractSplitArchiveWith7ZaAsyncExtractsRealVolumeSet()
+    {
+        var sevenZipPath = Path.Combine(AppContext.BaseDirectory, "7za.exe");
+        Assert.True(File.Exists(sevenZipPath), "7za.exe must be present in the test output");
+
+        // Build a real multi-volume 7z set: a 64 KiB incompressible image split into 4 KiB
+        // volumes, compressed with the same bundled 7za the app extracts with. Random bytes keep
+        // the archive from compressing into a single volume.
+        var sourceDir = Path.Combine(_tempDir, "source");
+        Directory.CreateDirectory(sourceDir);
+        var sourceIso = Path.Combine(sourceDir, "game.iso");
+        await File.WriteAllBytesAsync(sourceIso, CreateRandomBytes(64 * 1024));
+
+        var splitDir = Path.Combine(_tempDir, "split");
+        Directory.CreateDirectory(splitDir);
+        Run7za(sevenZipPath, $"a -v4k \"{Path.Combine(splitDir, "game.7z")}\" \"{sourceIso}\"");
+        Assert.True(File.Exists(Path.Combine(splitDir, "game.7z.001")), "volume 1 was not created");
+        Assert.True(File.Exists(Path.Combine(splitDir, "game.7z.002")), "volume 2 was not created");
+
+        var service = new ArchiveService(sevenZipPath, true);
+        var outDir = Path.Combine(_tempDir, "split_out");
+
+        var result = await service.ExtractSplitArchiveWith7ZaAsync(
+            Path.Combine(splitDir, "game.7z.001"),
+            outDir,
+            static _ => { },
+            CancellationToken.None
+        );
+
+        Assert.True(result.Success, result.ErrorMessage);
+
+        var collection = await ArchiveService.CollectExtractedPrimaryFilesAsync(
+            outDir,
+            static _ => { },
+            CancellationToken.None
+        );
+        Assert.True(collection.Success, collection.ErrorMessage);
+        Assert.Contains(
+            collection.FilePaths,
+            static f => f.EndsWith("game.iso", StringComparison.OrdinalIgnoreCase)
+        );
+    }
+
+    [Fact]
+    public async Task ExtractSplitArchiveWith7ZaAsyncMissingVolumeReturnsFailure()
+    {
+        var sevenZipPath = Path.Combine(AppContext.BaseDirectory, "7za.exe");
+        Assert.True(File.Exists(sevenZipPath), "7za.exe must be present in the test output");
+
+        // A real volume set with volume 2 removed: extraction must fail with guidance rather
+        // than produce a partial image.
+        var sourceDir = Path.Combine(_tempDir, "source_missing");
+        Directory.CreateDirectory(sourceDir);
+        await File.WriteAllBytesAsync(
+            Path.Combine(sourceDir, "game.iso"),
+            CreateRandomBytes(64 * 1024)
+        );
+
+        var splitDir = Path.Combine(_tempDir, "split_missing");
+        Directory.CreateDirectory(splitDir);
+        Run7za(sevenZipPath, $"a -v4k \"{Path.Combine(splitDir, "game.7z")}\" \"{Path.Combine(sourceDir, "game.iso")}\"");
+        File.Delete(Path.Combine(splitDir, "game.7z.002"));
+
+        var service = new ArchiveService(sevenZipPath, true);
+        var outDir = Path.Combine(_tempDir, "split_missing_out");
+        var logs = new List<string>();
+
+        var result = await service.ExtractSplitArchiveWith7ZaAsync(
+            Path.Combine(splitDir, "game.7z.001"),
+            outDir,
+            logs.Add,
+            CancellationToken.None
+        );
+
+        Assert.False(result.Success);
+        Assert.Contains(
+            "volume",
+            result.ErrorMessage,
+            StringComparison.OrdinalIgnoreCase
+        );
+    }
+
+    private static byte[] CreateRandomBytes(int count)
+    {
+        var bytes = new byte[count];
+        Random.Shared.NextBytes(bytes);
+        return bytes;
+    }
+
+    private static void Run7za(string sevenZipPath, string arguments)
+    {
+        using var process = new System.Diagnostics.Process();
+        process.StartInfo = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = sevenZipPath,
+            Arguments = arguments,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        process.Start();
+        var output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        Assert.True(
+            process.ExitCode == 0,
+            $"7za {arguments} failed with exit code {process.ExitCode}: {output}"
+        );
+    }
+
+
     private static void ThrowIndexOutOfRange()
     {
         // Simulates what SharpCompress does internally with corrupt RAR data

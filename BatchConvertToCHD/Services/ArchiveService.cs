@@ -210,103 +210,16 @@ internal class ArchiveService
 
             token.ThrowIfCancellationRequested();
 
-            var foundFiles = await Task.Run(
-                    () =>
-                    {
-                        var options = new EnumerationOptions
-                        {
-                            RecurseSubdirectories = true,
-                            IgnoreInaccessible = true
-                        };
-                        return Directory
-                            .GetFiles(tempDirectoryRoot, "*.*", options)
-                            .Where(static f =>
-                                FileExtensions.PrimaryTargetExtensionsSet.Contains(
-                                    Path.GetExtension(f)
-                                )
-                            )
-                            .ToList();
-                    },
+            var collection = await CollectExtractedPrimaryFilesAsync(
+                    tempDirectoryRoot,
+                    onLog,
                     token
                 )
                 .ConfigureAwait(false);
 
-            if (foundFiles.Count == 0)
-            {
-                // No descriptor found: if the archive contains a bare .bin, generate a cue for it
-                // (single data track) so the disc can still be converted.
-                var binFiles = Directory
-                    .GetFiles(
-                        tempDirectoryRoot,
-                        "*.*",
-                        new EnumerationOptions
-                        {
-                            RecurseSubdirectories = true,
-                            IgnoreInaccessible = true
-                        }
-                    )
-                    .Where(static f =>
-                        Path.GetExtension(f)
-                            .Equals(FileExtensions.Bin, StringComparison.OrdinalIgnoreCase)
-                    )
-                    .ToList();
-
-                if (binFiles.Count > 0)
-                {
-                    // A "(Track N)" set describes a whole disc across several files. Building a
-                    // multi-track cue keeps the CDDA audio, which converting one bin cannot.
-                    var trackSet = TrackBinCueBuilder.TryGetTrackSet(binFiles);
-                    if (trackSet is not null)
-                    {
-                        var trackCuePath = await TrackBinCueBuilder
-                            .WriteCueAsync(trackSet, BinCueGenerator.Mode2, token)
-                            .ConfigureAwait(false);
-                        onLog(
-                            $"No descriptor found; generated a {trackSet.Count}-track cue for {Path.GetFileName(trackSet[0].Path)} (data track MODE2/2352, remaining tracks AUDIO)."
-                        );
-                        onLog(
-                            "         Track pregaps are not recorded in the file names, so each track is taken to start at the beginning of its own file; audio track starts may be up to two seconds out."
-                        );
-                        foundFiles = [trackCuePath];
-                    }
-                    else
-                    {
-                        var largestBin = binFiles
-                            .OrderByDescending(f => new FileInfo(f).Length)
-                            .First();
-                        if (binFiles.Count > 1)
-                        {
-                            onLog(
-                                $"WARNING: Archive contains {binFiles.Count} .bin files but no descriptor (.cue/.iso/.img) and no recognisable track numbering. Converting the largest one ({Path.GetFileName(largestBin)}) as a single data track; any other tracks will be missing."
-                            );
-                        }
-
-                        var cuePath = BinCueGenerator.GetAutoCuePath(largestBin);
-                        await File.WriteAllTextAsync(
-                                cuePath,
-                                BinCueGenerator.BuildCueContent(
-                                    Path.GetFileName(largestBin),
-                                    BinCueGenerator.Mode2
-                                ),
-                                token
-                            )
-                            .ConfigureAwait(false);
-                        onLog(
-                            $"No descriptor (.cue/.iso/.img) found; generated cue for {Path.GetFileName(largestBin)} (MODE2/2352)."
-                        );
-                        foundFiles = [cuePath];
-                    }
-                }
-            }
-
-            return foundFiles.Count > 0
-                ? (true, foundFiles, tempDirectoryRoot, string.Empty)
-                : (
-                    false,
-                    new List<string>(),
-                    tempDirectoryRoot,
-                    "No supported primary files found in archive."
-                );
+            return collection.Success
+                ? (true, collection.FilePaths, tempDirectoryRoot, string.Empty)
+                : (false, [], tempDirectoryRoot, collection.ErrorMessage);
         }
         catch (OperationCanceledException)
         {
@@ -437,6 +350,174 @@ internal class ArchiveService
         {
             Logger.Error(ex, "Error extracting archive: {FileName}", archiveFileName);
             return (false, [], tempDirectoryRoot, $"Error extracting archive: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    ///     Picks the convertible files out of an extraction directory: every descriptor or image the
+    ///     app recognises, or - when an archive holds a bare .bin with no descriptor - a generated
+    ///     cue for it. Shared by <see cref="ExtractArchiveAsync" /> and the split volume-set path.
+    /// </summary>
+    /// <param name="tempDirectoryRoot">Directory the archive was extracted into.</param>
+    /// <param name="onLog">Callback for logging progress messages.</param>
+    /// <param name="token">Cancellation token to abort the operation.</param>
+    internal static async Task<(
+        bool Success,
+        List<string> FilePaths,
+        string ErrorMessage
+        )> CollectExtractedPrimaryFilesAsync(
+        string tempDirectoryRoot,
+        Action<string> onLog,
+        CancellationToken token
+    )
+    {
+        var foundFiles = await Task.Run(
+                () =>
+                {
+                    var options = new EnumerationOptions
+                    {
+                        RecurseSubdirectories = true,
+                        IgnoreInaccessible = true
+                    };
+                    return Directory
+                        .GetFiles(tempDirectoryRoot, "*.*", options)
+                        .Where(static f =>
+                            FileExtensions.PrimaryTargetExtensionsSet.Contains(Path.GetExtension(f))
+                        )
+                        .ToList();
+                },
+                token
+            )
+            .ConfigureAwait(false);
+
+        if (foundFiles.Count == 0)
+        {
+            // No descriptor found: if the archive contains a bare .bin, generate a cue for it
+            // (single data track) so the disc can still be converted.
+            var binFiles = Directory
+                .GetFiles(
+                    tempDirectoryRoot,
+                    "*.*",
+                    new EnumerationOptions
+                    {
+                        RecurseSubdirectories = true,
+                        IgnoreInaccessible = true
+                    }
+                )
+                .Where(static f =>
+                    Path.GetExtension(f).Equals(FileExtensions.Bin, StringComparison.OrdinalIgnoreCase)
+                )
+                .ToList();
+
+            if (binFiles.Count > 0)
+            {
+                // A "(Track N)" set describes a whole disc across several files. Building a
+                // multi-track cue keeps the CDDA audio, which converting one bin cannot.
+                var trackSet = TrackBinCueBuilder.TryGetTrackSet(binFiles);
+                if (trackSet is not null)
+                {
+                    var trackCuePath = await TrackBinCueBuilder
+                        .WriteCueAsync(trackSet, BinCueGenerator.Mode2, token)
+                        .ConfigureAwait(false);
+                    onLog(
+                        $"No descriptor found; generated a {trackSet.Count}-track cue for {Path.GetFileName(trackSet[0].Path)} (data track MODE2/2352, remaining tracks AUDIO)."
+                    );
+                    onLog(
+                        "         Track pregaps are not recorded in the file names, so each track is taken to start at the beginning of its own file; audio track starts may be up to two seconds out."
+                    );
+                    foundFiles = [trackCuePath];
+                }
+                else
+                {
+                    var largestBin = binFiles.OrderByDescending(f => new FileInfo(f).Length).First();
+                    if (binFiles.Count > 1)
+                    {
+                        onLog(
+                            $"WARNING: Archive contains {binFiles.Count} .bin files but no descriptor (.cue/.iso/.img) and no recognisable track numbering. Converting the largest one ({Path.GetFileName(largestBin)}) as a single data track; any other tracks will be missing."
+                        );
+                    }
+
+                    var cuePath = BinCueGenerator.GetAutoCuePath(largestBin);
+                    await File.WriteAllTextAsync(
+                            cuePath,
+                            BinCueGenerator.BuildCueContent(
+                                Path.GetFileName(largestBin),
+                                BinCueGenerator.Mode2
+                            ),
+                            token
+                        )
+                        .ConfigureAwait(false);
+                    onLog(
+                        $"No descriptor (.cue/.iso/.img) found; generated cue for {Path.GetFileName(largestBin)} (MODE2/2352)."
+                    );
+                    foundFiles = [cuePath];
+                }
+            }
+        }
+
+        return foundFiles.Count > 0
+            ? (true, foundFiles, string.Empty)
+            : (false, [], "No supported primary files found in archive.");
+    }
+
+    /// <summary>
+    ///     Extracts a numbered archive volume set (e.g. "game.7z.001" with "game.7z.002" beside it)
+    ///     using the bundled 7za. 7-Zip and ZIP volume sets are byte-splits of one archive stream,
+    ///     which 7za reads directly from the first volume; SharpCompress cannot open them.
+    /// </summary>
+    /// <param name="firstVolumePath">The full path to the first volume (".001") of the set.</param>
+    /// <param name="outputDirectory">The directory to extract into.</param>
+    /// <param name="onLog">Callback for logging progress messages.</param>
+    /// <param name="token">Cancellation token to abort the operation.</param>
+    /// <returns>A tuple containing success status and an error message string (empty on success).</returns>
+    internal async Task<(bool Success, string ErrorMessage)> ExtractSplitArchiveWith7ZaAsync(
+        string firstVolumePath,
+        string outputDirectory,
+        Action<string> onLog,
+        CancellationToken token
+    )
+    {
+        var archiveFileName = Path.GetFileName(firstVolumePath);
+
+        if (!_isSevenZipAvailable)
+        {
+            return (
+                false,
+                "the bundled 7za.exe is missing, so the split archive cannot be extracted. Extract the set manually and add the extracted image."
+            );
+        }
+
+        try
+        {
+            token.ThrowIfCancellationRequested();
+
+            var spaceError = CheckTempDiskSpace(firstVolumePath, outputDirectory, archiveFileName);
+            if (spaceError != null)
+            {
+                return (false, spaceError);
+            }
+
+            Directory.CreateDirectory(outputDirectory);
+            onLog($"Extracting split archive {archiveFileName} to: {outputDirectory}");
+
+            await ExtractWith7ZaAsync(firstVolumePath, outputDirectory, onLog, token)
+                .ConfigureAwait(false);
+            return (true, string.Empty);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (InvalidDataException ex)
+        {
+            return (
+                false,
+                $"The split archive may be corrupted or incomplete and could not be extracted. Make sure every volume (.001, .002, ...) is in the same folder and try again. Details: {ex.Message}"
+            );
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Error extracting split archive {archiveFileName}: {ex.Message}");
         }
     }
 

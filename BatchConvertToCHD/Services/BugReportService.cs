@@ -77,6 +77,11 @@ internal class BugReportService
         "unavailable network location",
         "Archive is encrypted",
         "compression method that is not supported",
+        // Split volume sets of 7z/zip are extracted in-app; these skips are user-data problems
+        // (missing volumes, no convertible image inside, no 7za on disk).
+        "the extracted set contained no supported disc image",
+        "The split archive may be corrupted or incomplete",
+        "the split archive cannot be extracted",
         "CCDSharp: Conversion error",
         "File not found, skipping:",
         // CHD open/read failures during extraction are user-data problems (corrupt CHD files).
