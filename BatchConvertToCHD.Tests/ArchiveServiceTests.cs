@@ -1156,7 +1156,8 @@ public class ArchiveServiceTests : IDisposable
 
         var splitDir = Path.Combine(_tempDir, "split_missing");
         Directory.CreateDirectory(splitDir);
-        Run7Za(sevenZipPath, $"a -v4k \"{Path.Combine(splitDir, "game.7z")}\" \"{Path.Combine(sourceDir, "game.iso")}\"");
+        Run7Za(sevenZipPath,
+            $"a -v4k \"{Path.Combine(splitDir, "game.7z")}\" \"{Path.Combine(sourceDir, "game.iso")}\"");
         File.Delete(Path.Combine(splitDir, "game.7z.002"));
 
         var service = new ArchiveService(sevenZipPath, true);

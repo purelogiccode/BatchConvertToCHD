@@ -31,7 +31,7 @@ public sealed class PbpDiscInfo
     ///     framing), so the cap allows that slack instead of rejecting a perfectly good block.
     ///     This matches the reference implementation, which imposes no cap at all.
     /// </summary>
-    private const int MaxBlockEntrySize = 16 * IsoBlockSize + 4096;
+    private const int MaxBlockEntrySize = (16 * IsoBlockSize) + 4096;
 
     private readonly List<IsoIndexEntry> _isoIndex;
     private readonly int _psarOffset;
@@ -377,10 +377,10 @@ public sealed class PbpDiscInfo
         }
         catch (Exception ex)
             when (ex
-                    is SharpZipBaseException
-                        or InvalidDataException
-                && compressedLength > 2
-            )
+                      is SharpZipBaseException
+                      or InvalidDataException
+                  && compressedLength > 2
+                 )
         {
             return Inflate(compressed, compressedLength, output, noHeader: false);
         }

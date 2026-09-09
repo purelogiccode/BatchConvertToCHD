@@ -896,16 +896,19 @@ internal partial class MainWindow : IDisposable
     /// <param name="path">The path to the input folder.</param>
     private void SetInputFolder(string path)
     {
-        if (Directory.Exists(path)) {
+        if (Directory.Exists(path))
+        {
             ConversionInputFolderTextBox.Text = path;
-            if (string.IsNullOrWhiteSpace(ConversionOutputFolderTextBox.Text)) {
+            if (string.IsNullOrWhiteSpace(ConversionOutputFolderTextBox.Text))
+            {
                 ConversionOutputFolderTextBox.Text = path;
             }
 
             LogMessage($"Input folder set from command line: {path}");
             _ = LoadFilesForConversionAsync();
         }
-        else {
+        else
+        {
             LogMessage($"Warning: Command line path does not exist: {path}");
         }
     }
@@ -1032,26 +1035,31 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private void HandleFolderBrowse(TextBox targetBox,string logName)
+    private void HandleFolderBrowse(TextBox targetBox, string logName)
     {
         var folder = SelectFolder($"Select {logName} folder");
-        if (string.IsNullOrEmpty(folder)) {
+        if (string.IsNullOrEmpty(folder))
+        {
             return;
         }
 
-        var normalized = PathUtils.ValidateAndNormalizePath(folder,logName,ShowError,LogMessage);
-        if (normalized != null) {
+        var normalized = PathUtils.ValidateAndNormalizePath(folder, logName, ShowError, LogMessage);
+        if (normalized != null)
+        {
             targetBox.Text = normalized;
             RefreshFileListForActiveTab();
         }
 
-        if (targetBox == ConversionInputFolderTextBox && normalized != null) {
-            if (string.IsNullOrWhiteSpace(ConversionOutputFolderTextBox.Text)) {
+        if (targetBox == ConversionInputFolderTextBox && normalized != null)
+        {
+            if (string.IsNullOrWhiteSpace(ConversionOutputFolderTextBox.Text))
+            {
                 ConversionOutputFolderTextBox.Text = normalized;
             }
 
             _fileWatcher.StartWatching(normalized);
-            if (_fileWatcher.IsWatching) {
+            if (_fileWatcher.IsWatching)
+            {
                 LogMessage($"Monitoring input folder for file changes: {normalized}");
             }
         }
@@ -1737,13 +1745,13 @@ internal partial class MainWindow : IDisposable
             }
             catch (Exception ex)
                 when (ex
-                        is DriveNotFoundException
-                            or DirectoryNotFoundException
-                            or IOException
-                            or UnauthorizedAccessException
-                            or SecurityException
-                    && !IsCancellationException(ex)
-                )
+                          is DriveNotFoundException
+                          or DirectoryNotFoundException
+                          or IOException
+                          or UnauthorizedAccessException
+                          or SecurityException
+                      && !IsCancellationException(ex)
+                     )
             {
                 LogError($" The output folder is not available: {outputFolder}");
                 LogMessage(
@@ -5803,6 +5811,7 @@ internal partial class MainWindow : IDisposable
                         return false;
                     }
                 }
+
                 asciiOutputFile = Path.Combine(
                     stagingDir,
                     Path.GetFileNameWithoutExtension(originalOutputFile)
