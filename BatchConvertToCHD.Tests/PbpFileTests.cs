@@ -542,6 +542,152 @@ public class PbpFileTests : IDisposable
     // --- Synthetic PBP tests using PbpTestFileBuilder ---
 
     [Fact]
+    public void ExtractToBinCueWithPopFeStyleIndexesSucceeds()
+    {
+        // Regression: pop-fe writes the ISO index in the official 16-bit layout (uint16 size
+        // at offset 4, flag byte at 6, SHA-1 at 8). A reader that treats the size field as a
+        // full 32-bit int misreads those entries and rejects the file with DecompressionError.
+        var path = Path.Combine(_tempDir, $"popfeidx_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithBlockCount(2)
+            .WithCompressedBlocks(true)
+            .WithPopFeStyleIndexes()
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        using (pbp)
+        {
+            var binPath = Path.Combine(_tempDir, $"popfeidx_{Guid.NewGuid():N}.bin");
+            var cuePath = Path.ChangeExtension(binPath, ".cue");
+            var result = pbp.Discs[0].ExtractToBinCue(binPath, cuePath);
+            Assert.Equal(PbpError.None, result);
+            Assert.True(File.Exists(binPath));
+            Assert.Equal(2 * 16 * 0x930, new FileInfo(binPath).Length);
+        }
+    }
+
+    [Fact]
+    public void ExtractToBinCueWithUncompressedFlaggedBlocksSucceeds()
+    {
+        // Regression: pop-fe with compression disabled stores raw blocks and sets flag bit 0
+        // on every index entry. Reading the flag byte as part of a 32-bit size turned the
+        // size into 0x19300 and failed every block with DecompressionError.
+        var path = Path.Combine(_tempDir, $"uncomprflag_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithBlockCount(2)
+            .WithCompressedBlocks(false)
+            .WithPopFeStyleIndexes()
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        using (pbp)
+        {
+            var binPath = Path.Combine(_tempDir, $"uncomprflag_{Guid.NewGuid():N}.bin");
+            var cuePath = Path.ChangeExtension(binPath, ".cue");
+            var result = pbp.Discs[0].ExtractToBinCue(binPath, cuePath);
+            Assert.Equal(PbpError.None, result);
+            Assert.True(File.Exists(binPath));
+            Assert.Equal(2 * 16 * 0x930, new FileInfo(binPath).Length);
+        }
+    }
+
+    [Fact]
+    public void ExtractToBinCueWithZlibWrappedBlocksSucceeds()
+    {
+        // Regression: some PBP authoring tools compress PSAR blocks with zlib.compress,
+        // wrapping each deflate stream in a zlib container (header + Adler-32) instead of
+        // raw deflate as popstation/PSX2PSP/iPoPS do. Extraction must still succeed.
+        var path = Path.Combine(_tempDir, $"zlibwrapped_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithBlockCount(2)
+            .WithCompressedBlocks(true)
+            .WithZlibWrappedBlocks()
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        using (pbp)
+        {
+            var binPath = Path.Combine(_tempDir, $"zlibwrapped_{Guid.NewGuid():N}.bin");
+            var cuePath = Path.ChangeExtension(binPath, ".cue");
+            var result = pbp.Discs[0].ExtractToBinCue(binPath, cuePath);
+            Assert.Equal(PbpError.None, result);
+            Assert.True(File.Exists(binPath));
+            Assert.Equal(2 * 16 * 0x930, new FileInfo(binPath).Length);
+        }
+    }
+
+    [Fact]
+    public void ExtractToBinCueWithOversizedZlibWrappedBlocksSucceeds()
+    {
+        // Combined variant: an authoring tool that both wraps blocks in a zlib container and
+        // stores incompressible blocks slightly larger than the raw 16-sector block (index
+        // length > 0x9300). Both quirks must be tolerated in the same file.
+        var path = Path.Combine(_tempDir, $"zliboversize_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithBlockCount(2)
+            .WithCompressedBlocks(true)
+            .WithIncompressibleBlocks()
+            .WithZlibWrappedBlocks()
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        using (pbp)
+        {
+            var binPath = Path.Combine(_tempDir, $"zliboversize_{Guid.NewGuid():N}.bin");
+            var cuePath = Path.ChangeExtension(binPath, ".cue");
+            var result = pbp.Discs[0].ExtractToBinCue(binPath, cuePath);
+            Assert.Equal(PbpError.None, result);
+            Assert.True(File.Exists(binPath));
+            Assert.Equal(2 * 16 * 0x930, new FileInfo(binPath).Length);
+        }
+    }
+
+    [Fact]
+    public void ExtractToBinCueWithCompressedBlockLargerThanRawBlockSucceeds()
+    {
+        // Regression: PSX2PSP and similar tools store incompressible blocks (FMV/audio-heavy
+        // discs) as deflate streams a few bytes LARGER than the raw 16-sector block, so the
+        // ISO index length exceeds one full block. Rejecting those lengths made extraction
+        // fail with DecompressionError on files the reference implementation handles fine.
+        var path = Path.Combine(_tempDir, $"oversizeblock_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithBlockCount(2)
+            .WithCompressedBlocks(true)
+            .WithIncompressibleBlocks()
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        using (pbp)
+        {
+            // The index lengths exceed one full 16-sector block; otherwise this test
+            // would not exercise the oversized-block case.
+            Assert.Equal(2, pbp.Discs[0].BlockCount);
+
+            var binPath = Path.Combine(_tempDir, $"oversize_{Guid.NewGuid():N}.bin");
+            var cuePath = Path.ChangeExtension(binPath, ".cue");
+            var result = pbp.Discs[0].ExtractToBinCue(binPath, cuePath);
+            Assert.Equal(PbpError.None, result);
+            Assert.True(File.Exists(binPath));
+            Assert.Equal(2 * 16 * 0x930, new FileInfo(binPath).Length);
+        }
+    }
+
+    [Fact]
     public void OpenSyntheticSingleDiscCompressedReturnsSuccess()
     {
         var path = Path.Combine(_tempDir, $"synth_compressed_{Guid.NewGuid():N}.pbp");
@@ -1129,3 +1275,5 @@ public class PbpFileTests : IDisposable
         }
     }
 }
+
+

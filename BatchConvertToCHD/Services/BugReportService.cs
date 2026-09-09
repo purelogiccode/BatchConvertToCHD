@@ -91,7 +91,13 @@ internal class BugReportService
         "Failed to move CHDSharp output to destination",
         // Encoder start failures depend on the user's installation.
         "Failed to start chdman",
-        "Failed to start CHDSharp"
+        "Failed to start CHDSharp",
+        // The startup probe crashing with a negative exit code (0xC0000139 entry point not
+        // found, illegal instruction, ...) means the bundled chdman build is incompatible with
+        // the user's CPU/Windows version - an installation problem, not app logic.
+        "terminated abnormally during the startup check",
+        // The output folder's drive is gone (USB unplugged, network drive dropped).
+        "output folder is not available"
     ];
 
     private readonly string _apiKey;

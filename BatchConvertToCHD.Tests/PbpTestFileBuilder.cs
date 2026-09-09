@@ -20,6 +20,9 @@ internal sealed class PbpTestFileBuilder
     private int _blockCount = 2;
     private string _category = "ME";
     private bool _compressBlocks = true;
+    private bool _incompressibleBlocks;
+    private bool _zlibWrappedBlocks;
+    private bool _popFeStyleIndexes;
     private byte[]? _customIsoBlock1Data;
     private string _discId = "SLUS00001";
     private bool _multiDisc;
@@ -54,6 +57,38 @@ internal sealed class PbpTestFileBuilder
     public PbpTestFileBuilder WithCompressedBlocks(bool compress)
     {
         _compressBlocks = compress;
+        return this;
+    }
+
+    /// <summary>
+    ///     Fills blocks with pseudo-random (incompressible) data. The deflate stream for such a
+    ///     block is a few bytes LARGER than the raw 16-sector block, so the ISO index length
+    ///     exceeds one full block - the shape real-world tools like PSX2PSP produce.
+    /// </summary>
+    public PbpTestFileBuilder WithIncompressibleBlocks()
+    {
+        _incompressibleBlocks = true;
+        return this;
+    }
+
+    /// <summary>
+    ///     Wraps each block's deflate stream in a zlib container (2-byte header + Adler-32),
+    ///     like PBP authoring tools that compress with zlib.compress instead of raw deflate.
+    /// </summary>
+    public PbpTestFileBuilder WithZlibWrappedBlocks()
+    {
+        _zlibWrappedBlocks = true;
+        return this;
+    }
+
+    /// <summary>
+    ///     Writes ISO index entries in the official 16-bit layout (size as uint16 at offset 4,
+    ///     stored-flag byte at offset 6, SHA-1 at offset 8) like pop-fe, instead of the
+    ///     32-bit int size layout used by popstation/PSX2PSP/iPoPS.
+    /// </summary>
+    public PbpTestFileBuilder WithPopFeStyleIndexes()
+    {
+        _popFeStyleIndexes = true;
         return this;
     }
 
@@ -276,10 +311,25 @@ internal sealed class PbpTestFileBuilder
             // Write index entry (32 bytes)
             entry.Clear();
             BinaryPrimitives.WriteUInt32LittleEndian(entry[..4], currentOffset);
-            BinaryPrimitives.WriteInt32LittleEndian(
-                entry[4..8],
-                _compressBlocks ? compressedLength : BlockSize
-            );
+            if (_popFeStyleIndexes)
+            {
+                // Official layout: uint16 size at 4, flag byte at 6 (bit 0 = stored
+                // uncompressed block, set by pop-fe with compression disabled), SHA-1 at 8.
+                BinaryPrimitives.WriteUInt16LittleEndian(
+                    entry.Slice(4, 2),
+                    (ushort)(_compressBlocks ? compressedLength : BlockSize)
+                );
+                if (!_compressBlocks)
+                    entry[6] = 0x01;
+            }
+            else
+            {
+                BinaryPrimitives.WriteInt32LittleEndian(
+                    entry[4..8],
+                    _compressBlocks ? compressedLength : BlockSize
+                );
+            }
+
             stream.Write(entry);
 
             currentOffset += (uint)(_compressBlocks ? compressedLength : BlockSize);
@@ -309,6 +359,28 @@ internal sealed class PbpTestFileBuilder
 
     private byte[] GetBlockData(int blockIndex)
     {
+        if (_incompressibleBlocks)
+        {
+            var randomBlock = new byte[BlockSize];
+            var seed = 0x2F6E2B1 ^ (blockIndex * 0x9E3779B1);
+            for (var i = 0; i < BlockSize; i++)
+            {
+                seed = (seed * 1103515245) + 12345;
+                randomBlock[i] = (byte)((seed >> 16) & 0xFF);
+            }
+
+            if (blockIndex == 1)
+            {
+                var sectorCount = (uint)(_blockCount * 16);
+                BinaryPrimitives.WriteUInt32LittleEndian(
+                    randomBlock.AsSpan(104, 4),
+                    sectorCount
+                );
+            }
+
+            return randomBlock;
+        }
+
         if (blockIndex == 1)
         {
             // Block index 1 (the second block) carries the ISO9660 volume information:
@@ -343,7 +415,7 @@ internal sealed class PbpTestFileBuilder
         return block;
     }
 
-    private static byte[] CompressBlock(byte[] data)
+    private byte[] CompressBlock(byte[] data)
     {
         using var ms = new MemoryStream();
         using (var deflate = new DeflateStream(ms, CompressionLevel.Fastest, true))
@@ -351,7 +423,36 @@ internal sealed class PbpTestFileBuilder
             deflate.Write(data, 0, data.Length);
         }
 
-        return ms.ToArray();
+        var raw = ms.ToArray();
+        return _zlibWrappedBlocks ? WrapZlib(raw, data) : raw;
+    }
+
+    private static byte[] WrapZlib(byte[] rawDeflate, byte[] uncompressed)
+    {
+        var wrapped = new byte[rawDeflate.Length + 6];
+        wrapped[0] = 0x78; // CM=8 (deflate), CINFO=7 (32K window)
+        wrapped[1] = 0x9C; // FCHECK valid: 0x789C % 31 == 0, default compression level
+        Buffer.BlockCopy(rawDeflate, 0, wrapped, 2, rawDeflate.Length);
+        // The zlib trailer is the Adler-32 of the UNCOMPRESSED data.
+        BinaryPrimitives.WriteUInt32BigEndian(
+            wrapped.AsSpan(wrapped.Length - 4),
+            Adler32(uncompressed, 0, uncompressed.Length)
+        );
+        return wrapped;
+    }
+
+    private static uint Adler32(byte[] data, int offset, int length)
+    {
+        const uint modAdler = 65521;
+        uint a = 1;
+        uint b = 0;
+        for (var i = offset; i < offset + length; i++)
+        {
+            a = (a + data[i]) % modAdler;
+            b = (b + a) % modAdler;
+        }
+
+        return (b << 16) | a;
     }
 
     private static byte[] BuildSfo(string title, string category, string discId)

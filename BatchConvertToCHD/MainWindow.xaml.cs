@@ -894,10 +894,11 @@ internal partial class MainWindow : IDisposable
     ///     Sets the input folder for conversion from a command line argument.
     /// </summary>
     /// <param name="path">The path to the input folder.</param>
-    private void SetInputFolder(string path) {
-        if(Directory.Exists(path)) {
+    private void SetInputFolder(string path)
+    {
+        if (Directory.Exists(path)) {
             ConversionInputFolderTextBox.Text = path;
-            if(string.IsNullOrWhiteSpace(ConversionOutputFolderTextBox.Text)) {
+            if (string.IsNullOrWhiteSpace(ConversionOutputFolderTextBox.Text)) {
                 ConversionOutputFolderTextBox.Text = path;
             }
 
@@ -1031,25 +1032,26 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private void HandleFolderBrowse(TextBox targetBox,string logName) {
+    private void HandleFolderBrowse(TextBox targetBox,string logName)
+    {
         var folder = SelectFolder($"Select {logName} folder");
-        if(string.IsNullOrEmpty(folder)) {
+        if (string.IsNullOrEmpty(folder)) {
             return;
         }
 
         var normalized = PathUtils.ValidateAndNormalizePath(folder,logName,ShowError,LogMessage);
-        if(normalized != null) {
+        if (normalized != null) {
             targetBox.Text = normalized;
             RefreshFileListForActiveTab();
         }
 
-        if(targetBox == ConversionInputFolderTextBox && normalized != null) {
-            if(string.IsNullOrWhiteSpace(ConversionOutputFolderTextBox.Text)) {
+        if (targetBox == ConversionInputFolderTextBox && normalized != null) {
+            if (string.IsNullOrWhiteSpace(ConversionOutputFolderTextBox.Text)) {
                 ConversionOutputFolderTextBox.Text = normalized;
             }
 
             _fileWatcher.StartWatching(normalized);
-            if(_fileWatcher.IsWatching) {
+            if (_fileWatcher.IsWatching) {
                 LogMessage($"Monitoring input folder for file changes: {normalized}");
             }
         }
@@ -1722,6 +1724,37 @@ internal partial class MainWindow : IDisposable
         if (_totalFilesProcessed == 0) return;
 
         CheckDiskSpace(outputFolder, filesToConvert, true);
+
+        // A disconnected or unmounted output drive (USB stick unplugged, mapped drive gone) is a
+        // common cause of mid-batch failures: every file then dies with a confusing "Could not
+        // find a part of the path" from deep inside the staging logic. Probe the folder once up
+        // front so the user gets one actionable message instead of a batch of failures.
+        if (!Directory.Exists(outputFolder))
+        {
+            try
+            {
+                Directory.CreateDirectory(outputFolder);
+            }
+            catch (Exception ex)
+                when (ex
+                        is DriveNotFoundException
+                            or DirectoryNotFoundException
+                            or IOException
+                            or UnauthorizedAccessException
+                            or SecurityException
+                    && !IsCancellationException(ex)
+                )
+            {
+                LogError($" The output folder is not available: {outputFolder}");
+                LogMessage(
+                    "       Reconnect the drive that holds the output folder, or pick an output folder that exists, and try again."
+                );
+                ShowError(
+                    $"The output folder is not available:\n\n{outputFolder}\n\nReconnect the drive or choose a different output folder and try again."
+                );
+                return;
+            }
+        }
 
         // chdman reports an unwritable destination only as a per-file "Permission denied" deep in
         // its own output (e.g. writing into "Program Files" without elevation). Probe the folder
@@ -3969,6 +4002,12 @@ internal partial class MainWindow : IDisposable
                     $" Not enough disk space to convert {originalName}. Free up disk space and try again."
                 );
             }
+            else if (ex is DriveNotFoundException or DirectoryNotFoundException)
+            {
+                LogError(
+                    $" Cannot convert {originalName}: the output folder is not available ({ex.Message})."
+                );
+            }
             else
             {
                 LogError($"Direct conversion attempt error for {originalName}: {ex.Message}", ex);
@@ -5750,7 +5789,20 @@ internal partial class MainWindow : IDisposable
                     return false;
 
                 if (!Directory.Exists(stagingDir))
-                    Directory.CreateDirectory(stagingDir);
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(stagingDir);
+                    }
+                    catch (Exception ex)
+                        when (ex is DriveNotFoundException or DirectoryNotFoundException)
+                    {
+                        // The output drive vanished mid-batch (unplugged, unmounted). Report the
+                        // folder rather than letting the raw exception surface as an app bug.
+                        LogError($" Output folder is not available: {stagingDir}");
+                        return false;
+                    }
+                }
                 asciiOutputFile = Path.Combine(
                     stagingDir,
                     Path.GetFileNameWithoutExtension(originalOutputFile)
@@ -6835,7 +6887,18 @@ internal partial class MainWindow : IDisposable
         {
             try
             {
-                await Task.Run(() => Directory.Delete(path, true), token);
+                await Task.Run(
+                    () =>
+                    {
+                        // Files staged into temp dirs can carry the ReadOnly attribute (copied
+                        // from read-only sources or set by other tools); Directory.Delete
+                        // refuses those and reports "access denied" naming the file itself.
+                        // Clear the attributes first so the real delete can proceed.
+                        ClearDirectoryAttributes(path);
+                        Directory.Delete(path, true);
+                    },
+                    token
+                );
                 return;
             }
             catch (DirectoryNotFoundException)
@@ -6843,13 +6906,52 @@ internal partial class MainWindow : IDisposable
                 LogMessage($"{desc} already deleted: {Path.GetFileName(path)}");
                 return;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch when (attempt < MaxFileOperationRetries - 1)
             {
                 await Task.Delay(500 * (attempt + 1), token);
             }
+            catch
+            {
+                // Final attempt failed. Cleanup is best effort: rethrowing here would abort
+                // the whole run and report an app bug for what is a leftover temp folder the
+                // OS will happily reclaim later.
+                break;
+            }
         }
 
-        LogError($"Failed to delete {desc}: {path}");
+        LogWarning($"Could not delete {desc}: {Path.GetFileName(path)}");
+    }
+
+    private static void ClearDirectoryAttributes(string path)
+    {
+        try
+        {
+            foreach (
+                var file in Directory.EnumerateFiles(
+                    path,
+                    "*",
+                    SearchOption.AllDirectories
+                )
+            )
+            {
+                try
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                }
+                catch
+                {
+                    // ignored - the delete attempt reports the real cause
+                }
+            }
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     private async Task TryDeleteEmptySubfolderAsync(
