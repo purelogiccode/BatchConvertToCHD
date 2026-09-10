@@ -82,7 +82,7 @@ public class PbpFileTests : IDisposable
     }
 
     [Fact]
-    public void OpenFileWithInvalidSfoMagicReturnsInvalidSfo()
+    public void OpenFileWithInvalidSfoMagicFallsThroughToPsarValidation()
     {
         var path = Path.Combine(_tempDir, $"badsfo_{Guid.NewGuid():N}.pbp");
 
@@ -93,37 +93,79 @@ public class PbpFileTests : IDisposable
         BitConverter.GetBytes(0xDEADBEEFu).CopyTo(sfo, 0); // corrupt the SFO magic
         ms.Write(sfo);
 
-        while (ms.Position < 0x200)
+        while (ms.Position < 0x210)
             ms.WriteByte(0);
 
         File.WriteAllBytes(path, ms.ToArray());
 
+        // A corrupt SFO no longer rejects the file; without a valid PSAR the open still
+        // fails, but with the PSAR error rather than the SFO one.
         var error = PbpFile.Open(path, out var pbp);
-        Assert.Equal(PbpError.InvalidSfo, error);
+        Assert.Equal(PbpError.InvalidPsarHeader, error);
         Assert.Null(pbp);
     }
 
     [Fact]
-    public void OpenMultiDiscPbpWithInvalidHeaderMagicReturnsInvalidPsarHeader()
+    public void OpenPbpWithCorruptSfoStillOpensWithEmptyMetadata()
     {
-        var path = Path.Combine(_tempDir, $"badmagic_{Guid.NewGuid():N}.pbp");
-
-        using var ms = new MemoryStream();
-        WriteStandardPbpHeader(ms);
-        ms.Write(BuildMinimalSfo());
-
-        while (ms.Position < 0x200)
-            ms.WriteByte(0);
-
-        ms.Write("PSTITLEIMG000000"u8.ToArray());
-        ms.Write(new byte[8]); // 2 x padding uint32
-        ms.Write(new byte[16]); // wrong magic DWORDs (all zero)
-
-        File.WriteAllBytes(path, ms.ToArray());
+        var path = Path.Combine(_tempDir, $"badsfo_full_{Guid.NewGuid():N}.pbp");
+        var data = new PbpTestFileBuilder().Build();
+        BitConverter.GetBytes(0xDEADBEEFu).CopyTo(data, 0x28); // corrupt the SFO magic
+        File.WriteAllBytes(path, data);
 
         var error = PbpFile.Open(path, out var pbp);
-        Assert.Equal(PbpError.InvalidPsarHeader, error);
-        Assert.Null(pbp);
+
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+        Assert.Null(pbp.Title);
+        Assert.Null(pbp.DiscId);
+        Assert.Empty(pbp.SfoData.Entries);
+        Assert.Single(pbp.Discs);
+    }
+
+    [Fact]
+    public void OpenPopFeStyleMultiDiscPbpSucceeds()
+    {
+        // pop-fe leaves the four "random" template DWORDs zero in multi-disc PBPs; the disc
+        // position table at +0x200 is what locates the discs and it must still be honoured.
+        var path = Path.Combine(_tempDir, $"popfe_multi_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithPopFeStyleTitleHeader()
+            .AsMultiDisc(0x200000, 0x400000)
+            .WithBlockCount(2)
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+        Assert.True(pbp.IsMultiDisc);
+        Assert.Equal(2, pbp.Discs.Count);
+    }
+
+    [Fact]
+    public void OpenPopFeStyleMultiDiscPbpExtractsBothDiscs()
+    {
+        var path = Path.Combine(_tempDir, $"popfe_multi2_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithPopFeStyleTitleHeader()
+            .WithPopFeStyleIndexes()
+            .AsMultiDisc(0x200000, 0x400000)
+            .WithBlockCount(2)
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+        foreach (var disc in pbp.Discs)
+        {
+            var result = disc.ExtractToBinCue(
+                Path.Combine(_tempDir, $"{Guid.NewGuid():N}.bin"),
+                cancellationToken: CancellationToken.None
+            );
+            Assert.Equal(PbpError.None, result);
+        }
     }
 
     [Fact]

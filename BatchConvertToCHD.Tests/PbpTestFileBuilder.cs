@@ -23,6 +23,7 @@ internal sealed class PbpTestFileBuilder
     private bool _incompressibleBlocks;
     private bool _zlibWrappedBlocks;
     private bool _popFeStyleIndexes;
+    private bool _popFeStyleTitleHeader;
     private byte[]? _customIsoBlock1Data;
     private string _discId = "SLUS00001";
     private bool _multiDisc;
@@ -89,6 +90,16 @@ internal sealed class PbpTestFileBuilder
     public PbpTestFileBuilder WithPopFeStyleIndexes()
     {
         _popFeStyleIndexes = true;
+        return this;
+    }
+
+    /// <summary>
+    ///     Writes the PSTITLEIMG header the way pop-fe does: zeros where popstation/PSX2PSP/iPoPS
+    ///     write the fixed template DWORDs (0x2CC9C5BC...), disc positions still at +0x200.
+    /// </summary>
+    public PbpTestFileBuilder WithPopFeStyleTitleHeader()
+    {
+        _popFeStyleTitleHeader = true;
         return this;
     }
 
@@ -195,13 +206,20 @@ internal sealed class PbpTestFileBuilder
         // 8 bytes padding (2 x uint32 zeros)
         stream.Write(new byte[8]);
 
-        // Magic DWORDs
-        Span<byte> magic = stackalloc byte[16];
-        BinaryPrimitives.WriteUInt32LittleEndian(magic[..4], 0x2CC9C5BCu);
-        BinaryPrimitives.WriteUInt32LittleEndian(magic[4..8], 0x33B5A90Fu);
-        BinaryPrimitives.WriteUInt32LittleEndian(magic[8..12], 0x06F6B4B3u);
-        BinaryPrimitives.WriteUInt32LittleEndian(magic[12..16], 0xB25945BAu);
-        stream.Write(magic);
+        // Magic DWORDs (pop-fe writes zeros here instead of the fixed template values)
+        if (_popFeStyleTitleHeader)
+        {
+            stream.Write(new byte[16]);
+        }
+        else
+        {
+            Span<byte> magic = stackalloc byte[16];
+            BinaryPrimitives.WriteUInt32LittleEndian(magic[..4], 0x2CC9C5BCu);
+            BinaryPrimitives.WriteUInt32LittleEndian(magic[4..8], 0x33B5A90Fu);
+            BinaryPrimitives.WriteUInt32LittleEndian(magic[8..12], 0x06F6B4B3u);
+            BinaryPrimitives.WriteUInt32LittleEndian(magic[12..16], 0xB25945BAu);
+            stream.Write(magic);
+        }
 
         // 0x76 uint32 zeros
         for (var i = 0; i < 0x76; i++)

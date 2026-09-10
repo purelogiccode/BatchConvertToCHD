@@ -469,12 +469,17 @@ internal class ArchiveService
     /// <param name="outputDirectory">The directory to extract into.</param>
     /// <param name="onLog">Callback for logging progress messages.</param>
     /// <param name="token">Cancellation token to abort the operation.</param>
+    /// <param name="totalSetSize">
+    ///     Total size in bytes of every volume in the set, for the disk-space check. Pass -1 when
+    ///     unknown; the size of the first volume alone is then used, which underestimates.
+    /// </param>
     /// <returns>A tuple containing success status and an error message string (empty on success).</returns>
     internal async Task<(bool Success, string ErrorMessage)> ExtractSplitArchiveWith7ZaAsync(
         string firstVolumePath,
         string outputDirectory,
         Action<string> onLog,
-        CancellationToken token
+        CancellationToken token,
+        long totalSetSize = -1
     )
     {
         var archiveFileName = Path.GetFileName(firstVolumePath);
@@ -491,7 +496,12 @@ internal class ArchiveService
         {
             token.ThrowIfCancellationRequested();
 
-            var spaceError = CheckTempDiskSpace(firstVolumePath, outputDirectory, archiveFileName);
+            var spaceError = CheckTempDiskSpace(
+                firstVolumePath,
+                outputDirectory,
+                archiveFileName,
+                totalSetSize
+            );
             if (spaceError != null)
             {
                 return (false, spaceError);
@@ -967,7 +977,8 @@ internal class ArchiveService
     private static string? CheckTempDiskSpace(
         string originalArchivePath,
         string tempDirectoryRoot,
-        string archiveFileName
+        string archiveFileName,
+        long totalSetSize = -1
     )
     {
         try
@@ -983,13 +994,22 @@ internal class ArchiveService
             var availableSpace = drive.AvailableFreeSpace;
 
             long estimatedUncompressedSize;
-            try
+            if (totalSetSize >= 0)
             {
-                estimatedUncompressedSize = EstimateArchiveUncompressedSize(originalArchivePath);
+                // The caller already measured the whole set (e.g. every volume of a split
+                // archive); a per-file estimate would under-require by the volume count.
+                estimatedUncompressedSize = totalSetSize;
             }
-            catch
+            else
             {
-                estimatedUncompressedSize = new FileInfo(originalArchivePath).Length;
+                try
+                {
+                    estimatedUncompressedSize = EstimateArchiveUncompressedSize(originalArchivePath);
+                }
+                catch
+                {
+                    estimatedUncompressedSize = new FileInfo(originalArchivePath).Length;
+                }
             }
 
             var safetyMargin = Math.Max(estimatedUncompressedSize / 10, 100L * 1024 * 1024);

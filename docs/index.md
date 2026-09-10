@@ -33,7 +33,7 @@ This documentation covers the project from both a user and a developer perspecti
 | Fact | Value |
 |------|-------|
 | **Application name** | `BatchConvertToCHD` |
-| **Latest version** | 3.6.0 |
+| **Latest version** | 3.7.0 |
 | **Target framework** | .NET 10.0 (`net10.0-windows`), WPF |
 | **Platform** | Windows 10 / 11, x64 and ARM64 |
 | **License** | GPL v3.0 |
@@ -58,7 +58,7 @@ CSharp_BatchConvertToCHD/
 │   ├── Services/                   # Archive, BugReport, FileWatcher, Stats, Update, ...
 │   └── Utilities/                  # PathUtils, CueNormalizer, GameFileParser, ...
 │       └── Ecm/                    # in-process ECM decoding
-├── BatchConvertToCHD.Tests/        # xUnit test suite (820 tests)
+├── BatchConvertToCHD.Tests/        # xUnit test suite (835 tests)
 ├── CCDSharp/                       # CloneCD (.ccd/.img/.sub) parsing library
 ├── CSOSharp/                       # CSO/CISO decompression library (deflate + LZ4)
 ├── PBPSharp/                       # PlayStation PBP extraction + SFO parsing library

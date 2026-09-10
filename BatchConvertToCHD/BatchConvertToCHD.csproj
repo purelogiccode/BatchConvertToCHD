@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
         <TargetFramework>net10.0-windows</TargetFramework>
@@ -7,8 +7,8 @@
         <UseWPF>true</UseWPF>
         <ApplicationIcon>icon\chd.ico</ApplicationIcon>
         <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
-        <AssemblyVersion>3.6.1</AssemblyVersion>
-        <FileVersion>3.6.1</FileVersion>
+        <AssemblyVersion>3.7.0</AssemblyVersion>
+        <FileVersion>3.7.0</FileVersion>
         <IsPackable>false</IsPackable>
         <NeutralLanguage>en</NeutralLanguage>
         <DebugType>embedded</DebugType>

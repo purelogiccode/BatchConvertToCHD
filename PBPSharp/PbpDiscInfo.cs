@@ -242,10 +242,13 @@ public sealed class PbpDiscInfo
         // copied verbatim; everything else is a deflate (raw, or zlib-wrapped) stream.
         if (entry.Uncompressed || entry.Length == 16 * IsoBlockSize)
         {
-            var rawLength =
-                entry.Length == 16 * IsoBlockSize ? 16 * IsoBlockSize : entry.Length;
-            _stream.ReadExactly(buffer, 0, rawLength);
-            bytesRead = rawLength;
+            // A stored block can never exceed the raw block size; a larger length here can
+            // only be a corrupt index, and copying it would overrun the caller's buffer.
+            if (entry.Length > 16 * IsoBlockSize)
+                throw new InvalidDataException("Invalid ISO block length in PSAR index.");
+
+            _stream.ReadExactly(buffer, 0, entry.Length);
+            bytesRead = entry.Length;
         }
         else
         {

@@ -186,7 +186,7 @@ These all converge on `ClassifyRecoveredImageAsync` (§5.2) once the image has b
 
 ### Split volume sets — `SplitImageJoiner` (Alcohol120Sharp)
 
-`.001`/`.002`… and `.i00`/`.i01`… sets are concatenated into one temp file. Only the **first** volume is a registered input, so a set is offered once rather than once per piece. A multi-part *archive* is detected and refused separately, with instructions, since that needs different tooling. A set whose parts do not join to a whole number of sectors is reported as needing re-download rather than converted.
+`.001`/`.002`… and `.i00`/`.i01`… sets are concatenated into one temp file. Only the **first** volume is a registered input, so a set is offered once rather than once per piece. A multi-part *archive* first volume (`.7z.001`/`.zip.001`) is no longer refused: 7-Zip and ZIP volume sets are byte-splits of one archive stream, so `ResolveSplitArchiveSetAsync` extracts the set with the bundled `7za.exe` (disk space checked against the total size of every volume) and routes the extracted image through the same classification as a joined set. Multi-part **RAR** still needs manual extraction, since the app carries no RAR tooling. A set whose parts do not join to a whole number of sectors is reported as needing re-download rather than converted.
 
 ### ISZ — `UltraIsoSharp`
 

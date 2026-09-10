@@ -2508,7 +2508,8 @@ internal partial class MainWindow : IDisposable
             firstVolume,
             tempDir,
             LogMessage,
-            token
+            token,
+            totalBytes
         );
         if (!extraction.Success)
         {
@@ -6950,6 +6951,36 @@ internal partial class MainWindow : IDisposable
                 try
                 {
                     File.SetAttributes(file, FileAttributes.Normal);
+                }
+                catch
+                {
+                    // ignored - the delete attempt reports the real cause
+                }
+            }
+
+            // Read-only directories also make Directory.Delete fail; clear them, including
+            // the root itself, so nothing the delete touches can stay protected.
+            var directoriesToClear = new List<string> { path };
+            try
+            {
+                directoriesToClear.AddRange(
+                    Directory.EnumerateDirectories(
+                        path,
+                        "*",
+                        SearchOption.AllDirectories
+                    )
+                );
+            }
+            catch
+            {
+                // ignored - the files above were cleared and the delete attempt reports the rest
+            }
+
+            foreach (var directory in directoriesToClear)
+            {
+                try
+                {
+                    File.SetAttributes(directory, FileAttributes.Normal);
                 }
                 catch
                 {
