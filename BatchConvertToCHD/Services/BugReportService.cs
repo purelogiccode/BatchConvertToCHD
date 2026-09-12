@@ -63,6 +63,8 @@ internal class BugReportService
         "CRITICAL ERROR: The following required component",
         "referenced files are missing",
         "could not be resolved",
+        // An Alcohol descriptor without its data file (incomplete set, renamed file).
+        "the .mdf data file was not found",
         "MP3 audio track could not be decoded",
         "is not divisible by",
         "could not validate referenced files",

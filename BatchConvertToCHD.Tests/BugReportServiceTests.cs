@@ -412,6 +412,9 @@ public class BugReportServiceTests
     [InlineData("No supported primary files found in archive")]
     [InlineData("referenced files are missing")]
     [InlineData("could not be resolved")]
+    [InlineData(
+        " Virtua Tennis 2 (USA).mds cannot be converted: the .mdf data file was not found next to the .mds descriptor."
+    )]
     [InlineData("MP3 audio track could not be decoded")]
     [InlineData("is not divisible by")]
     [InlineData("could not validate referenced files")]
