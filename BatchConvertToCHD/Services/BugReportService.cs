@@ -99,7 +99,13 @@ internal class BugReportService
         // the user's CPU/Windows version - an installation problem, not app logic.
         "terminated abnormally during the startup check",
         // The output folder's drive is gone (USB unplugged, network drive dropped).
-        "output folder is not available"
+        "output folder is not available",
+        // Direct-stream extraction over a network share can hit a transient SMB hiccup
+        // ("An unexpected network error occurred." / French "Erreur réseau inattendue.");
+        // the extractor retries via a local temp copy, so this intermediate notice is
+        // not an app bug.
+        "Direct extraction failed",
+        "will fall back to temp-copy extraction"
     ];
 
     private readonly string _apiKey;

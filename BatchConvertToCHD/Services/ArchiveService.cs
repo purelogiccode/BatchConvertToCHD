@@ -587,7 +587,7 @@ internal class ArchiveService
         );
         try
         {
-            File.Copy(archivePath, tempCopyPath, true);
+            CopyFileWithRetry(archivePath, tempCopyPath);
             ExtractZipWithOpenRead(tempCopyPath, outputDirectory, fullOutputDirectory, token);
         }
         finally
@@ -856,7 +856,10 @@ internal class ArchiveService
                 throw;
             }
 
-            Logger.Error(ex, "Direct extraction failed");
+            Logger.Debug(
+                ex,
+                "Direct extraction failed, will fall back to temp-copy extraction"
+            );
         }
 
         if (directExtractionSuccess)
@@ -868,7 +871,9 @@ internal class ArchiveService
         );
         try
         {
-            File.Copy(archivePath, sanitizedArchivePath, true);
+            // A transient SMB hiccup that broke direct streaming will likely also break
+            // an immediate copy, so retry the copy before surfacing a network error.
+            CopyFileWithRetry(archivePath, sanitizedArchivePath);
             using var stream = File.OpenRead(sanitizedArchivePath);
             using var archive = openArchive(stream);
             ExtractArchiveEntries(archive, outputDirectory, fullOutputDirectory, token);
@@ -939,6 +944,47 @@ internal class ArchiveService
         }
     }
 
+    /// <summary>
+    ///     Copies a file with retries for transient I/O failures (e.g. SMB hiccups when the
+    ///     source lives on a NAS). Missing-source errors are not retried.
+    /// </summary>
+    private static void CopyFileWithRetry(
+        string sourcePath,
+        string destinationPath,
+        int maxAttempts = 4
+    )
+    {
+        for (var attempt = 1;; attempt++)
+        {
+            try
+            {
+                File.Copy(sourcePath, destinationPath, true);
+                return;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+                when (
+                    ex is FileNotFoundException or DirectoryNotFoundException
+                )
+            {
+                throw;
+            }
+            catch (IOException) when (attempt < maxAttempts)
+            {
+                TryDeleteFile(destinationPath);
+                Thread.Sleep(attempt * 1000);
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
+            {
+                TryDeleteFile(destinationPath);
+                Thread.Sleep(attempt * 1000);
+            }
+        }
+    }
+
     private static bool IsDiskFullException(Exception ex)
     {
         return ex is IOException { HResult: -2147024784 or -2147024783 };
@@ -955,23 +1001,64 @@ internal class ArchiveService
 
     /// <summary>
     ///     Detects I/O errors caused by an unavailable network location (disconnected drive/share).
+    ///     Message matching is locale-independent: Win32 error codes are checked via HResult so
+    ///     non-English Windows builds (e.g. French "Erreur réseau inattendue." for
+    ///     ERROR_UNEXP_NET_ERR) are recognised, with message substrings as a fallback.
     /// </summary>
     internal static bool IsNetworkUnavailableError(Exception ex)
     {
-        return ex.Message.Contains("network path was not found", StringComparison.OrdinalIgnoreCase)
-               || ex.Message.Contains(
-                   "network location cannot be reached",
-                   StringComparison.OrdinalIgnoreCase
-               )
-               || ex.Message.Contains(
-                   "network name is no longer available",
-                   StringComparison.OrdinalIgnoreCase
-               )
-               || ex.Message.Contains("The specified network name", StringComparison.OrdinalIgnoreCase)
-               || ex.Message.Contains(
-                   "An unexpected network error occurred",
-                   StringComparison.OrdinalIgnoreCase
-               );
+        for (var current = ex; current != null; current = current.InnerException)
+        {
+            // HRESULT_FROM_WIN32(code) = 0x80070000 | code. Mask to the Win32 facility code.
+            var win32 = current.HResult & 0xFFFF;
+            switch (win32)
+            {
+                case 53: // ERROR_BAD_NETPATH ("The network path was not found.")
+                case 59: // ERROR_UNEXP_NET_ERR ("An unexpected network error occurred.")
+                case 64: // ERROR_NETNAME_DELETED ("The specified network name is no longer available.")
+                case 67: // ERROR_BAD_NET_NAME ("The network name cannot be found.")
+                case 1203: // ERROR_NO_NET_OR_BAD_PATH
+                case 1222: // ERROR_NO_NETWORK ("The network is not present or not started.")
+                case 1231: // ERROR_NETWORK_UNREACHABLE ("The network location cannot be reached.")
+                    return true;
+            }
+
+            var message = current.Message;
+            if (
+                message.Contains("network path was not found", StringComparison.OrdinalIgnoreCase)
+                || message.Contains(
+                    "network location cannot be reached",
+                    StringComparison.OrdinalIgnoreCase
+                )
+                || message.Contains(
+                    "network name is no longer available",
+                    StringComparison.OrdinalIgnoreCase
+                )
+                || message.Contains(
+                    "The specified network name",
+                    StringComparison.OrdinalIgnoreCase
+                )
+                || message.Contains(
+                    "An unexpected network error occurred",
+                    StringComparison.OrdinalIgnoreCase
+                )
+                // Locale fallback for non-English Windows builds: the Win32 message above
+                // is localised (e.g. French "Erreur réseau inattendue." for
+                // ERROR_UNEXP_NET_ERR, "Chemin réseau introuvable.", "Le nom réseau
+                // spécifié n'est plus disponible."). HResult is the primary signal;
+                // this covers cases where it was lost (wrapped/rethrown exceptions).
+                // Note: no generic English "network" substring here — it would also
+                // match a UNC path such as "\\NETWORK\share\..." embedded in an
+                // unrelated message (e.g. access denied).
+                || message.Contains("réseau", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("reseau", StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string? CheckTempDiskSpace(
