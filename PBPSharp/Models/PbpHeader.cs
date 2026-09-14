@@ -68,6 +68,20 @@ public readonly struct PbpHeader
     /// </summary>
     public bool IsValid { get; }
 
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PbpHeader" /> struct from the raw PBP
+    ///     header fields. Instances are created by <see cref="PbpFile.Open(string, out PbpFile?)" />
+    ///     and <see cref="PbpFile.Open(Stream, bool, out PbpFile?)" />.
+    /// </summary>
+    /// <param name="version">The PBP format version from the header.</param>
+    /// <param name="sfoOffset">Offset of PARAM.SFO.</param>
+    /// <param name="icon0Offset">Offset of ICON0.PNG.</param>
+    /// <param name="icon1Offset">Offset of ICON1.PMF or ICON1.PNG.</param>
+    /// <param name="pic0Offset">Offset of PIC0.PNG.</param>
+    /// <param name="pic1Offset">Offset of PIC1.PNG.</param>
+    /// <param name="snd0Offset">Offset of SND0.AT3.</param>
+    /// <param name="dataPspOffset">Offset of DATA.PSP.</param>
+    /// <param name="dataPsarOffset">Offset of DATA.PSAR.</param>
     internal PbpHeader(
         uint version,
         int sfoOffset,

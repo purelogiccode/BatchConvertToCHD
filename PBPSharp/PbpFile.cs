@@ -14,6 +14,16 @@ public sealed class PbpFile : IDisposable
     private bool _disposed;
     private Stream _stream;
 
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PbpFile" /> class. Instances are created by
+    ///     the static <see cref="Open(string, out PbpFile?)" /> and
+    ///     <see cref="Open(Stream, bool, out PbpFile?)" /> factory methods.
+    /// </summary>
+    /// <param name="stream">The seekable stream containing the PBP data.</param>
+    /// <param name="ownsStream">Whether disposing this instance disposes <paramref name="stream" />.</param>
+    /// <param name="header">The parsed PBP header.</param>
+    /// <param name="sfoData">The parsed PARAM.SFO metadata.</param>
+    /// <param name="discs">The disc entries discovered in the PSAR section.</param>
     private PbpFile(
         Stream stream,
         bool ownsStream,
@@ -166,6 +176,18 @@ public sealed class PbpFile : IDisposable
         }
     }
 
+    /// <summary>
+    ///     Reads and validates the 40-byte PBP header at the start of the stream.
+    /// </summary>
+    /// <param name="stream">The seekable PBP stream, positioned at the start of the file.</param>
+    /// <param name="header">
+    ///     When this method returns, contains the parsed header when the magic is valid; otherwise,
+    ///     the default value.
+    /// </param>
+    /// <returns>
+    ///     <see cref="PbpError.None" /> on success; <see cref="PbpError.InvalidHeader" /> when the
+    ///     stream is too short or the PBP magic does not match.
+    /// </returns>
     private static PbpError ReadHeader(Stream stream, out PbpHeader header)
     {
         header = default;
@@ -202,6 +224,18 @@ public sealed class PbpFile : IDisposable
         return PbpError.None;
     }
 
+    /// <summary>
+    ///     Reads the PARAM.SFO metadata section pointed to by the PBP header. Parsing is best
+    ///     effort: a missing or malformed SFO leaves the returned data empty instead of failing the
+    ///     open, because disc extraction does not depend on the metadata.
+    /// </summary>
+    /// <param name="stream">The seekable PBP stream.</param>
+    /// <param name="header">The parsed PBP header providing the SFO offset.</param>
+    /// <param name="sfoData">
+    ///     When this method returns, contains the parsed SFO entries, or an empty instance when the
+    ///     SFO is absent or corrupt.
+    /// </param>
+    /// <returns>Always <see cref="PbpError.None" />.</returns>
     private static PbpError ReadSfo(Stream stream, PbpHeader header, out SfoData sfoData)
     {
         sfoData = new SfoData();
@@ -226,6 +260,7 @@ public sealed class PbpFile : IDisposable
             var entryCount = ReadUInt32(stream, sfoBuffer);
 
             var entries = new List<SfoEntry>();
+            var dataTableSize = 0UL;
             for (var i = 0; i < entryCount; i++)
             {
                 var dirBuffer = new byte[16];
@@ -242,6 +277,10 @@ public sealed class PbpFile : IDisposable
                 };
 
                 var dataOffset = BinaryPrimitives.ReadUInt32LittleEndian(dirBuffer.AsSpan(12, 4));
+
+                var entryEnd = (ulong)dataOffset + entry.MaxLength;
+                if (entryEnd > dataTableSize)
+                    dataTableSize = entryEnd;
 
                 stream.Seek(header.SfoOffset + sfoData.KeyTableOffset + keyOffset, SeekOrigin.Begin);
                 entry.Key = ReadNullTerminatedString(stream, 128);
@@ -261,6 +300,7 @@ public sealed class PbpFile : IDisposable
             }
 
             sfoData.Entries = entries;
+            sfoData.Size = (uint)Math.Min((ulong)sfoData.DataTableOffset + dataTableSize, uint.MaxValue);
         }
         catch
         {
@@ -271,6 +311,21 @@ public sealed class PbpFile : IDisposable
         return PbpError.None;
     }
 
+    /// <summary>
+    ///     Locates the disc entries inside the PSAR section. A "PSISOIMG0000" PSAR is a single-disc
+    ///     container; a "PSTITLEIMG000000" PSAR is a multi-disc container whose disc positions are
+    ///     read from the table at PSAR+0x200. Each position is then parsed into a
+    ///     <see cref="PbpDiscInfo" />.
+    /// </summary>
+    /// <param name="stream">The seekable PBP stream.</param>
+    /// <param name="header">The parsed PBP header providing the DATA.PSAR offset.</param>
+    /// <param name="discs">
+    ///     When this method returns, contains the discs discovered in the PSAR, in disc order.
+    /// </param>
+    /// <returns>
+    ///     <see cref="PbpError.None" /> on success; <see cref="PbpError.InvalidPsarHeader" /> when the
+    ///     PSAR does not identify itself as a PlayStation disc image.
+    /// </returns>
     private static PbpError ReadDiscs(Stream stream, PbpHeader header, out List<PbpDiscInfo> discs)
     {
         discs = [];
@@ -331,12 +386,26 @@ public sealed class PbpFile : IDisposable
         return PbpError.None;
     }
 
+    /// <summary>
+    ///     Reads exactly four bytes from the stream and interprets them as a little-endian 32-bit
+    ///     unsigned integer.
+    /// </summary>
+    /// <param name="stream">The stream to read from.</param>
+    /// <param name="buffer">A reusable four-byte buffer used to hold the raw bytes.</param>
+    /// <returns>The value read from the stream.</returns>
     private static uint ReadUInt32(Stream stream, byte[] buffer)
     {
         stream.ReadExactly(buffer, 0, 4);
         return BitConverter.ToUInt32(buffer, 0);
     }
 
+    /// <summary>
+    ///     Reads an ASCII string from the current stream position up to a null terminator or the
+    ///     specified maximum length, whichever comes first.
+    /// </summary>
+    /// <param name="stream">The stream to read from.</param>
+    /// <param name="maxLength">The maximum number of bytes to read, including the terminator.</param>
+    /// <returns>The decoded string, without the null terminator.</returns>
     private static string ReadNullTerminatedString(Stream stream, int maxLength)
     {
         var buffer = new byte[maxLength];

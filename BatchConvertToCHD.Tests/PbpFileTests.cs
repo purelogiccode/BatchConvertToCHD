@@ -779,6 +779,8 @@ public class PbpFileTests : IDisposable
         Assert.Equal("My Test Game", pbp.SfoData.GetString("TITLE"));
         Assert.Equal("SCUS94163", pbp.SfoData.GetString("DISC_ID"));
         Assert.Equal(1u, pbp.SfoData.GetUInt32("BOOTABLE"));
+        Assert.True(pbp.SfoData.Size > 0);
+        Assert.True(pbp.SfoData.Size <= pbp.Header.DataPsarOffset - pbp.Header.SfoOffset);
 
         pbp.Dispose();
     }

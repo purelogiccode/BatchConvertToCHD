@@ -38,6 +38,20 @@ public sealed class PbpDiscInfo
 
     private readonly Stream _stream;
 
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PbpDiscInfo" /> class by parsing the disc's
+    ///     game ID, TOC and ISO index from the PSAR area of the supplied stream.
+    /// </summary>
+    /// <param name="stream">The seekable stream containing the PBP data.</param>
+    /// <param name="psarOffset">The absolute file offset of the disc's PSAR image header.</param>
+    /// <param name="index">The 1-based disc index within the PBP.</param>
+    /// <exception cref="NoIsoIndexException">
+    ///     Thrown when the PSAR header parsed correctly but contains no ISO index entries, which
+    ///     typically means the file is truncated or incomplete.
+    /// </exception>
+    /// <exception cref="InvalidDataException">
+    ///     Thrown when the ISO index contains more entries than the format permits.
+    /// </exception>
     internal PbpDiscInfo(Stream stream, int psarOffset, int index)
     {
         _stream = stream;
@@ -83,6 +97,11 @@ public sealed class PbpDiscInfo
     /// </summary>
     public int BlockCount => _isoIndex.Count;
 
+    /// <summary>
+    ///     Reads the 9-character disc ID (for example "SCUS94163") from the PSAR image header. The
+    ///     ID is stored as a null byte, four characters, a null separator, then five characters.
+    /// </summary>
+    /// <returns>The disc ID decoded from the image header.</returns>
     private string ReadDiscId()
     {
         var buffer = new byte[16];
@@ -94,6 +113,12 @@ public sealed class PbpDiscInfo
         return Encoding.ASCII.GetString(buffer, 0, 9);
     }
 
+    /// <summary>
+    ///     Reads the disc's Table of Contents from the PSAR TOC area, which begins with the A0, A1
+    ///     and A2 control points and is followed by one entry per track. Parsing is best effort: a
+    ///     malformed TOC returns the entries read so far instead of aborting the whole disc.
+    /// </summary>
+    /// <returns>The list of parsed TOC entries, or an empty list when the TOC is missing.</returns>
     private List<TocEntry> ReadToc()
     {
         var entries = new List<TocEntry>();
@@ -146,6 +171,16 @@ public sealed class PbpDiscInfo
         return entries;
     }
 
+    /// <summary>
+    ///     Reads the ISO block index starting at PSAR+0x4000 and ending at the ISO data area
+    ///     (PSAR+0x100000). Each 32-byte entry stores the block offset, its stored length, and an
+    ///     optional stored/uncompressed flag; both the 16-bit official layout and the 32-bit layout
+    ///     used by older authoring tools are accepted.
+    /// </summary>
+    /// <returns>The parsed index entries, in block order.</returns>
+    /// <exception cref="InvalidDataException">
+    ///     Thrown when the number of index entries exceeds the format maximum.
+    /// </exception>
     private List<IsoIndexEntry> ReadIsoIndexes()
     {
         var isoIndex = new List<IsoIndexEntry>();
@@ -192,6 +227,12 @@ public sealed class PbpDiscInfo
         return isoIndex;
     }
 
+    /// <summary>
+    ///     Derives the total uncompressed ISO size from the sector count stored at bytes 104-107 of
+    ///     the second ISO block (the ISO9660 volume descriptor), matching the reference
+    ///     implementation. The sector count is multiplied by <see cref="IsoBlockSize" />.
+    /// </summary>
+    /// <returns>The ISO size in bytes.</returns>
     private uint ReadIsoSize()
     {
         var outBuffer = ArrayPool<byte>.Shared.Rent(16 * IsoBlockSize);
@@ -366,6 +407,19 @@ public sealed class PbpDiscInfo
         return PbpError.None;
     }
 
+    /// <summary>
+    ///     Decompresses one PSAR ISO block into the caller's buffer. Raw deflate (the layout used by
+    ///     popstation, PSX2PSP and iPoPS) is attempted first; a stream that fails raw inflation is
+    ///     retried as a zlib-wrapped stream (2-byte header plus Adler-32 trailer), as written by
+    ///     authoring tools that use zlib rather than raw deflate.
+    /// </summary>
+    /// <param name="compressed">The buffer holding the compressed block.</param>
+    /// <param name="compressedLength">The number of valid bytes in <paramref name="compressed" />.</param>
+    /// <param name="output">The buffer that receives the decompressed data.</param>
+    /// <returns>The number of bytes written to <paramref name="output" />.</returns>
+    /// <exception cref="InvalidDataException">
+    ///     Thrown when the block cannot be inflated as either raw deflate or a zlib stream.
+    /// </exception>
     private static int DecompressBlock(byte[] compressed, int compressedLength, byte[] output)
     {
         // The popstation reference tools (popstation, PSX2PSP, iPoPS) compress PSAR blocks as
@@ -426,6 +480,12 @@ public sealed class PbpDiscInfo
         }
     }
 
+    /// <summary>
+    ///     Converts a binary-coded decimal byte (two nibbles, each 0-9) to its decimal value. The
+    ///     PSAR TOC stores track numbers and MSF addresses in BCD.
+    /// </summary>
+    /// <param name="value">The BCD-encoded byte.</param>
+    /// <returns>The decoded decimal value.</returns>
     private static int FromBinaryDecimal(byte value)
     {
         var ones = value % 16;
@@ -433,9 +493,22 @@ public sealed class PbpDiscInfo
         return (tens * 10) + ones;
     }
 
+    /// <summary>
+    ///     One parsed entry of the ISO block index: where the block's data lives inside the ISO data
+    ///     area, how many bytes it occupies, and whether it is stored uncompressed.
+    /// </summary>
     private sealed class IsoIndexEntry
     {
+        /// <summary>
+        ///     The block data offset relative to the start of the PSAR ISO data area
+        ///     (PSAR+0x100000).
+        /// </summary>
         public uint Offset { get; init; }
+
+        /// <summary>
+        ///     The stored length of the block in bytes: either the compressed stream length or, for
+        ///     stored blocks, the raw 16-sector block size.
+        /// </summary>
         public int Length { get; init; }
 
         /// <summary>

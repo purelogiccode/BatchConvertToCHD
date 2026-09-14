@@ -1,28 +1,39 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
+        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <LangVersion>latest</LangVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <Company>PureLogicCode.com</Company>
-        <AssemblyVersion>1.1.0</AssemblyVersion>
-        <FileVersion>1.1.0</FileVersion>
+        <AssemblyVersion>1.1.1</AssemblyVersion>
+        <FileVersion>1.1.1</FileVersion>
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
 
         <!-- NuGet Package Metadata -->
         <IsPackable>true</IsPackable>
         <PackageId>PBPSharp</PackageId>
-        <Version>1.0.0</Version>
-        <Authors>PureLogicCode</Authors>
+        <Version>1.1.1</Version>
+        <Authors>PureLogicCode.com</Authors>
+        <Title>PBPSharp</Title>
         <Description>A managed C# read-only library for reading and extracting PlayStation Portable PBP (EBOOT.PBP) files. Supports single-disc and multi-disc PBP, SFO metadata parsing, and ISO extraction with CUE sheet generation. Designed as an intermediate step for converting PBP discs to other formats (e.g. CHD). Read-only: it can open and extract, but cannot create or modify PBP files.</Description>
-        <PackageTags>pbp;psp;playstation;iso;eboot;psx;ps1;disc-image;read-only</PackageTags>
+        <PackageTags>pbp;psp;playstation;ps1;psx;eboot;iso;disc-image;extract;read-only</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageProjectUrl>https://github.com/PureLogicCode/PBPSharp</PackageProjectUrl>
-        <RepositoryUrl>https://github.com/PureLogicCode/PBPSharp</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/purelogiccode/BatchConvertToCHD</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>icon.png</PackageIcon>
+        <RepositoryUrl>https://github.com/purelogiccode/BatchConvertToCHD</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
+        <Copyright>PureLogicCode.com</Copyright>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" />
+        <None Include="icon\icon.png" Pack="true" PackagePath="icon.png" />
+    </ItemGroup>
 
     <ItemGroup>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
