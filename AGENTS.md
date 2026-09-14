@@ -63,6 +63,61 @@ dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -r win-arm6
   GitHub release (title = version, body = the `WhatsNew.md` section).
   Re-running the workflow uploads assets with `--clobber`.
 
+## Library NuGet packages (manual publish)
+
+`PBPSharp` (<https://www.nuget.org/packages/PBPSharp>) and `CSOSharp`
+(<https://www.nuget.org/packages/CSOSharp>) are the only libraries published as
+NuGet packages. Releases are **manual only**: do not add pack/push steps to the
+solution CI workflows, and never commit or echo the API key. It is read from the
+`NUGET_API_KEY` user environment variable.
+
+- **Version** lives in the project file (`PBPSharp/PBPSharp.csproj` and
+  `CSOSharp/CSOSharp.csproj`): bump `<Version>`, `<AssemblyVersion>` and
+  `<FileVersion>` together. A pushed version is immutable - to change anything,
+  bump and push again.
+- **Target frameworks** are `net8.0;net9.0;net10.0` so both packages serve
+  .NET 8, 9 and 10 consumers. `GenerateDocumentationFile` must stay on so each
+  TFM ships its `.xml` next to the assembly.
+- **Metadata** must keep `PackageProjectUrl` and `RepositoryUrl` pointed at
+  <https://github.com/purelogiccode/BatchConvertToCHD>.
+- **README**: `<Project>/README.md` is the package readme (packed at the package
+  root as `README.md`). Keep it descriptive with usage examples and an API
+  reference, and update it whenever the public surface changes.
+- **Icon**: `<Project>/icon/icon.png` is packed as `icon.png` through its `None`
+  item. It must stay under NuGet's 1 MB icon limit (currently ~280-300 KB at
+  600x600). `icon.ico` stays in the repo only; do not pack a generated or
+  resized copy.
+- **XML docs**: every public member and, per this repo's convention, every
+  method including private/internal ones carries documentation. The build must
+  stay warning-free.
+
+Release procedure (run from the repo root; substitute the project and package
+name for the library being published):
+
+```powershell
+# 1. bump the three version fields in <project>.csproj, then:
+dotnet build PBPSharp/PBPSharp.csproj -c Release        # or CSOSharp/CSOSharp.csproj
+
+# library tests plus real-file integration tests (needs the local sample folder)
+dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release --filter "FullyQualifiedName~Pbp"   # or ~Cso
+
+# 2. pack with package validation enabled
+dotnet pack PBPSharp/PBPSharp.csproj -c Release -o <out-dir> -p:EnablePackageValidation=true
+
+# 3. inspect the nupkg: README.md, icon.png, and lib/<tfm>/<name>.dll + .xml
+#    for net8.0, net9.0 and net10.0
+
+# 4. push with the user environment key (never hard-code it)
+dotnet nuget push <out-dir>/PBPSharp.<version>.nupkg --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json
+
+# 5. verify indexing (takes a few minutes)
+Invoke-RestMethod https://api.nuget.org/v3-flatcontainer/pbpsharp/index.json   # or csosharp
+```
+
+Before pushing, smoke-test the packed `.nupkg` in a throwaway consumer project
+targeting `net8.0;net9.0;net10.0` (restore from a local package source and open
+a real file on each runtime).
+
 ## CI workflows
 
 | Workflow | Trigger | Purpose |
