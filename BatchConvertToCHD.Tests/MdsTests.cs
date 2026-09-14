@@ -481,4 +481,84 @@ public class MdsTests : IDisposable
 
         Assert.Equal(expected, disc.MdfPath);
     }
+
+    [Fact]
+    public void MdfFileIsFoundWhenRenamedWithADecorationAndOthersExist()
+    {
+        var mds = WriteMds("Soul Calibur II.mds", (0xEC, 1, 2352, 0));
+        var expected = WriteMdf("Soul Calibur II (USA).mdf", 2352, 1);
+        WriteMdf("Unrelated Game.mdf", 2352, 1);
+
+        var disc = MdsParser.Parse(mds);
+
+        Assert.Equal(expected, disc.MdfPath);
+    }
+
+    [Fact]
+    public void DecorationMatchIsRejectedWhenSeveralCandidatesExist()
+    {
+        var mds = WriteMds("Game.mds", (0xEC, 1, 2352, 0));
+        WriteMdf("Game (Disc 1).mdf", 2352, 1);
+        WriteMdf("Game (Disc 2).mdf", 2352, 1);
+
+        var disc = MdsParser.Parse(mds);
+
+        Assert.Null(disc.MdfPath);
+    }
+
+    [Fact]
+    public void MdfFileIsFoundInASubdirectoryWhenNoneSitsBesideTheDescriptor()
+    {
+        var mds = WriteMds("Nested.mds", (0xEC, 1, 2352, 0));
+        var subdirectory = Path.Combine(_tempDir, "Nested");
+        Directory.CreateDirectory(subdirectory);
+        var expected = Path.Combine(subdirectory, "Nested.mdf");
+        File.WriteAllBytes(expected, new byte[2352]);
+
+        var disc = MdsParser.Parse(mds);
+
+        Assert.Equal(expected, disc.MdfPath);
+    }
+
+    [Fact]
+    public void SubdirectoryMdfIsIgnoredWhenSeveralSubfoldersMatch()
+    {
+        var mds = WriteMds("Twin.mds", (0xEC, 1, 2352, 0));
+        foreach (var name in new[] { "one", "two" })
+        {
+            var subdirectory = Path.Combine(_tempDir, name);
+            Directory.CreateDirectory(subdirectory);
+            File.WriteAllBytes(Path.Combine(subdirectory, "Twin.mdf"), new byte[2352]);
+        }
+
+        var disc = MdsParser.Parse(mds);
+
+        Assert.Null(disc.MdfPath);
+    }
+
+    [Fact]
+    public void SplitSetIsFoundByBaseNameEvenWhenSeveralExist()
+    {
+        var mds = WriteMds("Wanted.mds", (0xEC, 1, 2352, 0));
+        var expected = Path.Combine(_tempDir, "Wanted.I00");
+        File.WriteAllBytes(expected, new byte[2352]);
+        File.WriteAllBytes(Path.Combine(_tempDir, "Wanted.I01"), new byte[2352]);
+        File.WriteAllBytes(Path.Combine(_tempDir, "Other.I00"), new byte[2352]);
+        File.WriteAllBytes(Path.Combine(_tempDir, "Other.I01"), new byte[2352]);
+
+        var disc = MdsParser.Parse(mds);
+
+        Assert.Equal(expected, disc.MdfPath);
+    }
+
+    [Fact]
+    public void BaseNameMatchIgnoresUnicodeComposition()
+    {
+        var mds = WriteMds("Cafe\u0301.mds", (0xEC, 1, 2352, 0));
+        var expected = WriteMdf("Caf\u00e9.mdf", 2352, 1);
+
+        var disc = MdsParser.Parse(mds);
+
+        Assert.Equal(expected, disc.MdfPath);
+    }
 }

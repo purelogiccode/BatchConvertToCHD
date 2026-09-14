@@ -6,7 +6,9 @@ namespace Alcohol120Sharp;
 /// <param name="SessionCount">Sessions recorded in the descriptor.</param>
 /// <param name="Tracks">Tracks in descriptor order, lead-in and lead-out entries removed.</param>
 /// <param name="MdsPath">Path of the .mds descriptor.</param>
-/// <param name="MdfPath">Path of the .mdf data file, or null when it could not be found.</param>
+/// <param name="MdfPath">
+///     Path of the .mdf data file (or the .i00 first volume of a split set), or null when it could not be found.
+/// </param>
 public sealed record MdsDisc(
     int SessionCount,
     IReadOnlyList<MdsTrack> Tracks,

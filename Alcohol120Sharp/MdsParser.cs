@@ -159,14 +159,36 @@ public static class MdsParser
     }
 
     /// <summary>
-    ///     Finds the .mdf beside <paramref name="mdsPath" />: the matching base name first, then the only
-    ///     .mdf in the folder when there is exactly one.
+    ///     Finds the data file beside <paramref name="mdsPath" />: the matching base name first, then a
+    ///     decorated base name ("Game" beside "Game (USA).mdf"), then the only .mdf in the folder, then
+    ///     an unambiguous match one folder down.
     /// </summary>
     private static string? FindDataFile(string mdsPath)
     {
         var directory = Path.GetDirectoryName(mdsPath);
         if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) return null;
 
+        var baseName = Path.GetFileNameWithoutExtension(mdsPath);
+
+        var dataFile = FindCompanion(directory, baseName, MdfExtension);
+        if (dataFile is not null) return dataFile;
+
+        // Alcohol also splits the data across ".i00", ".i01" and so on with no .mdf at all. The
+        // first volume stands in for the data file; the preparer joins the set before reading it.
+        dataFile = FindCompanion(directory, baseName, SplitFirstAlcoholExtension);
+        if (dataFile is not null) return dataFile;
+
+        // Some collections leave the data file one folder down. Only an unambiguous exact base
+        // name match is accepted, so a sibling game's image is never picked up.
+        return FindCompanionInSubdirectories(directory, baseName, MdfExtension);
+    }
+
+    /// <summary>
+    ///     Picks the file with the requested extension in <paramref name="directory" />: the exact base
+    ///     name first, then a unique decorated variant, then a lone candidate whatever its name.
+    /// </summary>
+    private static string? FindCompanion(string directory, string baseName, string extension)
+    {
         string[] candidates;
         try
         {
@@ -174,9 +196,8 @@ public static class MdsParser
             [
                 .. Directory
                     .GetFiles(directory)
-                    .Where(static f =>
-                        Path.GetExtension(f)
-                            .Equals(MdfExtension, StringComparison.OrdinalIgnoreCase)
+                    .Where(f =>
+                        Path.GetExtension(f).Equals(extension, StringComparison.OrdinalIgnoreCase)
                     )
             ];
         }
@@ -185,35 +206,95 @@ public static class MdsParser
             return null;
         }
 
-        var baseName = Path.GetFileNameWithoutExtension(mdsPath);
         var byName = candidates.FirstOrDefault(f =>
-            string.Equals(
-                Path.GetFileNameWithoutExtension(f),
-                baseName,
-                StringComparison.OrdinalIgnoreCase
-            )
+            NamesMatch(Path.GetFileNameWithoutExtension(f), baseName)
         );
         if (byName is not null) return byName;
 
         if (candidates.Length == 1) return candidates[0];
 
-        // Alcohol also splits the data across ".i00", ".i01" and so on with no .mdf at all. The
-        // first volume stands in for the data file; the preparer joins the set before reading it.
+        var decorated =
+            candidates
+            .Where(f => IsDecoratedMatch(Path.GetFileNameWithoutExtension(f), baseName))
+            .ToArray();
+        return decorated.Length == 1 ? decorated[0] : null;
+    }
+
+    /// <summary>
+    ///     Finds the exact base name in the immediate subfolders of <paramref name="directory" />, or
+    ///     null when nothing matches or more than one folder holds a match.
+    /// </summary>
+    private static string? FindCompanionInSubdirectories(
+        string directory,
+        string baseName,
+        string extension
+    )
+    {
+        string[] subdirectories;
         try
         {
-            return Directory
-                .GetFiles(directory)
-                .FirstOrDefault(f =>
-                    Path.GetExtension(f)
-                        .Equals(
-                            SplitFirstAlcoholExtension,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                );
+            subdirectories = Directory.GetDirectories(directory);
         }
         catch (Exception)
         {
             return null;
         }
+
+        var matches = new List<string>();
+        foreach (var subdirectory in subdirectories)
+        {
+            string[] candidates;
+            try
+            {
+                candidates =
+                [
+                    .. Directory
+                        .GetFiles(subdirectory)
+                        .Where(f =>
+                            Path.GetExtension(f)
+                                .Equals(extension, StringComparison.OrdinalIgnoreCase)
+                        )
+                ];
+            }
+            catch (Exception)
+            {
+                continue;
+            }
+
+            matches.AddRange(
+                candidates.Where(f => NamesMatch(Path.GetFileNameWithoutExtension(f), baseName))
+            );
+        }
+
+        return matches.Count == 1 ? matches[0] : null;
+    }
+
+    /// <summary>True when two base names match once case and Unicode composition are ignored.</summary>
+    private static bool NamesMatch(string candidate, string baseName)
+    {
+        return string.Equals(
+            candidate.Normalize(NormalizationForm.FormC),
+            baseName.Normalize(NormalizationForm.FormC),
+            StringComparison.OrdinalIgnoreCase
+        );
+    }
+
+    /// <summary>
+    ///     True when one name is the other plus a separator-led decoration, so "Game" pairs with
+    ///     "Game (USA)" or "Game - Disc 1" but not with names whose next character is alphanumeric.
+    /// </summary>
+    private static bool IsDecoratedMatch(string candidate, string baseName)
+    {
+        var normalizedCandidate = candidate.Normalize(NormalizationForm.FormC);
+        var normalizedBase = baseName.Normalize(NormalizationForm.FormC);
+
+        var (longer, shorter) =
+            normalizedCandidate.Length > normalizedBase.Length
+                ? (normalizedCandidate, normalizedBase)
+                : (normalizedBase, normalizedCandidate);
+
+        return shorter.Length > 0
+            && longer.StartsWith(shorter, StringComparison.OrdinalIgnoreCase)
+            && !char.IsLetterOrDigit(longer[shorter.Length]);
     }
 }
