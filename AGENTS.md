@@ -65,16 +65,17 @@ dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -r win-arm6
 
 ## Library NuGet packages (manual publish)
 
-`PBPSharp` (<https://www.nuget.org/packages/PBPSharp>) and `CSOSharp`
-(<https://www.nuget.org/packages/CSOSharp>) are the only libraries published as
-NuGet packages. Releases are **manual only**: do not add pack/push steps to the
-solution CI workflows, and never commit or echo the API key. It is read from the
+`PBPSharp` (<https://www.nuget.org/packages/PBPSharp>), `CSOSharp`
+(<https://www.nuget.org/packages/CSOSharp>) and `CCDSharp`
+(<https://www.nuget.org/packages/CCDSharp>) are published as NuGet packages.
+Releases are **manual only**: do not add pack/push steps to the solution CI
+workflows, and never commit or echo the API key. It is read from the
 `NUGET_API_KEY` user environment variable.
 
-- **Version** lives in the project file (`PBPSharp/PBPSharp.csproj` and
-  `CSOSharp/CSOSharp.csproj`): bump `<Version>`, `<AssemblyVersion>` and
-  `<FileVersion>` together. A pushed version is immutable - to change anything,
-  bump and push again.
+- **Version** lives in the project file (`PBPSharp/PBPSharp.csproj`,
+  `CSOSharp/CSOSharp.csproj` and `CCDSharp/CCDSharp.csproj`): bump
+  `<Version>`, `<AssemblyVersion>` and `<FileVersion>` together. A pushed
+  version is immutable - to change anything, bump and push again.
 - **Target frameworks** are `net8.0;net9.0;net10.0` so both packages serve
   .NET 8, 9 and 10 consumers. `GenerateDocumentationFile` must stay on so each
   TFM ships its `.xml` next to the assembly.
@@ -96,10 +97,11 @@ name for the library being published):
 
 ```powershell
 # 1. bump the three version fields in <project>.csproj, then:
-dotnet build PBPSharp/PBPSharp.csproj -c Release        # or CSOSharp/CSOSharp.csproj
+dotnet build PBPSharp/PBPSharp.csproj -c Release        # or CSOSharp/CSOSharp.csproj, CCDSharp/CCDSharp.csproj
 
 # library tests plus real-file integration tests (needs the local sample folder)
 dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release --filter "FullyQualifiedName~Pbp"   # or ~Cso
+# (CCDSharp has no dedicated test class yet; run the full suite when it changes)
 
 # 2. pack with package validation enabled
 dotnet pack PBPSharp/PBPSharp.csproj -c Release -o <out-dir> -p:EnablePackageValidation=true
@@ -111,7 +113,7 @@ dotnet pack PBPSharp/PBPSharp.csproj -c Release -o <out-dir> -p:EnablePackageVal
 dotnet nuget push <out-dir>/PBPSharp.<version>.nupkg --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json
 
 # 5. verify indexing (takes a few minutes)
-Invoke-RestMethod https://api.nuget.org/v3-flatcontainer/pbpsharp/index.json   # or csosharp
+Invoke-RestMethod https://api.nuget.org/v3-flatcontainer/pbpsharp/index.json   # or csosharp, ccdsharp
 ```
 
 Before pushing, smoke-test the packed `.nupkg` in a throwaway consumer project
