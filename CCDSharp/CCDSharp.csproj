@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
+        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <LangVersion>latest</LangVersion>
@@ -10,6 +10,8 @@
         <FileVersion>1.0.0</FileVersion>
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
 
         <!-- Suppress MA0009 for [GeneratedRegex] - compiled at build time, not vulnerable to ReDoS -->
         <NoWarn>$(NoWarn);MA0009</NoWarn>
@@ -18,14 +20,23 @@
         <IsPackable>true</IsPackable>
         <PackageId>CCDSharp</PackageId>
         <Version>1.0.0</Version>
-        <Authors>PureLogicCode</Authors>
+        <Authors>PureLogicCode.com</Authors>
+        <Title>CCDSharp</Title>
         <Description>A managed C# library for parsing and converting CloneCD disc images (.ccd/.img/.sub) to standard formats. Supports conversion to .iso (2048-byte cooked data) and .cue/.bin (raw 2352-byte sectors). Ideal for disc image preservation and emulation workflows.</Description>
         <PackageTags>ccd;clonecd;img;sub;iso;cue;bin;disc-image;conversion;emulation</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageProjectUrl>https://github.com/PureLogicCode/CCDSharp</PackageProjectUrl>
-        <RepositoryUrl>https://github.com/PureLogicCode/CCDSharp</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/purelogiccode/BatchConvertToCHD</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>icon.png</PackageIcon>
+        <RepositoryUrl>https://github.com/purelogiccode/BatchConvertToCHD</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
+        <Copyright>PureLogicCode.com</Copyright>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" />
+        <None Include="icon\icon.png" Pack="true" PackagePath="icon.png" />
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Meziantou.Analyzer" Version="3.0.257">

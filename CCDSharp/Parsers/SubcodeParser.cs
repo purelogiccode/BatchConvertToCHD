@@ -47,6 +47,9 @@ public sealed class SubcodeParser : IDisposable
     /// </summary>
     private Stream BaseStream { get; }
 
+    /// <summary>
+    ///     Disposes the underlying stream when this parser owns it.
+    /// </summary>
     public void Dispose()
     {
         if (_ownsStream)

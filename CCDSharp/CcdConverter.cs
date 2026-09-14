@@ -16,7 +16,6 @@ public static class CcdConverter
     /// <param name="ccdFilePath">Path to the .ccd file.</param>
     /// <returns>The parsed disc image model.</returns>
     /// <exception cref="FileNotFoundException">If the .ccd file does not exist.</exception>
-    /// <exception cref="FormatException">If the .ccd file is malformed.</exception>
     public static DiscImage Parse(string ccdFilePath)
     {
         return CcdParser.Parse(ccdFilePath);

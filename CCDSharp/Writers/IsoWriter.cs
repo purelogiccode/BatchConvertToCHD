@@ -98,6 +98,13 @@ public static class IsoWriter
         return isoFilePath;
     }
 
+    /// <summary>
+    ///     Reads raw sectors from the input and writes the extracted user data to the output.
+    /// </summary>
+    /// <param name="input">Stream containing raw 2352-byte sectors.</param>
+    /// <param name="output">Stream to write 2048-byte user data sectors to.</param>
+    /// <param name="totalSectors">Total number of sectors to process.</param>
+    /// <param name="progress">Optional progress callback (bytesWritten, totalBytes).</param>
     private static void WriteSectors(
         Stream input,
         Stream output,
@@ -179,6 +186,12 @@ public static class IsoWriter
         };
     }
 
+    /// <summary>
+    ///     Extracts the user data from a Mode 1 sector.
+    /// </summary>
+    /// <param name="rawSector">The raw 2352-byte sector.</param>
+    /// <param name="output">Buffer to write 2048 bytes of user data to.</param>
+    /// <returns>Number of bytes extracted (2048).</returns>
     private static int ExtractMode1(byte[] rawSector, byte[] output)
     {
         // Mode 1 layout:
@@ -199,6 +212,12 @@ public static class IsoWriter
         return SectorConstants.UserDataSize;
     }
 
+    /// <summary>
+    ///     Extracts the user data from a Mode 2 sector, whether Form 1 or Form 2.
+    /// </summary>
+    /// <param name="rawSector">The raw 2352-byte sector.</param>
+    /// <param name="output">Buffer to write 2048 bytes of user data to.</param>
+    /// <returns>Number of bytes extracted (2048).</returns>
     private static int ExtractMode2(byte[] rawSector, byte[] output)
     {
         // Mode 2 Form 1 layout:
@@ -245,6 +264,14 @@ public static class IsoWriter
         return SectorConstants.UserDataSize;
     }
 
+    /// <summary>
+    ///     Reads exactly <paramref name="count" /> bytes from a stream, retrying until the buffer is
+    ///     filled or the end of the stream is reached.
+    /// </summary>
+    /// <param name="stream">The stream to read from.</param>
+    /// <param name="buffer">The buffer to fill.</param>
+    /// <param name="count">Number of bytes to read.</param>
+    /// <returns>The total number of bytes actually read.</returns>
     private static int ReadFully(Stream stream, byte[] buffer, int count)
     {
         var totalRead = 0;

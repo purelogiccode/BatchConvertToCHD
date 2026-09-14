@@ -11,6 +11,9 @@ namespace CCDSharp.Writers;
 /// </summary>
 internal static class CueBinWriter
 {
+    /// <summary>
+    ///     Number of attempts made when copying the .img data file.
+    /// </summary>
     private const int MaxCopyRetries = 4;
 
     /// <summary>
@@ -154,6 +157,11 @@ internal static class CueBinWriter
         cueWriter.Write(cueContent);
     }
 
+    /// <summary>
+    ///     Copies the .img file to <paramref name="dest" />, retrying transient I/O failures.
+    /// </summary>
+    /// <param name="source">The source .img file path.</param>
+    /// <param name="dest">The destination .bin file path.</param>
     private static void CopyWithRetry(string source, string dest)
     {
         for (var attempt = 0; attempt < MaxCopyRetries; attempt++)

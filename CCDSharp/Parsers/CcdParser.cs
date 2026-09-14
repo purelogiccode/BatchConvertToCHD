@@ -9,48 +9,93 @@ namespace CCDSharp.Parsers;
 /// </summary>
 public static partial class CcdParser
 {
+    /// <summary>
+    ///     Matches the [CloneCD] section header.
+    /// </summary>
     [GeneratedRegex(@"^\s*\[CloneCD\]")]
     private static partial Regex CloneCdIdentifier();
 
+    /// <summary>
+    ///     Matches the [Disc] section header.
+    /// </summary>
     [GeneratedRegex(@"^\s*\[Disc\]")]
     private static partial Regex DiscIdentifier();
 
+    /// <summary>
+    ///     Matches a [Session N] section header.
+    /// </summary>
     [GeneratedRegex(@"^\s*\[Session\s*(\d+)\]")]
     private static partial Regex SessionIdentifier();
 
+    /// <summary>
+    ///     Matches an [Entry N] section header.
+    /// </summary>
     [GeneratedRegex(@"^\s*\[Entry\s*(\d+)\]")]
     private static partial Regex EntryIdentifier();
 
+    /// <summary>
+    ///     Matches a [TRACK N] section header.
+    /// </summary>
     [GeneratedRegex(@"^\s*\[TRACK\s*(\d+)\]")]
     private static partial Regex TrackIdentifier();
 
+    /// <summary>
+    ///     Matches the MODE field of a track.
+    /// </summary>
     [GeneratedRegex(@"^\s*MODE\s*=\s*(\d+)")]
     private static partial Regex TrackModeRegex();
 
+    /// <summary>
+    ///     Matches an INDEX field of a track.
+    /// </summary>
     [GeneratedRegex(@"^\s*INDEX\s*(\d+)\s*=\s*(\d+)")]
     private static partial Regex TrackIndexRegex();
 
+    /// <summary>
+    ///     Matches the FLAGS field of a track.
+    /// </summary>
     [GeneratedRegex(@"^\s*FLAGS\s*=\s*(.+)")]
     private static partial Regex TrackFlagsRegex();
 
+    /// <summary>
+    ///     Matches the ISRC field of a track.
+    /// </summary>
     [GeneratedRegex(@"^\s*ISRC\s*=\s*(\S+)")]
     private static partial Regex TrackIsrcRegex();
 
+    /// <summary>
+    ///     Matches the Version field of the [CloneCD] section.
+    /// </summary>
     [GeneratedRegex(@"^\s*Version\s*=\s*(\d+)")]
     private static partial Regex VersionRegex();
 
+    /// <summary>
+    ///     Matches the TocEntries field of the [Disc] section.
+    /// </summary>
     [GeneratedRegex(@"^\s*TocEntries\s*=\s*(\d+)")]
     private static partial Regex TocEntriesRegex();
 
+    /// <summary>
+    ///     Matches the Sessions field of the [Disc] section.
+    /// </summary>
     [GeneratedRegex(@"^\s*Sessions\s*=\s*(\d+)")]
     private static partial Regex SessionsRegex();
 
+    /// <summary>
+    ///     Matches the DataTracksScrambled field of the [Disc] section.
+    /// </summary>
     [GeneratedRegex(@"^\s*DataTracksScrambled\s*=\s*(\d+)")]
     private static partial Regex DataTracksScrambledRegex();
 
+    /// <summary>
+    ///     Matches the CDTextLength field of the [Disc] section.
+    /// </summary>
     [GeneratedRegex(@"^\s*CDTextLength\s*=\s*(\d+)")]
     private static partial Regex CdTextLengthRegex();
 
+    /// <summary>
+    ///     Matches the CATALOG field of the [Disc] section.
+    /// </summary>
     [GeneratedRegex(@"^\s*CATALOG\s*=\s*(\S+)")]
     private static partial Regex CatalogRegex();
 
@@ -60,7 +105,6 @@ public static partial class CcdParser
     /// <param name="ccdFilePath">Path to the .ccd file.</param>
     /// <returns>The parsed disc image.</returns>
     /// <exception cref="FileNotFoundException">If the .ccd file does not exist.</exception>
-    /// <exception cref="FormatException">If the .ccd file is malformed.</exception>
     public static DiscImage Parse(string ccdFilePath)
     {
         if (!File.Exists(ccdFilePath))
@@ -85,6 +129,12 @@ public static partial class CcdParser
         return ParseLines(lines.ToArray(), ccdFilePath);
     }
 
+    /// <summary>
+    ///     Parses CCD content from an array of lines into a DiscImage.
+    /// </summary>
+    /// <param name="lines">The lines of the .ccd file.</param>
+    /// <param name="ccdFilePath">Optional path to the .ccd file for resolving associated files.</param>
+    /// <returns>The parsed disc image.</returns>
     private static DiscImage ParseLines(string[] lines, string? ccdFilePath)
     {
         var disc = new DiscImage { FilePath = ccdFilePath };
@@ -171,12 +221,22 @@ public static partial class CcdParser
         return disc;
     }
 
+    /// <summary>
+    ///     Parses a field line inside the [CloneCD] section.
+    /// </summary>
+    /// <param name="line">The trimmed line to parse.</param>
+    /// <param name="disc">The disc image being populated.</param>
     private static void ParseCcdSection(string line, DiscImage disc)
     {
         var versionMatch = VersionRegex().Match(line);
         if (versionMatch.Success) disc.Version = int.Parse(versionMatch.Groups[1].Value, CultureInfo.InvariantCulture);
     }
 
+    /// <summary>
+    ///     Parses a field line inside the [Disc] section.
+    /// </summary>
+    /// <param name="line">The trimmed line to parse.</param>
+    /// <param name="disc">The disc image being populated.</param>
     private static void ParseDiscSection(string line, DiscImage disc)
     {
         var match = TocEntriesRegex().Match(line);
@@ -212,6 +272,11 @@ public static partial class CcdParser
         if (match.Success) disc.Catalog = match.Groups[1].Value;
     }
 
+    /// <summary>
+    ///     Parses a field line inside a [TRACK N] section.
+    /// </summary>
+    /// <param name="line">The trimmed line to parse.</param>
+    /// <param name="track">The track being populated.</param>
     private static void ParseTrackSection(string line, Track track)
     {
         var modeMatch = TrackModeRegex().Match(line);
@@ -264,6 +329,9 @@ public static partial class CcdParser
     /// <summary>
     ///     Formats an MSF tuple as a CUE-compatible string (MM:SS:FF).
     /// </summary>
+    /// <param name="minutes">The minutes component.</param>
+    /// <param name="seconds">The seconds component.</param>
+    /// <param name="frames">The frames component.</param>
     public static string FormatMsf(int minutes, int seconds, int frames)
     {
         return $"{minutes:00}:{seconds:00}:{frames:00}";
