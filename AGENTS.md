@@ -25,6 +25,11 @@ dotnet restore CSharp_BatchConvertToCHD.sln
 dotnet build CSharp_BatchConvertToCHD.sln -c Release
 dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release
 
+# CI runs the unit tests only: the [Trait("Category", "Integration")] classes
+# read sample folders that exist on this machine (e.g. D:\Emulators\...) but
+# not on GitHub runners. Run the full command above before a release.
+dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release --filter "Category!=Integration"
+
 # Framework-dependent single-file publish (one per architecture)
 dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish/win-x64
 dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -r win-arm64 --self-contained false -p:PublishSingleFile=true -o publish/win-arm64
@@ -95,3 +100,5 @@ the runner's Node 24 runtime is used.
   them deliberately.
 - Tests are xUnit; add regression tests next to the existing ones in
   `BatchConvertToCHD.Tests/`. The suite must pass before a release.
+  `[Trait("Category", "Integration")]` classes depend on local sample folders
+  and are excluded from CI with `--filter "Category!=Integration"`.

@@ -44,6 +44,7 @@ jobs:
         run: >
           dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj
           -c Release --no-build
+          --filter "Category!=Integration"
           --logger "trx;LogFileName=test-results.trx"
           --results-directory TestResults
 
