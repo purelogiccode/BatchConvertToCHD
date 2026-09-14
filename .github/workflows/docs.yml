@@ -1,0 +1,77 @@
+# Publishes docs/ to both documentation homes:
+#   - GitHub Pages (Jekyll site, just-the-docs theme), and
+#   - the GitHub wiki, kept in sync from the same files.
+#
+# docs/ is the single source of truth. Do not edit the wiki by hand; the wiki
+# job copies docs/*.md over (index.md becomes Home.md, Jekyll front matter is
+# stripped), adds WhatsNew.md, and pushes. _Sidebar.md is wiki-only and is left
+# alone. Requires a repository secret named WIKI_TOKEN (classic PAT with the
+# "repo" scope, or a fine-grained PAT with Contents: Read and write) because
+# GITHUB_TOKEN cannot push to the wiki repository.
+#
+# Before the Pages deployment can run, enable Pages in the repository:
+#   Settings -> Pages -> Source: "GitHub Actions" -> Save
+# (Alternatively, no workflow is needed at all: Settings -> Pages ->
+#  Source: "Deploy from a branch" -> Branch: master -> Folder: /docs.)
+name: Docs
+
+on:
+  push:
+    branches: ["master"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "docs"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Pages site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+
+  deploy:
+    name: Deploy to GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+  wiki:
+    name: Sync GitHub wiki
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Sync docs/ to the wiki
+        env:
+          WIKI_TOKEN: ${{ secrets.WIKI_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: node scripts/ci/sync-wiki.mjs

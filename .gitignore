@@ -7,3 +7,7 @@ riderModule.iml
 [Bb]atch[Cc]onvertTo[Cc][Hh][Dd]/[Rr]eferences/
 *.DotSettings.user
 *.user
+/publish/
+/dist/
+/TestResults/
+release-notes.md

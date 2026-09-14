@@ -1,0 +1,166 @@
+# Builds the two Windows release zips and attaches them to a GitHub release.
+#
+# Cut a release by pushing a tag that matches the version in
+# BatchConvertToCHD/BatchConvertToCHD.csproj, e.g.:
+#   git tag release_3.8.0 && git push origin release_3.8.0
+#
+# Artifacts: release_<version>_win-x64.zip and release_<version>_win-arm64.zip.
+# The app is framework-dependent (users install the .NET 10 Desktop Runtime)
+# and published as a single file; see scripts/ci/package-release.ps1.
+name: Release
+
+on:
+  push:
+    tags: ["release_*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to release, e.g. release_3.8.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  meta:
+    name: Resolve version & release notes
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Resolve and validate version
+        id: version
+        run: node scripts/ci/version.mjs --tag "$TAG" --github-output
+
+      - name: Extract release notes from WhatsNew.md
+        run: node scripts/ci/release-notes.mjs --version "${{ steps.version.outputs.version }}" --out release-notes.md
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+
+  test:
+    name: Test
+    needs: meta
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore CSharp_BatchConvertToCHD.sln
+
+      - name: Build
+        run: dotnet build CSharp_BatchConvertToCHD.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release --no-build
+
+  package:
+    name: Package ${{ matrix.rid }}
+    needs: [meta, test]
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish single-file (framework-dependent)
+        run: >
+          dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          --self-contained false
+          -p:PublishSingleFile=true
+          -o publish/${{ matrix.rid }}
+
+      - name: Build release zip
+        shell: pwsh
+        run: >
+          ./scripts/ci/package-release.ps1
+          -Rid '${{ matrix.rid }}'
+          -Version '${{ needs.meta.outputs.version }}'
+          -PublishDir 'publish/${{ matrix.rid }}'
+          -OutputDir 'dist'
+
+      - name: Upload release zip
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.rid }}
+          path: dist/release_${{ needs.meta.outputs.version }}_${{ matrix.rid }}.zip
+          if-no-files-found: error
+
+  publish:
+    name: Create GitHub release
+    needs: [meta, package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: release
+          merge-multiple: true
+
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          ls -l release
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists - uploading assets with --clobber."
+            gh release upload "$TAG" release/*.zip --clobber
+          else
+            prerelease=()
+            if [[ "$VERSION" == *-* ]]; then
+              prerelease=(--prerelease)
+            fi
+            gh release create "$TAG" \
+              --verify-tag \
+              --title "$VERSION" \
+              --notes-file release/release-notes.md \
+              "${prerelease[@]}" \
+              release/*.zip
+          fi
