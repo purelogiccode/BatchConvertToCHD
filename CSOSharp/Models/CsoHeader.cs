@@ -68,6 +68,15 @@ public readonly struct CsoHeader
     /// </summary>
     public bool IsV2 => Version == 2;
 
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="CsoHeader" /> struct.
+    /// </summary>
+    /// <param name="magic">The CISO magic identifier.</param>
+    /// <param name="headerSize">The header size in bytes.</param>
+    /// <param name="uncompressedSize">The total uncompressed ISO size in bytes.</param>
+    /// <param name="blockSize">The size of each uncompressed block in bytes.</param>
+    /// <param name="version">The CSO format version (1 = deflate/zlib, 2 = LZ4).</param>
+    /// <param name="indexOffsetShift">The number of bits to left-shift index entries to get the real file offset.</param>
     internal CsoHeader(
         uint magic,
         uint headerSize,

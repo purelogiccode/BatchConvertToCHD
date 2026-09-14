@@ -17,6 +17,13 @@ public sealed class CsoFile : IDisposable
     private uint[] _indexTable;
     private Stream _stream;
 
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="CsoFile" /> class from an already-parsed header and index table.
+    /// </summary>
+    /// <param name="stream">The stream containing the CSO data.</param>
+    /// <param name="ownsStream">Whether this instance should dispose the stream when disposed.</param>
+    /// <param name="header">The parsed CSO header.</param>
+    /// <param name="indexTable">The parsed block index table.</param>
     private CsoFile(Stream stream, bool ownsStream, CsoHeader header, uint[] indexTable)
     {
         _stream = stream;
@@ -124,6 +131,12 @@ public sealed class CsoFile : IDisposable
         }
     }
 
+    /// <summary>
+    ///     Reads and validates the 24-byte CSO header from the stream.
+    /// </summary>
+    /// <param name="stream">The stream positioned at the start of the CSO data.</param>
+    /// <param name="header">When this method returns, contains the parsed header.</param>
+    /// <returns>A <see cref="CsoError" /> indicating the result of the operation.</returns>
     private static CsoError ReadHeader(Stream stream, out CsoHeader header)
     {
         header = default;
@@ -159,6 +172,13 @@ public sealed class CsoFile : IDisposable
         return CsoError.None;
     }
 
+    /// <summary>
+    ///     Reads the block index table (<see cref="CsoHeader.TotalBlocks" /> + 1 entries) from the stream.
+    /// </summary>
+    /// <param name="stream">The stream positioned at the start of the index table.</param>
+    /// <param name="header">The parsed CSO header.</param>
+    /// <param name="indexTable">When this method returns, contains the parsed index table.</param>
+    /// <returns>A <see cref="CsoError" /> indicating the result of the operation.</returns>
     private static CsoError ReadIndexTable(Stream stream, CsoHeader header, out uint[] indexTable)
     {
         indexTable = [];
@@ -254,6 +274,14 @@ public sealed class CsoFile : IDisposable
         }
     }
 
+    /// <summary>
+    ///     Decompresses a deflate/zlib-compressed block (CSO v1) into the specified buffer.
+    /// </summary>
+    /// <param name="compressedSize">The compressed block size in bytes.</param>
+    /// <param name="buffer">The buffer to receive the decompressed block data.</param>
+    /// <param name="offset">The byte offset in the buffer at which to begin writing.</param>
+    /// <param name="bytesRead">When this method returns, contains the number of bytes actually written.</param>
+    /// <returns>A <see cref="CsoError" /> indicating the result of the operation.</returns>
     private CsoError DecompressDeflateBlock(
         int compressedSize,
         byte[] buffer,
@@ -308,6 +336,14 @@ public sealed class CsoFile : IDisposable
         }
     }
 
+    /// <summary>
+    ///     Decompresses an LZ4-compressed block (CSO v2/ZSO) into the specified buffer.
+    /// </summary>
+    /// <param name="compressedSize">The compressed block size in bytes.</param>
+    /// <param name="buffer">The buffer to receive the decompressed block data.</param>
+    /// <param name="offset">The byte offset in the buffer at which to begin writing.</param>
+    /// <param name="bytesRead">When this method returns, contains the number of bytes actually written.</param>
+    /// <returns>A <see cref="CsoError" /> indicating the result of the operation.</returns>
     private CsoError DecompressLz4Block(
         int compressedSize,
         byte[] buffer,

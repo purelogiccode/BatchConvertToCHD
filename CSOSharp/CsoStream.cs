@@ -25,6 +25,10 @@ public sealed class CsoStream : Stream
     private bool _disposed;
     private long _position;
 
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="CsoStream" /> class over the specified <see cref="CsoFile" />.
+    /// </summary>
+    /// <param name="csoFile">The CSO file to read from.</param>
     internal CsoStream(CsoFile csoFile)
     {
         _csoFile = csoFile ?? throw new ArgumentNullException(nameof(csoFile));
@@ -168,6 +172,11 @@ public sealed class CsoStream : Stream
         throw new NotSupportedException("CsoStream is read-only.");
     }
 
+    /// <summary>
+    ///     Loads the specified block into the internal buffer when it is not already cached.
+    /// </summary>
+    /// <param name="blockIndex">The zero-based index of the block to load.</param>
+    /// <returns>A <see cref="CsoError" /> indicating the result of the operation.</returns>
     private CsoError EnsureBlockLoaded(uint blockIndex)
     {
         if (_currentBlockValid && _currentBlockIndex == blockIndex)
