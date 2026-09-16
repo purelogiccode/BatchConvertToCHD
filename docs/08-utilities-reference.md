@@ -191,6 +191,18 @@ Recognises raw 2352-byte CD sectors and stages a cue for them.
 - `DetectTrackMode(path)` — checks the sync mark, reads the mode byte, and confirms the file is a whole number of 2352-byte sectors; returns `MODE1/2352`, `MODE2/2352` or `null` (a cooked 2048-byte image, a DVD image, or an unknown layout).
 - `TryWriteCueAsync(imagePath, trackMode, workDir, token)` — writes a cue in `workDir` that references the image **in place** via a relative path, returning `null` when the image cannot be reached relatively (different volume). BOM-free UTF-8, as always.
 
+### RecoveredImageClassifier (`RecoveredImageClassifier.cs`)
+
+Decides how an image recovered into a temp directory (rejoined split set, decoded ECM, decompressed ISZ, extracted archive) reaches chdman. These images can wear any sector layout and usually have no descriptor, so the size and, where possible, the sector header decide:
+
+- Raw 2352-byte CD sectors are sniffed by `RawCdImageDetector` and get a generated single-track cue (`MODE1/2352`/`MODE2/2352`).
+- A whole number of 2048-byte sectors converts as a DVD image.
+- `Mode2XaSectorSize = 2336` and `Mode2Form1SectorSize = 2324` cover Mode 2 images whose sectors carry no header to sniff; a `MODE2/2336`/`MODE2/2324` cue describes them, and chdman accepts and round-trips both losslessly.
+- `MdsDisc.RawPlusSubchannelSize` (2448) and `RawPlusShortSubchannelSize` (2368) rips are stripped to plain 2352 with `MdsInputPreparer.StripSubchannelAsync` — the same stripper the `.mds` path uses — then sniffed and cued.
+- Anything else returns a skip result carrying the caller's "probably damaged" reason.
+
+The checks run in that order, so when a size fits several layouts at once (a 2336-byte image is 2048-aligned every 64 sectors, for example) the 2048 DVD interpretation wins, matching the order the app has always used.
+
 ### SplitImageJoiner (`Alcohol120Sharp`)
 
 - `TryGetVolumeSet(firstVolumePath)` — finds a numbered volume set (`.001`/`.002`…, `.i00`/`.i01`…) in order, or `null`.

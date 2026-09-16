@@ -417,6 +417,9 @@ public class BugReportServiceTests
     )]
     [InlineData("MP3 audio track could not be decoded")]
     [InlineData("is not divisible by")]
+    [InlineData(
+        "Zero Divide [SLUS_001.83].mdf.ecm: the decoded image is not a whole number of 2352-byte CD sectors or 2048-byte data sectors, so the .ecm file is probably damaged."
+    )]
     [InlineData("could not validate referenced files")]
     [InlineData("The file or directory is corrupted and unreadable")]
     [InlineData("Retry via temp failed")]

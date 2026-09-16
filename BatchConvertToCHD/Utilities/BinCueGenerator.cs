@@ -13,6 +13,12 @@ internal static class BinCueGenerator
     internal const string Mode2 = "MODE2/2352";
     internal const string Mode1 = "MODE1/2352";
 
+    /// <summary>Mode 2 (XA) sectors stored without their 16-byte sync and header.</summary>
+    internal const string Mode2Xa = "MODE2/2336";
+
+    /// <summary>Mode 2 Form 1 sectors as some rippers store them, 2324 bytes each.</summary>
+    internal const string Mode2Form1 = "MODE2/2324";
+
     /// <summary>Marker embedded in the auto-generated cue file name so the app can recognize it.</summary>
     private const string AutoCueMarker = ".autocue";
 

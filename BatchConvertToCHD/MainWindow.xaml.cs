@@ -2695,8 +2695,8 @@ internal partial class MainWindow : IDisposable
 
     /// <summary>
     ///     Works out how an image recovered into a temp directory - joined from parts, decoded from ECM
-    ///     or decompressed from ISZ - should be handed to chdman: as a CD with a generated cue, or as a
-    ///     DVD image.
+    ///     or decompressed from ISZ - should be handed to chdman, then wraps the classifier's answer
+    ///     as a conversion request.
     /// </summary>
     /// <param name="imagePath">The recovered image.</param>
     /// <param name="workDir">Directory holding it, where any cue is written.</param>
@@ -2711,35 +2711,15 @@ internal partial class MainWindow : IDisposable
         CancellationToken token
     )
     {
-        var trackMode = RawCdImageDetector.DetectTrackMode(imagePath);
-        if (trackMode is not null)
-        {
-            LogMessage(
-                $" {description} holds raw CD sectors ({trackMode}); generating a cue for it."
-            );
-            var cuePath = await RawCdImageDetector.TryWriteCueAsync(
-                imagePath,
-                trackMode,
-                workDir,
-                token
-            );
+        var result = await RecoveredImageClassifier
+            .ClassifyAsync(imagePath, workDir, description, misalignedReason, LogMessage, token)
+            .ConfigureAwait(false);
 
-            return cuePath is not null
-                ? ResolvedInput.Convert(cuePath, false)
-                : ResolvedInput.Skip(
-                    $"could not write a cue for the {description.ToLowerInvariant()}."
-                );
-        }
+        if (!result.Success) return ResolvedInput.Skip(result.SkipReason!);
 
-        if (IsCookedImageSize(imagePath))
-        {
-            LogMessage(
-                $" {description} holds {MdsDisc.CookedSectorSize}-byte sectors; converting it as a DVD image."
-            );
-            return ResolvedInput.Convert(imagePath, true);
-        }
-
-        return ResolvedInput.Skip(misalignedReason);
+        return result.DvdImagePath is not null
+            ? ResolvedInput.Convert(result.DvdImagePath, true)
+            : ResolvedInput.Convert(result.CuePath!, false);
     }
 
     /// <summary>True when the file's size is a whole number of 2048-byte sectors.</summary>

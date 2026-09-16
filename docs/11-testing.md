@@ -63,6 +63,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 |------|-------|
 | `DiscImageSignatureTests.cs` | Magic-byte identification of every `DiscImageKind`, `IsArchive` grouping, `Describe` phrasing, unknown/short/missing files |
 | `RawCdImageDetectorTests.cs` | Sync-mark and mode-byte sniffing (MODE1/MODE2), rejection of cooked 2048-byte images and non-sector-aligned files, candidate extensions, generated cue content, and the cross-volume refusal that returns `null` |
+| `RecoveredImageClassifierTests.cs` | Recovery layout routing: raw 2352 sniffing, 2048 DVD classification, 2336/2324 Mode 2 cues, 2448/2368 subchannel stripping down to a cued 2352 image, and the skip reason for sizes that fit no layout |
 | `InputFileFilterTests.cs` | A raw image is dropped when a sibling descriptor covers it (by base name and by cue text), kept when nothing covers it, matching is directory-scoped and case-insensitive — and `ResolveOutputCollisions` keeps the first non-archive input of each colliding output group, order-independently, including three-way collisions and all-archive groups |
 | `SplitImageJoinerTests.cs` | `.001`/`.002` and `.i00`/`.i01` set discovery and ordering, gaps, single-file non-sets, byte totals, and join output equality |
 | `TrackBinCueBuilderTests.cs` | `(Track N)` set recognition and ordering, multi-FILE cue content, data track mode vs. AUDIO tracks, non-track-set rejection |
@@ -99,7 +100,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 4. For chdman-dependent tests, early-return when `chdman.exe` is absent from `AppContext.BaseDirectory`.
 5. Prefer building binary fixtures in code (see `IszImageBuilder`) over committing them. Commit one only when the format cannot be generated trustworthily in-repo, as with `ecm-sample.ecm`.
 6. When a fixture asserts agreement with an outside implementation, add a **guard test** that the fixture still covers the cases it is meant to. A fixture can be regenerated more simply and silently stop testing anything.
-7. Run the full suite before pushing. On a machine with the PBP integration samples present a good run is **842 passed / 0 failed**; without them, the PBP integration group fails as described in §11.5. CI runs the unit tests only, via `--filter "Category!=Integration"` (817 on a runner without the local sample folders).
+7. Run the full suite before pushing. On a machine with the PBP integration samples present a good run is **851 passed / 0 failed**; without them, the PBP integration group fails as described in §11.5. CI runs the unit tests only, via `--filter "Category!=Integration"` (826 on a runner without the local sample folders).
 
 ### Analyzer constraints worth knowing
 

@@ -40,7 +40,7 @@ The order matters:
 4. `DiscImageSignature.Detect` decides the rest: `Ecm` → `ResolveEcmAsync`, `Isz` → `ResolveIszAsync`, `Chd` → skip ("this file is already a CHD").
 5. An extension promising a container (`.zip`/`.7z`/`.rar`/`.isz`) whose content is a plain image → `ResolveMislabelledContainerAsync`.
 
-`ClassifyRecoveredImageAsync` is the shared tail for anything recovered into a temp directory (joined from parts, decoded from ECM, decompressed from ISZ): raw CD sectors get a generated cue and `createcd`; a whole number of 2048-byte sectors converts as a DVD image; anything else is skipped with a reason naming the likely cause.
+`ClassifyRecoveredImageAsync` is the shared tail for anything recovered into a temp directory (joined from parts, decoded from ECM, decompressed from ISZ, extracted from an archive). It hands the image to `RecoveredImageClassifier` ([§8.9](08-utilities-reference.md#recoveredimageclassifier-recoveredimageclassifiercs)): raw 2352-byte CD sectors are sniffed by their sync header and get a generated cue for `createcd`; a whole number of 2048-byte sectors converts as a DVD image; a whole number of 2336- or 2324-byte Mode 2 sectors gets a `MODE2/2336`/`MODE2/2324` cue; a 2448/2368-byte rip has its subchannel tail stripped to 2352 first; anything else is skipped with a reason naming the likely cause.
 
 ### Stage 2 — extension dispatch
 
@@ -205,7 +205,7 @@ Note that `.isz` covers two unrelated things in practice: a real ISZ starts with
 ECM shrinks a raw CD image by discarding each sector's EDC checksum and Reed-Solomon parity, which are derivable from the user data, and recording only what kind of sector each one was. `EcmImageDecoder` parses the block stream (literal, Mode 1, Mode 2 Form 1, Mode 2 Form 2) and `CdSectorEccEdc` regenerates the discarded fields.
 
 - **No external tool.** An earlier version drove Neill Corlett's UNECM binary, because regenerating parity cannot be trusted without a known-good fixture to check against. That fixture now exists (see [Testing](11-testing.md)), the output is verified byte for byte against the original tool, and the dependency is gone — which also means ARM64 gets ECM like every other format.
-- Mode 1 parity covers the sector address; **Mode 2 Form 1 parity is computed over a zeroed address** so it stays valid when the sector is read without its header. That is exactly what lets ECM store Mode 2 sectors as 2336 bytes and emit the 16-byte sync and header as a literal run.
+- Mode 1 parity covers the sector address; **Mode 2 Form 1 parity is computed over a zeroed address** so it stays valid when the sector is read without its header. That is exactly what lets ECM store Mode 2 sectors as 2336 bytes and emit the 16-byte sync and header as a literal run. A decoded Mode 2 image can therefore land as 2336 bytes per sector, and one whose source carried subchannel data as 2448/2368 — `RecoveredImageClassifier` (see §5.2) routes each layout instead of reporting the file as damaged.
 - Every ECM file ends with a checksum of the whole restored image, which is always validated — a damaged file is reported rather than turned into a plausible one.
 
 ### Alcohol 120% — `Alcohol120Sharp`

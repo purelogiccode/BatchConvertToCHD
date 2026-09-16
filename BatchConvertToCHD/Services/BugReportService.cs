@@ -67,6 +67,9 @@ internal class BugReportService
         "the .mdf data file was not found",
         "MP3 audio track could not be decoded",
         "is not divisible by",
+        // An image recovered from ECM/ISZ/archive/parts whose size fits no sector layout chdman can
+        // read is a user-data problem (truncated or damaged download), not an app bug.
+        "not a whole number of 2352-byte",
         "could not validate referenced files",
         "The file or directory is corrupted and unreadable",
         "Retry via temp failed",
