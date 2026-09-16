@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Threading;
@@ -257,6 +258,27 @@ public partial class App
                     == true
                 ):
                 Log.Debug(fnfEx, "WPF ToolTip/Popup accessibility bridge unavailable; suppressing");
+                e.Handled = true;
+                return;
+            // Suppress COMException 0x80263001 (DWM_E_COMPOSITIONDISABLED) raised by
+            // WindowChromeWorker when desktop composition is disabled (DWM off, e.g. via
+            // system settings or third-party tools). This is an OS-level condition, not a
+            // defect in this application: the window's glass frame is simply not extended.
+            case COMException dwmEx
+                when (
+                    dwmEx.HResult == unchecked((int)0x80263001)
+                    && (
+                        dwmEx.StackTrace?.Contains(
+                            "DwmExtendFrameIntoClientArea",
+                            StringComparison.Ordinal
+                        ) == true
+                        || dwmEx.StackTrace?.Contains(
+                            "WindowChromeWorker",
+                            StringComparison.Ordinal
+                        ) == true
+                    )
+                ):
+                Log.Debug(dwmEx, "Desktop composition is disabled; suppressing DWM glass frame error");
                 e.Handled = true;
                 return;
             default:

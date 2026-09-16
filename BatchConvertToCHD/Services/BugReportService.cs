@@ -100,6 +100,9 @@ internal class BugReportService
         "terminated abnormally during the startup check",
         // The output folder's drive is gone (USB unplugged, network drive dropped).
         "output folder is not available",
+        // Writing into the output folder is denied (root of C:\, "Program Files", read-only
+        // drive); the app already shows one actionable dialog per batch start.
+        "output folder is not writable",
         // Direct-stream extraction over a network share can hit a transient SMB hiccup
         // ("An unexpected network error occurred." / French "Erreur réseau inattendue.");
         // the extractor retries via a local temp copy, so this intermediate notice is

@@ -847,19 +847,19 @@ internal partial class MainWindow : IDisposable
 
     private void LogMessage(string message)
     {
-        Log.Information(message);
+        Log.Information("{Message}", message);
         AppendToUiLog(message);
     }
 
     private void LogError(string message, Exception? ex = null)
     {
-        Log.Error(ex, message.TrimStart());
+        Log.Error(ex, "{Message}", message.TrimStart());
         AppendToUiLog($"ERROR: {message.TrimStart()}");
     }
 
     private void LogWarning(string message, Exception? ex = null)
     {
-        Log.Warning(ex, message.TrimStart());
+        Log.Warning(ex, "{Message}", message.TrimStart());
         AppendToUiLog($"WARNING: {message.TrimStart()}");
     }
 

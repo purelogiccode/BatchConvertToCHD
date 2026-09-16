@@ -63,14 +63,14 @@ internal static class AppHttpClient
             var subject =
                 (certificate as X509Certificate2)?.Subject ?? certificate?.Subject ?? "unknown";
             Logger.Warning(
-                "SSL certificate name mismatch for {Subject}. The server certificate does not match the expected hostname. This may be caused by a proxy or firewall intercepting the connection. Allowing the connection to proceed.",
+                "SSL certificate name mismatch for {Subject} - server certificate does not match the expected hostname, possibly a proxy or firewall; allowing the connection to proceed",
                 subject
             );
             return true;
         }
 
         Logger.Warning(
-            "SSL certificate validation error: {Errors}. The connection will be rejected.",
+            "SSL certificate validation error {Errors} - connection will be rejected",
             sslPolicyErrors
         );
         return false;
