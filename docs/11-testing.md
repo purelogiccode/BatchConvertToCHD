@@ -5,7 +5,7 @@ nav_order: 12
 
 # 11. Testing
 
-The solution contains a single test project, `BatchConvertToCHD.Tests` (xUnit, `net10.0-windows`), with **835 tests across 43 test classes** (a handful of PBP integration tests need a local sample folder — see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
+The solution contains a single test project, `BatchConvertToCHD.Tests` (xUnit, `net10.0-windows`), with **842 tests across 43 test classes** (a handful of PBP integration tests need a local sample folder — see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
 
 > **Expected result on a clean machine: 762 passed, 15 failed.** The 15 failures are a fixture problem, not a regression — see [§11.5](#115-the-15-expected-failures). A change that leaves exactly those 15 failing has broken nothing.
 
@@ -66,7 +66,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 | `InputFileFilterTests.cs` | A raw image is dropped when a sibling descriptor covers it (by base name and by cue text), kept when nothing covers it, matching is directory-scoped and case-insensitive — and `ResolveOutputCollisions` keeps the first non-archive input of each colliding output group, order-independently, including three-way collisions and all-archive groups |
 | `SplitImageJoinerTests.cs` | `.001`/`.002` and `.i00`/`.i01` set discovery and ordering, gaps, single-file non-sets, byte totals, and join output equality |
 | `TrackBinCueBuilderTests.cs` | `(Track N)` set recognition and ordering, multi-FILE cue content, data track mode vs. AUDIO tracks, non-track-set rejection |
-| `MdsTests.cs` | `.mds` header/session/track parsing, mode-to-cue-track mapping, sector-size classification (2352 / 2448 / 2368 / 2048), implausible session counts, `.mdf` lookup, subchannel stripping, MSF formatting, and the three `MdsInputPreparer` shapes |
+| `MdsTests.cs` | `.mds` header/session/track parsing, mode-to-cue-track mapping, sector-size classification (2352 / 2448 / 2368 / 2048), implausible session counts, `.mdf` lookup (exact, decorated, ambiguous, subdirectory, split `.i00`, Unicode composition), subchannel stripping, MSF formatting, and the three `MdsInputPreparer` shapes |
 | `IszHeaderTests.cs` | **Every header field read at its documented offset** (the test that catches an offset mistake), 64-bit image-size arithmetic for dual-layer sizes, signature and short-input rejection, and each refusal in `GetUnusableReason` including all four encryption modes |
 | `IszDecoderTests.cs` | Chunk-entry bit-packing for 2/3/4-byte pointers, segment naming, round trips for zlib / bzip2 / stored / all-zero and mixed chunk types, trailing partial chunks, two-segment images with a chunk straddling the boundary, and the refusals: not-an-ISZ, encrypted, truncated file, truncated chunk table, corrupt compressed data, missing segment, and a segment from a different image |
 | `CdSectorEccEdcTests.cs` | Sync/mode layout, EDC accumulation equivalence whole vs. in pieces, and the parity distinction that matters: **Mode 1 parity covers the address, Mode 2 Form 1 parity does not** and restores it afterwards; Form 2 gets an EDC and no parity |
@@ -99,7 +99,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 4. For chdman-dependent tests, early-return when `chdman.exe` is absent from `AppContext.BaseDirectory`.
 5. Prefer building binary fixtures in code (see `IszImageBuilder`) over committing them. Commit one only when the format cannot be generated trustworthily in-repo, as with `ecm-sample.ecm`.
 6. When a fixture asserts agreement with an outside implementation, add a **guard test** that the fixture still covers the cases it is meant to. A fixture can be regenerated more simply and silently stop testing anything.
-7. Run the full suite before pushing. On a machine with the PBP integration samples present a good run is **835 passed / 0 failed**; without them, the PBP integration group fails as described in §11.5.
+7. Run the full suite before pushing. On a machine with the PBP integration samples present a good run is **842 passed / 0 failed**; without them, the PBP integration group fails as described in §11.5. CI runs the unit tests only, via `--filter "Category!=Integration"` (817 on a runner without the local sample folders).
 
 ### Analyzer constraints worth knowing
 

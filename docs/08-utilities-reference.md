@@ -258,7 +258,7 @@ Lives in the standalone `Alcohol120Sharp` library (multi-targeted `net10.0;net8.
 
 | Type | Role |
 |------|------|
-| `MdsParser` | Parses the `.mds` descriptor: signature, session table, track table; locates the `.mdf`; rejects descriptors whose session count is implausible. |
+| `MdsParser` | Parses the `.mds` descriptor: signature, session table, track table; locates the `.mdf` (exact base name first, then a unique decorated name like `Game (USA).mdf` beside `Game.mds` — Unicode composition ignored, alphanumeric continuations rejected — then the lone `.mdf` in the folder, then an unambiguous exact-name match one folder down; split `.i00` first volumes are located the same way); rejects descriptors whose session count is implausible. |
 | `MdsDisc` | The parsed model. `RawSectorSize = 2352`, `RawPlusSubchannelSize = 2448`, `CookedSectorSize = 2048`; `IsDvdImage`, `IsPlainRawCd`, `NeedsSubchannelStrip`, `AllTracksDescribable`. |
 | `MdsTrack` | One track: number, mode, sector size, start LBA, and `CueTrackType` (`null` when the mode cannot be expressed in a cue). |
 | `MdsInputPreparer` | `PrepareAsync` → `Result(CuePath, DvdImagePath, FailureReason)`, plus `StripSubchannelAsync`, `WriteCueAsync` and `FormatMsf`. |

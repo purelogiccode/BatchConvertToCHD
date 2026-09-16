@@ -216,7 +216,7 @@ ECM shrinks a raw CD image by discarding each sector's EDC checksum and Reed-Sol
 - **2448 or 2368** — 2352 data plus a subchannel tail chdman will not read, so the tail is stripped into a new image and a cue is written for that.
 - **2048** — the `.mdf` is really an ISO and converts as a DVD image.
 
-Split `.i00` data files are joined first. A descriptor whose session count is implausible, or whose track modes cannot be expressed in a cue, is refused with the reason. A `.mdf` is never converted on its own: the `.mds` drives everything, which is why only `.mds` is a registered input.
+Split `.i00` data files are joined first. The descriptor's data file is located in stages — exact base name beside the `.mds`, then a unique decorated name (`Game (USA).mdf` beside `Game.mds`), then the lone `.mdf` in the folder, then an unambiguous exact-name match one folder down (split `.i00` sets are located the same way, so a sibling game's set is never picked up); when more than one plausible candidate exists the disc is skipped with a reason instead of guessing. A descriptor whose session count is implausible, or whose track modes cannot be expressed in a cue, is refused with the reason. A `.mdf` is never converted on its own: the `.mds` drives everything, which is why only `.mds` is a registered input.
 
 ---
 

@@ -1,5 +1,32 @@
 # What's New
 
+## 3.7.1 (unreleased)
+
+### MDS descriptors find renamed and nested data files (#66955, #66989)
+
+*   **A `.mdf` no longer has to sit beside its `.mds` under the exact same name.** The descriptor's data file is now found when it was renamed with a decoration (`Game.mds` beside `Game (USA).mdf` — but never when the name continues with a letter or digit, so `Game 2` never matches `Game`), when it sits one folder down (only an unambiguous exact-name match, so a sibling game's image is never picked up), and split `.i00` sets are located by base name even when other sets share the folder. File names that differ only in Unicode composition (`Cafe\u0301` vs `Café`) are treated as equal.
+*   **Ambiguity is refused, not guessed**: with `Game (Disc 1).mdf` and `Game (Disc 2).mdf` both beside `Game.mds`, the disc is skipped with the existing "data file was not found" message instead of converting the wrong disc.
+
+### Transient network/NAS failures no longer abort a batch (#66854)
+
+*   **Archive copies retry transient I/O errors** before the temp-copy fallback runs: a failed direct extraction (for example an SMB hiccup while streaming from a NAS) is demoted to a debug notice, and the automatic copy that precedes the fallback retries up to four times with increasing delays. Missing-source errors are never retried.
+*   **Network-unavailability detection is locale-independent**: the Win32 error codes (bad netpath, unexpected network error, netname deleted, …) are now read from the exception's `HResult`, so non-English Windows builds (e.g. French `"Erreur réseau inattendue."`) are recognized without relying on localized message text.
+
+### Startup crash suppressed: desktop composition disabled (#67014, #67084)
+
+*   A user with desktop composition disabled (registry/DWM tweak or third-party theming tool) got a `COMException 0x80263001` from `WindowChromeWorker.DwmExtendFrameIntoClientArea` reported as an unhandled dispatcher exception. It is now suppressed like the other known-benign WPF-internal exceptions: the window simply runs without the glass frame effect.
+
+### Bug-report noise reduction (#67027)
+
+*   **"The output folder is not writable"** (root of `C:\`, `Program Files`, a read-only drive) is excluded from automatic reports — the batch-start probe already shows one actionable dialog and nothing was converted.
+
+### Housekeeping
+
+*   Library updates: Meziantou.Analyzer 3.0.259, Microsoft.NET.Test.Sdk 18.10.1.
+*   Test suite grew to **842 tests** (decorated/ambiguous/subdirectory/split/Unicode `.mdf` lookup, transient network copy retries, SFO size bounds, the new bug-report exclusion).
+
+---
+
 ## 3.7.0 (2026-09-09)
 
 ### Split archive volume sets now convert end to end
