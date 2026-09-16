@@ -1,5 +1,18 @@
 # What's New
 
+## 3.7.2 (2026-09-16)
+
+### Recovered images with Mode 2 or subchannel layouts now convert (#67139)
+
+*   **A decoded ECM whose source was not a plain 2352-byte image is no longer reported as damaged.** Alcohol `.mdf` rips can store 2336-byte Mode 2 sectors, or 2448/2368-byte sectors carrying subchannel data, and all three were skipped with "the decoded image is not a whole number of 2352-byte CD sectors or 2048-byte data sectors" even though the ECM trailing checksum had already proved the file intact. The new `RecoveredImageClassifier` routes every recovered image (ECM, ISZ, archive, split set) by its actual layout: raw 2352-byte CD sectors get a generated cue as before, 2048-byte sectors convert as a DVD image as before, 2336 and 2324-byte Mode 2 sectors get a `MODE2/2336`/`MODE2/2324` cue (both round-trip losslessly through chdman 0.289), and 2448/2368-byte rips have their subchannel tail stripped to 2352 and are then sniffed and cued — the same strip the `.mds` path already used. Only a size that fits no standard layout is still reported as damaged.
+*   The "not a whole number of 2352-byte CD sectors..." skip is now excluded from automatic bug reports, like the other user-data conditions.
+
+### Housekeeping
+
+*   Test suite grew to **851 tests** (recovered-image layout routing: 2336/2324 cues, 2448/2368 stripping, skip reasons).
+
+---
+
 ## 3.7.1 (2026-09-16)
 
 ### MDS descriptors find renamed and nested data files (#66955, #66989)
