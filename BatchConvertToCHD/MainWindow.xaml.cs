@@ -13,7 +13,6 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
-using Alcohol120Sharp;
 using BatchConvertToCHD.Models;
 using BatchConvertToCHD.Services;
 using BatchConvertToCHD.Utilities;
@@ -22,6 +21,7 @@ using CCDSharp;
 using CCDSharp.Models;
 using CHDSharp;
 using CHDSharp.Models;
+using MDSSharp;
 using Microsoft.Win32;
 using PBPSharp;
 using PBPSharp.Models;
@@ -3456,14 +3456,19 @@ internal partial class MainWindow : IDisposable
 
         LogMessage($"MDS: {originalName} - {disc.Summary}");
 
-        // Stripping subchannel data writes a whole second copy of the disc, so the work directory
-        // has to be chosen with room for it.
+        // Stripping subchannel data, rebuilding pregaps or joining several data files writes a whole
+        // second copy of the disc, so the work directory has to be chosen with room for it.
         long requiredBytes = 0;
-        if (disc is { NeedsSubchannelStrip: true, MdfPath: not null })
+        if (
+            disc is { MdfPath: not null }
+            && (disc.NeedsSubchannelStrip || disc.HasPregapInfo || disc.DataFilePaths.Count > 1)
+        )
         {
             try
             {
-                requiredBytes = new FileInfo(disc.MdfPath).Length;
+                requiredBytes = disc.DataFilePaths.Count > 0
+                    ? disc.DataFilePaths.Sum(f => new FileInfo(f).Length)
+                    : new FileInfo(disc.MdfPath).Length;
             }
             catch
             {

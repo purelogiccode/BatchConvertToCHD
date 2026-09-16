@@ -54,7 +54,7 @@ CSharp_BatchConvertToCHD.sln
 │           ├── EcmImageDecoder.cs         → ECM block-stream decoder
 │           └── EcmDecodeResult.cs
 ├── BatchConvertToCHD.Tests/               (xUnit, 842 tests; Fixtures/ holds ecm-sample.ecm)
-├── Alcohol120Sharp/                         (Alcohol 120% .mds/.mdf parsing; net10.0;net8.0)
+├── MDSSharp/                                (Alcohol 120% .mds/.mdf parsing; net8.0;net9.0;net10.0)
 ├── CCDSharp/                                (CloneCD .ccd/.img/.sub parsing; net10.0;net8.0)
 ├── CSOSharp/                                (CSO/CISO decompression; net10.0;net8.0)
 ├── PBPSharp/                                (PBP/SFO parsing; net10.0;net8.0)
@@ -73,16 +73,16 @@ CSharp_BatchConvertToCHD.sln
          │  CCDSharp    │ │  CSOSharp   │ │  PBPSharp   │
          └──────────────┘ └─────────────┘ └─────────────┘
          ┌──────────────────────┐  ┌─────────────────────┐
-         │    Alcohol120Sharp   │  │    UltraIsoSharp    │
+         │       MDSSharp       │  │    UltraIsoSharp    │
          └──────────────────────┘  └─────────────────────┘
      NuGet: CHDSharp 1.4.3, WPF-UI, SharpCompress, NAudio, Serilog
 ```
 
-- The app references `Alcohol120Sharp`, `CCDSharp`, `CSOSharp`, `PBPSharp` and `UltraIsoSharp` as project references.
-- All five libraries multi-target `net10.0;net8.0`, are packable, and expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`.
-- `BatchConvertToCHD.Tests` references the app (internals visible) plus `Alcohol120Sharp`, `CSOSharp`, `PBPSharp` and `UltraIsoSharp` — but **not** `CCDSharp` (there are no CCDSharp unit tests today; see [Testing](11-testing.md)).
+- The app references `MDSSharp`, `CCDSharp`, `CSOSharp`, `PBPSharp` and `UltraIsoSharp` as project references.
+- All five libraries are packable and expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`; `MDSSharp`, `CCDSharp`, `CSOSharp` and `PBPSharp` multi-target `net8.0;net9.0;net10.0`, while `UltraIsoSharp` targets `net10.0;net8.0`.
+- `BatchConvertToCHD.Tests` references the app (internals visible) plus `MDSSharp`, `CSOSharp`, `PBPSharp` and `UltraIsoSharp` — but **not** `CCDSharp` (there are no CCDSharp unit tests today; see [Testing](11-testing.md)).
 
-> **Why ISZ and Alcohol support moved into libraries.** `UltraIsoSharp` and `Alcohol120Sharp` were split out of the app's utilities into standalone packable projects (they are self-contained formats with redistributable value), while ECM decoding remains in-app because it is tightly coupled to the cue staging flow. The test project references both new libraries directly.
+> **Why ISZ and Alcohol support moved into libraries.** `UltraIsoSharp` and `MDSSharp` were split out of the app's utilities into standalone packable projects (they are self-contained formats with redistributable value), while ECM decoding remains in-app because it is tightly coupled to the cue staging flow. The test project references both new libraries directly.
 
 ---
 
@@ -145,7 +145,7 @@ User clicks Start Conversion
              └─ per file: ProcessSingleFileForConversionAsync
                   ├─ missing file? → FileWatcherService diagnostics
                   ├─ TryResolveByContentAsync  ← content before extension
-                  │    ├─ split volume set → SplitImageJoiner (Alcohol120Sharp) → classify
+                  │    ├─ split volume set → SplitImageJoiner (MDSSharp) → classify
                   │    ├─ Isz  → ResolveIszAsync   (UltraIsoSharp)  → classify
                   │    ├─ Ecm  → ResolveEcmAsync   (Utilities/Ecm)  → classify
                   │    ├─ Chd  → skip ("already a CHD")
@@ -155,7 +155,7 @@ User clicks Start Conversion
                   │    archive→ ProcessArchiveFileForConversionAsync
                   │    .pbp   → ProcessPbpFileForConversionAsync
                   │    .ccd   → ProcessCcdFileForConversionAsync
-                  │    .mds   → ProcessMdsFileForConversionAsync   (Alcohol120Sharp)
+                  │    .mds   → ProcessMdsFileForConversionAsync   (MDSSharp)
                   │    other  → TryStageCueForRawImageAsync → direct conversion
                   ├─ ValidateDependentFilesAsync (cue/gdi/toc)
                   ├─ TryDirectConversionAsync

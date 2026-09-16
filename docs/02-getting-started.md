@@ -55,10 +55,10 @@ The solution contains seven projects:
 |---------|------|------------------|
 | `BatchConvertToCHD` | WPF application (WinExe) | `net10.0-windows` |
 | `BatchConvertToCHD.Tests` | xUnit test suite | `net10.0-windows` |
-| `Alcohol120Sharp` | class library (Alcohol 120% .mds/.mdf parsing) | `net10.0;net8.0` |
-| `CCDSharp` | class library (CloneCD parsing) | `net10.0;net8.0` |
-| `CSOSharp` | class library (CSO decompression) | `net10.0;net8.0` |
-| `PBPSharp` | class library (PBP/SFO parsing) | `net10.0;net8.0` |
+| `MDSSharp` | class library (Alcohol 120% .mds/.mdf parsing) | `net8.0;net9.0;net10.0` |
+| `CCDSharp` | class library (CloneCD parsing) | `net8.0;net9.0;net10.0` |
+| `CSOSharp` | class library (CSO decompression) | `net8.0;net9.0;net10.0` |
+| `PBPSharp` | class library (PBP/SFO parsing) | `net8.0;net9.0;net10.0` |
 | `UltraIsoSharp` | class library (ISZ decompression) | `net10.0;net8.0` |
 
 > **Note**: `chdman.exe` and `7za.exe` are copied to the output directory by the build (`BatchConvertToCHD.csproj:26–40`). The libraries are referenced as project references, not NuGet packages, except `CHDSharp` (NuGet 1.4.3) and other packages listed below.

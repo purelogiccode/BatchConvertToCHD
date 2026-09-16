@@ -203,7 +203,7 @@ Decides how an image recovered into a temp directory (rejoined split set, decode
 
 The checks run in that order, so when a size fits several layouts at once (a 2336-byte image is 2048-aligned every 64 sectors, for example) the 2048 DVD interpretation wins, matching the order the app has always used.
 
-### SplitImageJoiner (`Alcohol120Sharp`)
+### SplitImageJoiner (`MDSSharp`)
 
 - `TryGetVolumeSet(firstVolumePath)` — finds a numbered volume set (`.001`/`.002`…, `.i00`/`.i01`…) in order, or `null`.
 - `GetTotalBytes(set)` / `JoinAsync(set, destination, token)` — concatenates the parts into one image and returns the byte count, so the caller can check it against a sector boundary.
@@ -264,16 +264,23 @@ The format: after the 4-byte signature comes a sequence of blocks, each introduc
 
 ---
 
-## 8.12 Alcohol 120% Support (`Alcohol120Sharp`)
+## 8.12 Alcohol 120% Support (`MDSSharp`)
 
-Lives in the standalone `Alcohol120Sharp` library (multi-targeted `net10.0;net8.0`, MIT-licensed, packable) together with `SplitImageJoiner`.
+Lives in the standalone `MDSSharp` library (multi-targeted `net8.0;net9.0;net10.0`, MIT-licensed, packable) together with `SplitImageJoiner`.
 
 | Type | Role |
 |------|------|
-| `MdsParser` | Parses the `.mds` descriptor: signature, session table, track table; locates the `.mdf` (exact base name first, then a unique decorated name like `Game (USA).mdf` beside `Game.mds` — Unicode composition ignored, alphanumeric continuations rejected — then the lone `.mdf` in the folder, then an unambiguous exact-name match one folder down; split `.i00` first volumes are located the same way); rejects descriptors whose session count is implausible. |
-| `MdsDisc` | The parsed model. `RawSectorSize = 2352`, `RawPlusSubchannelSize = 2448`, `CookedSectorSize = 2048`; `IsDvdImage`, `IsPlainRawCd`, `NeedsSubchannelStrip`, `AllTracksDescribable`. |
-| `MdsTrack` | One track: number, mode, sector size, start LBA, and `CueTrackType` (`null` when the mode cannot be expressed in a cue). |
-| `MdsInputPreparer` | `PrepareAsync` → `Result(CuePath, DvdImagePath, FailureReason)`, plus `StripSubchannelAsync`, `WriteCueAsync` and `FormatMsf`. |
+| `MdsParser` | Parses the `.mds` descriptor: signature, medium type, session table, track table, per-track extra blocks (pregap/length) and footer blocks (data file names, single-byte or UTF-16); resolves the data files from the declared names, then falls back to name matching (exact base name, unique decorated name like `Game (USA).mdf` beside `Game.mds` — Unicode composition ignored, alphanumeric continuations rejected — the lone `.mdf` in the folder, then an unambiguous exact-name match one folder down; split `.i00` first volumes are located the same way); rejects descriptors whose session count is implausible. |
+| `MdsDisc` | The parsed model. `MediumType` (`Cd`/`CdR`/`CdRw`/`Dvd`/`DvdMinusR`/`Unknown`), `DataFilePaths`, `RawSectorSize = 2352`, `RawPlusSubchannelSize = 2448`, `RawPlusShortSubchannelSize = 2368`, `Mode2XaSectorSize = 2336`, `CookedSectorSize = 2048`; `IsDvdImage`, `IsCookedCd`, `IsPlainRawCd`, `NeedsSubchannelStrip`, `AllTracksDescribable`, `HasPregapInfo`. |
+| `MdsTrack` | One track: number, mode (low nibble, folded by 8), sector size, start LBA, `PregapSectors`/`LengthSectors` from the extra block, subchannel mode, ADR/CTL, and `CueTrackType` (`null` when the mode or stored size cannot be expressed in a cue). |
+| `MdsInputPreparer` | `PrepareAsync` → `Result(CuePath, DvdImagePath, FailureReason)`, plus `StripSubchannelAsync`, `WriteCueAsync(disc, workDir, reference, token, pregapsInFile)` and `FormatMsf`. |
+
+Behaviour worth knowing:
+
+- The medium type decides DVD passthrough; a CD descriptor with 2048-byte sectors is a cooked data disc and gets a `MODE1/2048` cue instead.
+- Track modes follow libmirage's reverse engineering: only the low nibble selects the mode (values 8–15 fold down by 8), so `0xA9` is audio, `0xAA`/`0xE2` Mode 1, and `0xEC`/`0xE3` the Mode 2 family.
+- When the descriptor's track lengths add up to the data file without the recorded pregaps, the pregaps are rebuilt as zeros into a `.pregap.bin` (stripping subchannel in the same pass) so `INDEX 00` points at real sectors; pregaps that are already present are referenced in place.
+- Descriptors that name several data files are joined in order before anything else happens.
 
 The three shapes it handles, and the reasoning, are in [Conversion Pipeline §5.7](05-conversion-pipeline.md#57-recovered-image-formats).
 

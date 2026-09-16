@@ -184,7 +184,7 @@ See [Services Reference → ArchiveService](07-services-reference.md#archive-ser
 
 These all converge on `ClassifyRecoveredImageAsync` (§5.2) once the image has been reconstructed.
 
-### Split volume sets — `SplitImageJoiner` (Alcohol120Sharp)
+### Split volume sets — `SplitImageJoiner` (MDSSharp)
 
 `.001`/`.002`… and `.i00`/`.i01`… sets are concatenated into one temp file. Only the **first** volume is a registered input, so a set is offered once rather than once per piece. A multi-part *archive* first volume (`.7z.001`/`.zip.001`) is no longer refused: 7-Zip and ZIP volume sets are byte-splits of one archive stream, so `ResolveSplitArchiveSetAsync` extracts the set with the bundled `7za.exe` (disk space checked against the total size of every volume) and routes the extracted image through the same classification as a joined set. Multi-part **RAR** still needs manual extraction, since the app carries no RAR tooling. A set whose parts do not join to a whole number of sectors is reported as needing re-download rather than converted.
 
@@ -208,7 +208,7 @@ ECM shrinks a raw CD image by discarding each sector's EDC checksum and Reed-Sol
 - Mode 1 parity covers the sector address; **Mode 2 Form 1 parity is computed over a zeroed address** so it stays valid when the sector is read without its header. That is exactly what lets ECM store Mode 2 sectors as 2336 bytes and emit the 16-byte sync and header as a literal run. A decoded Mode 2 image can therefore land as 2336 bytes per sector, and one whose source carried subchannel data as 2448/2368 — `RecoveredImageClassifier` (see §5.2) routes each layout instead of reporting the file as damaged.
 - Every ECM file ends with a checksum of the whole restored image, which is always validated — a damaged file is reported rather than turned into a plausible one.
 
-### Alcohol 120% — `Alcohol120Sharp`
+### Alcohol 120% — `MDSSharp`
 
 `MdsParser` reads the descriptor's session and track tables; `MdsInputPreparer` picks one of three shapes:
 

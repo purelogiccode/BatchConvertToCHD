@@ -67,14 +67,16 @@ dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -r win-arm6
 ## Library NuGet packages (manual publish)
 
 `PBPSharp` (<https://www.nuget.org/packages/PBPSharp>), `CSOSharp`
-(<https://www.nuget.org/packages/CSOSharp>) and `CCDSharp`
-(<https://www.nuget.org/packages/CCDSharp>) are published as NuGet packages.
+(<https://www.nuget.org/packages/CSOSharp>), `CCDSharp`
+(<https://www.nuget.org/packages/CCDSharp>) and `MDSSharp`
+(<https://www.nuget.org/packages/MDSSharp>) are published as NuGet packages.
 Releases are **manual only**: do not add pack/push steps to the solution CI
 workflows, and never commit or echo the API key. It is read from the
 `NUGET_API_KEY` user environment variable.
 
 - **Version** lives in the project file (`PBPSharp/PBPSharp.csproj`,
-  `CSOSharp/CSOSharp.csproj` and `CCDSharp/CCDSharp.csproj`): bump
+  `CSOSharp/CSOSharp.csproj`, `CCDSharp/CCDSharp.csproj` and
+  `MDSSharp/MDSSharp.csproj`): bump
   `<Version>`, `<AssemblyVersion>` and `<FileVersion>` together. A pushed
   version is immutable - to change anything, bump and push again.
 - **Target frameworks** are `net8.0;net9.0;net10.0` so both packages serve

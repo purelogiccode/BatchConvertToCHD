@@ -5,14 +5,14 @@ nav_order: 11
 
 # 10. Embedded Libraries
 
-The solution ships five in-house libraries that replace external tools (maxcso, psxpackager), add CloneCD support, and cover Alcohol 120% and UltraISO images. The app references them as project references. Three of them are additionally published as NuGet packages for outside consumers — **PBPSharp** (<https://www.nuget.org/packages/PBPSharp>, 1.1.1), **CSOSharp** (<https://www.nuget.org/packages/CSOSharp>, 1.0.0) and **CCDSharp** (<https://www.nuget.org/packages/CCDSharp>, 1.0.0) — and those three multi-target `net8.0;net9.0;net10.0`, each shipping its XML docs next to the assembly; releases are manual (see the repository's AGENTS.md). The other two (`Alcohol120Sharp`, `UltraIsoSharp`) multi-target `net10.0;net8.0`, are packable, and all five expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`. A sixth in-house library, **CHDSharp**, is consumed as a NuGet package and is covered in [§10.4](#104-chdsharp-nuget).
+The solution ships five in-house libraries that replace external tools (maxcso, psxpackager), add CloneCD support, and cover Alcohol 120% and UltraISO images. The app references them as project references. Four of them are published as NuGet packages for outside consumers — **PBPSharp** (<https://www.nuget.org/packages/PBPSharp>, 1.1.1), **CSOSharp** (<https://www.nuget.org/packages/CSOSharp>, 1.0.0), **CCDSharp** (<https://www.nuget.org/packages/CCDSharp>, 1.0.0) and **MDSSharp** (<https://www.nuget.org/packages/MDSSharp>, 1.1.0) — and those four multi-target `net8.0;net9.0;net10.0`, each shipping its XML docs next to the assembly; releases are manual (see the repository's AGENTS.md). `UltraIsoSharp` multi-targets `net10.0;net8.0` and is packable. All five expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`. A sixth in-house library, **CHDSharp**, is consumed as a NuGet package and is covered in [§10.4](#104-chdsharp-nuget).
 
 | Library | Purpose | Replaces |
 |---------|---------|----------|
 | **CCDSharp** | CloneCD `.ccd`/`.img`/`.sub` parsing + CUE/BIN conversion | — (new capability) |
 | **CSOSharp** | CSO/CISO decompression (deflate/zlib + LZ4) | `maxcso.exe` |
 | **PBPSharp** | PlayStation PBP extraction + SFO/TOC parsing | `psxpackager.exe` |
-| **Alcohol120Sharp** | Alcohol 120% `.mds`/`.mdf` parsing, subchannel stripping, split-volume joining, cue writing | — (new capability) |
+| **MDSSharp** | Alcohol 120% `.mds`/`.mdf` parsing, subchannel stripping, split-volume joining, cue writing | — (new capability) |
 | **UltraIsoSharp** | UltraISO ISZ decompression back to the plain image | — (new capability) |
 
 ---
@@ -66,12 +66,15 @@ The solution ships five in-house libraries that replace external tools (maxcso, 
 - In the conversion pipeline CHDSharp is the **automatic fallback**: the bundled `chdman` is the primary encoder, and a file that chdman cannot convert is retried with `CHDSharp.exe` — see [Conversion Pipeline §5.3](05-conversion-pipeline.md#53-converttochdasync--encoder-selection-chdman-first-chdsharp-fallback).
 - When the library cannot decode a CHD (corrupt file, A/V laserdisc), the app falls back to `chdman` for extraction — see [Extraction & Verification](06-extraction-and-verification.md).
 
-## 10.5 Alcohol120Sharp
+## 10.5 MDSSharp
 
 **Purpose**: turn an Alcohol 120% image (`.mds` descriptor + `.mdf` data, including split `.i00`/`.i01` volumes) into something the encoder can read.
 
-- Main types: `MdsParser` (`IsMdsFile`, `Parse`), `MdsDisc`/`MdsTrack` (parsed model with sector-size classification), `MdsInputPreparer` (`PrepareAsync` → cue / DVD image / failure; `StripSubchannelAsync`, `WriteCueAsync`, `FormatMsf`), and `SplitImageJoiner` (`TryGetVolumeSet`, `JoinAsync`, `GetTotalBytes` for `.001`/`.i00` volume sets).
-- The three preparation shapes (plain 2352, subchannel strip, ISO-as-DVD) and the recovered `.mds` layout are documented in [Utilities Reference §8.12](08-utilities-reference.md#812-alcohol-120-support-alcohol120sharp).
+- Main types: `MdsParser` (`IsMdsFile`, `Parse`), `MdsMedium`, `MdsDisc`/`MdsTrack` (parsed model with medium type, sector-size classification and pregap/length fields), `MdsInputPreparer` (`PrepareAsync` → cue / DVD image / failure; `StripSubchannelAsync`, `WriteCueAsync`, `FormatMsf`), and `SplitImageJoiner` (`TryGetVolumeSet`, `JoinAsync`, `GetTotalBytes` for `.001`/`.i00` volume sets).
+- Reads the medium type, the track extra blocks (pregap/length) and the footer blocks that name the data files (single-byte or UTF-16), so renamed and multi-file descriptors resolve without guessing; several declared files are joined in order.
+- Track modes follow libmirage's reverse engineering (low nibble, folded by 8): audio, Mode 1 and the Mode 2 forms; CD media with 2048-byte sectors becomes a `MODE1/2048` cue, DVD media stays a direct image.
+- Pregaps the data file does not contain are rebuilt as zeros into a `.pregap.bin` so `INDEX 00` can be written; pregaps already in the file are referenced in place.
+- The three preparation shapes (plain 2352, subchannel strip, ISO-as-DVD) plus the cooked-CD and pregap paths are documented in [Utilities Reference §8.12](08-utilities-reference.md#812-alcohol-120-support-mdsssharp).
 - Integration: `ProcessMdsFileForConversionAsync` prepares the work set, then the conversion funnel takes the cue (or DVD image).
 - Tests: `MdsTests.cs`, `SplitImageJoinerTests.cs`.
 

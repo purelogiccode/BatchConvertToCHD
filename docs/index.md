@@ -22,7 +22,7 @@ This documentation covers the project from both a user and a developer perspecti
 | 7 | [Services Reference](07-services-reference.md) | Developers | ArchiveService, UpdateService, StatsService, FileWatcherService, AppHttpClient, more |
 | 8 | [Utilities Reference](08-utilities-reference.md) | Developers | PathUtils, CueNormalizer, CueWorkDirectory, GameFileParser, BinCueGenerator, content detection, ISZ/ECM/Alcohol, more |
 | 9 | [Bug Reporting System](09-bug-reporting.md) | Developers | Bug report API contract, sink, exclusion patterns, environment details |
-| 10 | [Embedded Libraries](10-libraries.md) | Developers | CCDSharp, CSOSharp, PBPSharp, Alcohol120Sharp, UltraIsoSharp: purpose, API, integration |
+| 10 | [Embedded Libraries](10-libraries.md) | Developers | CCDSharp, CSOSharp, PBPSharp, MDSSharp, UltraIsoSharp: purpose, API, integration |
 | 11 | [Testing](11-testing.md) | Developers | Test project layout, coverage by file, integration tests, how to run |
 | 12 | [Application Data](12-application-data.md) | Users & devs | AppData layout: logs, screenshots, temp directories, cleanup |
 | 13 | [Troubleshooting](13-troubleshooting.md) | Users & devs | Common errors, their meaning, and how to resolve them |
@@ -49,7 +49,7 @@ This documentation covers the project from both a user and a developer perspecti
 
 ```
 CSharp_BatchConvertToCHD/
-├── Alcohol120Sharp/                # Alcohol 120% (.mds/.mdf) parsing library
+├── MDSSharp/                       # Alcohol 120% (.mds/.mdf) parsing library
 ├── BatchConvertToCHD/              # WPF application (net10.0-windows)
 │   ├── MainWindow.xaml(.cs)        # Main UI + conversion/extraction/verification logic
 │   ├── App.xaml(.cs)               # Startup, Serilog, exception handlers

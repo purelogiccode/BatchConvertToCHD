@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Alcohol120Sharp;
+namespace MDSSharp;
 
 /// <summary>
 ///     Reassembles disc images that were split into numbered pieces.

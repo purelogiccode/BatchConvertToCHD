@@ -1,28 +1,39 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
+        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <LangVersion>latest</LangVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <Company>PureLogicCode.com</Company>
-        <AssemblyVersion>1.0.0</AssemblyVersion>
-        <FileVersion>1.0.0</FileVersion>
+        <AssemblyVersion>1.1.0</AssemblyVersion>
+        <FileVersion>1.1.0</FileVersion>
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
 
         <!-- NuGet Package Metadata -->
         <IsPackable>true</IsPackable>
-        <PackageId>Alcohol120Sharp</PackageId>
-        <Version>1.0.0</Version>
-        <Authors>PureLogicCode</Authors>
-        <Description>A managed C# library for parsing Alcohol 120% disc image descriptors (.mds) and preparing their .mdf/.i00 data files for conversion. Reads the MDS session/track tables, joins split volumes, strips subchannel tails and writes cue sheets. Ideal for disc image preservation and emulation workflows.</Description>
+        <PackageId>MDSSharp</PackageId>
+        <Version>1.1.0</Version>
+        <Authors>PureLogicCode.com</Authors>
+        <Title>MDSSharp</Title>
+        <Description>A managed C# library for parsing Alcohol 120% disc image descriptors (.mds) and preparing their .mdf data files for conversion. Reads the MDS session and track tables, joins split volumes, strips subchannel tails and writes cue sheets. Ideal for disc image preservation and emulation workflows.</Description>
         <PackageTags>mds;mdf;alcohol;disc-image;cue;bin;split;subchannel;conversion;emulation</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageProjectUrl>https://github.com/PureLogicCode/Alcohol120Sharp</PackageProjectUrl>
-        <RepositoryUrl>https://github.com/PureLogicCode/Alcohol120Sharp</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/purelogiccode/BatchConvertToCHD</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>icon.png</PackageIcon>
+        <RepositoryUrl>https://github.com/purelogiccode/BatchConvertToCHD</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
+        <Copyright>PureLogicCode.com</Copyright>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" />
+        <None Include="icon\icon.png" Pack="true" PackagePath="icon.png" />
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Meziantou.Analyzer" Version="3.0.259">

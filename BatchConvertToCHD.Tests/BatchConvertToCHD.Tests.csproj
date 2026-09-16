@@ -36,7 +36,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Alcohol120Sharp\Alcohol120Sharp.csproj" />
+        <ProjectReference Include="..\MDSSharp\MDSSharp.csproj" />
         <ProjectReference Include="..\BatchConvertToCHD\BatchConvertToCHD.csproj" />
         <ProjectReference Include="..\CSOSharp\CSOSharp.csproj" />
         <ProjectReference Include="..\PBPSharp\PBPSharp.csproj" />
