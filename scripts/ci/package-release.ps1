@@ -4,9 +4,10 @@
 
 .DESCRIPTION
     Stages a published BatchConvertToCHD output folder, drops the binaries that
-    belong to the other architecture, adds LICENSE.txt and ReadMe.md, and zips
-    the result as release_<version>_<rid>.zip. The app itself is published
-    framework-dependent and single-file, so the .NET runtime is never bundled.
+    belong to the other architecture and the library .xml IntelliSense files,
+    adds LICENSE.txt and ReadMe.md, and zips the result as
+    release_<version>_<rid>.zip. The app itself is published framework-dependent
+    and single-file, so the .NET runtime is never bundled.
 
 .PARAMETER Rid
     win-x64 or win-arm64.
@@ -65,6 +66,11 @@ try {
             Remove-Item -LiteralPath $path -Force
         }
     }
+
+    # Library .xml files in the publish output are IntelliSense doc files, never
+    # used at runtime; they do not belong in the release bundle.
+    Get-ChildItem -LiteralPath $stage -Filter '*.xml' -File -ErrorAction SilentlyContinue |
+        Remove-Item -Force
 
     foreach ($extra in @('LICENSE.txt', 'ReadMe.md')) {
         Copy-Item -LiteralPath (Join-Path $repoRoot $extra) -Destination $stage -Force

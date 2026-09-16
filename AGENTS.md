@@ -48,7 +48,8 @@ dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -r win-arm6
 - **Release zips contain exactly one architecture's tools.** For `win-x64`:
   `7za.exe`, `chdman.exe`, `CHDSharp.exe`. For `win-arm64`: the `*_arm64.exe`
   variants. `scripts/ci/package-release.ps1` removes the other architecture and
-  adds `LICENSE.txt` and `ReadMe.md`. Do not put both architectures in one zip.
+  the library `.xml` IntelliSense files (never used at runtime), and adds
+  `LICENSE.txt` and `ReadMe.md`. Do not put both architectures in one zip.
 - **Zip naming is fixed:** `release_<version>_win-<rid>.zip`, e.g.
   `release_3.7.0_win-x64.zip`. One zip per architecture, both attached to the
   GitHub release.
@@ -155,6 +156,10 @@ the runner's Node 24 runtime is used.
 - Bundled binaries (`7za*.exe`, `chdman*.exe`, `CHDSharp*.exe`) are committed
   and copied to the output with `CopyToOutputDirectory=Always`; only replace
   them deliberately.
+- `BatchConvertToCHD/bin/Release/` is the local release archive: every
+  version's `release_<version>_win-<rid>.zip` lives there. Copy new zips in,
+  **never delete files inside that path** (also avoid commands that would
+  clean it - it sits beside, not inside, the per-TFM build output).
 - Tests are xUnit; add regression tests next to the existing ones in
   `BatchConvertToCHD.Tests/`. The suite must pass before a release.
   `[Trait("Category", "Integration")]` classes depend on local sample folders

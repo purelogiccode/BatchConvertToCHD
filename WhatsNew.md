@@ -1,6 +1,6 @@
 # What's New
 
-## 3.7.1 (unreleased)
+## 3.7.1 (2026-09-16)
 
 ### MDS descriptors find renamed and nested data files (#66955, #66989)
 
@@ -22,6 +22,7 @@
 
 ### Housekeeping
 
+*   **Release zips are leaner**: the library `.xml` IntelliSense doc files (`CCDSharp.xml`, `CSOSharp.xml`, `PBPSharp.xml`) are no longer included — nothing at runtime uses them.
 *   Library updates: Meziantou.Analyzer 3.0.259, Microsoft.NET.Test.Sdk 18.10.1.
 *   Test suite grew to **842 tests** (decorated/ambiguous/subdirectory/split/Unicode `.mdf` lookup, transient network copy retries, SFO size bounds, the new bug-report exclusion).
 
