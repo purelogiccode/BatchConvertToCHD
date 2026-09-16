@@ -215,8 +215,8 @@ public static class MdsParser
 
         var decorated =
             candidates
-            .Where(f => IsDecoratedMatch(Path.GetFileNameWithoutExtension(f), baseName))
-            .ToArray();
+                .Where(f => IsDecoratedMatch(Path.GetFileNameWithoutExtension(f), baseName))
+                .ToArray();
         return decorated.Length == 1 ? decorated[0] : null;
     }
 
@@ -294,7 +294,7 @@ public static class MdsParser
                 : (normalizedBase, normalizedCandidate);
 
         return shorter.Length > 0
-            && longer.StartsWith(shorter, StringComparison.OrdinalIgnoreCase)
-            && !char.IsLetterOrDigit(longer[shorter.Length]);
+               && longer.StartsWith(shorter, StringComparison.OrdinalIgnoreCase)
+               && !char.IsLetterOrDigit(longer[shorter.Length]);
     }
 }
