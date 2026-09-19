@@ -47,6 +47,10 @@
     ecm-sample.ecm was produced by Neill Corlett's own encoder from an image this suite rebuilds in
     code, so decoding it and comparing proves the in-process ECM decoder agrees with the reference
     implementation without needing that tool installed.
+
+    rar-multipart/set.part1.rar ... set.part5.rar are a real WinRAR store-mode volume set holding
+    game.bin (3500 bytes, byte i = i % 251) and a one-track game.cue. They prove multi-volume RAR
+    extraction works without depending on an external tool at test time.
   -->
     <ItemGroup>
         <None Include="Fixtures\**">

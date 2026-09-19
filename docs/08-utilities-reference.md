@@ -208,6 +208,16 @@ The checks run in that order, so when a size fits several layouts at once (a 233
 - `TryGetVolumeSet(firstVolumePath)` — finds a numbered volume set (`.001`/`.002`…, `.i00`/`.i01`…) in order, or `null`.
 - `GetTotalBytes(set)` / `JoinAsync(set, destination, token)` — concatenates the parts into one image and returns the byte count, so the caller can check it against a sector boundary.
 
+### RarVolumeSet (`RarVolumeSet.cs`)
+
+Locates the volumes of a multi-part RAR. SharpCompress can only decode a set when it is opened by path through the **first** volume, so any later part the batch offers has to be redirected before extraction.
+
+- `TryGetPartInfo(path, out setBaseName, out partNumber)` — recognises `name.partNN.rar` (case-insensitive, any zero-padding); rejects other names.
+- `IsLaterPart(path)` — true for a `partNN` volume with N > 1.
+- `FindFirstVolume(path)` — the first (`part1`/`part01`) volume beside a later part, `null` when it is missing, or the input itself for a single archive, a `.001` set or an old-style `.rar`.
+- `GetVolumePaths(path)` — every volume in order for the copy-to-temp fallback: `partNN.rar` sets, `.001`/`.002`… sets (whose pieces may be renamed volumes or plain byte-splits) and old-style `name.rar` + `name.rNN` sets.
+- `GetTotalBytes(path)` / `GetFirstVolumeName(path)` — summed volume size for the disk-space check, and the first-volume file name for log messages, mirroring the observed zero-padding.
+
 ### TrackBinCueBuilder (`TrackBinCueBuilder.cs`)
 
 - `TryGetTrackSet(binFiles)` — recognises a `(Track 1)`, `(Track 2)`, … bin set and orders it.
@@ -218,6 +228,7 @@ The checks run in that order, so when a size fits several layouts at once (a 233
 ### InputFileFilter (`InputFileFilter.cs`)
 
 - `RemoveCompanionDataFilesAsync(paths, onLog, token)` — drops a raw `.bin`/`.img`/`.iso`/`.raw` when a descriptor in the **same directory** covers it, matched by base name and then by the descriptor's text. Applied at the folder scan, at batch start, and in the archive loop, so a cue/bin or CloneCD set converts once through its descriptor instead of once per file with both attempts aimed at the same output name.
+- `RemoveRarVolumeParts(paths, onLog)` — drops every `.partNN.rar` volume except the first of its set, keeping the lowest-numbered one when the first is missing so extraction still reports the incomplete set. Applied at the folder scan and at batch start, so a multi-part RAR is decoded once from its first volume rather than once per volume.
 - `ResolveOutputCollisions(files, outputPathSelector)` — groups inputs that would all be written to the same output `.chd` and keeps only the **first non-archive input** of each colliding group (or the first input when every member is an archive). Returns the kept inputs plus one `SkippedDuplicate(SkippedFile, KeptFile, OutputPath)` per dropped input so the caller can log the resolution. Converting both would only overwrite one product with the other, so the redundant conversion — and, for archives, the redundant extraction — is skipped up front.
 
 ---

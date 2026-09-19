@@ -335,4 +335,66 @@ public class InputFileFilterTests : IDisposable
         Assert.Equal(2, skipped.Count);
         Assert.All(skipped, s => Assert.Equal(@"C:\in\Game.iso", s.KeptFile));
     }
+
+    // --- RemoveRarVolumeParts ---
+
+    [Fact]
+    public void RemoveRarVolumePartsKeepsOnlyTheFirstVolume()
+    {
+        var first = CreateFile("game.part01.rar");
+        var second = CreateFile("game.part02.rar");
+        var tenth = CreateFile("game.part10.rar");
+
+        var remaining = InputFileFilter.RemoveRarVolumeParts([first, second, tenth], _log.Add);
+
+        Assert.Equal([first], remaining);
+        Assert.Contains(_log, m => m.Contains("game.part02.rar", StringComparison.Ordinal));
+        Assert.Contains(_log, m => m.Contains("game.part10.rar", StringComparison.Ordinal));
+        Assert.Contains(_log, m => m.Contains("game.part01.rar", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RemoveRarVolumePartsKeepsTheLowestPartWhenTheFirstIsMissing()
+    {
+        var fifth = CreateFile("game.part05.rar");
+        var sixth = CreateFile("game.part06.rar");
+
+        var remaining = InputFileFilter.RemoveRarVolumeParts([fifth, sixth], _log.Add);
+
+        Assert.Equal([fifth], remaining);
+        Assert.Single(_log);
+    }
+
+    [Fact]
+    public void RemoveRarVolumePartsLeavesLonePartsAndPlainArchivesAlone()
+    {
+        var loneFirst = CreateFile("game.part01.rar");
+        var loneLater = CreateFile("other.part07.rar");
+        var plain = CreateFile("plain.rar");
+
+        var remaining = InputFileFilter.RemoveRarVolumeParts(
+            [loneFirst, loneLater, plain],
+            _log.Add
+        );
+
+        Assert.Equal([loneFirst, loneLater, plain], remaining);
+        Assert.Empty(_log);
+    }
+
+    [Fact]
+    public void RemoveRarVolumePartsKeepsSetsInDifferentFoldersSeparate()
+    {
+        var aFirst = CreateFile("A.part01.rar");
+        var aSecond = CreateFile("A.part02.rar");
+        var bFirst = CreateFile(Path.Combine("sub", "B.part01.rar"));
+        var bSecond = CreateFile(Path.Combine("sub", "B.part02.rar"));
+
+        var remaining = InputFileFilter.RemoveRarVolumeParts(
+            [aFirst, aSecond, bFirst, bSecond],
+            _log.Add
+        );
+
+        Assert.Equal([aFirst, bFirst], remaining);
+        Assert.Equal(2, _log.Count);
+    }
 }

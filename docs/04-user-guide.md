@@ -39,7 +39,7 @@ Title-bar buttons: **About** (info dialog), **AppData** (opens `%LocalAppData%\B
 
 ### What happens during conversion
 
-1. **Archives** (`.zip`/`.7z`/`.rar`) are extracted to a temp directory first (SharpCompress, with a `7za.exe` fallback for zip/7z), then each supported file inside is converted. Cue/GDI/TOC entries whose referenced data files are missing are skipped with a warning.
+1. **Archives** (`.zip`/`.7z`/`.rar`) are extracted to a temp directory first (SharpCompress, with a `7za.exe` fallback for zip/7z), then each supported file inside is converted. Multi-part RAR sets (`.partNN.rar`, `.001` volumes) are decoded from their first volume; only that volume is offered as an input. Cue/GDI/TOC entries whose referenced data files are missing are skipped with a warning.
 2. **`.cso`** is decompressed to a temp ISO (CSOSharp), then converted.
 3. **`.pbp`** is extracted to CUE/BIN (PBPSharp), then converted. Files without a PlayStation disc image (PSP homebrew, corrupt variants) are skipped with an informational message.
 4. **`.ccd`** is converted to CUE/BIN (CCDSharp), then converted.

@@ -1121,6 +1121,9 @@ internal partial class MainWindow : IDisposable
                     _cts.Token
                 );
 
+                // A multi-part RAR is decoded from its first volume, so only that volume is offered.
+                paths = InputFileFilter.RemoveRarVolumeParts(paths, LogMessage);
+
                 var files = paths
                         .ConvertAll(f => new FileItem
                         {
@@ -1723,6 +1726,10 @@ internal partial class MainWindow : IDisposable
                 token
             )
         ];
+
+        // Whatever route the selection arrived by, a multi-part RAR is only processed once, from
+        // its first volume; the remaining parts would each extract the same set.
+        filesToConvert = [.. InputFileFilter.RemoveRarVolumeParts(filesToConvert, LogMessage)];
 
         filesToConvert = ResolveOutputCollisions(filesToConvert, inputFolder, outputFolder);
 
@@ -2423,14 +2430,19 @@ internal partial class MainWindow : IDisposable
 
         // A multi-part archive is a different thing entirely. 7-Zip and ZIP volume sets are
         // byte-splits of one archive stream, which the bundled 7za reads straight from the first
-        // volume, so they convert end to end. Multi-part RAR needs tooling the app does not carry.
+        // volume, so they convert end to end. RAR sets are decoded from their first volume by
+        // SharpCompress, which can follow the whole set from that path.
         var firstKind = DiscImageSignature.Detect(firstVolume);
         if (DiscImageSignature.IsArchive(firstKind))
         {
             if (firstKind is DiscImageKind.Rar)
             {
-                return ResolvedInput.Skip(
-                    $"this is part 1 of a {volumeSet.Count}-part RAR archive. Extract the set manually and convert the extracted image."
+                return await ResolveRarVolumeSetAsync(
+                    volumeSet,
+                    originalName,
+                    outputFolder,
+                    tempDirs,
+                    token
                 );
             }
 
@@ -2516,7 +2528,93 @@ internal partial class MainWindow : IDisposable
             return ResolvedInput.Skip(extraction.ErrorMessage);
         }
 
-        var found = await ArchiveService.CollectExtractedPrimaryFilesAsync(tempDir, LogMessage, token);
+        return await ResolveExtractedArchiveContentsAsync(
+            tempDir,
+            originalName,
+            outputFolder,
+            tempDirs,
+            token
+        );
+    }
+
+    /// <summary>
+    ///     Extracts a RAR volume set ("game.part01.rar" with the rest of the set beside it, or a RAR
+    ///     renamed to ".001") and decides how the extracted disc image should be converted.
+    ///     SharpCompress follows the whole set from its first volume, so the set is handed over as a
+    ///     path rather than a stream; opening single parts is what used to crash its decoder.
+    /// </summary>
+    /// <param name="volumeSet">Volumes in order, first part first.</param>
+    /// <param name="originalName">File name used in log messages.</param>
+    /// <param name="outputFolder">Conversion output folder, used to pick a temp location.</param>
+    /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
+    /// <param name="token">Cancellation token.</param>
+    private async Task<ResolvedInput> ResolveRarVolumeSetAsync(
+        List<string> volumeSet,
+        string originalName,
+        string outputFolder,
+        List<string> tempDirs,
+        CancellationToken token
+    )
+    {
+        var firstVolume = volumeSet[0];
+        var totalBytes = SplitImageJoiner.GetTotalBytes(volumeSet);
+        LogMessage(
+            $" {originalName} is part 1 of a {volumeSet.Count}-part RAR archive ({totalBytes:N0} bytes total); extracting the set."
+        );
+
+        var tempDir = PathUtils.GetBestTempDirectory(
+            firstVolume,
+            outputFolder,
+            TempDirPrefix,
+            totalBytes
+        );
+        await Task.Run(() => Directory.CreateDirectory(tempDir), token);
+        tempDirs.Add(tempDir);
+
+        var extraction = await _archiveService.ExtractArchiveAsync(
+            firstVolume,
+            tempDir,
+            LogMessage,
+            token,
+            totalBytes
+        );
+        if (!extraction.Success)
+        {
+            return ResolvedInput.Skip(extraction.ErrorMessage);
+        }
+
+        return await ResolveExtractedArchiveContentsAsync(
+            tempDir,
+            originalName,
+            outputFolder,
+            tempDirs,
+            token
+        );
+    }
+
+    /// <summary>
+    ///     Picks the convertible file out of an extracted archive volume set and routes it through
+    ///     the same classification a loose input gets. Shared by the 7za (7z/ZIP) and RAR volume-set
+    ///     paths.
+    /// </summary>
+    /// <param name="tempDir">Directory the set was extracted into.</param>
+    /// <param name="originalName">File name used in log messages.</param>
+    /// <param name="outputFolder">Conversion output folder, used to pick a temp location.</param>
+    /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
+    /// <param name="token">Cancellation token.</param>
+    private async Task<ResolvedInput> ResolveExtractedArchiveContentsAsync(
+        string tempDir,
+        string originalName,
+        string outputFolder,
+        List<string> tempDirs,
+        CancellationToken token
+    )
+    {
+        var found = await ArchiveService.CollectExtractedPrimaryFilesAsync(
+            tempDir,
+            LogMessage,
+            token
+        );
         if (!found.Success)
         {
             return ResolvedInput.Skip(found.ErrorMessage);
@@ -2531,7 +2629,9 @@ internal partial class MainWindow : IDisposable
         );
         if (primaries.Count == 0)
         {
-            return ResolvedInput.Skip("the extracted set contained no supported disc image or descriptor.");
+            return ResolvedInput.Skip(
+                "the extracted set contained no supported disc image or descriptor."
+            );
         }
 
         if (primaries.Count > 1)

@@ -131,6 +131,10 @@ internal class ArchiveService
     /// <param name="tempDirectoryRoot">The root directory where extracted files will be placed.</param>
     /// <param name="onLog">Callback for logging progress messages.</param>
     /// <param name="token">Cancellation token to abort the operation.</param>
+    /// <param name="totalSetSize">
+    ///     Total size in bytes of every volume of the set, for the disk-space check. Pass -1 for a
+    ///     single file; the size of the volumes the input names is then measured.
+    /// </param>
     /// <returns>
     ///     A tuple containing success status, the list of extracted primary file paths,
     ///     the temp directory root, and an error message string (empty on success).
@@ -144,7 +148,8 @@ internal class ArchiveService
         string originalArchivePath,
         string tempDirectoryRoot,
         Action<string> onLog,
-        CancellationToken token
+        CancellationToken token,
+        long totalSetSize = -1
     )
     {
         var extension = Path.GetExtension(originalArchivePath);
@@ -160,10 +165,20 @@ internal class ArchiveService
         {
             token.ThrowIfCancellationRequested();
 
+            // A .rar file may be one volume of a multi-part set; the whole set has to fit on disk.
+            if (
+                totalSetSize < 0
+                && extension.Equals(FileExtensions.Rar, StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                totalSetSize = RarVolumeSet.GetTotalBytes(originalArchivePath);
+            }
+
             var spaceError = CheckTempDiskSpace(
                 originalArchivePath,
                 tempDirectoryRoot,
-                archiveFileName
+                archiveFileName,
+                totalSetSize
             );
             if (spaceError != null)
             {
@@ -196,6 +211,17 @@ internal class ArchiveService
             }
             else if (extension.Equals(FileExtensions.Rar, StringComparison.OrdinalIgnoreCase))
             {
+                await Task.Run(
+                        () =>
+                            ExtractRarArchive(originalArchivePath, tempDirectoryRoot, onLog, token),
+                        token
+                    )
+                    .ConfigureAwait(false);
+            }
+            else if (DiscImageSignature.Detect(originalArchivePath) is DiscImageKind.Rar)
+            {
+                // A .001 (or similarly renamed) first volume of a RAR set: the extension hides
+                // what the content says, and SharpCompress can read the set from this path.
                 await Task.Run(
                         () =>
                             ExtractRarArchive(originalArchivePath, tempDirectoryRoot, onLog, token),
@@ -309,7 +335,10 @@ internal class ArchiveService
                 $"The archive file may be corrupted or unsupported and could not be extracted. Try re-downloading or re-copying the file, then attempt the conversion again. Details: {ex.Message}"
             );
         }
-        catch (IndexOutOfRangeException)
+        catch (Exception ex)
+            when (ex is IndexOutOfRangeException
+                    or ArgumentOutOfRangeException
+                    or NullReferenceException)
         {
             return (
                 false,
@@ -769,6 +798,18 @@ internal class ArchiveService
         }
     }
 
+    /// <summary>
+    ///     Extracts a RAR archive, including multi-part sets. SharpCompress only decodes a
+    ///     multi-volume RAR when it is opened from disk through the first volume, so a later part is
+    ///     redirected to the first volume before extraction; opening an individual part as a stream
+    ///     makes its decoder fail on data that begins in an earlier volume. When the direct read
+    ///     fails for a non-archive reason (a transient network-share hiccup, typically) every volume
+    ///     of the set is copied to a temp folder and the extraction is retried there.
+    /// </summary>
+    /// <param name="archivePath">Full path to any volume of the archive.</param>
+    /// <param name="outputDirectory">Directory where extracted files will be written.</param>
+    /// <param name="onLog">Callback for logging messages.</param>
+    /// <param name="token">Cancellation token to abort the operation.</param>
     private static void ExtractRarArchive(
         string archivePath,
         string outputDirectory,
@@ -776,14 +817,108 @@ internal class ArchiveService
         CancellationToken token
     )
     {
-        ExtractArchiveWithFallback(
-            archivePath,
-            outputDirectory,
-            onLog,
-            FileExtensions.Rar,
-            static stream => RarArchive.OpenArchive(stream),
-            token
-        );
+        var fullOutputDirectory =
+            Path.GetFullPath(outputDirectory)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar;
+        var firstVolume =
+            RarVolumeSet.FindFirstVolume(archivePath)
+            ?? throw new InvalidFormatException(
+                $"Multi-part rar file is incomplete. The first volume of '{Path.GetFileName(archivePath)}' was not found in its folder."
+            );
+
+        try
+        {
+            ExtractRarEntriesFromPath(firstVolume, outputDirectory, fullOutputDirectory, token);
+            return;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            onLog(
+                $"Direct extraction failed ({ex.Message}). Skipping fallback because source file is missing."
+            );
+            throw;
+        }
+        catch (Exception ex) when (IsArchiveDamageException(ex))
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            onLog(
+                $"Direct extraction failed ({ex.Message}). Attempting fallback with local copy..."
+            );
+        }
+
+        var tempRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var firstVolumeName = Path.GetFileName(firstVolume);
+        Directory.CreateDirectory(tempRoot);
+        try
+        {
+            foreach (var volume in RarVolumeSet.GetVolumePaths(firstVolume))
+            {
+                CopyFileWithRetry(volume, Path.Combine(tempRoot, Path.GetFileName(volume)));
+            }
+
+            ExtractRarEntriesFromPath(
+                Path.Combine(tempRoot, firstVolumeName),
+                outputDirectory,
+                fullOutputDirectory,
+                token
+            );
+        }
+        finally
+        {
+            TryDeleteDirectory(tempRoot);
+        }
+    }
+
+    /// <summary>
+    ///     Opens a RAR set from disk through its first volume and writes every file entry.
+    /// </summary>
+    /// <param name="firstVolumePath">Full path to the first volume of the set.</param>
+    /// <param name="outputDirectory">Directory where extracted files will be written.</param>
+    /// <param name="fullOutputDirectory">Output directory with a trailing separator, for the escape check.</param>
+    /// <param name="token">Cancellation token to abort the operation.</param>
+    private static void ExtractRarEntriesFromPath(
+        string firstVolumePath,
+        string outputDirectory,
+        string fullOutputDirectory,
+        CancellationToken token
+    )
+    {
+        using var archive = RarArchive.OpenArchive(new FileInfo(firstVolumePath));
+        ExtractArchiveEntries(archive, outputDirectory, fullOutputDirectory, token);
+    }
+
+    /// <summary>
+    ///     True for exceptions that mean the archive data itself is damaged, encrypted or
+    ///     unsupported, so retrying through a local copy cannot help. SharpCompress throws
+    ///     <see cref="NullReferenceException" />, <see cref="ArgumentOutOfRangeException" /> and
+    ///     <see cref="IndexOutOfRangeException" /> from inside its RAR decoders on malformed data;
+    ///     those are archive problems rather than app bugs and must not trigger a retry or a bug
+    ///     report.
+    /// </summary>
+    /// <param name="ex">Exception to classify.</param>
+    private static bool IsArchiveDamageException(Exception ex)
+    {
+        return ex is InvalidDataException
+            or IncompleteArchiveException
+            or CryptographicException
+            or ArchiveOperationException
+            or InvalidFormatException
+            or IndexOutOfRangeException
+            or ArgumentOutOfRangeException
+            or NullReferenceException
+            || string.Equals(
+                ex.GetType().FullName,
+                "SharpCompress.Compressors.LZMA.DataErrorException",
+                StringComparison.Ordinal
+            );
     }
 
     /// <summary>
@@ -838,20 +973,7 @@ internal class ArchiveService
                 $"Direct extraction failed ({ex.Message}). Attempting fallback with local copy..."
             );
 
-            if (
-                ex is InvalidDataException
-                || ex is IncompleteArchiveException
-                || ex is CryptographicException
-                || ex is ArchiveOperationException
-                || ex is InvalidFormatException
-                || ex is IndexOutOfRangeException
-                || ex is NullReferenceException
-                || string.Equals(
-                    ex.GetType().FullName,
-                    "SharpCompress.Compressors.LZMA.DataErrorException",
-                    StringComparison.Ordinal
-                )
-            )
+            if (IsArchiveDamageException(ex))
             {
                 throw;
             }
@@ -937,6 +1059,19 @@ internal class ArchiveService
         try
         {
             File.Delete(filePath);
+        }
+        catch
+        {
+            /* ignore */
+        }
+    }
+
+    private static void TryDeleteDirectory(string directoryPath)
+    {
+        try
+        {
+            if (Directory.Exists(directoryPath))
+                Directory.Delete(directoryPath, true);
         }
         catch
         {

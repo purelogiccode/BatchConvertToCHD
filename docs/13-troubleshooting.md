@@ -46,7 +46,8 @@ Common messages, their meaning, and what to do.
 
 | Message | Meaning | Action |
 |---------|---------|--------|
-| `... multi-part RAR with a missing volume ...` | A multi-part `.rar` is missing one or more parts. | Download all `.partNN.rar` volumes into the same folder. |
+| `... multi-part RAR with a missing volume ...` | A multi-part RAR (`.partNN.rar`, old-style `.rar` + `.rNN`, or a set renamed `.001`/`.002`) is missing one or more volumes, or the first volume is not beside the part that was offered. | Download all volumes of the set into the same folder. The app extracts the set from its first volume automatically; later parts are not converted separately. |
+| `Skipping <name>.partNN.rar - part N of a multi-part RAR set; <name>.part01.rar extracts the whole set.` | Informational. The folder scan found every volume of a multi-part RAR; only the first is kept because it decodes the whole set. | Nothing to do. |
 | `... Archive is encrypted ...` | The archive is password-protected. | Password-protected archives are not supported; extract manually first. |
 | `... compression method that is not supported ...` | The ZIP uses Deflate64/LZMA/PPMd, which the extractor can't read. | Re-zip with standard Deflate, or extract manually first. |
 | `... archive file may be corrupted or incomplete ...` | The archive failed CRC/structure checks. | Re-download the archive. |

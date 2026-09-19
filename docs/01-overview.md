@@ -26,7 +26,7 @@ Developed by [Pure Logic Code](https://www.purelogiccode.com), the application c
 - **Automated batch processing** — convert entire directories with real-time progress, immediate cancellation, and per-file timeouts.
 - **Recursive structure preservation** — the output folder mirrors the input folder's directory hierarchy (`PathUtils.GetSafeRelativePath`).
 - **Robust extraction** — CHD → `.cue` (CD), `.iso` (DVD), `.gdi` (Dreamcast/Naomi), `.img` (HDD), with automatic metadata-based command detection via CHDSharp.
-- **Archive integration** — `.zip`, `.7z`, `.rar` are extracted and processed transparently (SharpCompress, with a `7za.exe` fallback).
+- **Archive integration** — `.zip`, `.7z`, `.rar` are extracted and processed transparently (SharpCompress, with a `7za.exe` fallback); multi-part RAR sets (`.partNN.rar`, renamed `.001` volumes) are decoded from their first volume.
 - **CloneCD support** — `.ccd` sets are parsed by CCDSharp and converted via an auto-generated CUE/BIN.
 - **CSO decompression** — `.cso`/`.ciso` via CSOSharp (deflate/zlib and LZ4).
 - **PBP extraction** — PlayStation `.pbp` via PBPSharp; PSP-homebrew-style files (no PlayStation disc image) are detected and skipped with a clear message.

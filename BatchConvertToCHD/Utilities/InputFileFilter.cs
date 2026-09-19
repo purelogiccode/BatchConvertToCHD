@@ -155,6 +155,68 @@ internal static class InputFileFilter
     }
 
     /// <summary>
+    ///     Drops every <c>.partNN.rar</c> volume that is not the first one of its set. A multi-part
+    ///     RAR is decoded from its first volume, so offering each part as its own input would extract
+    ///     the same image once per volume, and a part that starts mid-data fails outright. When the
+    ///     first volume is not in the batch the lowest-numbered part is kept, so extraction can still
+    ///     report the set as incomplete. Input order is preserved.
+    /// </summary>
+    /// <param name="files">Candidate input paths.</param>
+    /// <param name="onLog">Callback used to report each dropped volume.</param>
+    internal static List<string> RemoveRarVolumeParts(IEnumerable<string> files, Action<string>? onLog)
+    {
+        var ordered = files.ToList();
+        var suppressed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (
+            var directoryGroup in ordered
+                .Where(static f => RarVolumeSet.TryGetPartInfo(f, out _, out _))
+                .GroupBy(
+                    static f => Path.GetDirectoryName(f) ?? string.Empty,
+                    StringComparer.OrdinalIgnoreCase
+                )
+        )
+        {
+            foreach (
+                var setGroup in directoryGroup.GroupBy(
+                    static f =>
+                    {
+                        RarVolumeSet.TryGetPartInfo(f, out var setBaseName, out _);
+                        return setBaseName;
+                    },
+                    StringComparer.OrdinalIgnoreCase
+                )
+            )
+            {
+                var parts = setGroup
+                    .Select(static f =>
+                    {
+                        RarVolumeSet.TryGetPartInfo(f, out _, out var partNumber);
+                        return (File: f, partNumber);
+                    })
+                    .OrderBy(static p => p.partNumber)
+                    .ToList();
+
+                var keeper =
+                    parts.FirstOrDefault(static p => p.partNumber == 1).File ?? parts[0].File;
+
+                foreach (var part in parts)
+                {
+                    if (string.Equals(part.File, keeper, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    suppressed.Add(part.File);
+                    onLog?.Invoke(
+                        $" Skipping {Path.GetFileName(part.File)} - part {part.partNumber} of a multi-part RAR set; {RarVolumeSet.GetFirstVolumeName(part.File)} extracts the whole set."
+                    );
+                }
+            }
+        }
+
+        return [.. ordered.Where(f => !suppressed.Contains(f))];
+    }
+
+    /// <summary>
     ///     Groups inputs that would all be written to the same output CHD path. Any group with more
     ///     than one member is a collision: whichever input runs last wins, and a failure on it would
     ///     discard the output of the others.

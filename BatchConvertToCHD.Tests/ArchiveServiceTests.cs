@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using BatchConvertToCHD.Services;
+using BatchConvertToCHD.Utilities;
 using SharpCompress.Common;
 using SharpCompressZipArchive = SharpCompress.Archives.Zip.ZipArchive;
 
@@ -485,6 +486,258 @@ public class ArchiveServiceTests : IDisposable
         Assert.NotNull(ex);
         // openArchive should be called twice: once for direct, once for fallback
         Assert.Equal(2, openCallCount);
+    }
+
+    [Fact]
+    public void ExtractArchiveWithFallbackArgumentOutOfRangeExceptionRethrowsWithoutFallback()
+    {
+        // SharpCompress throws this from its RAR VM decoder on malformed data; a local-copy retry
+        // cannot help and the old behaviour surfaced it as an app bug report.
+        var archivePath = CreateDummyFile("test.rar");
+        var outputDir = Path.Combine(_tempDir, "out");
+        Directory.CreateDirectory(outputDir);
+        var logs = new List<string>();
+        var openCallCount = 0;
+
+        var ex = Record.Exception(() =>
+        {
+            ArchiveService.ExtractArchiveWithFallback<SharpCompressZipArchive>(
+                archivePath,
+                outputDir,
+                logs.Add,
+                ".rar",
+                _ =>
+                {
+                    openCallCount++;
+                    throw new ArgumentOutOfRangeException("index");
+                },
+                CancellationToken.None
+            );
+        });
+
+        Assert.NotNull(ex);
+        Assert.IsType<ArgumentOutOfRangeException>(ex);
+        Assert.Equal(1, openCallCount);
+    }
+
+    [Fact]
+    public async Task ExtractArchiveAsyncPartRarWithoutFirstVolumeReturnsMissingVolumeMessage()
+    {
+        var service = new ArchiveService("7za.exe", false);
+        var partPath = Path.Combine(_tempDir, "game.part03.rar");
+        File.WriteAllText(partPath, "Rar!\x1A\x07\x00dummy");
+        var tempDir = Path.Combine(_tempDir, "extract_missing_first");
+
+        var result = await service.ExtractArchiveAsync(
+            partPath,
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
+
+        Assert.False(result.Success);
+        Assert.Contains(
+            "multi-part RAR",
+            result.ErrorMessage,
+            StringComparison.OrdinalIgnoreCase
+        );
+    }
+
+    [Fact]
+    public async Task ExtractArchiveAsyncRarPartWithFirstVolumeAndCorruptDataReturnsFailure()
+    {
+        var service = new ArchiveService("7za.exe", false);
+        File.WriteAllText(
+            Path.Combine(_tempDir, "set.part01.rar"),
+            "Rar!\x1A\x07\x00not a real archive body"
+        );
+        File.WriteAllText(Path.Combine(_tempDir, "set.part02.rar"), "still not a volume");
+        var tempDir = Path.Combine(_tempDir, "extract_corrupt_set");
+
+        var result = await service.ExtractArchiveAsync(
+            Path.Combine(_tempDir, "set.part01.rar"),
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
+
+        Assert.False(result.Success);
+        Assert.False(string.IsNullOrWhiteSpace(result.ErrorMessage));
+    }
+
+    [Fact]
+    public async Task ExtractArchiveAsyncRarContentWithHiddenExtensionIsRoutedToRarHandler()
+    {
+        // A ".001" file whose content is a RAR: the extension says nothing, the signature does.
+        var service = new ArchiveService("7za.exe", false);
+        var firstVolume = Path.Combine(_tempDir, "hidden.001");
+        File.WriteAllText(firstVolume, "Rar!\x1A\x07\x00dummy volume");
+        File.WriteAllText(Path.Combine(_tempDir, "hidden.002"), "dummy volume 2");
+        var tempDir = Path.Combine(_tempDir, "extract_hidden_rar");
+
+        var result = await service.ExtractArchiveAsync(
+            firstVolume,
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
+
+        Assert.False(result.Success);
+        Assert.DoesNotContain(
+            "Unsupported archive type",
+            result.ErrorMessage,
+            StringComparison.Ordinal
+        );
+    }
+
+    // --- Real multi-volume RAR fixture (Fixtures/rar-multipart) ---
+
+    [Fact]
+    public async Task ExtractArchiveAsyncMultiPartRarExtractsTheWholeSet()
+    {
+        var service = new ArchiveService("7za.exe", false);
+        var setDir = CopyRarFixtureVolumes();
+        var tempDir = Path.Combine(_tempDir, "rar_extract");
+        var logs = new List<string>();
+
+        var result = await service.ExtractArchiveAsync(
+            Path.Combine(setDir, "set.part1.rar"),
+            tempDir,
+            logs.Add,
+            CancellationToken.None
+        );
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Contains(
+            result.FilePaths,
+            static f => f.EndsWith("game.cue", StringComparison.OrdinalIgnoreCase)
+        );
+        Assert.Equal(
+            BuildRarFixturePayload(),
+            await File.ReadAllBytesAsync(Path.Combine(tempDir, "game.bin"))
+        );
+    }
+
+    [Fact]
+    public async Task ExtractArchiveAsyncLaterRarVolumeIsRedirectedToTheFirstVolume()
+    {
+        // The bug reports: a later ".partNN.rar" was opened on its own and crashed SharpCompress.
+        var service = new ArchiveService("7za.exe", false);
+        var setDir = CopyRarFixtureVolumes();
+        var tempDir = Path.Combine(_tempDir, "rar_extract_later");
+        var logs = new List<string>();
+
+        var result = await service.ExtractArchiveAsync(
+            Path.Combine(setDir, "set.part3.rar"),
+            tempDir,
+            logs.Add,
+            CancellationToken.None
+        );
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Equal(
+            BuildRarFixturePayload(),
+            await File.ReadAllBytesAsync(Path.Combine(tempDir, "game.bin"))
+        );
+    }
+
+    [Fact]
+    public async Task ExtractArchiveAsyncRarSetWithMissingVolumeReportsMultiPart()
+    {
+        var service = new ArchiveService("7za.exe", false);
+        var setDir = CopyRarFixtureVolumes("set.part2.rar");
+        var tempDir = Path.Combine(_tempDir, "rar_extract_missing");
+
+        var result = await service.ExtractArchiveAsync(
+            Path.Combine(setDir, "set.part1.rar"),
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
+
+        Assert.False(result.Success);
+        Assert.Contains(
+            "multi-part RAR",
+            result.ErrorMessage,
+            StringComparison.OrdinalIgnoreCase
+        );
+    }
+
+    [Fact]
+    public async Task ExtractArchiveAsyncRarSetWithoutFirstVolumeReportsMultiPart()
+    {
+        var service = new ArchiveService("7za.exe", false);
+        var setDir = CopyRarFixtureVolumes("set.part1.rar", "set.part2.rar");
+        var tempDir = Path.Combine(_tempDir, "rar_extract_no_first");
+
+        var result = await service.ExtractArchiveAsync(
+            Path.Combine(setDir, "set.part3.rar"),
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
+
+        Assert.False(result.Success);
+        Assert.Contains(
+            "multi-part RAR",
+            result.ErrorMessage,
+            StringComparison.OrdinalIgnoreCase
+        );
+    }
+
+    [Fact]
+    public async Task ExtractArchiveAsyncRarSetRenamedToNumberedVolumesExtractsTheWholeSet()
+    {
+        // The ".001" bug reports: a RAR set renamed to .001/.002/... whose first volume the
+        // split-volume path hands over. The extension hides the content, the signature routes it.
+        var service = new ArchiveService("7za.exe", false);
+        var setDir = Path.Combine(_tempDir, $"rar_renamed_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(setDir);
+        var fixtureDir = Path.Combine(AppContext.BaseDirectory, "Fixtures", "rar-multipart");
+        foreach (var volume in Directory.GetFiles(fixtureDir, "set.part*.rar"))
+        {
+            RarVolumeSet.TryGetPartInfo(volume, out _, out var partNumber);
+            File.Copy(volume, Path.Combine(setDir, $"set.{partNumber:000}"));
+        }
+
+        var tempDir = Path.Combine(_tempDir, "rar_extract_renamed");
+
+        var result = await service.ExtractArchiveAsync(
+            Path.Combine(setDir, "set.001"),
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Equal(
+            BuildRarFixturePayload(),
+            await File.ReadAllBytesAsync(Path.Combine(tempDir, "game.bin"))
+        );
+    }
+
+    private string CopyRarFixtureVolumes(params string[] excludedVolumeNames)
+    {
+        var setDir = Path.Combine(_tempDir, $"rar_set_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(setDir);
+        var fixtureDir = Path.Combine(AppContext.BaseDirectory, "Fixtures", "rar-multipart");
+        var excluded = new HashSet<string>(excludedVolumeNames, StringComparer.OrdinalIgnoreCase);
+        foreach (var volume in Directory.GetFiles(fixtureDir, "set.part*.rar"))
+        {
+            var volumeName = Path.GetFileName(volume);
+            if (excluded.Contains(volumeName)) continue;
+
+            File.Copy(volume, Path.Combine(setDir, volumeName));
+        }
+
+        return setDir;
+    }
+
+    private static byte[] BuildRarFixturePayload()
+    {
+        var bytes = new byte[3500];
+        for (var i = 0; i < bytes.Length; i++) bytes[i] = (byte)(i % 251);
+        return bytes;
     }
 
     // --- Tests for ExtractArchiveAsync exception handling ---
