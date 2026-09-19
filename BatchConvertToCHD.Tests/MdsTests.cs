@@ -104,7 +104,7 @@ public class MdsTests : IDisposable
     }
 
     /// <summary>Patches the medium type into a descriptor built by the simple tuple overload.</summary>
-    private void SetMediumType(string mdsPath, ushort mediumType)
+    private static void SetMediumType(string mdsPath, ushort mediumType)
     {
         var bytes = File.ReadAllBytes(mdsPath);
         BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(MediumTypeOffset), mediumType);
