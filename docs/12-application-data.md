@@ -45,7 +45,7 @@ Temp directories are **not** under AppData — they live on the drive with the m
 | `chdman.exe` / `chdman_arm64.exe` | MAME CHD tool (must stay next to the exe) |
 | `7za.exe` / `7za_arm64.exe` | 7-Zip fallback extractor |
 | `CHDSharp.dll`, `WPF-UI` assemblies, etc. | Managed dependencies (copy-local) |
-| `CCDSharp.dll`, `CSOSharp.dll`, `PBPSharp.dll` | In-house libraries |
+| `CCDSharp.dll`, `CSOSharp.dll`, `PBPSharp.dll`, `MDSSharp.dll`, `ISZSharp.dll` | In-house libraries |
 
 Legacy leftovers (`logs`, `Resources`, `Screenshot` folders; `maxcso.exe`, `psxpackager.exe`) are deleted automatically at startup by `LegacyCleanupService` (see [Services Reference](07-services-reference.md#76-legacycleanupservice)).
 

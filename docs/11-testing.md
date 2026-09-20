@@ -5,9 +5,9 @@ nav_order: 12
 
 # 11. Testing
 
-The solution contains a single test project, `BatchConvertToCHD.Tests` (xUnit, `net10.0-windows`), with **842 tests across 43 test classes** (a handful of PBP integration tests need a local sample folder — see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
+The solution contains a single test project, `BatchConvertToCHD.Tests` (xUnit, `net10.0-windows`), with **896 tests across 45 test classes** (a handful of PBP integration tests need a local sample folder — see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
 
-> **Expected result on a clean machine: 762 passed, 15 failed.** The 15 failures are a fixture problem, not a regression — see [§11.5](#115-the-15-expected-failures). A change that leaves exactly those 15 failing has broken nothing.
+> **Expected result on a machine without the local sample folders: 906 passed, 15 failed.** The 15 failures are a fixture problem, not a regression — see [§11.5](#115-the-15-expected-failures). A change that leaves exactly those 15 failing has broken nothing.
 
 ## 11.1 Running the Tests
 
@@ -101,7 +101,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 4. For chdman-dependent tests, early-return when `chdman.exe` is absent from `AppContext.BaseDirectory`.
 5. Prefer building binary fixtures in code (see `IszImageBuilder`) over committing them. Commit one only when the format cannot be generated trustworthily in-repo, as with `ecm-sample.ecm` (the reference encoder's own output) or the WinRAR-produced RAR volume set (there is no RAR writer in the repository).
 6. When a fixture asserts agreement with an outside implementation, add a **guard test** that the fixture still covers the cases it is meant to. A fixture can be regenerated more simply and silently stop testing anything.
-7. Run the full suite before pushing. On the maintainer's machine a full run is **905 passed / 0 failed**; CI runs the unit tests only, via `--filter "Category!=Integration"` (880 tests on a machine without the local sample folders). The integration classes' behaviour without samples is described in §11.5.
+7. Run the full suite before pushing. On the maintainer's machine a full run is **921 passed / 0 failed**; CI runs the unit tests only, via `--filter "Category!=Integration"` (896 tests on a machine without the local sample folders). The integration classes' behaviour without samples is described in §11.5.
 
 ### Analyzer constraints worth knowing
 

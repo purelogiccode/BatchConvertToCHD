@@ -1,6 +1,22 @@
 # What's New
 
-## Unreleased
+## 3.8.0 (2026-09-19)
+
+### Multi-part RAR archives now convert end to end (#67305)
+
+*   **A `.partNN.rar` set is decoded from its first volume**, whether the batch lists the first part or a later one. SharpCompress can only follow the whole set when it is opened by path through the first volume, so a later part is redirected to the first volume found beside it; when the first volume is missing the file is skipped with a message naming it instead of failing inside the decoder. This supersedes the 3.7.0 note that multi-part RAR still needed manual extraction.
+*   **RAR sets renamed to `.001` are extracted by content** instead of being refused, because the extension hides what the content says.
+*   **A set is offered once**: only the first volume stays in the batch, filtered both at the folder scan and again before the batch starts, so a multi-part RAR is no longer extracted once per volume.
+*   **Malformed archives are classified as data, not app bugs**: SharpCompress decoder crashes (`NullReferenceException`, `ArgumentOutOfRangeException`, `IndexOutOfRangeException`) on corrupt data no longer trigger the temp-copy retry or an automatic bug report.
+*   Volume discovery covers new-style `.partNN.rar`, numbered `.001` sets and old-style `.rar` + `.r00` volumes, and the disk-space preflight measures the whole set. A real WinRAR-built multi-volume fixture is committed so the path is tested without WinRAR at test time.
+
+### Alcohol 120% support upgraded — MDSSharp 1.1.0
+
+*   **The library was renamed `Alcohol120Sharp` → `MDSSharp`** and published as **MDSSharp 1.1.0** (<https://www.nuget.org/packages/MDSSharp>) with package metadata, a README and an icon matching the other embedded libraries.
+*   **Pregaps are now described**: when the descriptor records pregap and track length, the generated cue carries `INDEX 00` if the data file already contains the pregap sectors, and pregaps the file does not contain are rebuilt as zeros so the cue can still express them without shifting the tracks that follow.
+*   **Multi-file descriptors are joined** in track order before preparation, and the temp-space preflight accounts for the rebuilt or joined image.
+*   **The descriptor is read more completely**: medium type (CD/CD-R/CD-RW/DVD/DVD-R), each track's extra block (pregap and length) and the footer data-file names (single-byte or UTF-16, `*.mdf` wildcards) are parsed, and the track mode now uses the low nibble of the mode byte exactly as libMirage's reverse engineering established.
+*   A CD descriptor whose sectors are the cooked 2048 bytes is converted through a `MODE1/2048` cue instead of being treated as a DVD image.
 
 ### ISZ support upgraded, library renamed to ISZSharp
 
@@ -9,8 +25,18 @@
 *   **UltraISO's checksum is validated** when the 64-byte header carries one; a mismatch is reported as damaged and the output deleted, like a size shortfall. A failed or cancelled decode now always deletes its partial output.
 *   **A split image whose cut lands inside a chunk now decodes.** A later segment stores the tail of the straddling chunk (`left_size`) between its header and its chunk data; the reader started at the chunk data offset and skipped that tail, so a complete split image was rejected as truncated. Fixed in **ISZSharp 1.0.1**, and the split fixtures now use UltraISO's real segment layout, so the round-trip tests exercise it.
 *   **The library now matches the other embedded packages' shape**: renamed `UltraIsoSharp` → `ISZSharp`, multi-targeting `net8.0;net9.0;net10.0`, shipping XML docs, a README and an icon, and published on NuGet (<https://www.nuget.org/packages/ISZSharp>) as **1.0.0**, then **1.0.1** with the split-boundary fix.
-*   Smaller fixes: deleting originals now removes every `.mdf`/volume a descriptor names (not just the first), a multi-file descriptor with one file missing is reported instead of falling back to a truncated image, and a folder holding both `.part1.rar` and `.part01.rar` keeps the spelling whose next volume exists.
-*   Housekeeping: test suite grew to **896 tests** (obfuscated tables, stripped bzip2 headers, no-chunk-table images including a checksummed one, `.partNN` segment naming, checksum validation and mismatch refusal, and the new header refusals: version ≠ 1 and a later segment opened directly).
+
+### Smaller fixes
+
+*   Deleting originals for an Alcohol image now removes every data file the descriptor names and every volume of a split set, not just the first.
+*   A multi-file `.mds` descriptor with one declared file missing is reported by name instead of silently falling back to the file that happens to be present, which could convert a truncated image.
+*   A folder holding both `.part1.rar` and `.part01.rar` keeps the spelling whose next volume exists, so the set is still decodable.
+
+### Housekeeping
+
+*   Version bumps: application 3.8.0, MDSSharp 1.1.0, ISZSharp 1.0.1.
+*   Library updates: Meziantou.Analyzer 3.0.264.
+*   Test suite grew to **896 tests** (real multi-part RAR extraction, ISZ real-layout splits and checksums, MDS pregap/multi-file handling, RAR volume filtering).
 
 ---
 

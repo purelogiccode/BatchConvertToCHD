@@ -7,7 +7,7 @@ nav_order: 2
 
 **Batch Convert to CHD** is a high-performance Windows desktop utility designed to streamline the conversion of various disk image formats into the **Compressed Hunks of Data (CHD)** format — the format used by MAME, and increasingly by emulation frontends for PlayStation, Dreamcast, and other systems.
 
-Developed by [Pure Logic Code](https://www.purelogiccode.com), the application combines a modern WPF-UI dashboard with battle-tested MAME tooling (`chdman`) and pure-C# libraries (CHDSharp, CCDSharp, CSOSharp, PBPSharp) for a fully local, offline-capable conversion experience.
+Developed by [Pure Logic Code](https://www.purelogiccode.com), the application combines a modern WPF-UI dashboard with battle-tested MAME tooling (`chdman`) and pure-C# libraries (CHDSharp, CCDSharp, CSOSharp, PBPSharp, MDSSharp, ISZSharp) for a fully local, offline-capable conversion experience.
 
 ---
 
