@@ -7,14 +7,16 @@ namespace BatchConvertToCHD.Tests;
 
 /// <summary>
 ///     Builds synthetic ISZ files for the decoder tests.
-///     The layout here is written straight from EZB Systems' ISZ File Format Specification 1.00 rather
-///     than from the production reader, with every offset spelled out, so the two agreeing means the
-///     reader matches the spec and not merely itself. There is no sample from UltraISO to test against,
-///     which is what this stands in for.
+///     The layout here is written from EZB Systems' ISZ File Format Specification 1.00 plus the
+///     behaviours libMirage's ISZ filter and isz-tool agree UltraISO adds on top of it (the obfuscated
+///     tables, the stripped bzip2 header), with every offset spelled out, so the two agreeing means
+///     the reader matches real files and not merely itself. There is no sample from UltraISO to test
+///     against, which is what this stands in for.
 /// </summary>
 internal static class IszImageBuilder
 {
     internal const int HeaderLength = 48;
+    internal const int ExtendedHeaderLength = 64;
     internal const int SegmentEntryLength = 24;
 
     // Chunk flag values, in the position the spec gives them: the top two bits of the entry.
@@ -24,6 +26,9 @@ internal static class IszImageBuilder
     internal const int AdiBz2 = 0xC0;
 
     internal const uint DefaultVolumeSerial = 0x11223344;
+
+    /// <summary>The XOR mask UltraISO stores both tables under: the complement of "IsZ!".</summary>
+    private static ReadOnlySpan<byte> ObfuscationMask => [0xB6, 0x8C, 0xA5, 0xDE];
 
     /// <summary>
     ///     Writes a whole-file ISZ. Returns the image bytes it describes so a caller can compare them
@@ -37,6 +42,8 @@ internal static class IszImageBuilder
     /// <param name="flagForChunk">Chosen storage method per chunk index.</param>
     /// <param name="passwordMode">Encryption field value; 0 means none.</param>
     /// <param name="declaredSectors">Sector count to declare, when it should not match the image.</param>
+    /// <param name="writeChecksums">True to write UltraISO's 64-byte header with valid checksums.</param>
+    /// <param name="zeroChunksCarryLength">True to record a zero chunk's uncompressed length in its table entry, as UltraISO does; false records zero.</param>
     internal static void WriteSingle(
         string path,
         byte[] image,
@@ -45,14 +52,25 @@ internal static class IszImageBuilder
         int pointerLength,
         Func<int, int> flagForChunk,
         int passwordMode = 0,
-        uint? declaredSectors = null
+        uint? declaredSectors = null,
+        bool writeChecksums = false,
+        bool zeroChunksCarryLength = true
     )
     {
-        var chunks = BuildChunks(image, chunkSize, pointerLength, flagForChunk);
+        var chunks = BuildChunks(
+            image,
+            chunkSize,
+            pointerLength,
+            flagForChunk,
+            zeroChunksCarryLength
+        );
         var chunkTable = BuildChunkTable(chunks, pointerLength);
+        Obfuscate(chunkTable);
         var data = Concat(chunks);
 
-        var dataOffset = HeaderLength + chunkTable.Length;
+        var headerLength = writeChecksums ? ExtendedHeaderLength : HeaderLength;
+        var dataOffset = headerLength + chunkTable.Length;
+        var checksums = Checksums(writeChecksums, image, data);
 
         var header = BuildHeader(
             sectorSize,
@@ -62,11 +80,16 @@ internal static class IszImageBuilder
             (uint)chunks.Count,
             (uint)chunkSize,
             pointerLength,
-            1,
-            HeaderLength,
+            0,
+            (uint)headerLength,
             0,
             (uint)dataOffset,
-            DefaultVolumeSerial
+            DefaultVolumeSerial,
+            headerLength,
+            1,
+            checksums.UncompressedCrc,
+            checksums.DataSize,
+            checksums.StoredCrc
         );
 
         using var file = new FileStream(path, FileMode.Create, FileAccess.Write);
@@ -76,10 +99,55 @@ internal static class IszImageBuilder
     }
 
     /// <summary>
+    ///     Writes a whole-file ISZ whose header declares no chunk table, which the specification
+    ///     allows: the data is then one uncompressed run starting straight after the header.
+    /// </summary>
+    /// <param name="path">File to write.</param>
+    /// <param name="image">The image being stored.</param>
+    /// <param name="sectorSize">Sector size to declare.</param>
+    /// <param name="chunkSize">Chunk size to declare; the decoder uses it to size its buffers.</param>
+    /// <param name="writeChecksums">True to write UltraISO's 64-byte header with valid checksums.</param>
+    internal static void WriteWithoutChunkTable(
+        string path,
+        byte[] image,
+        int sectorSize,
+        int chunkSize,
+        bool writeChecksums = false
+    )
+    {
+        var headerLength = writeChecksums ? ExtendedHeaderLength : HeaderLength;
+        var checksums = Checksums(writeChecksums, image, image);
+
+        var header = BuildHeader(
+            sectorSize,
+            (uint)(image.Length / sectorSize),
+            0,
+            0,
+            0,
+            (uint)chunkSize,
+            3,
+            0,
+            0,
+            0,
+            (uint)headerLength,
+            DefaultVolumeSerial,
+            headerLength,
+            1,
+            checksums.UncompressedCrc,
+            checksums.DataSize,
+            checksums.StoredCrc
+        );
+
+        using var file = new FileStream(path, FileMode.Create, FileAccess.Write);
+        file.Write(header);
+        file.Write(image);
+    }
+
+    /// <summary>
     ///     Writes a two-segment ISZ, cutting the chunk data at <paramref name="splitAfterBytes" /> so a
     ///     chunk straddles the boundary when that offset falls inside one.
     /// </summary>
-    /// <param name="firstPath">Path of the .isz first segment; the second becomes ".i01".</param>
+    /// <param name="firstPath">Path of the .isz first segment; the second becomes ".i01" or the next part number.</param>
     /// <param name="image">The image being stored.</param>
     /// <param name="sectorSize">Sector size to declare.</param>
     /// <param name="chunkSize">Uncompressed bytes per chunk.</param>
@@ -88,6 +156,8 @@ internal static class IszImageBuilder
     /// <param name="splitAfterBytes">Bytes of chunk data to keep in the first segment.</param>
     /// <param name="secondSegmentVolumeSerial">Serial for the second segment, to test a mismatch.</param>
     /// <param name="writeSecondSegment">False to leave the second segment missing.</param>
+    /// <param name="writeChecksums">True to write UltraISO's 64-byte header with valid checksums.</param>
+    /// <param name="zeroChunksCarryLength">True to record a zero chunk's uncompressed length in its table entry, as UltraISO does; false records zero.</param>
     internal static void WriteSplit(
         string firstPath,
         byte[] image,
@@ -97,14 +167,24 @@ internal static class IszImageBuilder
         Func<int, int> flagForChunk,
         int splitAfterBytes,
         uint? secondSegmentVolumeSerial = null,
-        bool writeSecondSegment = true
+        bool writeSecondSegment = true,
+        bool writeChecksums = false,
+        bool zeroChunksCarryLength = true
     )
     {
-        var chunks = BuildChunks(image, chunkSize, pointerLength, flagForChunk);
+        var chunks = BuildChunks(
+            image,
+            chunkSize,
+            pointerLength,
+            flagForChunk,
+            zeroChunksCarryLength
+        );
         var chunkTable = BuildChunkTable(chunks, pointerLength);
+        Obfuscate(chunkTable);
         var data = Concat(chunks);
 
-        const int chunkTableOffset = HeaderLength + (3 * SegmentEntryLength);
+        var headerLength = writeChecksums ? ExtendedHeaderLength : HeaderLength;
+        var chunkTableOffset = headerLength + (3 * SegmentEntryLength);
         var dataOffset = chunkTableOffset + chunkTable.Length;
 
         var firstData = data.AsSpan(0, splitAfterBytes).ToArray();
@@ -126,7 +206,7 @@ internal static class IszImageBuilder
         }
 
         var firstLength = dataOffset + firstData.Length;
-        var secondLength = HeaderLength + secondData.Length;
+        var secondLength = headerLength + secondData.Length;
 
         var segmentTable = new byte[3 * SegmentEntryLength];
         WriteSegmentEntry(
@@ -142,10 +222,14 @@ internal static class IszImageBuilder
             secondLength,
             chunks.Count - chunksStartingInFirst,
             chunksStartingInFirst,
-            HeaderLength,
+            headerLength,
             0
         );
-        // Third entry stays zeroed: the spec terminates the table with a zero-size entry.
+        // Third entry stays zeroed before obfuscation: the spec terminates the table with a zero-size
+        // entry, which UltraISO stores obfuscated like every other entry.
+        Obfuscate(segmentTable);
+
+        var checksums = Checksums(writeChecksums, image, data);
 
         var firstHeader = BuildHeader(
             sectorSize,
@@ -155,11 +239,16 @@ internal static class IszImageBuilder
             (uint)chunks.Count,
             (uint)chunkSize,
             pointerLength,
-            1,
-            chunkTableOffset,
-            HeaderLength,
+            0,
+            (uint)chunkTableOffset,
+            (uint)headerLength,
             (uint)dataOffset,
-            DefaultVolumeSerial
+            DefaultVolumeSerial,
+            headerLength,
+            1,
+            checksums.UncompressedCrc,
+            checksums.DataSize,
+            checksums.StoredCrc
         );
 
         using (var file = new FileStream(firstPath, FileMode.Create, FileAccess.Write))
@@ -180,11 +269,16 @@ internal static class IszImageBuilder
             (uint)chunks.Count,
             (uint)chunkSize,
             pointerLength,
-            2,
+            1,
             0,
             0,
-            HeaderLength,
-            secondSegmentVolumeSerial ?? DefaultVolumeSerial
+            (uint)headerLength,
+            secondSegmentVolumeSerial ?? DefaultVolumeSerial,
+            headerLength,
+            1,
+            checksums.UncompressedCrc,
+            checksums.DataSize,
+            checksums.StoredCrc
         );
 
         using var second = new FileStream(
@@ -196,17 +290,60 @@ internal static class IszImageBuilder
         second.Write(secondData);
     }
 
-    /// <summary>The ".i01" path beside a ".isz", which is what the spec names segment 2.</summary>
+    /// <summary>
+    ///     The second-segment path beside a first segment: ".i01" for the spec scheme, or the next
+    ///     ".partNN.isz"/".partNNN.isz" when the first segment uses that naming.
+    /// </summary>
     /// <param name="firstPath">Path of the first segment.</param>
     internal static string GetSecondSegmentPath(string firstPath)
     {
+        var name = Path.GetFileName(firstPath);
+        if (!name.EndsWith(".isz", StringComparison.OrdinalIgnoreCase))
+            return Path.ChangeExtension(firstPath, ".i01");
+
+        var beforeExtension = name[..^".isz".Length];
+        var dot = beforeExtension.LastIndexOf('.');
+        if (dot > 0)
+        {
+            var last = beforeExtension[(dot + 1)..];
+            if (
+                last.StartsWith("part", StringComparison.OrdinalIgnoreCase)
+                && last.Length is >= 6 and <= 7
+                && last[4..].All(char.IsAsciiDigit)
+            )
+            {
+                var digits = last.Length - 4;
+                var next = 2.ToString("D" + digits.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    System.Globalization.CultureInfo.InvariantCulture);
+
+                return firstPath[..^name.Length] + beforeExtension[..(dot + 1)] + "part" + next + ".isz";
+            }
+        }
+
         return Path.ChangeExtension(firstPath, ".i01");
     }
 
     /// <summary>
-    ///     Builds a 48-byte header with a distinct value in every field, for checking that each one is
-    ///     read at the offset the spec gives it.
+    ///     Builds a header, 48 bytes by default and 64 when checksums are given. Every field is
+    ///     written at its documented offset so a test can tell which reader offset is wrong.
     /// </summary>
+    /// <param name="sectorSize">Sector size field.</param>
+    /// <param name="totalSectors">Total sectors field.</param>
+    /// <param name="passwordMode">Encryption field.</param>
+    /// <param name="segmentSize">Segment size field.</param>
+    /// <param name="chunkCount">Chunk count field.</param>
+    /// <param name="chunkSize">Chunk size field.</param>
+    /// <param name="pointerLength">Chunk table entry width field.</param>
+    /// <param name="segmentNumber">Segment number field.</param>
+    /// <param name="chunkTableOffset">Chunk table offset field.</param>
+    /// <param name="segmentTableOffset">Segment table offset field.</param>
+    /// <param name="dataOffset">Data offset field.</param>
+    /// <param name="volumeSerial">Volume serial number field.</param>
+    /// <param name="headerSize">Header size field when no checksums are given.</param>
+    /// <param name="version">Format version field.</param>
+    /// <param name="uncompressedCrc">Checksum of the restored image, or null for a 48-byte header.</param>
+    /// <param name="dataSize">Data size field, or null.</param>
+    /// <param name="storedCrc">Checksum of the stored data, or null.</param>
     internal static byte[] BuildHeader(
         int sectorSize,
         uint totalSectors,
@@ -221,16 +358,25 @@ internal static class IszImageBuilder
         uint dataOffset,
         uint volumeSerial,
         int headerSize = HeaderLength,
-        int version = 1
+        int version = 1,
+        uint? uncompressedCrc = null,
+        uint? dataSize = null,
+        uint? storedCrc = null
     )
     {
-        var header = new byte[HeaderLength];
+        var extended =
+            headerSize >= ExtendedHeaderLength
+            || uncompressedCrc is not null
+            || dataSize is not null
+            || storedCrc is not null;
+
+        var header = new byte[extended ? ExtendedHeaderLength : HeaderLength];
 
         header[0] = (byte)'I';
         header[1] = (byte)'s';
         header[2] = (byte)'Z';
         header[3] = (byte)'!';
-        header[4] = (byte)headerSize;
+        header[4] = (byte)(extended ? ExtendedHeaderLength : HeaderLength);
         header[5] = (byte)version;
         BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(6), volumeSerial);
         BinaryPrimitives.WriteUInt16LittleEndian(header.AsSpan(10), (ushort)sectorSize);
@@ -245,6 +391,20 @@ internal static class IszImageBuilder
         BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(39), segmentTableOffset);
         BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(43), dataOffset);
         header[47] = 0;
+
+        if (extended)
+        {
+            BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(48), uncompressedCrc ?? 0);
+            BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(52), dataSize ?? 0);
+            BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(56), 0);
+
+            // The stored-data checksum is the checksum of the restored image unless the caller says
+            // otherwise, which keeps a hand-built header self-consistent.
+            BinaryPrimitives.WriteUInt32LittleEndian(
+                header.AsSpan(60),
+                storedCrc ?? uncompressedCrc ?? 0
+            );
+        }
 
         return header;
     }
@@ -291,16 +451,45 @@ internal static class IszImageBuilder
                     bzip2.Write(plain);
                 }
 
-                return output.ToArray();
+                var compressed = output.ToArray();
+
+                // UltraISO stores bzip2 chunks without the "BZh" stream header; readers put it back.
+                Array.Clear(compressed, 0, Math.Min(3, compressed.Length));
+
+                return compressed;
             }
         }
+    }
+
+    /// <summary>Applies the table XOR mask in place, matching what UltraISO writes.</summary>
+    /// <param name="table">Segment or chunk table bytes.</param>
+    private static void Obfuscate(Span<byte> table)
+    {
+        for (var index = 0; index < table.Length; index++)
+            table[index] ^= ObfuscationMask[index % ObfuscationMask.Length];
+    }
+
+    /// <summary>The checksum values for a header, or all-null when the fixture should not carry any.</summary>
+    /// <param name="write">True to compute them.</param>
+    /// <param name="image">The image being stored.</param>
+    /// <param name="storedData">The concatenated stored chunk bytes.</param>
+    private static ChecksumValues Checksums(bool write, byte[] image, byte[] storedData)
+    {
+        return write
+            ? new ChecksumValues(
+                Complement(Crc32(image)),
+                (uint)image.Length,
+                Complement(Crc32(storedData))
+            )
+            : new ChecksumValues(null, null, null);
     }
 
     private static List<Chunk> BuildChunks(
         byte[] image,
         int chunkSize,
         int pointerLength,
-        Func<int, int> flagForChunk
+        Func<int, int> flagForChunk,
+        bool zeroChunksCarryLength
     )
     {
         var chunks = new List<Chunk>();
@@ -322,14 +511,17 @@ internal static class IszImageBuilder
                 stored = plain;
             }
 
-            if (stored.Length > maxStored)
+            var tableLength = stored.Length;
+            if (flag == AdiZero) tableLength = zeroChunksCarryLength ? plain.Length : 0;
+
+            if (tableLength > maxStored)
             {
                 throw new InvalidOperationException(
-                    $"chunk {chunks.Count} stores {stored.Length} bytes, more than a {pointerLength}-byte pointer can express"
+                    $"chunk {chunks.Count} stores {tableLength} bytes, more than a {pointerLength}-byte pointer can express"
                 );
             }
 
-            chunks.Add(new Chunk(flag, stored));
+            chunks.Add(new Chunk(flag, stored, tableLength));
         }
 
         return chunks;
@@ -346,7 +538,7 @@ internal static class IszImageBuilder
             // The flag occupies the top two bits of the whole entry, so it lands in the top two bits
             // of the last byte of a little-endian value.
             var entry =
-                (uint)chunk.Stored.Length | ((ulong)(chunk.Flag >> 6) << ((8 * pointerLength) - 2));
+                (uint)chunk.TableLength | ((ulong)(chunk.Flag >> 6) << ((8 * pointerLength) - 2));
 
             for (var b = 0; b < pointerLength; b++) table[(index * pointerLength) + b] = (byte)(entry >> (8 * b));
         }
@@ -378,5 +570,35 @@ internal static class IszImageBuilder
         return buffer.ToArray();
     }
 
-    private sealed record Chunk(int Flag, byte[] Stored);
+    /// <summary>Standard CRC-32 (IEEE 802.3), implemented bitwise so it does not share code with the reader.</summary>
+    /// <param name="data">Bytes to checksum.</param>
+    private static uint Crc32(byte[] data)
+    {
+        var crc = 0xFFFFFFFFu;
+
+        foreach (var value in data)
+        {
+            crc ^= value;
+
+            for (var bit = 0; bit < 8; bit++)
+                crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1u)));
+        }
+
+        return crc ^ 0xFFFFFFFFu;
+    }
+
+    /// <summary>Turns a standard CRC-32 into the value the ISZ header stores.</summary>
+    /// <param name="crc">Standard CRC-32 value.</param>
+    private static uint Complement(uint crc)
+    {
+        return ~crc;
+    }
+
+    /// <summary>The checksum fields of a header.</summary>
+    /// <param name="UncompressedCrc">Checksum of the restored image.</param>
+    /// <param name="DataSize">Total data size.</param>
+    /// <param name="StoredCrc">Checksum of the stored chunk bytes.</param>
+    private sealed record ChecksumValues(uint? UncompressedCrc, uint? DataSize, uint? StoredCrc);
+
+    private sealed record Chunk(int Flag, byte[] Stored, int TableLength);
 }

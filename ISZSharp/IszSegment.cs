@@ -1,4 +1,4 @@
-namespace UltraIsoSharp;
+namespace ISZSharp;
 
 /// <summary>
 ///     One entry of an ISZ segment definition table, describing a single file of a split image.

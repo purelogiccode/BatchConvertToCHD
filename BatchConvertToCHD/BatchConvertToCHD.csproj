@@ -47,7 +47,7 @@
 
     <ItemGroup>
         <PackageReference Include="CHDSharp" Version="1.4.3" />
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.259">
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.264">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
@@ -68,7 +68,7 @@
         <ProjectReference Include="..\CCDSharp\CCDSharp.csproj" />
         <ProjectReference Include="..\CSOSharp\CSOSharp.csproj" />
         <ProjectReference Include="..\PBPSharp\PBPSharp.csproj" />
-        <ProjectReference Include="..\UltraIsoSharp\UltraIsoSharp.csproj" />
+        <ProjectReference Include="..\ISZSharp\ISZSharp.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -337,8 +337,8 @@ internal class ArchiveService
         }
         catch (Exception ex)
             when (ex is IndexOutOfRangeException
-                    or ArgumentOutOfRangeException
-                    or NullReferenceException)
+                      or ArgumentOutOfRangeException
+                      or NullReferenceException)
         {
             return (
                 false,
@@ -907,18 +907,18 @@ internal class ArchiveService
     private static bool IsArchiveDamageException(Exception ex)
     {
         return ex is InvalidDataException
-            or IncompleteArchiveException
-            or CryptographicException
-            or ArchiveOperationException
-            or InvalidFormatException
-            or IndexOutOfRangeException
-            or ArgumentOutOfRangeException
-            or NullReferenceException
-            || string.Equals(
-                ex.GetType().FullName,
-                "SharpCompress.Compressors.LZMA.DataErrorException",
-                StringComparison.Ordinal
-            );
+                   or IncompleteArchiveException
+                   or CryptographicException
+                   or ArchiveOperationException
+                   or InvalidFormatException
+                   or IndexOutOfRangeException
+                   or ArgumentOutOfRangeException
+                   or NullReferenceException
+               || string.Equals(
+                   ex.GetType().FullName,
+                   "SharpCompress.Compressors.LZMA.DataErrorException",
+                   StringComparison.Ordinal
+               );
     }
 
     /// <summary>

@@ -233,13 +233,13 @@ Locates the volumes of a multi-part RAR. SharpCompress can only decode a set whe
 
 ---
 
-## 8.10 ISZ Support (`UltraIsoSharp`)
+## 8.10 ISZ Support (`ISZSharp`)
 
-Decompresses UltraISO `.isz` images. Lives in the standalone `UltraIsoSharp` library (multi-targeted `net10.0;net8.0`, MIT-licensed, packable) and is written against EZB Systems' ISZ File Format Specification 1.00.
+Decompresses UltraISO `.isz` images. Lives in the standalone `ISZSharp` library (multi-targeted `net8.0;net9.0;net10.0`, MIT-licensed, packable, with a README and icon like the other libraries) and is written against EZB Systems' ISZ File Format Specification 1.00 plus the real-file behaviours libMirage's ISZ filter and isz-tool agree on.
 
 | Type | Role |
 |------|------|
-| `IszHeader` | The packed 48-byte header, every field read at its documented offset. `ImageSizeBytes` (= `TotalSectors × SectorSize`, computed in 64-bit so dual-layer DVDs don't overflow), `IsEncrypted`, `IsSegmented`, `EncryptionDescription`, `Summary`, and `GetUnusableReason()` which refuses encryption, a zero-sector or zero-chunk header, an implausible chunk size, an unreadable pointer width and a missing chunk table. |
+| `IszHeader` | The packed header, every field read at its documented offset: 48 bytes per the specification, 64 when UltraISO's checksum fields are present (`UncompressedCrc`, `DataSize`, `StoredCrc`, exposed as nullables). `ImageSizeBytes` (= `TotalSectors × SectorSize`, computed in 64-bit so dual-layer DVDs don't overflow), `IsEncrypted`, `IsSegmented`, `HasChecksums`, `EncryptionDescription`, `Summary`, and `GetUnusableReason()` which refuses encryption, a header version other than 1, a later segment opened in place of the first, a zero-sector header, an implausible chunk size, and a chunk table with no chunks or an unreadable pointer width. A missing chunk table is **valid** — the data is one raw run. |
 | `IszChunkType` | The four storage kinds: `Zero`, `Stored`, `ZLib`, `BZip2` (spec names `ADI_ZERO`, `ADI_DATA`, `ADI_ZLIB`, `ADI_BZ2`). |
 | `IszSegment` | One segment-table entry: size, chunk count, first chunk number, chunk offset, left-over bytes. `IsTerminator` marks the zero-size entry that ends the table. |
 | `IszDecoder` | `TryReadHeaderAsync`, `GetDecodedFileName`, `GetSegmentPath`, `ReadChunkEntry` and `DecodeAsync`. |
@@ -248,9 +248,13 @@ Decompresses UltraISO `.isz` images. Lives in the standalone `UltraIsoSharp` lib
 Behaviour worth knowing:
 
 - A chunk table entry is a little-endian integer `PointerLength` bytes wide whose **top two bits are the storage kind**; the rest is the stored length. `ReadChunkEntry` is exposed for testing precisely because that bit-packing is easy to get subtly wrong.
-- Segment naming follows the spec: segment 1 is `game.isz`, segment 2 is `game.i01`, segment *n* is `game.i(n-1)`.
+- **Both tables are obfuscated.** The segment and chunk tables are XORed with `B6 8C A5 DE` (the complement of `IsZ!`, cycling), which the published specification never mentions but every independent reader undoes. Both are de-obfuscated on read.
+- **Bzip2 chunks lack their header.** A bzip2 chunk is stored with the three-byte `BZh` stream header cleared; the decoder writes it back before decompressing, exactly as the reference readers do.
+- Segment naming follows the first segment's own scheme: the spec's `game.isz`/`game.i01`/`game.i(n-1)`, or the `.part01.isz` and `.part001.isz` forms.
 - Multi-segment images are read as one logical stream over a region per file, so a chunk straddling a boundary needs no special case. `left_size` is read but not used to drive reading — it would only be a redundant cross-check.
-- The spec caps a stored chunk at the chunk size, so a larger one is treated as a damaged table rather than read into a bigger buffer. Real writers keep a chunk verbatim (`ADI_DATA`) when compressing it would not shrink it, which is why incompressible content never produces an oversized chunk.
+- A zero chunk stores no data; its entry may record the uncompressed length (as UltraISO does) or zero, and the decoder produces a whole chunk (or the correct partial final chunk) either way without consuming data bytes.
+- The 64-byte header's CRC32 of the restored image is validated while writing; a mismatch deletes the output and fails, like a size shortfall. The spec caps a stored chunk at the chunk size, so a larger one is treated as a damaged table rather than read into a bigger buffer.
+- A failed or cancelled decode deletes its partial output, so a short image never reaches the converter.
 
 ---
 

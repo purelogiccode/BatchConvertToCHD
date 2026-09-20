@@ -6,8 +6,8 @@
         <LangVersion>latest</LangVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <Company>PureLogicCode.com</Company>
-        <AssemblyVersion>1.1.0</AssemblyVersion>
-        <FileVersion>1.1.0</FileVersion>
+        <AssemblyVersion>1.0.0</AssemblyVersion>
+        <FileVersion>1.0.0</FileVersion>
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -15,12 +15,12 @@
 
         <!-- NuGet Package Metadata -->
         <IsPackable>true</IsPackable>
-        <PackageId>MDSSharp</PackageId>
-        <Version>1.1.0</Version>
+        <PackageId>ISZSharp</PackageId>
+        <Version>1.0.0</Version>
         <Authors>PureLogicCode.com</Authors>
-        <Title>MDSSharp</Title>
-        <Description>A managed C# library for parsing Alcohol 120% disc image descriptors (.mds) and preparing their .mdf data files for conversion. Reads the MDS session and track tables, joins split volumes, strips subchannel tails and writes cue sheets. Ideal for disc image preservation and emulation workflows.</Description>
-        <PackageTags>mds;mdf;alcohol;disc-image;cue;bin;split;subchannel;conversion;emulation</PackageTags>
+        <Title>ISZSharp</Title>
+        <Description>A managed C# library for decompressing UltraISO ISZ disc images back to the plain images they were made from. Supports whole and split ISZ images with zlib, bzip2, stored and zero-elided chunks, the obfuscated chunk and segment tables and stripped bzip2 headers real UltraISO files carry, images with no chunk table, and the three segment naming schemes writers use. Validates the UltraISO checksum when the file carries one, and refuses encrypted or damaged files by name. Ideal for disc image preservation and emulation workflows.</Description>
+        <PackageTags>isz;ultraiso;disc-image;decompress;zlib;bzip2;iso;conversion;emulation</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/purelogiccode/BatchConvertToCHD</PackageProjectUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -36,6 +36,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="SharpCompress" Version="0.50.4" />
         <PackageReference Include="Meziantou.Analyzer" Version="3.0.264">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>

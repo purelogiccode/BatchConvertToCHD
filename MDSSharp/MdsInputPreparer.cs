@@ -99,10 +99,10 @@ public static class MdsInputPreparer
         if (
             disc.SectorSize
             is not (
-                MdsDisc.RawSectorSize
-                or MdsDisc.RawPlusSubchannelSize
-                or MdsDisc.RawPlusShortSubchannelSize
-                or MdsDisc.Mode2XaSectorSize
+            MdsDisc.RawSectorSize
+            or MdsDisc.RawPlusSubchannelSize
+            or MdsDisc.RawPlusShortSubchannelSize
+            or MdsDisc.Mode2XaSectorSize
             )
         )
         {

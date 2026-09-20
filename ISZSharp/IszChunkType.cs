@@ -1,4 +1,4 @@
-namespace UltraIsoSharp;
+namespace ISZSharp;
 
 /// <summary>
 ///     How one ISZ chunk was stored, taken from the top two bits of its chunk table entry.

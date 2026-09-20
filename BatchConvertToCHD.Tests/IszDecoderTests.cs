@@ -1,5 +1,5 @@
 using System.Text;
-using UltraIsoSharp;
+using ISZSharp;
 
 namespace BatchConvertToCHD.Tests;
 
@@ -33,13 +33,24 @@ public class IszDecoderTests : IDisposable
     private async Task AssertRoundTripsAsync(
         byte[] image,
         Func<int, int> flagForChunk,
-        bool expectCompressed = false
+        bool expectCompressed = false,
+        bool writeChecksums = false,
+        bool zeroChunksCarryLength = true
     )
     {
         var iszPath = Path.Combine(_tempDir, $"image_{Guid.NewGuid():N}.isz");
         var outputPath = Path.ChangeExtension(iszPath, ".iso");
 
-        IszImageBuilder.WriteSingle(iszPath, image, SectorSize, ChunkSize, 3, flagForChunk);
+        IszImageBuilder.WriteSingle(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            flagForChunk,
+            writeChecksums: writeChecksums,
+            zeroChunksCarryLength: zeroChunksCarryLength
+        );
 
         if (expectCompressed)
         {
@@ -143,6 +154,70 @@ public class IszDecoderTests : IDisposable
         Assert.Equal((IszChunkType.BZip2, 3), IszDecoder.ReadChunkEntry(table, 2, 3));
     }
 
+    [Fact]
+    public async Task TheChunkTableIsStoredObfuscated()
+    {
+        // The spec does not mention it, but UltraISO XORs both tables with the complement of "IsZ!"
+        // and every independent reader undoes it. A decoder that read the plain bytes would see
+        // nonsense lengths, so the obfuscation is asserted here rather than only through round trips.
+        var image = BuildImage(4);
+        var iszPath = Path.Combine(_tempDir, "obfuscated.isz");
+        IszImageBuilder.WriteSingle(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiData
+        );
+
+        var header = await IszDecoder.TryReadHeaderAsync(iszPath, CancellationToken.None);
+        Assert.NotNull(header);
+
+        var bytes = await File.ReadAllBytesAsync(iszPath);
+        var firstEntry = bytes.AsSpan((int)header.ChunkTableOffset, 3);
+        var plainEntry = new byte[] { 0x00, 0x20, 0x40 };
+        var mask = new byte[] { 0xB6, 0x8C, 0xA5 };
+
+        for (var index = 0; index < plainEntry.Length; index++)
+            Assert.Equal((byte)(plainEntry[index] ^ mask[index]), firstEntry[index]);
+    }
+
+    [Fact]
+    public async Task AnImageWithNoChunkTableDecodes()
+    {
+        // The spec says a zero pointer offset means no chunk table; the data is one raw run.
+        var image = BuildImage(8, 3);
+        var iszPath = Path.Combine(_tempDir, "notable.isz");
+        IszImageBuilder.WriteWithoutChunkTable(iszPath, image, SectorSize, ChunkSize);
+
+        var outputPath = Path.Combine(_tempDir, "notable.iso");
+        var result = await IszDecoder.DecodeAsync(iszPath, outputPath, Log, CancellationToken.None);
+
+        Assert.True(result.Success, result.FailureReason);
+        Assert.Equal(image, await File.ReadAllBytesAsync(outputPath));
+    }
+
+    [Fact]
+    public async Task AnImageWithNoChunkTableAndChecksumsDecodes()
+    {
+        var image = BuildImage(8, 3);
+        var iszPath = Path.Combine(_tempDir, "notablecrc.isz");
+        IszImageBuilder.WriteWithoutChunkTable(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            writeChecksums: true
+        );
+
+        var outputPath = Path.Combine(_tempDir, "notablecrc.iso");
+        var result = await IszDecoder.DecodeAsync(iszPath, outputPath, Log, CancellationToken.None);
+
+        Assert.True(result.Success, result.FailureReason);
+        Assert.Equal(image, await File.ReadAllBytesAsync(outputPath));
+    }
+
     #endregion
 
     #region Segment naming
@@ -157,6 +232,30 @@ public class IszDecoderTests : IDisposable
         Assert.Equal(Path.Combine(_tempDir, "game.i01"), IszDecoder.GetSegmentPath(first, 1));
         Assert.Equal(Path.Combine(_tempDir, "game.i02"), IszDecoder.GetSegmentPath(first, 2));
         Assert.Equal(Path.Combine(_tempDir, "game.i15"), IszDecoder.GetSegmentPath(first, 15));
+    }
+
+    [Fact]
+    public void PartNamingSchemesFollowTheFirstSegment()
+    {
+        // UltraISO can also write "game.part01.isz"/"game.part02.isz" (and a three-digit form), and
+        // both reference readers accept them, so the segment path follows whichever the first file
+        // uses instead of forcing the spec scheme onto it.
+        var twoDigit = Path.Combine(_tempDir, "game.part01.isz");
+
+        Assert.Equal(twoDigit, IszDecoder.GetSegmentPath(twoDigit, 0));
+        Assert.Equal(Path.Combine(_tempDir, "game.part02.isz"), IszDecoder.GetSegmentPath(twoDigit, 1));
+        Assert.Equal(Path.Combine(_tempDir, "game.part10.isz"), IszDecoder.GetSegmentPath(twoDigit, 9));
+
+        var threeDigit = Path.Combine(_tempDir, "game.part001.isz");
+
+        Assert.Equal(
+            Path.Combine(_tempDir, "game.part002.isz"),
+            IszDecoder.GetSegmentPath(threeDigit, 1)
+        );
+        Assert.Equal(
+            Path.Combine(_tempDir, "game.part012.isz"),
+            IszDecoder.GetSegmentPath(threeDigit, 11)
+        );
     }
 
     [Fact]
@@ -245,6 +344,35 @@ public class IszDecoderTests : IDisposable
     }
 
     [Fact]
+    public async Task AChecksummedImageRoundTrips()
+    {
+        // UltraISO writes a 64-byte header with a CRC32 of the restored image; the decoder validates
+        // it while writing, so a round trip through it proves the calculation matches the reference.
+        await AssertRoundTripsAsync(
+            BuildImage(16, 3),
+            static _ => IszImageBuilder.AdiZlib,
+            expectCompressed: true,
+            writeChecksums: true
+        );
+    }
+
+    [Fact]
+    public async Task ZeroChunksWithNoLengthRecordedStillComeBackAsWholeChunks()
+    {
+        // UltraISO records a zero chunk's uncompressed length, but a writer may leave it zero. Both
+        // forms have to yield a whole chunk of zeros; neither stores any bytes.
+        var image = BuildImage(16);
+        Array.Clear(image, ChunkSize * 4, ChunkSize * 4);
+
+        await AssertRoundTripsAsync(
+            image,
+            static index =>
+                index is >= 4 and < 8 ? IszImageBuilder.AdiZero : IszImageBuilder.AdiZlib,
+            zeroChunksCarryLength: false
+        );
+    }
+
+    [Fact]
     public async Task RawCdSectorSizeIsCarriedThrough()
     {
         // ISZ is documented for 2048-byte ISO images, but the sector size is a header field and the
@@ -325,6 +453,56 @@ public class IszDecoderTests : IDisposable
     }
 
     [Fact]
+    public async Task AChecksummedSplitImageRoundTrips()
+    {
+        // The checksum covers the whole restored image, so it also proves the segments were read in
+        // the right order and a chunk straddling the boundary was stitched without losing a byte.
+        var image = BuildImage(16);
+        var iszPath = Path.Combine(_tempDir, "splitcrc.isz");
+        IszImageBuilder.WriteSplit(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiZlib,
+            200,
+            writeChecksums: true
+        );
+
+        var outputPath = Path.Combine(_tempDir, "splitcrc.iso");
+        var result = await IszDecoder.DecodeAsync(iszPath, outputPath, Log, CancellationToken.None);
+
+        Assert.True(result.Success, result.FailureReason);
+        Assert.Equal(image, await File.ReadAllBytesAsync(outputPath));
+    }
+
+    [Fact]
+    public async Task APartNamedSplitImageIsReadInOrder()
+    {
+        var image = BuildImage(12);
+        var iszPath = Path.Combine(_tempDir, "game.part01.isz");
+
+        IszImageBuilder.WriteSplit(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiZlib,
+            200
+        );
+
+        Assert.True(File.Exists(Path.Combine(_tempDir, "game.part02.isz")));
+
+        var outputPath = Path.Combine(_tempDir, "game.iso");
+        var result = await IszDecoder.DecodeAsync(iszPath, outputPath, Log, CancellationToken.None);
+
+        Assert.True(result.Success, result.FailureReason);
+        Assert.Equal(image, await File.ReadAllBytesAsync(outputPath));
+    }
+
+    [Fact]
     public async Task AMissingSegmentIsNamedRatherThanHalfDecoded()
     {
         var image = BuildImage(16);
@@ -388,6 +566,36 @@ public class IszDecoderTests : IDisposable
     #endregion
 
     #region Refusals
+
+    [Fact]
+    public async Task AChecksumMismatchIsRefusedAndTheOutputDeleted()
+    {
+        // The 64-byte header carries a checksum of the restored image. A file whose data was damaged
+        // in a way that still decodes to the right length must be refused, not converted.
+        var image = BuildImage(8);
+        var iszPath = Path.Combine(_tempDir, "badcrc.isz");
+        IszImageBuilder.WriteSingle(
+            iszPath,
+            image,
+            SectorSize,
+            ChunkSize,
+            3,
+            static _ => IszImageBuilder.AdiData,
+            writeChecksums: true
+        );
+
+        // Flip a stored byte well past the tables, leaving every length intact.
+        var bytes = await File.ReadAllBytesAsync(iszPath);
+        bytes[^1] ^= 0xFF;
+        await File.WriteAllBytesAsync(iszPath, bytes);
+
+        var outputPath = Path.Combine(_tempDir, "badcrc.iso");
+        var result = await IszDecoder.DecodeAsync(iszPath, outputPath, Log, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("checksum", result.FailureReason ?? string.Empty, StringComparison.Ordinal);
+        Assert.False(File.Exists(outputPath));
+    }
 
     [Fact]
     public async Task AFileThatIsNotAnIszIsReported()

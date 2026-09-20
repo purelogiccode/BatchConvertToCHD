@@ -190,14 +190,18 @@ These all converge on `ClassifyRecoveredImageAsync` (§5.2) once the image has b
 
 Multi-part **RAR** sets are extracted in-app too, whatever their naming: `name.partNN.rar`, old-style `name.rar` + `name.rNN`, or a RAR set renamed to `.001`/`.002` (routed by content). SharpCompress can only decode a set when it is opened **by path through the first volume** — opening one part as a stream leaves it without the earlier data and is what produced the decoder crashes — so `RarVolumeSet` locates the first volume from any part the batch offers. `InputFileFilter.RemoveRarVolumeParts` keeps only that first volume from the folder scan (or the lowest-numbered part when the first is missing, so extraction still reports the set as incomplete); a `.001` set never registers its later parts at all. A set whose parts do not join to a whole number of sectors is reported as needing re-download rather than converted.
 
-### ISZ — `UltraIsoSharp`
+### ISZ — `ISZSharp`
 
-Written against EZB Systems' ISZ File Format Specification 1.00. `IszHeader` parses the packed 48-byte header; `IszDecoder` walks the chunk table, splitting each entry's top two bits into the storage kind (`ADI_ZERO`, `ADI_DATA`, `ADI_ZLIB`, `ADI_BZ2`) and the remainder into the stored length, then decompresses through `ZLibStream` and SharpCompress's `BZip2Stream`.
+Written against EZB Systems' ISZ File Format Specification 1.00, with the real-file behaviours the specification omits taken from libMirage's ISZ filter and isz-tool, the two independent readers. `IszHeader` parses the packed 48-byte header (and UltraISO's 64-byte extension with its checksums); `IszDecoder` walks the chunk table, splitting each entry's top two bits into the storage kind (`ADI_ZERO`, `ADI_DATA`, `ADI_ZLIB`, `ADI_BZ2`) and the remainder into the stored length, then decompresses through `ZLibStream` and SharpCompress's `BZip2Stream`.
 
+- The segment and chunk tables are stored XOR-obfuscated with `B6 8C A5 DE` (the complement of `IsZ!`) and are de-obfuscated on read.
+- Bzip2 chunks are stored without the `BZh` stream header; it is restored before decompression.
+- A zero chunk table offset means the image is one raw run, which is decoded without a table.
+- Split images may use the spec's `.i01`/`.i02` naming or the `.part01.isz`/`.part001.isz` forms; both are followed from the first segment's own name.
 - Multi-segment images are read as **one logical stream over a region per file**, so a chunk straddling a segment boundary needs no special case.
 - Later segments are matched by volume serial number; a segment belonging to another rip is refused, and a missing one is named.
 - Encryption (`has_password` ≠ 0) is refused by name (AES-128/192/256).
-- Output is capped at `total_sectors × sect_size` and the total is checked at the end, so a truncated file is reported instead of yielding a short image that would convert and look fine.
+- Output is capped at `total_sectors × sect_size` and the total is checked at the end, so a truncated file is reported instead of yielding a short image that would convert and look fine. When the 64-byte header carries UltraISO's CRC32, the restored image is validated against it and a mismatch fails the same way.
 - A failed decompression **deletes its partial output**, for the same reason.
 
 Note that `.isz` covers two unrelated things in practice: a real ISZ starts with `IsZ!` and is decompressed, while ordinary images also get renamed to `.isz` and are routed by content like any other mislabelled file.

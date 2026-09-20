@@ -54,7 +54,7 @@ public sealed record MdsTrack(int Number, byte ModeByte, int SectorSize, long St
                     ? CueMode1Raw
                     : null,
             ModeMode2 or ModeMode2Form1 or ModeMode2Form2 or ModeMode2Alternate
-            or ModeMode2Alternate2 => Mode2CueType,
+                or ModeMode2Alternate2 => Mode2CueType,
             _ => null
         };
 
@@ -79,7 +79,7 @@ public sealed record MdsTrack(int Number, byte ModeByte, int SectorSize, long St
     /// <summary>True when the stored sector is one of the 2352-byte layouts a cue describes directly.</summary>
     private bool IsRawSectorSize =>
         SectorSize
-        is MdsDisc.RawSectorSize
+            is MdsDisc.RawSectorSize
             or MdsDisc.RawPlusSubchannelSize
             or MdsDisc.RawPlusShortSubchannelSize;
 
@@ -91,8 +91,8 @@ public sealed record MdsTrack(int Number, byte ModeByte, int SectorSize, long St
         SectorSize switch
         {
             MdsDisc.RawSectorSize
-            or MdsDisc.RawPlusSubchannelSize
-            or MdsDisc.RawPlusShortSubchannelSize => CueMode2Raw,
+                or MdsDisc.RawPlusSubchannelSize
+                or MdsDisc.RawPlusShortSubchannelSize => CueMode2Raw,
             MdsDisc.Mode2XaSectorSize => CueMode2Xa,
             _ => null
         };

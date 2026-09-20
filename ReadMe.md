@@ -49,7 +49,7 @@ A file's extension is the least reliable thing about it. Every input is identifi
 
 ### 💿 Awkward Format Support
 *   **Alcohol 120%**: `.mds`/`.mdf` sets convert directly. The descriptor's track table is parsed to build a matching cue, images storing 2448 or 2368 bytes per sector have their subchannel tail stripped first (chdman cannot read those), and a `.mdf` that is really an ISO is converted as a DVD image.
-*   **ISZ Decompression**: UltraISO `.isz` images are decompressed in-process (zlib, bzip2, stored and zero chunks), including images split across `.i01`, `.i02` and further segments. Segments are matched by volume serial number, a missing one is named, and an encrypted image says so rather than failing obscurely. Written against the EZB Systems ISZ File Format Specification 1.00.
+*   **ISZ Decompression**: UltraISO `.isz` images are decompressed in-process (zlib, bzip2, stored and zero chunks), including images split across `.i01`/`.i02` or `.part01.isz`/`.part001.isz` segments. The obfuscated tables and stripped bzip2 headers real UltraISO files carry are handled, and UltraISO's own checksum is validated when present. Segments are matched by volume serial number, a missing one is named, and an encrypted image says so rather than failing obscurely. Written against the EZB Systems ISZ File Format Specification 1.00 and checked against libMirage and isz-tool.
 *   **Split Volume Sets**: Images split into `.001`/`.002` or `.i00`/`.i01` pieces are rejoined before conversion, and a set with a missing part is reported as such instead of being handed to chdman half-complete. Split 7-Zip/ZIP *archive* sets (`.7z.001`) are extracted with the bundled `7za.exe` and converted rather than refused. Only the first volume appears in the file list, so a set is offered once rather than once per piece.
 *   **ECM Decoding**: `.ecm` files are decoded in-process, with no external tool to install. ECM works by discarding each sector's EDC checksum and Reed-Solomon parity, so decoding means regenerating them; the implementation is verified byte for byte against Neill Corlett's original encoder and decoder, and the checksum ECM stores for the whole image is validated at the end, so a damaged file is reported rather than turned into a plausible-looking one.
 *   **Split-Track Discs**: A `(Track 1)`, `(Track 2)`, ... bin set gets a multi-track cue, so discs with CDDA audio keep their audio tracks instead of converting as a single data track.
@@ -135,7 +135,7 @@ Generated cue sheets reference the disc image where it already lies rather than 
     * [PBPSharp](https://) (v1.1.0) — Pure C# PBP extraction and SFO parsing
     * [CCDSharp](https://) (v1.0.0) — Pure C# CloneCD (.ccd/.img/.sub) parsing and conversion
     * [MDSSharp](https://) (v1.1.0) — Pure C# Alcohol 120% (.mds/.mdf) parsing and cue preparation
-    * [UltraIsoSharp](https://) (v1.0.0) — Pure C# UltraISO ISZ decompression
+    * [ISZSharp](https://www.nuget.org/packages/ISZSharp) (v1.0.0) — Pure C# UltraISO ISZ decompression
     * [SharpCompress](https://github.com/adamhathcock/sharpcompress) (v0.50.4) — Archive extraction, and bzip2 decompression for ISZ images
     * [NAudio](https://github.com/naudio/NAudio) (v3.1.0) — MP3 audio track decoding (Media Foundation)
     * [Serilog](https://serilog.net/) (v4.4.0) — Structured diagnostic logging
@@ -231,6 +231,7 @@ This project is licensed under the **GNU General Public License v3.0**. See the 
 *   [CCDSharp](https://) by Peterson Fernandes — Pure C# CloneCD disc image parsing and conversion library.
 *   [SharpCompress](https://github.com/adamhathcock/sharpcompress) for archive handling and bzip2 decompression.
 *   [EZB Systems](https://www.ezbsystems.com/) for publishing the [ISZ File Format Specification](https://www.ezbsystems.com/isz/iszspec.txt), which the ISZ decompressor is written against.
+*   [libMirage](https://github.com/cdemu/cdemu) by Henrik Stokseth and [isz-tool](https://github.com/oserres/isz-tool) by Olivier Serres, whose independent ISZ readers the decoder was checked against for the behaviours the specification omits (obfuscated tables, stripped bzip2 headers, the checksum calculation).
 *   Neill Corlett for ECM. His GPL-2.0-or-later reference implementation defines the format the in-process `.ecm` decoder implements, and was used to verify it byte for byte.
 *   [NAudio](https://github.com/naudio/NAudio) by Mark Heath — MP3 decoding via Windows Media Foundation.
 *   [Serilog](https://serilog.net/) for structured logging.

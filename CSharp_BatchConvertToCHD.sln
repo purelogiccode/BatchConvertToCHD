@@ -12,7 +12,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CCDSharp", "CCDSharp\CCDSha
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MDSSharp", "MDSSharp\MDSSharp.csproj", "{2A8CBDD1-CBAD-4093-956F-F70FE3A2FEE5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UltraIsoSharp", "UltraIsoSharp\UltraIsoSharp.csproj", "{F65D73F9-0C36-460C-9EE7-3C009A13472F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ISZSharp", "ISZSharp\ISZSharp.csproj", "{F65D73F9-0C36-460C-9EE7-3C009A13472F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

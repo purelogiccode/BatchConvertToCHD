@@ -1,4 +1,4 @@
-using UltraIsoSharp;
+using ISZSharp;
 
 namespace BatchConvertToCHD.Tests;
 
@@ -121,13 +121,94 @@ public class IszHeaderTests
     }
 
     [Fact]
-    public void HeaderWithNoChunkTableIsRefused()
+    public void HeaderWithNoChunkTableIsUsable()
     {
+        // The spec says a zero pointer offset means there is no chunk table and the data is one
+        // uncompressed run, so this is a valid file rather than a damaged one.
         var header = IszHeader.TryRead(BuildValid(chunkTableOffset: 0));
 
         Assert.NotNull(header);
+        Assert.Null(header.GetUnusableReason());
+    }
+
+    [Fact]
+    public void HeaderWithNoChunkTableSkipsThePointerWidthCheck()
+    {
+        // No table means no entries, so an odd pointer width describes nothing and is ignored.
+        var header = IszHeader.TryRead(BuildValid(pointerLength: 0, chunkTableOffset: 0));
+
+        Assert.NotNull(header);
+        Assert.Null(header.GetUnusableReason());
+    }
+
+    [Fact]
+    public void ExtendedHeaderChecksumsAreReadAtTheirOffsets()
+    {
+        var bytes = IszImageBuilder.BuildHeader(
+            2048,
+            64,
+            0,
+            0,
+            2,
+            65536,
+            3,
+            1,
+            64,
+            0,
+            96,
+            IszImageBuilder.DefaultVolumeSerial,
+            IszImageBuilder.ExtendedHeaderLength,
+            1,
+            0xAABBCCDD,
+            0x00112233,
+            0x11223344
+        );
+
+        var header = IszHeader.TryRead(bytes);
+
+        Assert.NotNull(header);
+        Assert.Equal(IszImageBuilder.ExtendedHeaderLength, header.HeaderSize);
+        Assert.True(header.HasChecksums);
+        Assert.Equal(0xAABBCCDDu, header.UncompressedCrc);
+        Assert.Equal(0x00112233u, header.DataSize);
+        Assert.Equal(0x11223344u, header.StoredCrc);
+    }
+
+    [Fact]
+    public void AFortyEightByteHeaderCarriesNoChecksums()
+    {
+        var header = IszHeader.TryRead(BuildValid());
+
+        Assert.NotNull(header);
+        Assert.False(header.HasChecksums);
+        Assert.Null(header.UncompressedCrc);
+        Assert.Null(header.DataSize);
+        Assert.Null(header.StoredCrc);
+    }
+
+    [Fact]
+    public void ANonVersionOneHeaderIsRefused()
+    {
+        var header = IszHeader.TryRead(BuildValid(version: 2));
+
+        Assert.NotNull(header);
         Assert.Contains(
-            "no chunk table",
+            "version",
+            header.GetUnusableReason() ?? string.Empty,
+            StringComparison.Ordinal
+        );
+    }
+
+    [Fact]
+    public void ALaterSegmentIsRefusedInFavourOfTheFirst()
+    {
+        // Opening .i01 directly would decode from the middle of the chunk stream, so it is refused
+        // with the name of the file that should be opened instead.
+        var header = IszHeader.TryRead(BuildValid(segmentNumber: 2));
+
+        Assert.NotNull(header);
+        Assert.Contains(
+            "first segment",
             header.GetUnusableReason() ?? string.Empty,
             StringComparison.Ordinal
         );
@@ -179,7 +260,9 @@ public class IszHeaderTests
         uint chunkSize = 65536,
         int pointerLength = 3,
         uint chunkTableOffset = 48,
-        uint segmentTableOffset = 0
+        uint segmentTableOffset = 0,
+        int segmentNumber = 0,
+        int version = 1
     )
     {
         return IszImageBuilder.BuildHeader(
@@ -190,11 +273,12 @@ public class IszHeaderTests
             2,
             chunkSize,
             pointerLength,
-            1,
+            segmentNumber,
             chunkTableOffset,
             segmentTableOffset,
             96,
-            IszImageBuilder.DefaultVolumeSerial
+            IszImageBuilder.DefaultVolumeSerial,
+            version: version
         );
     }
 }

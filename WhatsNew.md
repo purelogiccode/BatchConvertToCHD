@@ -1,5 +1,17 @@
 # What's New
 
+## Unreleased
+
+### ISZ support upgraded, library renamed to ISZSharp
+
+*   **Genuine UltraISO files now decode.** The ISZ library was checked against libMirage's ISZ filter and isz-tool, the two independent open-source readers, and now handles the real-file behaviours the published specification omits: the segment and chunk tables are de-obfuscated (XOR with `B6 8C A5 DE`, the complement of `IsZ!`) and bzip2 chunks get their stripped `BZh` header restored before decompression. Without those, a real `.isz` could not be decoded at all — the old test fixtures mirrored the same omission, so the suite passed while the reader could not open a genuine file.
+*   **More layouts are read**: images whose header declares no chunk table (one raw run), and split images named `game.part01.isz`/`game.part02.isz` as well as the spec's `game.i01`/`game.i02`.
+*   **UltraISO's checksum is validated** when the 64-byte header carries one; a mismatch is reported as damaged and the output deleted, like a size shortfall. A failed or cancelled decode now always deletes its partial output.
+*   **The library now matches the other embedded packages' shape**: renamed `UltraIsoSharp` → `ISZSharp`, multi-targeting `net8.0;net9.0;net10.0`, shipping XML docs, a README and an icon, and published as **ISZSharp 1.0.0** on NuGet (<https://www.nuget.org/packages/ISZSharp>).
+*   Housekeeping: test suite grew to **894 tests** (obfuscated tables, stripped bzip2 headers, no-chunk-table images including a checksummed one, `.partNN` segment naming, checksum validation and mismatch refusal, and the new header refusals: version ≠ 1 and a later segment opened directly).
+
+---
+
 ## 3.7.2 (2026-09-16)
 
 ### Recovered images with Mode 2 or subchannel layouts now convert (#67139)

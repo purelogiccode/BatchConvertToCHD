@@ -5,7 +5,7 @@ nav_order: 11
 
 # 10. Embedded Libraries
 
-The solution ships five in-house libraries that replace external tools (maxcso, psxpackager), add CloneCD support, and cover Alcohol 120% and UltraISO images. The app references them as project references. Four of them are published as NuGet packages for outside consumers — **PBPSharp** (<https://www.nuget.org/packages/PBPSharp>, 1.1.1), **CSOSharp** (<https://www.nuget.org/packages/CSOSharp>, 1.0.0), **CCDSharp** (<https://www.nuget.org/packages/CCDSharp>, 1.0.0) and **MDSSharp** (<https://www.nuget.org/packages/MDSSharp>, 1.1.0) — and those four multi-target `net8.0;net9.0;net10.0`, each shipping its XML docs next to the assembly; releases are manual (see the repository's AGENTS.md). `UltraIsoSharp` multi-targets `net10.0;net8.0` and is packable. All five expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`. A sixth in-house library, **CHDSharp**, is consumed as a NuGet package and is covered in [§10.4](#104-chdsharp-nuget).
+The solution ships five in-house libraries that replace external tools (maxcso, psxpackager), add CloneCD support, and cover Alcohol 120% and UltraISO images. The app references them as project references. All five are published as NuGet packages for outside consumers — **PBPSharp** (<https://www.nuget.org/packages/PBPSharp>, 1.1.1), **CSOSharp** (<https://www.nuget.org/packages/CSOSharp>, 1.0.0), **CCDSharp** (<https://www.nuget.org/packages/CCDSharp>, 1.0.0), **MDSSharp** (<https://www.nuget.org/packages/MDSSharp>, 1.1.0) and **ISZSharp** (<https://www.nuget.org/packages/ISZSharp>, 1.0.0) — and they all multi-target `net8.0;net9.0;net10.0`, each shipping its XML docs, README and icon; releases are manual (see the repository's AGENTS.md). All five expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`. A sixth in-house library, **CHDSharp**, is consumed as a NuGet package and is covered in [§10.4](#104-chdsharp-nuget).
 
 | Library | Purpose | Replaces |
 |---------|---------|----------|
@@ -13,7 +13,7 @@ The solution ships five in-house libraries that replace external tools (maxcso, 
 | **CSOSharp** | CSO/CISO decompression (deflate/zlib + LZ4) | `maxcso.exe` |
 | **PBPSharp** | PlayStation PBP extraction + SFO/TOC parsing | `psxpackager.exe` |
 | **MDSSharp** | Alcohol 120% `.mds`/`.mdf` parsing, subchannel stripping, split-volume joining, cue writing | — (new capability) |
-| **UltraIsoSharp** | UltraISO ISZ decompression back to the plain image | — (new capability) |
+| **ISZSharp** | UltraISO ISZ decompression back to the plain image | — (new capability) |
 
 ---
 
@@ -78,11 +78,12 @@ The solution ships five in-house libraries that replace external tools (maxcso, 
 - Integration: `ProcessMdsFileForConversionAsync` prepares the work set, then the conversion funnel takes the cue (or DVD image).
 - Tests: `MdsTests.cs`, `SplitImageJoinerTests.cs`.
 
-## 10.6 UltraIsoSharp
+## 10.6 ISZSharp
 
-**Purpose**: decompress UltraISO `.isz` images back to the plain images they were made from, per EZB Systems' ISZ File Format Specification 1.00.
+**Purpose**: decompress UltraISO `.isz` images back to the plain images they were made from, per EZB Systems' ISZ File Format Specification 1.00 plus the real-file behaviours the specification omits.
 
-- Main types: `IszHeader` (packed 48-byte header with `TryRead` validation), `IszDecoder` (`TryReadHeaderAsync`, `DecodeAsync`), `IszSegment`/`IszChunkType`/`IszDecodeResult`.
-- Supports whole and multi-segment images, zlib / bzip2 / stored / zero-elided chunks; encryption is refused by name, truncation and damaged tables are reported rather than guessed at.
+- Main types: `IszHeader` (48/64-byte header with `TryRead` validation and the extended UltraISO checksum fields), `IszDecoder` (`TryReadHeaderAsync`, `DecodeAsync`, `GetSegmentPath`, `GetDecodedFileName`, `ReadChunkEntry`), `IszSegment`/`IszChunkType`/`IszDecodeResult`.
+- Supports whole and multi-segment images (the spec's `.i01`/`.i02` naming and the `.part01.isz`/`.part001.isz` forms), zlib / bzip2 / stored / zero-elided chunks, de-obfuscates the segment and chunk tables (XOR with `B6 8C A5 DE`), restores the `BZh` header stripped from bzip2 chunks, and decodes images whose header declares no chunk table (one raw run).
+- Validates UltraISO's CRC32 of the restored image when the 64-byte header carries one; a mismatch deletes the output and fails like a size shortfall. Encryption is refused by name (AES-128/192/256, password), later segments are matched by volume serial number, and truncation or damaged tables are reported rather than guessed at. A decode that fails after writing starts deletes its partial output.
 - Integration: `ResolveIszAsync` decodes the ISZ to a temp image, which is then classified and converted like any other image.
 - Tests: `IszHeaderTests.cs`, `IszDecoderTests.cs`.
