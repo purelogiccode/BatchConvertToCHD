@@ -197,8 +197,12 @@ internal static class InputFileFilter
                     .OrderBy(static p => p.partNumber)
                     .ToList();
 
+                // ".part1" beside ".part01" parses as the same part number; the spelling whose
+                // continuation is on disk is the one that extracts the set.
+                var firsts = parts.Where(static p => p.partNumber == 1).ToList();
                 var keeper =
-                    parts.FirstOrDefault(static p => p.partNumber == 1).File ?? parts[0].File;
+                    firsts.FirstOrDefault(static p => RarVolumeSet.HasContinuation(p.File)).File
+                    ?? (firsts.Count > 0 ? firsts[0].File : parts[0].File);
 
                 foreach (var part in parts)
                 {

@@ -3661,8 +3661,23 @@ internal partial class MainWindow : IDisposable
             LogMessage($"Deleting source: {originalName} (Option 'Delete originals' is enabled)");
             await TryDeleteFileAsync(inputFile, "original MDS", token);
 
-            if (disc.MdfPath is not null)
-                await TryDeleteFileAsync(disc.MdfPath, "original MDF", token);
+            // Every file the descriptor names is a source, and a first volume stands for its whole
+            // set; deleting only the first would leave the rest of the image behind.
+            var dataFiles = disc.DataFilePaths.Count > 0
+                ? disc.DataFilePaths
+                : disc.MdfPath is not null
+                    ? [disc.MdfPath]
+                    : [];
+            var sources = new List<string>();
+            foreach (var dataFile in dataFiles)
+            {
+                var volumeSet = SplitImageJoiner.TryGetVolumeSet(dataFile);
+                if (volumeSet is null) sources.Add(dataFile);
+                else sources.AddRange(volumeSet);
+            }
+
+            foreach (var source in sources.Distinct(StringComparer.OrdinalIgnoreCase))
+                await TryDeleteFileAsync(source, "original MDF", token);
 
             var subfolder = Path.GetDirectoryName(inputFile);
             if (!string.IsNullOrEmpty(subfolder))

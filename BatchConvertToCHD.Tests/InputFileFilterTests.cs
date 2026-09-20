@@ -397,4 +397,19 @@ public class InputFileFilterTests : IDisposable
         Assert.Equal([aFirst, bFirst], remaining);
         Assert.Equal(2, _log.Count);
     }
+
+    [Fact]
+    public void RemoveRarVolumePartsPrefersTheFirstVolumeSpellingWithAContinuation()
+    {
+        // Both names parse as part 1; only the padded one has its next volume on disk, so that is
+        // the one that has to be kept, whatever order the batch lists them in.
+        var unpadded = CreateFile("game.part1.rar");
+        var padded = CreateFile("game.part01.rar");
+        CreateFile("game.part02.rar");
+
+        var remaining = InputFileFilter.RemoveRarVolumeParts([unpadded, padded], _log.Add);
+
+        Assert.Equal([padded], remaining);
+        Assert.Single(_log);
+    }
 }

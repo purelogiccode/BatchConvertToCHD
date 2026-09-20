@@ -915,4 +915,21 @@ public class MdsTests : IDisposable
         Assert.Equal(2048 * 5, new FileInfo(result.DvdImagePath!).Length);
         Assert.Contains(_log, m => m.Contains("2 data files", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void APartiallyPresentMultiFileDescriptorIsReportedRatherThanTruncated()
+    {
+        // The descriptor names two files and only one is there. Falling back to the file that
+        // happens to exist would hand the preparer a truncated image, so the parse has to fail.
+        var mds = WriteMds(
+            "Partial.mds",
+            0x10,
+            new TrackSpec(0x02, 1, 2048, 0, Files: ["Partial.mdf", "Partial.part2"])
+        );
+        WriteMdf("Partial.mdf", 2048, 1);
+
+        var exception = Assert.Throws<InvalidDataException>(() => MdsParser.Parse(mds));
+
+        Assert.Contains("Partial.part2", exception.Message, StringComparison.Ordinal);
+    }
 }

@@ -363,7 +363,9 @@ public static class IszDecoder
     /// <summary>
     ///     Works out where chunk data lives. Chunks are stored back to back and a single chunk may
     ///     straddle a segment boundary, so the data is treated as one logical stream made of a region
-    ///     per file rather than as separate per-segment sequences.
+    ///     per file rather than as separate per-segment sequences. A later file's region starts at
+    ///     its chunk data offset minus the previous entry's <c>left_size</c>, which is where the
+    ///     straddling chunk's tail is stored.
     /// </summary>
     private static (List<DataRegion> Regions, string? Failure) BuildRegions(
         string iszPath,
@@ -426,11 +428,19 @@ public static class IszDecoder
             // check, with a message about a truncated download, instead of as a read past the end.
             var usableLength =
                 segment.Size > 0 ? Math.Min(actualLength, segment.Size) : actualLength;
-            var start =
-                index == 0 && segment.ChunkOffset == 0
-                    ? header.DataOffset
-                    : (uint)segment.ChunkOffset;
 
+            // A later segment opens with its header and then the tail of the chunk that straddled
+            // the boundary: the previous entry's left_size bytes, which both reference readers place
+            // immediately before the offset this segment's chunk data starts at. Reading from that
+            // offset alone would skip the tail and leave the image short by exactly its length.
+            var start =
+                index == 0
+                    ? segment.ChunkOffset == 0
+                        ? header.DataOffset
+                        : segment.ChunkOffset
+                    : (long)segment.ChunkOffset - segments[index - 1].LeftSize;
+
+            if (start < 0) start = 0;
             if (start < usableLength) regions.Add(new DataRegion(path, start, usableLength - start));
         }
 

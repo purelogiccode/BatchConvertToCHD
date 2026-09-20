@@ -127,6 +127,34 @@ internal static partial class RarVolumeSet
     }
 
     /// <summary>
+    ///     True when the next volume of the set <paramref name="path" /> belongs to is on disk with
+    ///     the same zero-padding. Two spellings of the same first volume (".part1" beside ".part01")
+    ///     parse as the same part number, so the one whose continuation exists is the one that can
+    ///     actually be extracted.
+    /// </summary>
+    /// <param name="path">Path of a <c>.partNN.rar</c> volume.</param>
+    internal static bool HasContinuation(string path)
+    {
+        if (!TryGetPartInfo(path, out var setBaseName, out var partNumber)) return false;
+
+        var digits = PartNumberWidth(path);
+        var directory = Path.GetDirectoryName(path);
+        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) return false;
+
+        return EnumerateParts(directory, setBaseName)
+            .Any(p => p.Number == partNumber + 1 && PartNumberWidth(p.Path) == digits);
+    }
+
+    /// <summary>Digits the part number of a <c>.partNN.rar</c> name was written with, or 0.</summary>
+    /// <param name="path">File path to inspect.</param>
+    private static int PartNumberWidth(string path)
+    {
+        var match = PartNamePattern().Match(Path.GetFileName(path));
+
+        return match.Success ? match.Groups["number"].Value.Length : 0;
+    }
+
+    /// <summary>
     ///     Total size in bytes of every volume of the set <paramref name="path" /> belongs to, or 0
     ///     when a volume cannot be measured.
     /// </summary>

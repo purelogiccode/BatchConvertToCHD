@@ -135,7 +135,7 @@ Generated cue sheets reference the disc image where it already lies rather than 
     * [PBPSharp](https://) (v1.1.0) — Pure C# PBP extraction and SFO parsing
     * [CCDSharp](https://) (v1.0.0) — Pure C# CloneCD (.ccd/.img/.sub) parsing and conversion
     * [MDSSharp](https://) (v1.1.0) — Pure C# Alcohol 120% (.mds/.mdf) parsing and cue preparation
-    * [ISZSharp](https://www.nuget.org/packages/ISZSharp) (v1.0.0) — Pure C# UltraISO ISZ decompression
+    * [ISZSharp](https://www.nuget.org/packages/ISZSharp) (v1.0.1) — Pure C# UltraISO ISZ decompression
     * [SharpCompress](https://github.com/adamhathcock/sharpcompress) (v0.50.4) — Archive extraction, and bzip2 decompression for ISZ images
     * [NAudio](https://github.com/naudio/NAudio) (v3.1.0) — MP3 audio track decoding (Media Foundation)
     * [Serilog](https://serilog.net/) (v4.4.0) — Structured diagnostic logging

@@ -6,8 +6,8 @@
         <LangVersion>latest</LangVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <Company>PureLogicCode.com</Company>
-        <AssemblyVersion>1.0.0</AssemblyVersion>
-        <FileVersion>1.0.0</FileVersion>
+        <AssemblyVersion>1.0.1</AssemblyVersion>
+        <FileVersion>1.0.1</FileVersion>
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -16,7 +16,7 @@
         <!-- NuGet Package Metadata -->
         <IsPackable>true</IsPackable>
         <PackageId>ISZSharp</PackageId>
-        <Version>1.0.0</Version>
+        <Version>1.0.1</Version>
         <Authors>PureLogicCode.com</Authors>
         <Title>ISZSharp</Title>
         <Description>A managed C# library for decompressing UltraISO ISZ disc images back to the plain images they were made from. Supports whole and split ISZ images with zlib, bzip2, stored and zero-elided chunks, the obfuscated chunk and segment tables and stripped bzip2 headers real UltraISO files carry, images with no chunk table, and the three segment naming schemes writers use. Validates the UltraISO checksum when the file carries one, and refuses encrypted or damaged files by name. Ideal for disc image preservation and emulation workflows.</Description>

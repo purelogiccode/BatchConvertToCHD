@@ -217,12 +217,15 @@ internal static class IszImageBuilder
             dataOffset,
             leftSize
         );
+        // The second segment is laid out the way UltraISO writes one: its header, then the tail of
+        // the chunk that straddled the boundary, then the chunk data - which is why its chunk offset
+        // is the header plus that tail, as both reference readers expect.
         WriteSegmentEntry(
             segmentTable.AsSpan(SegmentEntryLength),
             secondLength,
             chunks.Count - chunksStartingInFirst,
             chunksStartingInFirst,
-            headerLength,
+            headerLength + leftSize,
             0
         );
         // Third entry stays zeroed before obfuscation: the spec terminates the table with a zero-size

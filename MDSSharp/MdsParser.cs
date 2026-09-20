@@ -349,9 +349,10 @@ public static class MdsParser
     }
 
     /// <summary>
-    ///     Resolves every data file name the descriptor declares, in order, or null when the
-    ///     descriptor names no files or any of them cannot be found (the caller then falls back to
-    ///     locating the data file by name, which also covers split volumes).
+    ///     Resolves every data file name the descriptor declares, in order. Null means none of the
+    ///     declared names could be found, so the caller falls back to locating the data file by name.
+    ///     When only some are found the image cannot be assembled from what is there, so that is an
+    ///     error rather than a fallback to whichever file happens to be present.
     /// </summary>
     /// <param name="mdsPath">Path of the .mds descriptor.</param>
     /// <param name="declaredNames">File names read from the track footers.</param>
@@ -360,12 +361,26 @@ public static class MdsParser
         if (declaredNames.Count == 0) return null;
 
         var resolved = new List<string>(declaredNames.Count);
+        var missing = new List<string>();
         foreach (var declaredName in declaredNames)
         {
             var path = ResolveDeclaredFile(mdsPath, declaredName);
-            if (path is null) return null;
+            if (path is null)
+            {
+                missing.Add(declaredName);
+                continue;
+            }
 
             if (!resolved.Contains(path, StringComparer.OrdinalIgnoreCase)) resolved.Add(path);
+        }
+
+        if (resolved.Count == 0) return null;
+
+        if (missing.Count > 0)
+        {
+            throw new InvalidDataException(
+                $"the descriptor names data files that are not in its folder: {string.Join(", ", missing)}. The image cannot be assembled without them."
+            );
         }
 
         return resolved;

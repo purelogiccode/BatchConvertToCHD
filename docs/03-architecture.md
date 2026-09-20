@@ -53,7 +53,7 @@ CSharp_BatchConvertToCHD.sln
 │           ├── CdSectorEccEdc.cs          → regenerates sector EDC + Reed-Solomon parity
 │           ├── EcmImageDecoder.cs         → ECM block-stream decoder
 │           └── EcmDecodeResult.cs
-├── BatchConvertToCHD.Tests/               (xUnit, 894 tests; Fixtures/ holds ecm-sample.ecm)
+├── BatchConvertToCHD.Tests/               (xUnit, 896 tests; Fixtures/ holds ecm-sample.ecm)
 ├── MDSSharp/                                (Alcohol 120% .mds/.mdf parsing; net8.0;net9.0;net10.0)
 ├── CCDSharp/                                (CloneCD .ccd/.img/.sub parsing; net10.0;net8.0)
 ├── CSOSharp/                                (CSO/CISO decompression; net10.0;net8.0)
