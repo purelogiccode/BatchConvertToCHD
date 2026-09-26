@@ -17,6 +17,7 @@ internal static class FileExtensions
     internal const string Bin = ".bin";
     internal const string Mds = ".mds";
     internal const string Mdf = ".mdf";
+    internal const string Mdx = ".mdx";
     internal const string Ecm = ".ecm";
 
     // First volumes of split disc images. Later parts (.002, .i01, ...) are found from the first
@@ -65,6 +66,7 @@ internal static class FileExtensions
         Ccd,
         Bin,
         Mds,
+        Mdx,
         Ecm,
         Isz,
         SplitFirstNumbered,
@@ -114,6 +116,7 @@ internal static class FileExtensions
         Raw,
         Ccd,
         Mds,
+        Mdx,
         Isz
     ];
 

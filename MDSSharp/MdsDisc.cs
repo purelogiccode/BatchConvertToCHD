@@ -40,6 +40,25 @@ public sealed record MdsDisc(
     /// </summary>
     public IReadOnlyList<string> DataFilePaths { get; init; } = [];
 
+    /// <summary>
+    ///     True when the descriptor marks the track data as encrypted (a password-protected or TAGES
+    ///     MDS v2 image). The descriptor itself is always decrypted during parsing; only the track
+    ///     data can require a password.
+    /// </summary>
+    public bool HasEncryptedTrackData { get; init; }
+
+    /// <summary>
+    ///     True when the descriptor marks the track data as compressed (an MDS v2 image whose data
+    ///     blocks are stored deflated with a per-track compression table).
+    /// </summary>
+    public bool HasCompressedTrackData { get; init; }
+
+    /// <summary>
+    ///     True when the image is a single-file MDX container: the descriptor and the track data
+    ///     both live in the one file, which is then also the data file.
+    /// </summary>
+    public bool IsMdxContainer { get; init; }
+
     /// <summary>True when the descriptor declares DVD media.</summary>
     public bool IsDvdMedia => MediumType is MdsMedium.Dvd or MdsMedium.DvdMinusR;
 

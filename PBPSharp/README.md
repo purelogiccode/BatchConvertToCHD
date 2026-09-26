@@ -416,6 +416,7 @@ Notes:
 - `ExtractTo` propagates `OperationCanceledException` and `InvalidDataException`.
 - `ExtractToBinCue` writes the BIN first. If extraction fails, a partial BIN file may remain; delete it if the returned error is not `PbpError.None`.
 - `NoIsoIndexException` is what the PSAR parser throws internally when a valid disc container carries no ISO index. `PbpFile.Open` catches it and reports `PbpError.TruncatedPsar`.
+- When a block fails to decompress, `PbpDiagnostics.TakeDetail()` returns a one-line description of the failing block - its index and count, absolute file offset, index-entry length, stored flag, ISO size, disc id and a hex preview of the first bytes, plus the raw-deflate and zlib error messages. The detail is per-thread and cleared when read, so it is never reported twice. Attach it to logs or bug reports; the `PbpError` code alone cannot identify the block.
 
 ## API reference
 
@@ -459,6 +460,13 @@ Represents one disc inside a PBP.
 | Member | Description |
 |---|---|
 | `static string GenerateCueSheet(string binFileName, IReadOnlyList<TocEntry> tocEntries)` | Generates the complete CUE sheet text for the given BIN name and TOC. Data tracks become `MODE2/2352`, audio tracks become `AUDIO`, and audio tracks get an `INDEX 00` position 150 frames before `INDEX 01`. |
+
+### PbpDiagnostics
+
+| Member | Description |
+|---|---|
+| `static void SetDetail(string detail)` | Records a failure detail for the current thread. Called internally when a block fails to inflate. |
+| `static string? TakeDetail()` | Returns the most recent failure detail for the current thread and clears it, or `null` when none was recorded. |
 
 ### Models
 

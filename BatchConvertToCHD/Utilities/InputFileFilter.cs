@@ -22,7 +22,8 @@ internal static class InputFileFilter
             FileExtensions.Ccd,
             FileExtensions.Gdi,
             FileExtensions.Toc,
-            FileExtensions.Mds
+            FileExtensions.Mds,
+            FileExtensions.Mdx
         ],
         StringComparer.OrdinalIgnoreCase
     );

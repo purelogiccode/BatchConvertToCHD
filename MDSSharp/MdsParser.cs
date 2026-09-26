@@ -32,7 +32,7 @@ namespace MDSSharp;
 ///     0x00  u32       offset of the data file name
 ///     0x04  u32       non-zero when the name is stored as UTF-16
 /// </summary>
-public static class MdsParser
+public static partial class MdsParser
 {
     private const string Signature = "MEDIA DESCRIPTOR";
     private const int SignatureLength = 16;
@@ -123,6 +123,10 @@ public static class MdsParser
                 "Not an Alcohol MDS descriptor (missing \"MEDIA DESCRIPTOR\" signature)."
             );
         }
+
+        // A version 2 descriptor is a Daemon Tools MDS v2/MDX container: its descriptor is
+        // encrypted and compressed, so none of the v1 fields can be read before decryption.
+        if (bytes[0x10] >= 2) return ParseV2(mdsPath, bytes);
 
         var medium = ReadMediumType(bytes);
         var sessionCount = BinaryPrimitives.ReadUInt16LittleEndian(
@@ -302,7 +306,7 @@ public static class MdsParser
     /// <summary>Reads a null-terminated UTF-16LE file name.</summary>
     /// <param name="bytes">Whole descriptor.</param>
     /// <param name="nameOffset">Offset of the first character.</param>
-    private static string? ReadWideName(byte[] bytes, uint nameOffset)
+    internal static string? ReadWideName(byte[] bytes, uint nameOffset)
     {
         var maxBytes = (int)Math.Min(MaxFileNameChars * 2L, bytes.Length - (long)nameOffset);
         var length = 0;
@@ -393,7 +397,7 @@ public static class MdsParser
     /// </summary>
     /// <param name="mdsPath">Path of the .mds descriptor.</param>
     /// <param name="declaredName">Name recorded in a track footer.</param>
-    private static string? ResolveDeclaredFile(string mdsPath, string declaredName)
+    internal static string? ResolveDeclaredFile(string mdsPath, string declaredName)
     {
         var directory = Path.GetDirectoryName(mdsPath);
         if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) return null;

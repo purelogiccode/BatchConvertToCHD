@@ -439,6 +439,24 @@ public class BugReportServiceTests
     [InlineData(
         " Cannot convert 'Backup #3 (disc 4).iso': the output folder is not available (Could not find a part of the path 'F:\\compressed iso')."
     )]
+    [InlineData(
+        "Chocobo's Magical Dungeon 2 [NTSC-U] [SLUS-00814].bin.ecm: the ECM file ends part way through a block, so it is truncated. Re-download it and try again."
+    )]
+    [InlineData(
+        "SPYRO.mds could not be read as an Alcohol descriptor: Descriptor reports 8233 sessions, so it is corrupt or truncated."
+    )]
+    [InlineData(
+        "Sweet Home (Homebrew) [mdf] (Wld).mds cannot be converted: the image's track data is encrypted (password-protected or TAGES), so it cannot be decoded. Re-save it without a password first."
+    )]
+    [InlineData(
+        "Game.mds cannot be converted: the track data is encrypted and no password was supplied (or the image is corrupt)."
+    )]
+    [InlineData(
+        "Failed to convert 'Bujingai - The Forsaken City (USA).iso': CHD error occurred (main): A device which does not exist was specified."
+    )]
+    [InlineData(
+        "The bundled chdman.exe may be incompatible with this computer's CPU or Windows version, or was damaged/quarantined by antivirus software."
+    )]
     public void IsExcludedFromBugReport_KnownPatterns_ReturnsTrue(string message)
     {
         Assert.True(BugReportService.IsExcludedFromBugReport(message));

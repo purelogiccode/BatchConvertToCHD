@@ -67,6 +67,22 @@ internal class BugReportService
         "the .mdf data file was not found",
         "MP3 audio track could not be decoded",
         "is not divisible by",
+        // A truncated ECM stream is a user-data problem; the decoder already tells the user to
+        // re-download the file.
+        "ends part way through a block",
+        // Corrupt Alcohol descriptors (including MDS v2 files whose encrypted descriptor fails to
+        // decipher or decompress) are user-data problems.
+        "so it is corrupt or truncated",
+        "could not be read as an Alcohol descriptor",
+        // An MDS v2/MDX image whose track data is password-protected and the user supplied no
+        // password (the app cannot prompt); the message is actionable.
+        "track data is encrypted",
+        // chdman reporting that a drive or device disappeared mid-conversion (unplugged USB drive,
+        // dropped network share) is an environment problem, not an app bug.
+        "A device which does not exist was specified",
+        // The conversion-time counterpart of the startup probe: the bundled chdman build cannot run
+        // on this CPU/Windows version, which is an installation problem.
+        "may be incompatible with this computer's CPU",
         // An image recovered from ECM/ISZ/archive/parts whose size fits no sector layout chdman can
         // read is a user-data problem (truncated or damaged download), not an app bug.
         "not a whole number of 2352-byte",

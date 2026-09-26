@@ -175,6 +175,26 @@ public class MainWindowHelperTests : IDisposable
         Assert.Equal(message, MainWindow.GetChdExtractionErrorMessage(message));
     }
 
+    [Theory]
+    [InlineData("CHD error occurred (main): A device which does not exist was specified.")]
+    [InlineData("The device is not ready")]
+    [InlineData("The system cannot find the drive specified")]
+    public void IsMissingDeviceError_DeviceFailures_ReturnsTrue(string errorOutput)
+    {
+        Assert.True(MainWindow.IsMissingDeviceError(errorOutput));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("Input/output error")]
+    [InlineData("Access denied")]
+    [InlineData("couldn't find bin file")]
+    public void IsMissingDeviceError_OtherFailures_ReturnsFalse(string? errorOutput)
+    {
+        Assert.False(MainWindow.IsMissingDeviceError(errorOutput));
+    }
+
     [Fact]
     public void BuildChdmanExtractArgs_ExtractCd_PinsBinAndForces()
     {

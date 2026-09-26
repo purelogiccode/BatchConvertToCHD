@@ -297,13 +297,47 @@ public sealed class PbpDiscInfo
             try
             {
                 _stream.ReadExactly(inBuffer, 0, entry.Length);
-                bytesRead = DecompressBlock(inBuffer, entry.Length, buffer);
+                try
+                {
+                    bytesRead = DecompressBlock(inBuffer, entry.Length, buffer);
+                }
+                catch (Exception ex)
+                {
+                    // The bare error code loses the failing block's identity; record it so callers
+                    // can attach it to logs and bug reports.
+                    PbpDiagnostics.SetDetail(DescribeBlockFailure(blockIndex, entry, inBuffer, ex));
+                    throw;
+                }
             }
             finally
             {
                 ArrayPool<byte>.Shared.Return(inBuffer);
             }
         }
+    }
+
+    /// <summary>
+    ///     Builds the diagnostic text for a failed block: where the block lives in the file, its
+    ///     index entry, the image geometry and a preview of the stored bytes.
+    /// </summary>
+    /// <param name="blockIndex">Zero-based index of the failing block.</param>
+    /// <param name="entry">The failing block's index entry.</param>
+    /// <param name="inBuffer">The stored bytes, for the preview.</param>
+    /// <param name="exception">The decompression failure.</param>
+    private string DescribeBlockFailure(
+        int blockIndex,
+        IsoIndexEntry entry,
+        byte[] inBuffer,
+        Exception exception
+    )
+    {
+        var absoluteOffset = (long)_psarOffset + PsarIsoOffset + entry.Offset;
+        var previewLength = Math.Min(16, entry.Length);
+        var preview = Convert.ToHexString(inBuffer.AsSpan(0, previewLength));
+
+        return $"block {blockIndex} of {_isoIndex.Count} (disc {Index}, id {DiscId}): "
+            + $"fileOffset=0x{absoluteOffset:X}, length={entry.Length}, uncompressed={entry.Uncompressed}, "
+            + $"isoSize={IsoSize}, first bytes {preview}; {exception.Message}";
     }
 
     /// <summary>
@@ -427,7 +461,9 @@ public sealed class PbpDiscInfo
         // behaviour identical to the reference. A few other PBP authoring tools instead wrap
         // the deflate stream in a zlib container (2-byte header + Adler-32 trailer); those
         // streams always fail raw inflation, so retry the same bytes as a zlib-wrapped stream
-        // before giving up.
+        // before giving up. Both failure messages are kept so the caller can report why the
+        // block was rejected either way.
+        Exception? rawFailure = null;
         try
         {
             return Inflate(compressed, compressedLength, output, noHeader: true);
@@ -439,7 +475,19 @@ public sealed class PbpDiscInfo
                   && compressedLength > 2
                  )
         {
+            rawFailure = ex;
+        }
+
+        try
+        {
             return Inflate(compressed, compressedLength, output, noHeader: false);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidDataException(
+                $"the PSAR block did not inflate as raw deflate ({rawFailure.Message ?? "no error"}) or as a zlib stream ({ex.Message}).",
+                ex
+            );
         }
 
         static int Inflate(
@@ -468,12 +516,15 @@ public sealed class PbpDiscInfo
                     outputMs.Write(writeBuffer, 0, totalRead);
                 }
             }
-            catch (IndexOutOfRangeException)
+            catch (IndexOutOfRangeException ex)
             {
                 // A malformed deflate stream can drive SharpZipLib's Inflater into a raw
                 // IndexOutOfRangeException instead of its own exception type. Normalize it so
                 // callers classify the failure as decompression data rather than an app bug.
-                throw new InvalidDataException("Corrupt deflate stream in PSAR block.");
+                throw new InvalidDataException(
+                    $"the deflate stream is malformed ({ex.Message}).",
+                    ex
+                );
             }
 
             return (int)outputMs.Position;

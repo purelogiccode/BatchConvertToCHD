@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
 [![.NET 8 | 9 | 10](https://img.shields.io/badge/.NET-8.0%20%7C%209.0%20%7C%2010.0-512bd4.svg)](https://dotnet.microsoft.com/download)
 
-**MDSSharp** is a managed C# library for reading **Alcohol 120%** disc images (`.mds` descriptor + `.mdf` data). It parses the MDS session and track tables, locates and reassembles the data file (including `.i00`/`.i01` and `.001`/`.002` split sets), strips CD subchannel tails from oversized sectors, and writes CUE sheets so the image can be converted by `chdman` or other tools.
+**MDSSharp** is a managed C# library for reading **Alcohol 120%** disc images (`.mds` descriptor + `.mdf` data) and **Daemon Tools MDS v2 / MDX** descriptors. It parses the MDS session and track tables, locates and reassembles the data file (including `.i00`/`.i01` and `.001`/`.002` split sets), strips CD subchannel tails from oversized sectors, and writes CUE sheets so the image can be converted by `chdman` or other tools.
 
 The library is the Alcohol 120% conversion engine used by [Batch Convert to CHD](https://github.com/purelogiccode/BatchConvertToCHD), where it prepares `.mds` images for conversion to CHD with `chdman` or [CHDSharp](https://www.nuget.org/packages/CHDSharp).
 
@@ -39,6 +39,7 @@ The library is the Alcohol 120% conversion engine used by [Batch Convert to CHD]
 ## Features
 
 - **MDS descriptor parsing** — reads the medium type, session and track tables of Alcohol 120% descriptors, including track number, mode, sector size, start LBA, subchannel mode and ADR/CTL.
+- **MDS v2 / Daemon Tools descriptors** — decrypts the AES-256 + zlib-obfuscated descriptor (RIPEMD-160 PBKDF2 key derivation, no external crypto dependency), parses the wider v2 session/track/footer blocks and resolves their UTF-16 data file names. Compressed track data (per-track compression tables with stored/RLE/deflate groups) and encrypted track data (AES-256 LRW with GF(2^128) tweaks, including TAGES-style password-less images) are decoded automatically, and single-file `.mdx` containers are read end to end.
 - **Data file resolution** — uses the file names embedded in the track footers (single-byte or UTF-16), falling back to the matching `.mdf`, a split `.i00` first volume, or an unambiguously named file one folder down.
 - **Multi-file and split sets** — joins descriptors that name several data files, plus `.i00`/`.i01` (Alcohol) and `.001`/`.002` (byte-splitter) sets, tolerating case differences and archive-looking extensions.
 - **Subchannel stripping** — rewrites 2448-byte (2352 data + 96 subchannel) and 2368-byte (2352 + 16) images down to the 2352-byte sectors `chdman` reads.
@@ -228,10 +229,10 @@ foreach (var track in disc.Tracks)
 | Exception | Thrown when |
 |---|---|
 | `FileNotFoundException` | The `.mds` passed to `Parse` does not exist. |
-| `InvalidDataException` | The file is not an MDS descriptor, reports implausible session counts, exceeds 1 MB, or contains no readable tracks. |
+| `InvalidDataException` | The file is not an MDS descriptor, reports implausible session counts, exceeds 1 MB, contains no readable tracks, or is an MDS v2/MDX file whose encrypted descriptor cannot be decrypted or decompressed. |
 | `OperationCanceledException` | The cancellation token is signaled during prepare, strip or join. |
 
-`PrepareAsync` and `StripSubchannelAsync` otherwise report failures through their result (`Result.FailureReason`, `null`/message) rather than exceptions, so batch processing can continue past a bad image.
+`PrepareAsync` and `StripSubchannelAsync` otherwise report failures through their result (`Result.FailureReason`, `null`/message) rather than exceptions, so batch processing can continue past a bad image. MDS v2/MDX images with compressed or password-less encrypted track data are decoded automatically; images whose track data needs a user password fail preparation unless the password is supplied as the optional `PrepareAsync(..., password:)` argument.
 
 ## API reference
 
@@ -252,7 +253,7 @@ Turns a parsed image into something `chdman` can read.
 
 | Member | Description |
 |---|---|
-| `static Task<Result> PrepareAsync(MdsDisc disc, string workDir, Action<string>? onLog, CancellationToken token)` | Runs the full pipeline: join, strip and cue. |
+| `static Task<Result> PrepareAsync(MdsDisc disc, string workDir, Action<string>? onLog, CancellationToken token, string? password = null)` | Runs the full pipeline: decode MDS v2/MDX track data when needed, join, strip and cue. Pass `password` for images whose track data is password-protected. |
 | `static Task<string?> StripSubchannelAsync(string sourcePath, string destinationPath, int sectorSize, CancellationToken token)` | Keeps the 2352 data bytes of each oversized sector. `null` on success. |
 | `static Task<string> WriteCueAsync(MdsDisc disc, string workDir, string dataFileReference, CancellationToken token, bool pregapsInFile = false)` | Writes a single-file CUE and returns its path. `pregapsInFile` adds `INDEX 00` for tracks whose pregap sectors are present in the referenced file. |
 | `static string FormatMsf(long lba)` | Formats an absolute LBA as `MM:SS:FF`. |
@@ -270,13 +271,14 @@ Turns a parsed image into something `chdman` can read.
 | Type | Description |
 |---|---|
 | `MdsMedium` | Medium type: `Cd`, `CdR`, `CdRw`, `Dvd`, `DvdMinusR`, or `Unknown`. |
-| `MdsDisc` | Parsed image: `SessionCount`, `Tracks`, `MdsPath`, `MdfPath`, `MediumType`, `DataFilePaths`, plus constants (`RawSectorSize` 2352, `RawPlusSubchannelSize` 2448, `RawPlusShortSubchannelSize` 2368, `Mode2XaSectorSize` 2336, `CookedSectorSize` 2048) and computed `SectorSize`, `IsDvdImage`, `IsCookedCd`, `IsDvdMedia`, `IsCdMedia`, `NeedsSubchannelStrip`, `IsPlainRawCd`, `AllTracksDescribable`, `HasPregapInfo`, `Summary`. |
+| `MdsDisc` | Parsed image: `SessionCount`, `Tracks`, `MdsPath`, `MdfPath`, `MediumType`, `DataFilePaths`, `HasEncryptedTrackData`, `HasCompressedTrackData`, `IsMdxContainer`, plus constants (`RawSectorSize` 2352, `RawPlusSubchannelSize` 2448, `RawPlusShortSubchannelSize` 2368, `Mode2XaSectorSize` 2336, `CookedSectorSize` 2048) and computed `SectorSize`, `IsDvdImage`, `IsCookedCd`, `IsDvdMedia`, `IsCdMedia`, `NeedsSubchannelStrip`, `IsPlainRawCd`, `AllTracksDescribable`, `HasPregapInfo`, `Summary`. |
 | `MdsTrack` | One track: `Number`, `ModeByte`, `SectorSize`, `StartLba`, `PregapSectors`, `LengthSectors`, `SubchannelMode`, `AdrCtl`, plus computed `IsAudio`, `CueTrackType`, `Description`. |
 | `MdsInputPreparer.Result` | Preparation outcome: `CuePath`, `DvdImagePath`, `FailureReason`, `Success`. |
 
 ## Supported images
 
 - **Descriptors** — `MEDIA DESCRIPTOR` signature, medium type, session table and track table, plus the per-track extra blocks (pregap and length) and footer blocks (data file names). Up to 99 sessions; lead-in and lead-out entries are skipped.
+- **MDS v2 / MDX descriptors** — the Daemon Tools variant (`MEDIA DESCRIPTOR` + version 2). The descriptor is decrypted and decompressed transparently, and its 32-byte session, 80-byte track and 32-byte footer blocks are parsed, including UTF-16 file names. Compressed tracks are decoded from their compression tables (stored, run-length and deflate groups); encrypted tracks are decrypted with AES-256 LRW (password-less/TAGES or a supplied password); single-file `.mdx` containers keep their descriptor and data in one file, which is read directly.
 - **Medium types** — CD, CD-R, CD-RW (0x00–0x02) and DVD, DVD-R (0x10, 0x12); other values fall back to inspecting the sector sizes.
 - **Track modes** — audio, Mode 1 and the Mode 2 forms, selected by the low nibble of the mode byte and mapped to `AUDIO`, `MODE1/2352`/`MODE1/2048` and `MODE2/2352`/`MODE2/2336`.
 - **Data files** — one or more files named by the descriptor (single-byte or UTF-16 names, `*.mdf` wildcards), split `.i00`/`.i01` sets, split `.001`/`.002` sets.

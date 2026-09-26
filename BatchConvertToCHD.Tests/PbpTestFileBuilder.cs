@@ -28,6 +28,7 @@ internal sealed class PbpTestFileBuilder
     private string _discId = "SLUS00001";
     private bool _multiDisc;
     private List<int>? _multiDiscPositions;
+    private int _corruptBlockIndex = -1;
 
     private string _title = "Test Game";
 
@@ -113,6 +114,18 @@ internal sealed class PbpTestFileBuilder
     public PbpTestFileBuilder WithCustomIsoBlock1Data(byte[] data)
     {
         _customIsoBlock1Data = data;
+        return this;
+    }
+
+    /// <summary>
+    ///     Writes garbage bytes for one ISO data block while keeping its index entry consistent, so
+    ///     extraction reaches the block and fails to inflate it. Used to exercise the diagnostics
+    ///     channel; pick an index above 1 so the open-time ISO size probe still succeeds.
+    /// </summary>
+    /// <param name="blockIndex">Zero-based block index to corrupt.</param>
+    public PbpTestFileBuilder WithCorruptBlock(int blockIndex)
+    {
+        _corruptBlockIndex = blockIndex;
         return this;
     }
 
@@ -362,6 +375,16 @@ internal sealed class PbpTestFileBuilder
         for (var i = 0; i < blockCount; i++)
         {
             var blockData = GetBlockData(i);
+
+            if (i == _corruptBlockIndex)
+            {
+                // Same stored length as the valid block, but not a deflate stream at all.
+                var length = _compressBlocks ? CompressBlock(blockData).Length : BlockSize;
+                var garbage = new byte[length];
+                Array.Fill(garbage, (byte)0xFF);
+                stream.Write(garbage);
+                continue;
+            }
 
             if (_compressBlocks)
             {

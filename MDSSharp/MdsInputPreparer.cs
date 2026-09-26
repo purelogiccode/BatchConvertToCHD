@@ -32,11 +32,16 @@ public static class MdsInputPreparer
     /// <param name="workDir">Existing directory for generated files.</param>
     /// <param name="onLog">Optional logging callback.</param>
     /// <param name="token">Cancellation token.</param>
+    /// <param name="password">
+    ///     Password for MDS v2 images whose track data is encrypted, or null. Images encrypted
+    ///     without a user password (TAGES-style) are decoded automatically.
+    /// </param>
     public static async Task<Result> PrepareAsync(
         MdsDisc disc,
         string workDir,
         Action<string>? onLog,
-        CancellationToken token
+        CancellationToken token,
+        string? password = null
     )
     {
         if (disc.Tracks.Count == 0)
@@ -52,18 +57,31 @@ public static class MdsInputPreparer
             return Result.Failed("the .mdf data file was not found next to the .mds descriptor");
 
         string dataFilePath;
-        try
+        if (disc.HasEncryptedTrackData || disc.HasCompressedTrackData || disc.IsMdxContainer)
         {
-            dataFilePath = await JoinDataFilesAsync(disc, workDir, dataFiles, onLog, token)
+            var (decodedPath, failureReason) = await MdsV2DataDecoder
+                .DecodeAsync(disc, workDir, password, onLog, token)
                 .ConfigureAwait(false);
+            if (decodedPath is null)
+                return Result.Failed(failureReason ?? "the image's track data could not be decoded");
+
+            dataFilePath = decodedPath;
         }
-        catch (OperationCanceledException)
+        else
         {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            return Result.Failed($"the data files could not be joined: {ex.Message}");
+            try
+            {
+                dataFilePath = await JoinDataFilesAsync(disc, workDir, dataFiles, onLog, token)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                return Result.Failed($"the data files could not be joined: {ex.Message}");
+            }
         }
 
         if (disc.IsDvdImage)

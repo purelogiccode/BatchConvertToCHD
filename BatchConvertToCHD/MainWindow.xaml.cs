@@ -6,7 +6,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography;
-using System.Security.Principal;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -552,14 +551,6 @@ internal partial class MainWindow : IDisposable
                 return false;
             }
 
-            // Check for execution permissions by verifying file attributes
-            var fileInfo = new FileInfo(exePath);
-            if (fileInfo.Attributes.HasFlag(FileAttributes.ReadOnly) && !IsRunningAsAdmin())
-            {
-                // Read-only files can still be executed, but log a warning
-                LogWarning($" {exeName} is read-only.");
-            }
-
             return true;
         }
         catch (UnauthorizedAccessException)
@@ -574,23 +565,6 @@ internal partial class MainWindow : IDisposable
             ShowError(
                 $"Cannot access {exeName}. Check permissions and ensure the file is not in use."
             );
-            return false;
-        }
-    }
-
-    /// <summary>
-    ///     Checks if the application is running with administrator privileges.
-    /// </summary>
-    private static bool IsRunningAsAdmin()
-    {
-        try
-        {
-            var identity = WindowsIdentity.GetCurrent();
-            var principal = new WindowsPrincipal(identity);
-            return principal.IsInRole(WindowsBuiltInRole.Administrator);
-        }
-        catch
-        {
             return false;
         }
     }
@@ -2061,7 +2035,10 @@ internal partial class MainWindow : IDisposable
                     deleteOriginal
                 );
             }
-            else if (ext.Equals(FileExtensions.Mds, StringComparison.OrdinalIgnoreCase))
+            else if (
+                ext.Equals(FileExtensions.Mds, StringComparison.OrdinalIgnoreCase)
+                || ext.Equals(FileExtensions.Mdx, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 return await ProcessMdsFileForConversionAsync(
                     inputFile,
@@ -2341,6 +2318,7 @@ internal partial class MainWindow : IDisposable
             or FileExtensions.Toc
             or FileExtensions.Ccd
             or FileExtensions.Mds
+            or FileExtensions.Mdx
         )
         {
             return null;
@@ -2650,7 +2628,7 @@ internal partial class MainWindow : IDisposable
                 return await ResolveIszAsync(selected, originalName, outputFolder, tempDirs, token);
             // chdman cannot read these descriptors directly and their resolvers need a conversion
             // loop this single-path resolution cannot run, so they stay a manual job.
-            case FileExtensions.Ccd or FileExtensions.Mds:
+            case FileExtensions.Ccd or FileExtensions.Mds or FileExtensions.Mdx:
                 return ResolvedInput.Skip(
                     $"the extracted set contains a {selectedExt.TrimStart('.')} descriptor. Extract the set manually and add the descriptor directly."
                 );
@@ -3223,7 +3201,10 @@ internal partial class MainWindow : IDisposable
                     token
                 );
             }
-            else if (extractedExt.Equals(FileExtensions.Mds, StringComparison.OrdinalIgnoreCase))
+            else if (
+                extractedExt.Equals(FileExtensions.Mds, StringComparison.OrdinalIgnoreCase)
+                || extractedExt.Equals(FileExtensions.Mdx, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 // Same for an Alcohol set: the descriptor has to become a cue first.
                 converted = await ConvertMdsViaCueAsync(
@@ -3560,6 +3541,15 @@ internal partial class MainWindow : IDisposable
         // second copy of the disc, so the work directory has to be chosen with room for it.
         long requiredBytes = 0;
         if (
+            disc.HasEncryptedTrackData
+            || disc.HasCompressedTrackData
+            || disc.IsMdxContainer
+        )
+        {
+            // MDS v2/MDX track data is decoded to a plain image in the work directory first.
+            requiredBytes = disc.Tracks.Sum(static t => t.LengthSectors * t.SectorSize);
+        }
+        else if (
             disc is { MdfPath: not null }
             && (disc.NeedsSubchannelStrip || disc.HasPregapInfo || disc.DataFilePaths.Count > 1)
         )
@@ -3609,6 +3599,16 @@ internal partial class MainWindow : IDisposable
         if (!prepared.Success)
         {
             LogError($" {originalName} cannot be converted: {prepared.FailureReason}.");
+            if (
+                prepared.FailureReason?.Contains("password", StringComparison.OrdinalIgnoreCase)
+                == true
+            )
+            {
+                LogMessage(
+                    "       Password-protected MDS v2/MDX images cannot be prompted for; re-save the image without a password first."
+                );
+            }
+
             return false;
         }
 
@@ -3831,7 +3831,15 @@ internal partial class MainWindow : IDisposable
         LogMessage($"MDS: {Path.GetFileName(mdsPath)} - {disc.Summary}");
 
         long requiredBytes = 0;
-        if (disc is { NeedsSubchannelStrip: true, MdfPath: not null })
+        if (
+            disc.HasEncryptedTrackData
+            || disc.HasCompressedTrackData
+            || disc.IsMdxContainer
+        )
+        {
+            requiredBytes = disc.Tracks.Sum(static t => t.LengthSectors * t.SectorSize);
+        }
+        else if (disc is { NeedsSubchannelStrip: true, MdfPath: not null })
         {
             try
             {
@@ -3871,6 +3879,16 @@ internal partial class MainWindow : IDisposable
             LogError(
                 $" {Path.GetFileName(mdsPath)} cannot be converted: {prepared.FailureReason}."
             );
+            if (
+                prepared.FailureReason?.Contains("password", StringComparison.OrdinalIgnoreCase)
+                == true
+            )
+            {
+                LogMessage(
+                    "       Password-protected MDS v2/MDX images cannot be prompted for; re-save the image without a password first."
+                );
+            }
+
             return false;
         }
 
@@ -4595,18 +4613,35 @@ internal partial class MainWindow : IDisposable
 
                     await using (chd)
                     {
-                        if (extractCommand is "extractdvd" or "extracthd")
+                        try
                         {
-                            ExtractChdToSingleFile(chd, outputFile, token);
+                            if (extractCommand is "extractdvd" or "extracthd")
+                            {
+                                ExtractChdToSingleFile(chd, outputFile, token);
+                            }
+                            else
+                            {
+                                await ExtractChdTracksToDirectory(
+                                    chd,
+                                    chdFile,
+                                    targetDir,
+                                    fileName,
+                                    token
+                                );
+                            }
                         }
-                        else
+                        catch (OperationCanceledException)
                         {
-                            await ExtractChdTracksToDirectory(
-                                chd,
-                                chdFile,
-                                targetDir,
-                                fileName,
-                                token
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                            // Attach the CHD header fields that identify the image while it is
+                            // still open, then surface the enriched failure to the handler below
+                            // for the chdman fallback.
+                            throw new InvalidDataException(
+                                $"{ex.Message} [{BuildChdDiagnostics(chd)}]",
+                                ex
                             );
                         }
                     }
@@ -4640,7 +4675,8 @@ internal partial class MainWindow : IDisposable
             else
             {
                 LogError(
-                    $" Failed to extract '{Path.GetFileName(chdFile)}': {GetChdExtractionErrorMessage(ex.Message)}"
+                    $" Failed to extract '{Path.GetFileName(chdFile)}': {GetChdExtractionErrorMessage(ex.Message)}",
+                    ex
                 );
 
                 // CHDSharp could not decode this CHD (corrupt file, A/V laserdisc CHD, or a
@@ -4746,7 +4782,28 @@ internal partial class MainWindow : IDisposable
         try
         {
             token.ThrowIfCancellationRequested();
-            var extractedFiles = chd.ExtractToDirectory(tempExtractDir, baseFileName);
+            // The reporting variant returns per-track results instead of stopping at the first
+            // failure, so the log and bug report can name the track(s) that failed to decode.
+            var result = chd.ExtractToDirectoryWithReporting(
+                tempExtractDir,
+                baseFileName,
+                null,
+                token
+            );
+            if (!result.IsCompleteSuccess)
+            {
+                var builder = new StringBuilder("Extraction failed");
+                if (result.Error != ChdError.Chderrnone)
+                    builder.Append(": ").Append(result.Error);
+                foreach (var track in result.TrackResults.Where(static r => !r.IsSuccess))
+                {
+                    builder.Append("; track ").Append(track.TrackNumber).Append(": ").Append(track.Error);
+                }
+
+                throw new InvalidDataException(builder.ToString());
+            }
+
+            var extractedFiles = result.CreatedFiles;
 
             if (extractedFiles.Count == 0)
             {
@@ -5770,6 +5827,15 @@ internal partial class MainWindow : IDisposable
                     "       Choose a different output folder (e.g. Documents or a data drive) or run as administrator."
                 );
             }
+            else if (IsMissingDeviceError(errorTextFinal))
+            {
+                LogError(
+                    $" Conversion of '{Path.GetFileName(originalInputFile)}' failed because a drive or device is no longer available. The source or output drive was disconnected or removed while converting (USB drive, network share, or virtual drive)."
+                );
+                LogMessage(
+                    "       Reconnect the drive, or copy the source file to a local drive and convert again."
+                );
+            }
             else if (errorTextFinal.Length > 0)
             {
                 var errorLine = SelectChdmanErrorLine(errorTextFinal);
@@ -6086,6 +6152,40 @@ internal partial class MainWindow : IDisposable
     }
 
     /// <summary>
+    ///     Builds the diagnostic suffix attached to a CHDSharp extraction failure: the CHD header
+    ///     fields that identify the image (version, codecs, geometry, hashes), so a report is
+    ///     classifiable even when the library returns only a numeric error code.
+    /// </summary>
+    /// <param name="chd">The opened CHD.</param>
+    private static string BuildChdDiagnostics(ChdFile chd)
+    {
+        var builder = new StringBuilder();
+        builder
+            .Append("CHD v")
+            .Append(chd.Version)
+            .Append(" compression=")
+            .Append(string.Join(",", chd.Compression))
+            .Append(" secondary=")
+            .Append(chd.SecondaryCodec)
+            .Append(" hunks=")
+            .Append(chd.HunkCount)
+            .Append(" hunkBytes=")
+            .Append(chd.HunkBytes)
+            .Append(" totalBytes=")
+            .Append(chd.TotalBytes)
+            .Append(" cd=")
+            .Append(chd.IsCd)
+            .Append(" gdRom=")
+            .Append(chd.IsGdRom)
+            .Append(" dvd=")
+            .Append(chd.IsDvd)
+            .Append(" sha1=")
+            .Append(chd.Sha1 is { Length: > 0 } sha1 ? Convert.ToHexString(sha1) : "n/a");
+
+        return builder.ToString();
+    }
+
+    /// <summary>
     ///     Builds the chdman argument string for an extraction command, matching the app's existing
     ///     chdman arg style (short -i/-o flags, -f to force overwrite). extractcd also pins the bin
     ///     output name (-ob) so the app knows exactly where the data file lands.
@@ -6341,6 +6441,61 @@ internal partial class MainWindow : IDisposable
         }
     }
 
+    /// <summary>
+    ///     Builds the failure message for a disc whose PSAR extraction failed, attaching the image
+    ///     geometry and the library's block-level diagnostics so the report identifies the failing
+    ///     block and the inflate errors rather than only the numeric code.
+    /// </summary>
+    /// <param name="pbpFile">The opened PBP container.</param>
+    /// <param name="disc">The disc that failed to extract.</param>
+    /// <param name="binPath">Partial BIN path, used to count the blocks written before the failure.</param>
+    /// <param name="error">The error code the library returned.</param>
+    private static string BuildPbpFailureDetail(
+        PbpFile pbpFile,
+        PbpDiscInfo disc,
+        string binPath,
+        PbpError error
+    )
+    {
+        var builder = new StringBuilder();
+        builder
+            .Append("Failed to extract disc ")
+            .Append(disc.Index)
+            .Append(" of ")
+            .Append(pbpFile.Discs.Count)
+            .Append(": ")
+            .Append(error)
+            .Append(" (code ")
+            .Append((int)error)
+            .Append("); blocks=")
+            .Append(disc.BlockCount)
+            .Append(", isoSize=")
+            .Append(disc.IsoSize)
+            .Append(", discId=")
+            .Append(disc.DiscId)
+            .Append(", psarOffset=0x")
+            .Append(pbpFile.Header.DataPsarOffset.ToString("X", CultureInfo.InvariantCulture));
+
+        try
+        {
+            if (File.Exists(binPath))
+            {
+                builder
+                    .Append(", blocksWritten=")
+                    .Append(new FileInfo(binPath).Length / PbpDiscInfo.IsoBlockSize);
+            }
+        }
+        catch
+        {
+            // Diagnostics must never mask the original failure.
+        }
+
+        var detail = PbpDiagnostics.TakeDetail();
+        if (!string.IsNullOrWhiteSpace(detail)) builder.Append("; ").Append(detail);
+
+        return builder.ToString();
+    }
+
     private static async Task<PbpExtractionResult> ExtractPbpToCueBinAsync(
         string inputFile,
         string outputFolder,
@@ -6387,8 +6542,12 @@ internal partial class MainWindow : IDisposable
                                 return (
                                     Success: false,
                                     CuePaths: new List<string>(),
-                                    Error:
-                                    $"Failed to extract disc {t.Index} of {pbpFile.Discs.Count}: {extractError} (code {(int)extractError})",
+                                    Error: BuildPbpFailureDetail(
+                                        pbpFile,
+                                        t,
+                                        binPath,
+                                        extractError
+                                    ),
                                     ErrorCode: extractError
                                 );
                             }
@@ -6818,6 +6977,27 @@ internal partial class MainWindow : IDisposable
         return errorOutput.Contains("Permission denied", StringComparison.OrdinalIgnoreCase)
                || errorOutput.Contains("Access denied", StringComparison.OrdinalIgnoreCase)
                || errorOutput.Contains("UnauthorizedAccess", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    ///     True when chdman reports a Win32 "device does not exist" class of failure, which means the
+    ///     source or output drive disappeared mid-conversion (an unplugged USB drive, a dropped network
+    ///     share, or a removed virtual drive) rather than the disc image being at fault.
+    /// </summary>
+    internal static bool IsMissingDeviceError(string? errorOutput)
+    {
+        if (string.IsNullOrEmpty(errorOutput))
+            return false;
+
+        return errorOutput.Contains(
+                   "A device which does not exist was specified",
+                   StringComparison.OrdinalIgnoreCase
+               )
+               || errorOutput.Contains("The device is not ready", StringComparison.OrdinalIgnoreCase)
+               || errorOutput.Contains(
+                   "The system cannot find the drive specified",
+                   StringComparison.OrdinalIgnoreCase
+               );
     }
 
     /// <summary>

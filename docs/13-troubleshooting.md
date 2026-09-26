@@ -42,12 +42,16 @@ Common messages, their meaning, and what to do.
 | A `.pbp` extracts but the log shows no game title / disc ID | The PARAM.SFO inside the PBP is missing or corrupt. Extraction no longer requires the SFO — only the metadata is empty. | Informational; the disc converts anyway. |
 | `Retrying with createdvd (unrecognized track type)...` | A CD attempt failed; the app retries as DVD. | Usually succeeds automatically. If it fails again, force CD/DVD manually. |
 | `chdman exited with code N but produced a valid output file...` | Non-zero exit but a valid output; treated as success. | Informational — nothing to do. |
+| `Conversion of '<file>' failed because a drive or device is no longer available...` | chdman reported a Win32 "device does not exist" error: the source or output drive was unplugged or a network share dropped while converting. | Reconnect the drive, or copy the source file to a local drive and convert again. |
 
 ## 13.2 Archive Errors
 
 | Message | Meaning | Action |
 |---------|---------|--------|
 | `... multi-part RAR with a missing volume ...` | A multi-part RAR (`.partNN.rar`, old-style `.rar` + `.rNN`, or a set renamed `.001`/`.002`) is missing one or more volumes, or the first volume is not beside the part that was offered. | Download all volumes of the set into the same folder. The app extracts the set from its first volume automatically; later parts are not converted separately. |
+| `<name>.mds cannot be converted: the image's track data is encrypted (password-protected or TAGES)...` | The Daemon Tools MDS v2 descriptor was decrypted, but the track data itself is encrypted. | Re-save the image without a password in Daemon Tools/Alcohol, or convert it to ISO first. |
+| `<name>.mds cannot be converted: the track data is encrypted and no password was supplied...` | The MDS v2/MDX image's track data needs a password, and the app cannot prompt for one. | Re-save the image without a password, or convert it with a tool that accepts the password. Images encrypted without a user password (TAGES-style) decode automatically. |
+| MDS v2 / MDX images | Daemon Tools MDS v2 descriptors are decrypted and decompressed transparently; compressed track data and single-file `.mdx` containers are decoded automatically. | Nothing to do — conversion proceeds like any other image. |
 | `Skipping <name>.partNN.rar - part N of a multi-part RAR set; <name>.part01.rar extracts the whole set.` | Informational. The folder scan found every volume of a multi-part RAR; only the first is kept because it decodes the whole set. | Nothing to do. |
 | `... Archive is encrypted ...` | The archive is password-protected. | Password-protected archives are not supported; extract manually first. |
 | `... compression method that is not supported ...` | The ZIP uses Deflate64/LZMA/PPMd, which the extractor can't read. | Re-zip with standard Deflate, or extract manually first. |

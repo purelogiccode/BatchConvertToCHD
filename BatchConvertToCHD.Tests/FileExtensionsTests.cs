@@ -91,6 +91,7 @@ public class FileExtensionsTests
             ".raw",
             ".ccd",
             ".mds",
+            ".mdx",
             ".isz"
         };
         Assert.Equal(expected, FileExtensions.PrimaryTargetExtensions);
@@ -148,6 +149,7 @@ public class FileExtensionsTests
             ".ccd",
             ".bin",
             ".mds",
+            ".mdx",
             ".ecm",
             ".isz",
             ".001",
