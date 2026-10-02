@@ -147,5 +147,8 @@ internal static class Ripemd160
     /// <summary>Rotates a 32-bit value left.</summary>
     /// <param name="value">Value to rotate.</param>
     /// <param name="bits">Bit count.</param>
-    private static uint RotateLeft(uint value, int bits) => (value << bits) | (value >> (32 - bits));
+    private static uint RotateLeft(uint value, int bits)
+    {
+        return (value << bits) | (value >> (32 - bits));
+    }
 }
