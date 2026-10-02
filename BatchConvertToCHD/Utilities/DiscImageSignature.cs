@@ -1,7 +1,6 @@
-using System.IO;
 using System.Text;
 
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Identifies files by their leading bytes instead of trusting the extension.

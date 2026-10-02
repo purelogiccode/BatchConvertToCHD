@@ -685,10 +685,10 @@
 
                     <Border
                         Grid.Column="2"
-                        BorderBrush="{StaticResource TerminalBorderBrush}"
+                        BorderBrush="{DynamicResource TerminalBorderBrush}"
                         BorderThickness="2"
                         CornerRadius="4"
-                        Background="{StaticResource TerminalBackgroundBrush}"
+                        Background="{DynamicResource TerminalBackgroundBrush}"
                         ToolTip="Real-time application activity log">
                         <TextBox
                             x:Name="LogViewer"
@@ -718,7 +718,7 @@
                             <TextBlock
                                 Text="TOTAL FILES"
                                 Style="{StaticResource StatLabelStyle}"
-                                Foreground="{StaticResource TextSecondaryBrush}"
+                                Foreground="{DynamicResource TextSecondaryBrush}"
                                 ToolTip="Total number of files selected for processing" />
                             <TextBlock
                                 x:Name="TotalFilesValue"
@@ -777,7 +777,7 @@
                             <TextBlock
                                 Text="ELAPSED"
                                 Style="{StaticResource StatLabelStyle}"
-                                Foreground="{StaticResource TextSecondaryBrush}"
+                                Foreground="{DynamicResource TextSecondaryBrush}"
                                 ToolTip="Total time elapsed during the current or last batch operation" />
                             <TextBlock
                                 x:Name="ProcessingTimeValue"
@@ -800,7 +800,7 @@
                             <TextBlock
                                 Text="SPEED"
                                 Style="{StaticResource StatLabelStyle}"
-                                Foreground="{StaticResource TextSecondaryBrush}"
+                                Foreground="{DynamicResource TextSecondaryBrush}"
                                 ToolTip="Average processing speed of the current batch operation" />
                             <TextBlock
                                 x:Name="SpeedValue"
@@ -896,13 +896,13 @@
                         <TextBlock
                             x:Name="StatusBarChdSharp"
                             Text="CHDSharp"
-                            Foreground="{StaticResource SuccessTextBrush}"
+                            Foreground="{DynamicResource SuccessTextBrush}"
                             Margin="0,0,5,0"
                             ToolTip="Status of CHDSharp.exe (fallback encoder)" />
                         <TextBlock
                             x:Name="StatusBarChdman"
                             Text="CHDMAN"
-                            Foreground="{StaticResource SuccessTextBrush}"
+                            Foreground="{DynamicResource SuccessTextBrush}"
                             Margin="0"
                             ToolTip="Status of chdman.exe (primary encoder)" />
                     </StackPanel>

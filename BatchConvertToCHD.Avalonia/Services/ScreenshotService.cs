@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
@@ -21,7 +20,7 @@ internal sealed class ScreenshotService
     ///     when the capture failed.
     /// </summary>
     /// <param name="window">The window to capture.</param>
-    internal string? TakeScreenshot(Window window)
+    internal static string? TakeScreenshot(Window window)
     {
         try
         {

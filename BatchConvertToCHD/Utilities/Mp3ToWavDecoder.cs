@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.IO;
 #if WINDOWS
 using System.Runtime.Versioning;
 using NAudio.MediaFoundation;
@@ -7,7 +6,7 @@ using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 #endif
 
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     MP3 → WAV decoder. chdman cannot read MP3 audio tracks in cue sheets ("Unhandled track type

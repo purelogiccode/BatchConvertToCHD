@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace BatchConvertToCHD.Utilities.Ecm;
+namespace BatchConvertToCHD.Ecm;
 
 /// <summary>
 ///     Regenerates the error detection and correction fields of a raw 2352-byte CD sector.

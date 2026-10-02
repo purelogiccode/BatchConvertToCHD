@@ -1,4 +1,4 @@
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Centralized constants for file extensions used throughout the application.

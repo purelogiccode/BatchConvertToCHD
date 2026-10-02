@@ -1,9 +1,7 @@
 using System.Diagnostics;
-using System.IO;
 using System.IO.Compression;
 using System.Security;
 using System.Text;
-using BatchConvertToCHD.Utilities;
 using CSOSharp;
 using CSOSharp.Models;
 using Serilog;

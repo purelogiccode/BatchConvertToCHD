@@ -1,9 +1,8 @@
 using System.Globalization;
-using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Builds a cue for a set of split track bins that arrived without one.

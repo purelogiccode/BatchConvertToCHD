@@ -1,9 +1,8 @@
 using System.Globalization;
-using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Parses a CUE sheet with encoding detection, resolves every referenced file against the filesystem

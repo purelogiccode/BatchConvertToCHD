@@ -213,7 +213,7 @@ public class MdsV2Tests : IDisposable
         );
 
         Assert.False(result.Success);
-        Assert.Contains("password", result.FailureReason!, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("password", result.FailureReason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

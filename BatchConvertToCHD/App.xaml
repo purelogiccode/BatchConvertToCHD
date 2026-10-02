@@ -41,8 +41,8 @@
             <Style x:Key="TerminalLogTextBox" TargetType="TextBox">
                 <Setter Property="FontFamily" Value="Consolas" />
                 <Setter Property="FontSize" Value="12" />
-                <Setter Property="Background" Value="{StaticResource TerminalBackgroundBrush}" />
-                <Setter Property="Foreground" Value="{StaticResource TerminalForegroundBrush}" />
+                <Setter Property="Background" Value="{DynamicResource TerminalBackgroundBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TerminalForegroundBrush}" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Padding" Value="10" />
                 <Setter Property="AcceptsReturn" Value="True" />
@@ -51,7 +51,7 @@
                 <Setter Property="IsReadOnly" Value="True" />
                 <Setter Property="TextAlignment" Value="Left" />
                 <Setter Property="TextWrapping" Value="NoWrap" />
-                <Setter Property="CaretBrush" Value="{StaticResource TerminalForegroundBrush}" />
+                <Setter Property="CaretBrush" Value="{DynamicResource TerminalForegroundBrush}" />
                 <Setter Property="VerticalAlignment" Value="Stretch" />
                 <Setter Property="VerticalContentAlignment" Value="Top" />
             </Style>
@@ -84,14 +84,14 @@
                 x:Key="StatLabelSuccessStyle"
                 TargetType="TextBlock"
                 BasedOn="{StaticResource StatLabelStyle}">
-                <Setter Property="Foreground" Value="{StaticResource SuccessTextBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" />
             </Style>
 
             <Style
                 x:Key="StatLabelFailedStyle"
                 TargetType="TextBlock"
                 BasedOn="{StaticResource StatLabelStyle}">
-                <Setter Property="Foreground" Value="{StaticResource FailedTextBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource FailedTextBrush}" />
             </Style>
 
             <!-- Stat Card Value (the numeric value in stat cards) -->
@@ -105,34 +105,34 @@
                 x:Key="StatValueSuccessStyle"
                 TargetType="TextBlock"
                 BasedOn="{StaticResource StatValueStyle}">
-                <Setter Property="Foreground" Value="{StaticResource SuccessTextBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" />
             </Style>
 
             <Style
                 x:Key="StatValueFailedStyle"
                 TargetType="TextBlock"
                 BasedOn="{StaticResource StatValueStyle}">
-                <Setter Property="Foreground" Value="{StaticResource FailedTextBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource FailedTextBrush}" />
             </Style>
 
             <!-- ==================== TITLE / HEADER STYLES ==================== -->
             <Style x:Key="HeaderTitleStyle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="20" />
                 <Setter Property="FontWeight" Value="Bold" />
-                <Setter Property="Foreground" Value="{StaticResource HeaderTextBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource HeaderTextBrush}" />
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
 
             <Style x:Key="SectionLabelStyle" TargetType="Label">
                 <Setter Property="FontWeight" Value="Bold" />
-                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
 
             <!-- ==================== DATA GRID STYLES ==================== -->
             <Style TargetType="DataGrid">
-                <Setter Property="Background" Value="{StaticResource TerminalBackgroundBrush}" />
-                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                <Setter Property="Background" Value="{DynamicResource TerminalBackgroundBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter
@@ -195,7 +195,7 @@
                             <Setter
                                 Property="Background"
                                 Value="{DynamicResource SolidBackgroundFillColorBaseBrush}" />
-                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                             <Setter Property="FontWeight" Value="SemiBold" />
                             <Setter Property="Padding" Value="10,8" />
                             <Setter Property="BorderThickness" Value="0,0,1,1" />
@@ -224,7 +224,7 @@
 
             <Style x:Key="ThemedDataGridColumnHeaderStyle" TargetType="DataGridColumnHeader">
                 <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorBaseBrush}" />
-                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="Padding" Value="10,8" />
                 <Setter Property="BorderThickness" Value="0,0,1,1" />
@@ -288,7 +288,7 @@
                                 </Trigger>
                                 <Trigger Property="IsSelected" Value="False">
                                     <Setter TargetName="Border" Property="BorderBrush" Value="Transparent" />
-                                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
                                 </Trigger>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter
@@ -316,7 +316,7 @@
             <Style x:Key="AboutTitleStyle" TargetType="TextBlock">
                 <Setter Property="FontWeight" Value="Bold" />
                 <Setter Property="FontSize" Value="20" />
-                <Setter Property="Foreground" Value="{StaticResource HeaderTextBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource HeaderTextBrush}" />
                 <Setter Property="HorizontalAlignment" Value="Center" />
             </Style>
 
@@ -329,12 +329,12 @@
             <Style x:Key="AboutSectionHeaderStyle" TargetType="TextBlock">
                 <Setter Property="FontWeight" Value="Bold" />
                 <Setter Property="FontSize" Value="14" />
-                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             </Style>
 
             <Style x:Key="AboutBodyTextStyle" TargetType="TextBlock">
                 <Setter Property="TextWrapping" Value="Wrap" />
-                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             </Style>
         </ResourceDictionary>
     </Application.Resources>

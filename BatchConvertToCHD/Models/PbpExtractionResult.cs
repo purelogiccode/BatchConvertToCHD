@@ -1,6 +1,6 @@
 using PBPSharp.Models;
 
-namespace BatchConvertToCHD.Models;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Represents the result of a PBP (PlayStation Portable) file extraction operation.

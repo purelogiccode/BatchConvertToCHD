@@ -1,5 +1,4 @@
 using System.Reflection;
-using BatchConvertToCHD.Utilities;
 
 namespace BatchConvertToCHD.Tests;
 

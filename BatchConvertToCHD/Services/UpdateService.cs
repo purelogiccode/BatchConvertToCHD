@@ -1,8 +1,8 @@
 using System.Net;
+// ReSharper disable once RedundantUsingDirective
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
-using BatchConvertToCHD.Models;
 
 namespace BatchConvertToCHD.Services;
 

@@ -1,5 +1,3 @@
-using BatchConvertToCHD.Models;
-
 namespace BatchConvertToCHD.Tests;
 
 public class PbpExtractionResultTests

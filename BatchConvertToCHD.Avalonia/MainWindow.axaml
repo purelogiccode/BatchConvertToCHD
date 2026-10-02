@@ -623,7 +623,6 @@
                         ToolTip.Tip="Real-time application activity log">
                         <local:LogTextBox
                             x:Name="LogViewer"
-                            Classes="log"
                             Background="#0A0A0A"
                             Foreground="#FFFFFF"
                             BorderThickness="0"

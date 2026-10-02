@@ -17,6 +17,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Using Include="System.IO" />
+    </ItemGroup>
+
+    <ItemGroup>
         <Resource Include="images\about.png" />
         <Resource Include="images\exit.png" />
         <Resource Include="images\logo.png" />

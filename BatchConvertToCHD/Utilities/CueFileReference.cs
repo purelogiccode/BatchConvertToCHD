@@ -1,6 +1,4 @@
-using System.IO;
-
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     A file referenced by a CUE sheet FILE line.

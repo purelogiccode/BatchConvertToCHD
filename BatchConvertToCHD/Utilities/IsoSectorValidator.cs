@@ -1,6 +1,4 @@
-using System.IO;
-
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Pre-conversion validation for disc image files: a disc image must be a multiple of one of the

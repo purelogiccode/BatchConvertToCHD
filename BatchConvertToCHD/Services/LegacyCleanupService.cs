@@ -1,4 +1,3 @@
-using System.IO;
 using Serilog;
 
 namespace BatchConvertToCHD.Services;

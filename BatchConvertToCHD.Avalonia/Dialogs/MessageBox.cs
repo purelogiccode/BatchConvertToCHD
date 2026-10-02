@@ -2,16 +2,16 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 
-namespace BatchConvertToCHD;
+namespace BatchConvertToCHD.Dialogs;
 
 /// <summary>Buttons shown by <see cref="MessageBox" />.</summary>
 internal enum MessageBoxButton
 {
     /// <summary>Only an OK button.</summary>
-    OK,
+    Ok,
 
     /// <summary>OK and Cancel buttons.</summary>
-    OKCancel,
+    OkCancel,
 
     /// <summary>Yes and No buttons.</summary>
     YesNo,
@@ -46,7 +46,7 @@ internal enum MessageBoxResult
     None,
 
     /// <summary>The OK button was chosen.</summary>
-    OK,
+    Ok,
 
     /// <summary>The Cancel button was chosen.</summary>
     Cancel,
@@ -69,7 +69,7 @@ internal static class MessageBox
     internal static Task<MessageBoxResult> ShowAsync(
         string messageBoxText,
         string caption,
-        MessageBoxButton button = MessageBoxButton.OK,
+        MessageBoxButton button = MessageBoxButton.Ok,
         MessageBoxImage icon = MessageBoxImage.None
     )
     {

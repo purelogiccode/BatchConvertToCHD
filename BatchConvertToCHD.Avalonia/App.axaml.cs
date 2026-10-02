@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO;
 using System.Reflection;
 using System.Text;
 using Avalonia;
@@ -7,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using BatchConvertToCHD.Dialogs;
 using BatchConvertToCHD.Services;
 using Serilog;
 using Serilog.Events;
@@ -18,7 +18,7 @@ namespace BatchConvertToCHD;
 ///     single-instance enforcement and service initialization. Mirrors the WPF
 ///     <c>BatchConvertToCHD.App</c> so both front ends share the same behaviour.
 /// </summary>
-public partial class App : Application
+public class App : Application
 {
     private BugReportService? _bugReportService;
     private Mutex? _singleInstanceMutex;
@@ -75,7 +75,7 @@ public partial class App : Application
                 var dialog = new MessageDialog(
                     $"Another instance of {AppConfig.ApplicationName} is already running.",
                     AppConfig.ApplicationName,
-                    MessageBoxButton.OK,
+                    MessageBoxButton.Ok,
                     MessageBoxImage.Information
                 );
                 dialog.Closed += (_, _) => desktop.Shutdown();

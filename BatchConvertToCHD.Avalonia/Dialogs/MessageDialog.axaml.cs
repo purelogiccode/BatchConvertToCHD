@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Media;
 
-namespace BatchConvertToCHD;
+namespace BatchConvertToCHD.Dialogs;
 
 /// <summary>
 ///     Themed modal dialog window used by <see cref="MessageBox" />.
@@ -51,11 +51,11 @@ internal partial class MessageDialog : Window
     {
         switch (button)
         {
-            case MessageBoxButton.OK:
-                ButtonsPanel.Children.Add(CreateButton("_OK", MessageBoxResult.OK, "primary"));
+            case MessageBoxButton.Ok:
+                ButtonsPanel.Children.Add(CreateButton("_OK", MessageBoxResult.Ok, "primary"));
                 break;
-            case MessageBoxButton.OKCancel:
-                ButtonsPanel.Children.Add(CreateButton("_OK", MessageBoxResult.OK, "primary"));
+            case MessageBoxButton.OkCancel:
+                ButtonsPanel.Children.Add(CreateButton("_OK", MessageBoxResult.Ok, "primary"));
                 ButtonsPanel.Children.Add(CreateButton("_Cancel", MessageBoxResult.Cancel, "secondary"));
                 break;
             case MessageBoxButton.YesNo:
@@ -68,7 +68,7 @@ internal partial class MessageDialog : Window
                 ButtonsPanel.Children.Add(CreateButton("_Cancel", MessageBoxResult.Cancel, "secondary"));
                 break;
             default:
-                ButtonsPanel.Children.Add(CreateButton("_OK", MessageBoxResult.OK, "primary"));
+                ButtonsPanel.Children.Add(CreateButton("_OK", MessageBoxResult.Ok, "primary"));
                 break;
         }
     }

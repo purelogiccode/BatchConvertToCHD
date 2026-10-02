@@ -1,6 +1,4 @@
-using System.IO;
-
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Removes redundant inputs from a conversion batch before any work starts.

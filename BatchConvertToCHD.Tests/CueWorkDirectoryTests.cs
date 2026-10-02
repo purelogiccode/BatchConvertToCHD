@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text;
-using BatchConvertToCHD.Utilities;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 

@@ -55,7 +55,8 @@
         <None Include="..\BatchConvertToCHD\chdman.exe" Link="chdman.exe" CopyToOutputDirectory="Always" />
         <None Include="..\BatchConvertToCHD\chdman_arm64.exe" Link="chdman_arm64.exe" CopyToOutputDirectory="Always" />
         <None Include="..\BatchConvertToCHD\CHDSharp.exe" Link="CHDSharp.exe" CopyToOutputDirectory="Always" />
-        <None Include="..\BatchConvertToCHD\CHDSharp_arm64.exe" Link="CHDSharp_arm64.exe" CopyToOutputDirectory="Always" />
+        <None Include="..\BatchConvertToCHD\CHDSharp_arm64.exe" Link="CHDSharp_arm64.exe"
+              CopyToOutputDirectory="Always" />
     </ItemGroup>
 
     <ItemGroup>
@@ -71,7 +72,8 @@
     <ItemGroup>
         <Compile Include="..\BatchConvertToCHD\AppConfig.cs" Link="AppConfig.cs" />
         <Compile Include="..\BatchConvertToCHD\Models\**\*.cs" Link="Models\%(RecursiveDir)%(Filename)%(Extension)" />
-        <Compile Include="..\BatchConvertToCHD\Utilities\**\*.cs" Link="Utilities\%(RecursiveDir)%(Filename)%(Extension)" />
+        <Compile Include="..\BatchConvertToCHD\Utilities\**\*.cs"
+                 Link="Utilities\%(RecursiveDir)%(Filename)%(Extension)" />
         <Compile
             Include="..\BatchConvertToCHD\Services\**\*.cs"
             Exclude="..\BatchConvertToCHD\Services\ScreenshotService.cs"

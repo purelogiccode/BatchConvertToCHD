@@ -96,7 +96,7 @@
                         <Hyperlink
                             NavigateUri="https://github.com/purelogiccode/BatchConvertToCHD"
                             RequestNavigate="Hyperlink_RequestNavigate"
-                            Foreground="{StaticResource LinkTextBrush}"
+                            Foreground="{DynamicResource LinkTextBrush}"
                             TextDecorations="Underline"
                             ToolTip="Visit the project repository">
                             https://github.com/purelogiccode/BatchConvertToCHD
@@ -106,7 +106,7 @@
                         <Hyperlink
                             NavigateUri="https://www.purelogiccode.com"
                             RequestNavigate="Hyperlink_RequestNavigate"
-                            Foreground="{StaticResource LinkTextBrush}"
+                            Foreground="{DynamicResource LinkTextBrush}"
                             TextDecorations="Underline"
                             ToolTip="Visit the official website">
                             https://www.purelogiccode.com

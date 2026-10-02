@@ -12,8 +12,7 @@ using Models;
 public static class PbpDiagnostics
 {
     /// <summary>Per-thread storage for the most recent failure detail.</summary>
-    [ThreadStatic]
-    private static string? _detail;
+    [ThreadStatic] private static string? _detail;
 
     /// <summary>Records a failure detail for the current thread, overwriting any previous one.</summary>
     /// <param name="detail">The detail text to record.</param>

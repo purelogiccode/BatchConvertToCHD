@@ -276,7 +276,9 @@ public static partial class MdsParser
                     bytes.AsSpan((int)footerBase + V2FooterCompressionTableOffset)
                 ) != 0
             )
+            {
                 return true;
+            }
         }
 
         return false;

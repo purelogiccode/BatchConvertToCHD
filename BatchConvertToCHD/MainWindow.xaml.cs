@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography;
@@ -12,10 +11,8 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
-using BatchConvertToCHD.Models;
+using BatchConvertToCHD.Ecm;
 using BatchConvertToCHD.Services;
-using BatchConvertToCHD.Utilities;
-using BatchConvertToCHD.Utilities.Ecm;
 using CCDSharp;
 using CCDSharp.Models;
 using CHDSharp;
@@ -6346,7 +6343,7 @@ internal partial class MainWindow : IDisposable
             .Append("CHD v")
             .Append(chd.Version)
             .Append(" compression=")
-            .Append(string.Join(",", chd.Compression))
+            .AppendJoin(",", chd.Compression)
             .Append(" secondary=")
             .Append(chd.SecondaryCodec)
             .Append(" hunks=")

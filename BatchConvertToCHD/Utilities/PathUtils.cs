@@ -1,9 +1,8 @@
 using System.Globalization;
-using System.IO;
 using System.Text;
 using Serilog;
 
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Provides utility methods for path manipulation and validation.

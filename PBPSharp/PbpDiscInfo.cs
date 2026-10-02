@@ -336,8 +336,8 @@ public sealed class PbpDiscInfo
         var preview = Convert.ToHexString(inBuffer.AsSpan(0, previewLength));
 
         return $"block {blockIndex} of {_isoIndex.Count} (disc {Index}, id {DiscId}): "
-            + $"fileOffset=0x{absoluteOffset:X}, length={entry.Length}, uncompressed={entry.Uncompressed}, "
-            + $"isoSize={IsoSize}, first bytes {preview}; {exception.Message}";
+               + $"fileOffset=0x{absoluteOffset:X}, length={entry.Length}, uncompressed={entry.Uncompressed}, "
+               + $"isoSize={IsoSize}, first bytes {preview}; {exception.Message}";
     }
 
     /// <summary>

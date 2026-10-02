@@ -1,6 +1,5 @@
 using System.IO.Compression;
 using BatchConvertToCHD.Services;
-using BatchConvertToCHD.Utilities;
 using SharpCompress.Common;
 using SharpCompressZipArchive = SharpCompress.Archives.Zip.ZipArchive;
 

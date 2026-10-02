@@ -1,6 +1,4 @@
-using System.IO;
-
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Generates and manages auto-generated CUE sheets for archives that contain only a .bin file

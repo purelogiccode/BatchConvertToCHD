@@ -1,6 +1,4 @@
-using System.IO;
-
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Identifies raw CD images by their sector layout rather than their file extension.

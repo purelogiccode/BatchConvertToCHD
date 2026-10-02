@@ -1,7 +1,6 @@
-using System.IO;
 using MDSSharp;
 
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Works out how an image recovered into a temp directory - joined from parts, decoded from ECM,

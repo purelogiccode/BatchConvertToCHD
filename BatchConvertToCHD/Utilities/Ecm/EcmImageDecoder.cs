@@ -1,8 +1,7 @@
 using System.Buffers.Binary;
 using System.Globalization;
-using System.IO;
 
-namespace BatchConvertToCHD.Utilities.Ecm;
+namespace BatchConvertToCHD.Ecm;
 
 /// <summary>
 ///     Decodes ECM (Error Code Modeler) files back to the disc image they were made from.

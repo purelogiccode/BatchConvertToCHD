@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography;
@@ -15,12 +14,10 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
-using BatchConvertToCHD.Controls;
 using BatchConvertToCHD.Diagnostics;
-using BatchConvertToCHD.Models;
+using BatchConvertToCHD.Dialogs;
+using BatchConvertToCHD.Ecm;
 using BatchConvertToCHD.Services;
-using BatchConvertToCHD.Utilities;
-using BatchConvertToCHD.Utilities.Ecm;
 using CCDSharp;
 using CCDSharp.Models;
 using CHDSharp;
@@ -84,7 +81,6 @@ internal partial class MainWindow : Window, IDisposable
     private readonly Stopwatch _operationTimer = new();
     private readonly DispatcherTimer _elapsedTimeTimer;
     private readonly Lock _performanceCounterLock = new();
-    private readonly ScreenshotService _screenshotService;
     private readonly string _sevenZipExePath;
 
     // Services
@@ -92,7 +88,7 @@ internal partial class MainWindow : Window, IDisposable
     private readonly ObservableCollection<FileItem> _verificationFiles = new();
     private CancellationTokenSource _cts;
     private volatile int _failedCount;
-    private bool _uiInitialized;
+    private readonly bool _uiInitialized;
 
     // Operation state tracking (0 = idle, >0 = running) - using Interlocked for thread safety
     private int _operationRunningState;
@@ -154,7 +150,6 @@ internal partial class MainWindow : Window, IDisposable
             ShowUpdatePromptAsync = ShowUpdatePromptAsync
         };
         _archiveService = new ArchiveService(_sevenZipExePath, isSevenZipAvailable);
-        _screenshotService = new ScreenshotService();
 
         // F8 screenshot hotkey (window-scoped on every platform)
         KeyDown += MainWindow_KeyDown;
@@ -268,7 +263,7 @@ internal partial class MainWindow : Window, IDisposable
 
         try
         {
-            var filePath = _screenshotService.TakeScreenshot(this);
+            var filePath = ScreenshotService.TakeScreenshot(this);
             if (filePath != null)
             {
                 LogMessage($"Screenshot saved: {filePath}");
@@ -431,7 +426,7 @@ internal partial class MainWindow : Window, IDisposable
                 + "Conversion will NOT work without an encoder.";
 
             LogError(" " + msg.Replace("\n", " "));
-            _ = ShowMessageBoxAsync(msg, "Missing Dependency", MessageBoxButton.OK, MessageBoxImage.Error);
+            _ = ShowMessageBoxAsync(msg, "Missing Dependency", MessageBoxButton.Ok, MessageBoxImage.Error);
             return;
         }
 
@@ -441,7 +436,7 @@ internal partial class MainWindow : Window, IDisposable
                 "chdman.exe was not found, so conversions will run on the CHDSharp fallback.";
 
             LogWarning(" " + msg.Replace("\n", " "));
-            _ = ShowMessageBoxAsync(msg, "Encoder Notice", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _ = ShowMessageBoxAsync(msg, "Encoder Notice", MessageBoxButton.Ok, MessageBoxImage.Warning);
         }
         else if (chdSharpMissing)
         {
@@ -450,7 +445,7 @@ internal partial class MainWindow : Window, IDisposable
                 + "Place CHDSharp.exe in the application folder to restore the fallback encoder.";
 
             LogWarning(" " + msg.Replace("\n", " "));
-            _ = ShowMessageBoxAsync(msg, "Encoder Notice", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _ = ShowMessageBoxAsync(msg, "Encoder Notice", MessageBoxButton.Ok, MessageBoxImage.Warning);
         }
     }
 
@@ -962,27 +957,62 @@ internal partial class MainWindow : Window, IDisposable
 
     private async void BrowseConversionInputButton_Click(object? sender, RoutedEventArgs e)
     {
-        await HandleFolderBrowseAsync(ConversionInputFolderTextBox, "Conversion input");
+        try
+        {
+            await HandleFolderBrowseAsync(ConversionInputFolderTextBox, "Conversion input");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in method BrowseConversionInputButton_Click");
+        }
     }
 
     private async void BrowseConversionOutputButton_Click(object? sender, RoutedEventArgs e)
     {
-        await HandleFolderBrowseAsync(ConversionOutputFolderTextBox, "Conversion output");
+        try
+        {
+            await HandleFolderBrowseAsync(ConversionOutputFolderTextBox, "Conversion output");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in method BrowseConversionOutputButton_Click");
+        }
     }
 
     private async void BrowseVerificationInputButton_Click(object? sender, RoutedEventArgs e)
     {
-        await HandleFolderBrowseAsync(VerificationInputFolderTextBox, "Verification input");
+        try
+        {
+            await HandleFolderBrowseAsync(VerificationInputFolderTextBox, "Verification input");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in method BrowseVerificationInputButton_Click");
+        }
     }
 
     private async void BrowseExtractionInputButton_Click(object? sender, RoutedEventArgs e)
     {
-        await HandleFolderBrowseAsync(ExtractionInputFolderTextBox, "Extraction input");
+        try
+        {
+            await HandleFolderBrowseAsync(ExtractionInputFolderTextBox, "Extraction input");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in method BrowseExtractionInputButton_Click");
+        }
     }
 
     private async void BrowseExtractionOutputButton_Click(object? sender, RoutedEventArgs e)
     {
-        await HandleFolderBrowseAsync(ExtractionOutputFolderTextBox, "Extraction output");
+        try
+        {
+            await HandleFolderBrowseAsync(ExtractionOutputFolderTextBox, "Extraction output");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in method BrowseExtractionOutputButton_Click");
+        }
     }
 
     private async void StartExtractionButton_ClickAsync(object sender, RoutedEventArgs e)
@@ -6422,7 +6452,7 @@ internal partial class MainWindow : Window, IDisposable
             .Append("CHD v")
             .Append(chd.Version)
             .Append(" compression=")
-            .Append(string.Join(",", chd.Compression))
+            .AppendJoin(",", chd.Compression)
             .Append(" secondary=")
             .Append(chd.SecondaryCodec)
             .Append(" hunks=")
@@ -7600,7 +7630,7 @@ internal partial class MainWindow : Window, IDisposable
         _ = ShowMessageBoxAsync(
             $"{op} {verb}.\nTotal: {_totalFilesProcessed}\nOK: {_processedOkCount}\nFailed: {_failedCount}",
             "Complete",
-            MessageBoxButton.OK,
+            MessageBoxButton.Ok,
             _failedCount > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information
         );
     }
@@ -7622,7 +7652,7 @@ internal partial class MainWindow : Window, IDisposable
                 this,
                 msg,
                 "Error",
-                MessageBoxButton.OK,
+                MessageBoxButton.Ok,
                 MessageBoxImage.Error
             )
         );
@@ -7679,7 +7709,7 @@ internal partial class MainWindow : Window, IDisposable
                 this,
                 $"Unable to open browser automatically. The update URL has been copied to your clipboard.\n\nURL: {release.HtmlUrl}\n\nPlease paste it into your browser manually.",
                 "Browser Launch Failed",
-                MessageBoxButton.OK,
+                MessageBoxButton.Ok,
                 MessageBoxImage.Information
             );
         }

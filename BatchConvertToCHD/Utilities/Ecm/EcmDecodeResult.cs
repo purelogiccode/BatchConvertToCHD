@@ -1,4 +1,4 @@
-namespace BatchConvertToCHD.Utilities.Ecm;
+namespace BatchConvertToCHD.Ecm;
 
 /// <summary>
 ///     Outcome of decoding an ECM file.

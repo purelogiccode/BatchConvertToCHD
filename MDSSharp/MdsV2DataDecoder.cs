@@ -194,9 +194,11 @@ internal static class MdsV2DataDecoder
     {
         var group = track.BlocksInCompressionGroup;
         if (group == 0)
+        {
             throw new InvalidDataException(
                 $"track {track.Point} declares a compression group of zero sectors."
             );
+        }
 
         var entries = (int)((track.LengthSectors + group - 1) / group);
         var tableValues = ReadCompressionTable(data, track, entries);

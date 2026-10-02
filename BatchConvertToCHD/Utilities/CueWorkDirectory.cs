@@ -1,6 +1,4 @@
-using System.IO;
-
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Prepares an isolated ASCII work directory for a cue/toc descriptor when chdman cannot be handed

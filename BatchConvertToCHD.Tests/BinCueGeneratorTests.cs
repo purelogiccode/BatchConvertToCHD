@@ -1,5 +1,3 @@
-using BatchConvertToCHD.Utilities;
-
 namespace BatchConvertToCHD.Tests;
 
 public class BinCueGeneratorTests : IDisposable

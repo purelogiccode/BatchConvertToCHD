@@ -1,4 +1,4 @@
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Transforms a resolved reference during normalization (used e.g. to map MP3 tracks to decoded WAV files).

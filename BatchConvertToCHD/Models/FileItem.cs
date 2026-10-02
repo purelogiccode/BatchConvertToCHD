@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
-namespace BatchConvertToCHD.Models;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Represents a file item in the conversion/verification/extraction lists.

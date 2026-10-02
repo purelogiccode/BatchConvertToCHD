@@ -1,8 +1,7 @@
 using System.Globalization;
-using System.IO;
 using System.Text.RegularExpressions;
 
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Locates the volumes of a multi-part RAR archive.

@@ -1,4 +1,4 @@
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     The outcome of <see cref="CueWorkDirectory.PrepareAsync" />.

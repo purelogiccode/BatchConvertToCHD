@@ -1,7 +1,6 @@
-using System.IO;
 using System.Text;
 
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD;
 
 /// <summary>
 ///     Provides methods for parsing game file formats (CUE, GDI, TOC) to extract referenced files.

@@ -3,6 +3,7 @@ using System.Reflection;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using BatchConvertToCHD.Dialogs;
 
 namespace BatchConvertToCHD;
 
@@ -54,7 +55,7 @@ internal partial class AboutWindow : Window
                 this,
                 $"Unable to open link: {ex.Message}",
                 "Error",
-                MessageBoxButton.OK,
+                MessageBoxButton.Ok,
                 MessageBoxImage.Error
             );
         }
