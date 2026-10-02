@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using BatchConvertToCHD.Ecm;
+using BatchConvertToCHD.Utilities.Ecm;
 
 namespace BatchConvertToCHD.Tests;
 

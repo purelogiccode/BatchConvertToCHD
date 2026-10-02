@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 namespace BatchConvertToCHD.Diagnostics;
 
 /// <summary>
-///     Cross-platform replacement for the WPF build's <c>System.Diagnostics.PerformanceCounter</c>
+///     Cross-platform replacement for <c>System.Diagnostics.PerformanceCounter</c>
 ///     usage. Reports the current process's disk read/write throughput in bytes per second on
 ///     Windows (via <c>GetProcessIoCounters</c>) and Linux (via <c>/proc/self/io</c>). On platforms
 ///     without an implementation (macOS) the factory returns null and the speed card stays hidden.

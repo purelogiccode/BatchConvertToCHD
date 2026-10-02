@@ -9,7 +9,7 @@ namespace BatchConvertToCHD.Services;
 /// <summary>
 ///     Captures a screenshot of the application window and saves it as a PNG file in the
 ///     screenshots folder under <c>%LocalAppData%\BatchConvertToCHD\screenshots</c> (or the
-///     platform equivalent). Cross-platform Avalonia replacement for the WPF-only implementation.
+///     platform equivalent).
 /// </summary>
 internal sealed class ScreenshotService
 {

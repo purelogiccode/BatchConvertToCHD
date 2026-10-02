@@ -106,15 +106,15 @@ Auto-detection scans the CHD metadata (via CHDSharp): `dvd` → DVD, `gd-rom` �
 
 ---
 
-## 4.4 Global Hotkey — Screenshot (F8)
+## 4.4 Screenshot Hotkey (F8)
 
-Pressing **F8** anywhere (the hotkey is registered globally via `RegisterHotKey`) captures the current foreground window and saves it as
+While the application window is focused, pressing **F8** captures that window and saves it as
 
 ```
 %LocalAppData%\BatchConvertToCHD\screenshots\screenshot_yyyy-MM-dd_HH-mm-ss-fff.png
 ```
 
-The path is shown in the log ("Screenshot saved: ..."). Capture uses GDI `BitBlt`; if no foreground window exists, a message is logged instead.
+The path is shown in the log ("Screenshot saved: ..."). Capture uses Avalonia's `RenderTargetBitmap`; if the capture fails, a message is logged instead.
 
 ## 4.5 Status Bar & Stats
 

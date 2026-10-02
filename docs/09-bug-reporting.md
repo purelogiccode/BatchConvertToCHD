@@ -12,10 +12,10 @@ The application has a built-in, automatic bug-reporting channel that forwards **
 ## 9.1 Pipeline
 
 ```
-LogMessage / LogWarning / LogError        (MainWindow.xaml.cs:606–622)
+LogMessage / LogWarning / LogError        (MainWindow.axaml.cs:606–622)
         │  (Serilog: Information / Warning / Error)
         ▼
-Serilog Logger                             (App.xaml.cs:56–78)
+Serilog Logger                             (App.axaml.cs:56–78)
         ├── Debug sink
         ├── File sink  → %LocalAppData%\BatchConvertToCHD\logs\BatchConvertToCHD-YYYYMMDD.log
         └── BugReportApiSink.Emit           (Services/BugReportApiSink.cs:33)
@@ -32,8 +32,8 @@ Serilog Logger                             (App.xaml.cs:56–78)
 
 Additionally, **unhandled exceptions** are reported directly (not via the sink):
 
-- `AppDomain.CurrentDomain.UnhandledException` → `Log.Fatal` + synchronous `ReportException` (the process is about to terminate, so the report must complete inline — `App.xaml.cs:236–250`). For dispatcher and task-scheduler exceptions the report is fire-and-forget to avoid blocking the UI thread.
-- `DispatcherUnhandledException` → `Log.Error` + `ReportException`; a small allowlist of known-benign exceptions is suppressed (`App.xaml.cs:225–267`): WPF rendering errors (`GlyphTypeface` URI errors, PresentationCore OOM in `DUCE.Channel`/`HwndTarget`), the WPF-internal `FileNotFoundException` from `PopupSecurityHelper.ForceMsaaToUiaBridge` (ToolTip/Popup opening when the OS accessibility bridge cannot be loaded — the tooltip simply never appears), and the `COMException 0x80263001` (`DWM_E_COMPOSITIONDISABLED`) raised by `WindowChromeWorker.DwmExtendFrameIntoClientArea` when desktop composition is disabled on the user's machine — the window simply runs without the glass frame effect. These are suppressed at the handler level and never reach the log sink.
+- `AppDomain.CurrentDomain.UnhandledException` → `Log.Fatal` + synchronous `ReportException` (the process is about to terminate, so the report must complete inline — `App.axaml.cs:236–250`). For dispatcher and task-scheduler exceptions the report is fire-and-forget to avoid blocking the UI thread.
+- `Dispatcher.UIThread.UnhandledException` → `Log.Error` + `ReportException`, then `e.Handled = true` so the application survives the exception (`BatchConvertToCHD.Avalonia/App.axaml.cs`). There is no framework-specific suppression allowlist: every dispatcher exception is logged and reported, and known-noise filtering happens downstream in the Serilog sink's exclusion patterns (see §9.4).
 - `TaskScheduler.UnobservedTaskException` → `Log.Error` + `ReportException`, then `SetObserved()`.
 - **Stats-rate-limit handling**: `StatsService.RecordUsageAsync` returns early on HTTP 429 (Too Many Requests) and logs at Debug level, so these transient conditions never reach the warning-level sink.
 

@@ -43,7 +43,7 @@ public class RarVolumeSetTests : IDisposable
         int expectedPartNumber
     )
     {
-        var recognised = RarVolumeSet.TryGetPartInfo(
+        var recognised = Utilities.RarVolumeSet.TryGetPartInfo(
             Path.Combine(_tempDir, fileName),
             out var setBaseName,
             out var partNumber
@@ -63,7 +63,7 @@ public class RarVolumeSetTests : IDisposable
     public void TryGetPartInfoRejectsOtherNames(string fileName)
     {
         Assert.False(
-            RarVolumeSet.TryGetPartInfo(
+            Utilities.RarVolumeSet.TryGetPartInfo(
                 Path.Combine(_tempDir, fileName),
                 out var setBaseName,
                 out var partNumber
@@ -79,7 +79,7 @@ public class RarVolumeSetTests : IDisposable
     [InlineData("game.rar", false)]
     public void IsLaterPartClassifiesVolumeNames(string fileName, bool expected)
     {
-        Assert.Equal(expected, RarVolumeSet.IsLaterPart(Path.Combine(_tempDir, fileName)));
+        Assert.Equal(expected, Utilities.RarVolumeSet.IsLaterPart(Path.Combine(_tempDir, fileName)));
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class RarVolumeSetTests : IDisposable
     {
         var single = WriteFile("game.rar");
 
-        Assert.Equal(single, RarVolumeSet.FindFirstVolume(single));
+        Assert.Equal(single, Utilities.RarVolumeSet.FindFirstVolume(single));
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class RarVolumeSetTests : IDisposable
         WriteFile("set.part02.rar");
         var third = WriteFile("set.part03.rar");
 
-        Assert.Equal(first, RarVolumeSet.FindFirstVolume(third));
+        Assert.Equal(first, Utilities.RarVolumeSet.FindFirstVolume(third));
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class RarVolumeSetTests : IDisposable
         var first = WriteFile("Game.Part01.RAR");
         var third = WriteFile("game.part03.rar");
 
-        Assert.Equal(first, RarVolumeSet.FindFirstVolume(third));
+        Assert.Equal(first, Utilities.RarVolumeSet.FindFirstVolume(third));
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class RarVolumeSetTests : IDisposable
         WriteFile("set.part02.rar");
         var third = WriteFile("set.part03.rar");
 
-        Assert.Null(RarVolumeSet.FindFirstVolume(third));
+        Assert.Null(Utilities.RarVolumeSet.FindFirstVolume(third));
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class RarVolumeSetTests : IDisposable
         WriteFile("game (Japan).part01.rar");
         var target = WriteFile("game (USA).part12.rar");
 
-        Assert.Equal(first, RarVolumeSet.FindFirstVolume(target));
+        Assert.Equal(first, Utilities.RarVolumeSet.FindFirstVolume(target));
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class RarVolumeSetTests : IDisposable
         var second = WriteFile("set.part02.rar");
         var tenth = WriteFile("set.part10.rar");
 
-        Assert.Equal([first, second, tenth], RarVolumeSet.GetVolumePaths(tenth));
+        Assert.Equal([first, second, tenth], Utilities.RarVolumeSet.GetVolumePaths(tenth));
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class RarVolumeSetTests : IDisposable
         var second = WriteFile("disc.002");
         WriteFile("disc.010");
 
-        Assert.Equal([first, second], RarVolumeSet.GetVolumePaths(first));
+        Assert.Equal([first, second], Utilities.RarVolumeSet.GetVolumePaths(first));
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class RarVolumeSetTests : IDisposable
         var second = WriteFile("set.r00");
         var third = WriteFile("set.r01");
 
-        Assert.Equal([first, second, third], RarVolumeSet.GetVolumePaths(first));
+        Assert.Equal([first, second, third], Utilities.RarVolumeSet.GetVolumePaths(first));
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public class RarVolumeSetTests : IDisposable
     {
         var single = WriteFile("game.rar");
 
-        Assert.Equal([single], RarVolumeSet.GetVolumePaths(single));
+        Assert.Equal([single], Utilities.RarVolumeSet.GetVolumePaths(single));
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public class RarVolumeSetTests : IDisposable
         WriteFile("set.part02.rar", 20);
         var third = WriteFile("set.part03.rar", 30);
 
-        Assert.Equal(60, RarVolumeSet.GetTotalBytes(third));
+        Assert.Equal(60, Utilities.RarVolumeSet.GetTotalBytes(third));
     }
 
     [Fact]
@@ -181,11 +181,11 @@ public class RarVolumeSetTests : IDisposable
     {
         Assert.Equal(
             "hyk-D2-2.part01.rar",
-            RarVolumeSet.GetFirstVolumeName(Path.Combine(_tempDir, "hyk-D2-2.part22.rar"))
+            Utilities.RarVolumeSet.GetFirstVolumeName(Path.Combine(_tempDir, "hyk-D2-2.part22.rar"))
         );
         Assert.Equal(
             "game.part1.rar",
-            RarVolumeSet.GetFirstVolumeName(Path.Combine(_tempDir, "game.part2.rar"))
+            Utilities.RarVolumeSet.GetFirstVolumeName(Path.Combine(_tempDir, "game.part2.rar"))
         );
     }
 }

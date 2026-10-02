@@ -1,3 +1,4 @@
+using BatchConvertToCHD.Utilities;
 using MDSSharp;
 
 namespace BatchConvertToCHD.Tests;

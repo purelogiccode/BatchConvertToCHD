@@ -727,7 +727,7 @@ public class ArchiveServiceTests : IDisposable
         var fixtureDir = Path.Combine(AppContext.BaseDirectory, "Fixtures", "rar-multipart");
         foreach (var volume in Directory.GetFiles(fixtureDir, "set.part*.rar"))
         {
-            RarVolumeSet.TryGetPartInfo(volume, out _, out var partNumber);
+            Utilities.RarVolumeSet.TryGetPartInfo(volume, out _, out var partNumber);
             File.Copy(volume, Path.Combine(setDir, $"set.{partNumber:000}"));
         }
 

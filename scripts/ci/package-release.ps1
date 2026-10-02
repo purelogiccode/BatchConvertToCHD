@@ -4,9 +4,9 @@
 
 .DESCRIPTION
     Stages a published BatchConvertToCHD output folder, drops the binaries that
-    belong to the other architecture and the library .xml IntelliSense files,
-    adds LICENSE.txt and ReadMe.md, and zips the result as
-    release_<version>_<rid>.zip. The app itself is published framework-dependent
+    belong to the other architecture, the library .xml IntelliSense files and the
+    native .pdb debug symbols, adds LICENSE.txt and ReadMe.md, and zips the result
+    as release_<version>_<rid>.zip. The app itself is published framework-dependent
     and single-file, so the .NET runtime is never bundled.
 
 .PARAMETER Rid
@@ -67,16 +67,20 @@ try {
         }
     }
 
-    # Library .xml files in the publish output are IntelliSense doc files, never
-    # used at runtime; they do not belong in the release bundle.
+    # Library .xml IntelliSense files and native debug symbols (*.pdb) in the publish
+    # output are never used at runtime; they do not belong in the release bundle.
     Get-ChildItem -LiteralPath $stage -Filter '*.xml' -File -ErrorAction SilentlyContinue |
+        Remove-Item -Force
+    Get-ChildItem -LiteralPath $stage -Filter '*.pdb' -File -ErrorAction SilentlyContinue |
         Remove-Item -Force
 
     foreach ($extra in @('LICENSE.txt', 'ReadMe.md')) {
         Copy-Item -LiteralPath (Join-Path $repoRoot $extra) -Destination $stage -Force
     }
 
-    $expected = @('BatchConvertToCHD.exe', 'LICENSE.txt', 'ReadMe.md') + $toolFiles
+    # The single-file exe still loads Avalonia's native rendering/text libraries from
+    # beside it, so those must survive pruning.
+    $expected = @('BatchConvertToCHD.exe', 'LICENSE.txt', 'ReadMe.md', 'av_libglesv2.dll', 'libHarfBuzzSharp.dll', 'libSkiaSharp.dll') + $toolFiles
     $missing = @($expected | Where-Object { -not (Test-Path -LiteralPath (Join-Path $stage $_)) })
     if ($missing.Count -gt 0) {
         throw "Release stage is missing required file(s): $($missing -join ', ')"

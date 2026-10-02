@@ -1,4 +1,5 @@
 using System.Text.Json;
+using BatchConvertToCHD.Models;
 
 namespace BatchConvertToCHD.Tests;
 

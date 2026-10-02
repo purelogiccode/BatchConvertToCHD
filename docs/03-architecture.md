@@ -13,11 +13,11 @@ This page describes the solution structure, the runtime startup sequence, and th
 
 ```
 CSharp_BatchConvertToCHD.sln
-├── BatchConvertToCHD/                     (WPF app, net10.0-windows)
-│   ├── App.xaml(.cs)                      → startup, Serilog, exception handlers
+├── BatchConvertToCHD.Avalonia/            (Avalonia app, net10.0;net10.0-windows)
+│   ├── App.axaml(.cs)                     → startup, Serilog, exception handlers
 │   ├── AppConfig.cs                       → central configuration
-│   ├── MainWindow.xaml(.cs)               → UI + all batch logic (~3,600 lines)
-│   ├── AboutWindow.xaml(.cs)              → about dialog
+│   ├── MainWindow.axaml(.cs)              → UI + all batch logic
+│   ├── AboutWindow.axaml(.cs)             → about dialog
 │   ├── Models/
 │   │   ├── FileItem.cs                    → bindable file row (name, size, selected)
 │   │   ├── GitHubRelease.cs               → GitHub API release model
@@ -30,7 +30,7 @@ CSharp_BatchConvertToCHD.sln
 │   │   ├── FileEventRecord.cs / FileWatchEventType.cs
 │   │   ├── FileWatcherService.cs          → missing-file diagnostics
 │   │   ├── LegacyCleanupService.cs        → removes legacy files/folders
-│   │   ├── ScreenshotService.cs           → GDI screenshot capture
+│   │   ├── ScreenshotService.cs           → window screenshot capture (RenderTargetBitmap)
 │   │   ├── StatsService.cs                → anonymous usage stats
 │   │   └── UpdateService.cs               → GitHub update checks
 │   └── Utilities/
@@ -66,7 +66,7 @@ CSharp_BatchConvertToCHD.sln
 
 ```
                  ┌──────────────────────────────────┐
-                 │         BatchConvertToCHD        │  (WPF app)
+                 │         BatchConvertToCHD        │  (Avalonia app)
                  └───┬───────┬───────┬───────┬──────┘
       Project refs   │       │       │       │
          ┌───────────▼─┐ ┌───▼──────▼──┐ ┌──▼──────────┐
@@ -75,7 +75,7 @@ CSharp_BatchConvertToCHD.sln
          ┌──────────────────────┐  ┌─────────────────────┐
          │       MDSSharp       │  │       ISZSharp      │
          └──────────────────────┘  └─────────────────────┘
-     NuGet: CHDSharp 1.4.3, WPF-UI, SharpCompress, NAudio, Serilog
+     NuGet: CHDSharp 1.4.3, Avalonia, SharpCompress, NAudio, Serilog
 ```
 
 - The app references `MDSSharp`, `CCDSharp`, `CSOSharp`, `PBPSharp` and `ISZSharp` as project references.
@@ -97,21 +97,21 @@ App ctor
  │    ├─ file sink: %LocalAppData%\BatchConvertToCHD\logs\BatchConvertToCHD-.log (daily, 7 retained)
  │    ├─ debug sink
  │    └─ BugReportApiSink (forwards Warning+ to the bug API)
- └─ subscribe: AppDomain.UnhandledException, DispatcherUnhandledException,
-               TaskScheduler.UnobservedTaskException, Exit
+ └─ subscribe: AppDomain.UnhandledException, Dispatcher.UIThread.UnhandledException,
+                TaskScheduler.UnobservedTaskException, Exit
 
 OnStartup
  ├─ acquire global mutex "Global\BatchConvertToCHD_SingleInstance" (second instance → exit)
  ├─ ShutdownMode = OnMainWindowClose
- ├─ apply dark theme (WPF-UI)
+ ├─ apply dark Fluent theme (Avalonia)
  ├─ delete legacy 7z_x64.dll / 7z_arm64.dll
  ├─ _statsService.RecordUsageAsync()        (fire-and-forget)
  └─ type preloading on background thread
 
 MainWindow ctor
- ├─ probe CHDSharp/chdman/7za in BaseDirectory
+ ├─ probe CHDSharp/chdman/7za (app directory first, then PATH)
  ├─ construct services (ArchiveService, ScreenshotService, FileWatcherService)
- ├─ RegisterHotKey (F8) on SourceInitialized
+ ├─ wire F8 screenshot hotkey (window KeyDown)
  ├─ InitializeStatusBar
  ├─ after 2 s: CleanupLeftoverTempDirectories + LegacyCleanupService.RunInBackground
  └─ log environment details
@@ -123,7 +123,7 @@ MainWindow Loaded
  └─ UpdateService.CheckForNewVersionAsync (background)
 ```
 
-Line references: `App.xaml.cs:35–145`, `MainWindow.xaml.cs:87–172`.
+Line references: `App.axaml.cs:35–145`, `MainWindow.axaml.cs:87–172`.
 
 ---
 
@@ -131,7 +131,7 @@ Line references: `App.xaml.cs:35–145`, `MainWindow.xaml.cs:87–172`.
 
 ```
 User clicks Start Conversion
-  └─ StartConversionButton_ClickAsync              (MainWindow.xaml.cs:1275)
+  └─ StartConversionButton_ClickAsync              (MainWindow.axaml.cs:1275)
        ├─ validate paths (ValidateAndNormalizePath)
        ├─ read options (delete originals, smaller-first, force CD/DVD, timeout)
        ├─ RenewCancellationTokenSource
@@ -187,9 +187,9 @@ Verification: StartVerificationButton_ClickAsync (:1413)
 
 ## 3.5 Concurrency & Threading Model
 
-- **UI thread**: all WPF controls; dispatcher invocations are used from worker contexts (`Dispatcher.Invoke`, `Dispatcher.InvokeAsync` with `DispatcherPriority.Background` for chunked list loading).
-- **Worker threads**: `Task.Run` for file scanning, archive extraction, chdman process orchestration, GDI screenshots.
-- **Cancellation**: one `CancellationTokenSource` per operation, guarded by a `Lock` (`_cts`, `_ctsLock`, `MainWindow.xaml.cs:31–32`); cancellation is observed at every loop iteration and propagated into chdman via a linked timeout CTS.
+- **UI thread**: all Avalonia controls; dispatcher invocations are used from worker contexts (`Dispatcher.UIThread.Invoke`/`InvokeAsync`, with `DispatcherPriority.Background` for chunked list loading).
+- **Worker threads**: `Task.Run` for file scanning, archive extraction, chdman process orchestration, screenshot rendering.
+- **Cancellation**: one `CancellationTokenSource` per operation, guarded by a `Lock` (`_cts`, `_ctsLock`, `MainWindow.axaml.cs:31–32`); cancellation is observed at every loop iteration and propagated into chdman via a linked timeout CTS.
 - **Chdman process**: stdout/stderr are redirected and parsed asynchronously (`OutputDataReceived`/`ErrorDataReceived`); the process is killed (`process.Kill(true)`) on cancellation/timeout, and the app waits 300 ms before temp cleanup so file handles are released.
 - **Speed telemetry**: `PerformanceCounter`-based disk write/read rates sampled every second (`AppConfig.WriteSpeedUpdateIntervalMs = 1000`).
 - **Operation state**: an interlocked `_operationRunningState` plus `SetControlsState` guards the UI against re-entrancy; a `_pendingClose` flag lets the window close gracefully mid-operation.

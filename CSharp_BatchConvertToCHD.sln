@@ -1,7 +1,5 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BatchConvertToCHD", "BatchConvertToCHD\BatchConvertToCHD.csproj", "{59BAEC5C-EFC6-4931-A9E2-3E3890247FC8}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BatchConvertToCHD.Tests", "BatchConvertToCHD.Tests\BatchConvertToCHD.Tests.csproj", "{FF2ED339-6BE3-417D-88C8-2C1F4BE36531}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSOSharp", "CSOSharp\CSOSharp.csproj", "{5F41FA49-35E0-4D74-ABD7-707AE8096EA7}"
@@ -26,18 +24,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{59BAEC5C-EFC6-4931-A9E2-3E3890247FC8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{59BAEC5C-EFC6-4931-A9E2-3E3890247FC8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{59BAEC5C-EFC6-4931-A9E2-3E3890247FC8}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{59BAEC5C-EFC6-4931-A9E2-3E3890247FC8}.Debug|x64.Build.0 = Debug|Any CPU
-		{59BAEC5C-EFC6-4931-A9E2-3E3890247FC8}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{59BAEC5C-EFC6-4931-A9E2-3E3890247FC8}.Debug|x86.Build.0 = Debug|Any CPU
-		{59BAEC5C-EFC6-4931-A9E2-3E3890247FC8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{59BAEC5C-EFC6-4931-A9E2-3E3890247FC8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{59BAEC5C-EFC6-4931-A9E2-3E3890247FC8}.Release|x64.ActiveCfg = Release|Any CPU
-		{59BAEC5C-EFC6-4931-A9E2-3E3890247FC8}.Release|x64.Build.0 = Release|Any CPU
-		{59BAEC5C-EFC6-4931-A9E2-3E3890247FC8}.Release|x86.ActiveCfg = Release|Any CPU
-		{59BAEC5C-EFC6-4931-A9E2-3E3890247FC8}.Release|x86.Build.0 = Release|Any CPU
 		{FF2ED339-6BE3-417D-88C8-2C1F4BE36531}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FF2ED339-6BE3-417D-88C8-2C1F4BE36531}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FF2ED339-6BE3-417D-88C8-2C1F4BE36531}.Debug|x64.ActiveCfg = Debug|Any CPU

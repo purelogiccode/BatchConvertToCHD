@@ -5,7 +5,7 @@ nav_order: 1
 
 # BatchConvertToCHD — Wiki
 
-Welcome to the official wiki for **Batch Convert to CHD**, a high-performance Windows desktop utility for converting disk images into the **Compressed Hunks of Data (CHD)** format.
+Welcome to the official wiki for **Batch Convert to CHD**, a high-performance cross-platform desktop utility for converting disk images into the **Compressed Hunks of Data (CHD)** format.
 
 This documentation covers the project from both a user and a developer perspective: features, workflows, architecture, services, utilities, embedded libraries, testing, and troubleshooting.
 
@@ -33,9 +33,9 @@ This documentation covers the project from both a user and a developer perspecti
 | Fact | Value |
 |------|-------|
 | **Application name** | `BatchConvertToCHD` |
-| **Latest version** | 3.8.0 |
-| **Target framework** | .NET 10.0 (`net10.0-windows`), WPF |
-| **Platform** | Windows 10 / 11, x64 and ARM64 |
+| **Latest version** | 3.9.0 |
+| **Target framework** | .NET 10.0 (`net10.0;net10.0-windows`), Avalonia |
+| **Platform** | Windows 10 / 11 (x64 and ARM64); Linux and macOS from source |
 | **License** | GPL v3.0 |
 | **Primary encoder** | `chdman` (MAME Project, 0.289), bundled as `chdman.exe` / `chdman_arm64.exe` |
 | **Fallback encoder** | `CHDSharp` (PureLogicCode), bundled as `CHDSharp.exe` / `CHDSharp_arm64.exe` — chdman byte-identical output |
@@ -50,9 +50,9 @@ This documentation covers the project from both a user and a developer perspecti
 ```
 CSharp_BatchConvertToCHD/
 ├── MDSSharp/                       # Alcohol 120% (.mds/.mdf) parsing library
-├── BatchConvertToCHD/              # WPF application (net10.0-windows)
-│   ├── MainWindow.xaml(.cs)        # Main UI + conversion/extraction/verification logic
-│   ├── App.xaml(.cs)               # Startup, Serilog, exception handlers
+├── BatchConvertToCHD.Avalonia/     # Avalonia application (net10.0;net10.0-windows)
+│   ├── MainWindow.axaml(.cs)       # Main UI + conversion/extraction/verification logic
+│   ├── App.axaml(.cs)              # Startup, Serilog, exception handlers
 │   ├── AppConfig.cs                # Central configuration constants
 │   ├── Models/                     # FileItem, GitHubRelease, PbpExtractionResult
 │   ├── Services/                   # Archive, BugReport, FileWatcher, Stats, Update, ...

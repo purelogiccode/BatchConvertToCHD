@@ -6,33 +6,33 @@ GitHub wiki and GitHub Pages).
 
 ## What this is
 
-`Batch Convert to CHD` - a Windows WPF desktop app (`net10.0-windows`) that batch
-converts disc images (cue/iso/img/ccd/mds/pbp/cso/isz/ecm/split sets/archives)
-to CHD using a bundled `chdman.exe` with a managed CHDSharp fallback. The
-solution also contains six library projects, an xUnit test project, and
-`BatchConvertToCHD.Avalonia`, a cross-platform (Windows/Linux/macOS) front end
-with the same UI.
+`Batch Convert to CHD` - a cross-platform (Windows/Linux/macOS) Avalonia desktop
+app that batch converts disc images (cue/iso/img/ccd/mds/pbp/cso/isz/ecm/split
+sets/archives) to CHD using a bundled `chdman.exe` with a managed CHDSharp
+fallback. The solution also contains six library projects and an xUnit test
+project.
 
-### The Avalonia front end
+### The application project
 
-- `BatchConvertToCHD.Avalonia` multi-targets `net10.0` (Linux/macOS) and
-  `net10.0-windows` (Windows). The Windows TFM adds NAudio (Media Foundation/ACM
-  MP3 decoding); the neutral TFM decodes MP3 via `ffmpeg` on PATH.
-- Shared, UI-free code lives in the WPF project and is **linked** into the
-  Avalonia project (`Models`, `Utilities`, `Services`, `AppConfig.cs`). Edit the
-  file in `BatchConvertToCHD/` and both front ends pick it up; never fork a
-  copy. UI-layer files (`MainWindow`, `AboutWindow`, `App`, `ScreenshotService`)
-  exist separately per front end.
+- `BatchConvertToCHD.Avalonia` is the base app project: it multi-targets
+  `net10.0` (Linux/macOS) and `net10.0-windows` (Windows), builds
+  `BatchConvertToCHD.exe`, and links no files from outside its folder. The
+  Windows TFM adds NAudio (Media Foundation/ACM MP3 decoding); the neutral TFM
+  decodes MP3 via `ffmpeg` on PATH.
+- UI-free code (`AppConfig.cs`, `Models`, `Utilities`, `Services`) lives in the
+  app project alongside the UI layer (`MainWindow`, `AboutWindow`, `App`,
+  `ScreenshotService`). There is no separate WPF front end any more.
 - Tool discovery is platform-aware: bundled `chdman`/`7za`/`CHDSharp` binaries
   next to the app come first (Windows only), then `chdman`, `7z`/`7za`/`7zz` and
   `CHDSharp` on `PATH` (Linux/macOS).
 - The custom title bar, status colors and terminal log are styled in
-  `App.axaml`; keep UI changes in both front ends visually consistent.
+  `App.axaml`.
 
 ## Toolchain
 
 - .NET SDK 10 - declared in `global.json` (`rollForward: latestMajor`). Never
-  lower `TargetFramework` below `net10.0-windows`; the WPF UI depends on it.
+  lower the Windows target below `net10.0-windows`; the Windows UI and NAudio
+  need it.
 - Node.js 24 - used only for the zero-dependency helper scripts in
   `scripts/ci/`. Do not add npm packages or a `package.json`.
 - Avalonia 12.1 (desktop, Fluent theme, DataGrid); the neutral TFM must keep
@@ -51,19 +51,18 @@ dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release
 dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release --filter "Category!=Integration"
 
 # Framework-dependent single-file publish (one per architecture)
-dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish/win-x64
-dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -r win-arm64 --self-contained false -p:PublishSingleFile=true -o publish/win-arm64
+dotnet publish BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c Release -f net10.0-windows -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish/win-x64
+dotnet publish BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c Release -f net10.0-windows -r win-arm64 --self-contained false -p:PublishSingleFile=true -o publish/win-arm64
 
 # Release zip (same command CI runs)
 ./scripts/ci/package-release.ps1 -Rid win-x64 -Version 3.7.0 -PublishDir publish/win-x64 -OutputDir dist
 
-# Avalonia front end: run on Windows (multi-targeted, so pick the Windows TFM)
+# Run on Windows (multi-targeted, so pick the Windows TFM)
 dotnet run --project BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -f net10.0-windows
 
-# Avalonia front end: framework-dependent publishes per OS
-dotnet publish BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c Release -f net10.0-windows -r win-x64 --self-contained false -o publish/avalonia-win-x64
-dotnet publish BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c Release -f net10.0 -r linux-x64 --self-contained false -o publish/avalonia-linux-x64
-dotnet publish BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c Release -f net10.0 -r osx-arm64 --self-contained false -o publish/avalonia-osx-arm64
+# Framework-dependent publishes for Linux/macOS (neutral TFM)
+dotnet publish BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c Release -f net10.0 -r linux-x64 --self-contained false -o publish/linux-x64
+dotnet publish BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c Release -f net10.0 -r osx-arm64 --self-contained false -o publish/osx-arm64
 ```
 
 ## Release engineering (do not break)
@@ -81,7 +80,7 @@ dotnet publish BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c R
 - **Zip naming is fixed:** `release_<version>_win-<rid>.zip`, e.g.
   `release_3.7.0_win-x64.zip`. One zip per architecture, both attached to the
   GitHub release.
-- **Version lives in two csproj files** (`BatchConvertToCHD` and
+- **Version lives in two csproj files** (`BatchConvertToCHD.Avalonia` and
   `BatchConvertToCHD.Tests`, `AssemblyVersion`/`FileVersion`) plus a matching
   section in `WhatsNew.md`. A release tag is `release_<version>` and must match
   the csproj version - `scripts/ci/version.mjs` enforces this in CI.
@@ -185,12 +184,13 @@ the runner's Node 24 runtime is used.
   (Meziantou, Roslynator) run on every build. Do not add code comments unless
   asked.
 - Bundled binaries (`7za*.exe`, `chdman*.exe`, `CHDSharp*.exe`) are committed
-  and copied to the output with `CopyToOutputDirectory=Always`; only replace
-  them deliberately.
+  in `BatchConvertToCHD.Avalonia/` and copied to the output with
+  `CopyToOutputDirectory=Always`; only replace them deliberately.
 - `BatchConvertToCHD/bin/Release/` is the local release archive: every
-  version's `release_<version>_win-<rid>.zip` lives there. Copy new zips in,
-  **never delete files inside that path** (also avoid commands that would
-  clean it - it sits beside, not inside, the per-TFM build output).
+  version's `release_<version>_win-<rid>.zip` lives there. The WPF project it
+  belonged to is gone; the folder is kept solely as the archive. Copy new zips
+  in, **never delete files inside that path** (also avoid commands that would
+  clean it - it sits beside, not inside, any build output).
 - Tests are xUnit; add regression tests next to the existing ones in
   `BatchConvertToCHD.Tests/`. The suite must pass before a release.
   `[Trait("Category", "Integration")]` classes depend on local sample folders

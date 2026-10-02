@@ -7,7 +7,7 @@ nav_order: 2
 
 **Batch Convert to CHD** is a high-performance Windows desktop utility designed to streamline the conversion of various disk image formats into the **Compressed Hunks of Data (CHD)** format — the format used by MAME, and increasingly by emulation frontends for PlayStation, Dreamcast, and other systems.
 
-Developed by [Pure Logic Code](https://www.purelogiccode.com), the application combines a modern WPF-UI dashboard with battle-tested MAME tooling (`chdman`) and pure-C# libraries (CHDSharp, CCDSharp, CSOSharp, PBPSharp, MDSSharp, ISZSharp) for a fully local, offline-capable conversion experience.
+Developed by [Pure Logic Code](https://www.purelogiccode.com), the application combines a modern cross-platform Avalonia dashboard with battle-tested MAME tooling (`chdman`) and pure-C# libraries (CHDSharp, CCDSharp, CSOSharp, PBPSharp, MDSSharp, ISZSharp) for a fully local, offline-capable conversion experience.
 
 ---
 
@@ -16,7 +16,7 @@ Developed by [Pure Logic Code](https://www.purelogiccode.com), the application c
 ### Modern Side-by-Side Dashboard
 - **Dual-pane interface** — settings and file list on the left, real-time terminal-style log on the right.
 - **Interactive file selection** — automatically scans folders; the user picks exactly which files to process via a detailed list with checkboxes.
-- **Chunked file loading** — directory scans with thousands of files are loaded in chunks of 100 items at background priority to keep the UI responsive (`MainWindow.xaml.cs:820–975`).
+- **Chunked file loading** — directory scans with thousands of files are loaded in chunks of 100 items at background priority to keep the UI responsive (`MainWindow.axaml.cs:820–975`).
 - **Resizable layout** — built-in grid splitter between file explorer and log view.
 
 ### Multi-Architecture Support
@@ -71,7 +71,7 @@ A file's extension is the least reliable thing about it. Every input's leading b
 ### Performance & UI
 - **Real-time telemetry** — disk write/read speeds and elapsed time during operations.
 - **High-performance logging** — Serilog with UI log truncation at 100,000 characters.
-- **WPF-UI theming** — dark Fluent theme with a static dark background and rounded corners on Windows 11.
+- **Avalonia Fluent theming** — dark theme with a static dark background and rounded corners on Windows, Linux and macOS.
 
 ### Updates & Stability
 - **Automatic update checks** — GitHub releases are checked at startup; the user is offered the download page.

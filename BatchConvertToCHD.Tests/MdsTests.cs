@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
+using BatchConvertToCHD.Utilities;
 using MDSSharp;
 
 namespace BatchConvertToCHD.Tests;

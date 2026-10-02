@@ -14,9 +14,8 @@ using Serilog.Events;
 namespace BatchConvertToCHD;
 
 /// <summary>
-///     Avalonia application class for BatchConvertToCHD. Handles startup, exception handling,
-///     single-instance enforcement and service initialization. Mirrors the WPF
-///     <c>BatchConvertToCHD.App</c> so both front ends share the same behaviour.
+///     Application class for BatchConvertToCHD. Handles startup, exception handling,
+///     single-instance enforcement and service initialization.
 /// </summary>
 public class App : Application
 {

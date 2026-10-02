@@ -16,8 +16,10 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using BatchConvertToCHD.Diagnostics;
 using BatchConvertToCHD.Dialogs;
-using BatchConvertToCHD.Ecm;
+using BatchConvertToCHD.Models;
 using BatchConvertToCHD.Services;
+using BatchConvertToCHD.Utilities;
+using BatchConvertToCHD.Utilities.Ecm;
 using CCDSharp;
 using CCDSharp.Models;
 using CHDSharp;
@@ -174,6 +176,7 @@ internal partial class MainWindow : Window, IDisposable
         DisplayConversionInstructionsInLog();
         ResetOperationStats();
         LogEnvironmentDetails();
+        InitializeExplorerTab();
 
         // Defer heavy initialization until after window is shown
         Opened += MainWindow_OpenedAsync;
@@ -181,7 +184,7 @@ internal partial class MainWindow : Window, IDisposable
         // Hide speed display initially until we know counters are available
         SpeedStatCard.IsVisible = false;
 
-        // From here on the ported WPF event handlers can safely touch every named control.
+        // From here on the event handlers can safely touch every named control.
         _uiInitialized = true;
     }
 
@@ -854,7 +857,13 @@ internal partial class MainWindow : Window, IDisposable
                     DisplayExtractionInstructionsInLog();
                     UpdateStatusBarMessage("Ready for extraction");
                     break;
+                case "ExplorerTab":
+                    DisplayExplorerInstructionsInLog();
+                    UpdateStatusBarMessage("Ready to explore");
+                    break;
             }
+
+            SetExplorerLayout(string.Equals(selectedTab.Name, "ExplorerTab", StringComparison.Ordinal));
         }
 
         UpdateWriteSpeedDisplay(0);

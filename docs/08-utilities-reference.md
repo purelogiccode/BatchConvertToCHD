@@ -5,7 +5,7 @@ nav_order: 9
 
 # 8. Utilities Reference
 
-All classes live in `BatchConvertToCHD/Utilities/` (and `Models/` where noted).
+All classes live in `BatchConvertToCHD.Avalonia/Utilities/` (and `Models/` where noted).
 
 ---
 
@@ -92,7 +92,7 @@ Generates cue files for **bin-only archives** (no descriptor in the archive).
 - `ReadTrackModeAsync(cuePath)` — scans `TRACK ` lines for a `/` and returns the mode token after the last space; default MODE2/2352.
 - `RewriteCueAsync(cuePath, mode)` — rewrites the whole auto-cue with a new mode.
 - `GetAlternateMode(mode)` — MODE2 ↔ MODE1 swap.
-- Auto-cue outputs map to `Game.chd` (not `Game.autocue.chd`), and a failed auto-cue conversion is retried once with the alternate track mode (`MainWindow.xaml.cs:1579–1627`).
+- Auto-cue outputs map to `Game.chd` (not `Game.autocue.chd`), and a failed auto-cue conversion is retried once with the alternate track mode (`MainWindow.axaml.cs:1579–1627`).
 
 ---
 
@@ -166,7 +166,7 @@ Notes:
 - `.sub` is a sidecar format and `.chd` is an output, so neither is an input. `.bin` **is** a standalone input now — a bare `.bin` gets a generated cue — but `InputFileFilter` drops it from the batch when a sibling descriptor already covers it.
 - Only the **first** volume of a split set is registered (`.001`, `.i00`); later parts are found from it, so a set is offered once rather than once per piece.
 - A `.mdf` is deliberately absent: the `.mds` descriptor drives Alcohol conversion, so an orphaned `.mdf` is skipped.
-- The `.cdt` sibling of CCD sets is referenced literally in `MainWindow.xaml.cs` (no constant).
+- The `.cdt` sibling of CCD sets is referenced literally in `MainWindow.axaml.cs` (no constant).
 
 > **An extension missing from `AllSupportedInputExtensionsForConversion` is invisible.** This set gates the folder scan, so content-based handling for an unregistered extension can never run. `.isz` demonstrated the failure mode: the "genuinely compressed ISZ is not supported" message existed but was unreachable for actual `.isz` files, because they were never offered in the first place.
 

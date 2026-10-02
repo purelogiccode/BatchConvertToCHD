@@ -1,4 +1,5 @@
 using System.Text;
+using BatchConvertToCHD.Utilities;
 
 namespace BatchConvertToCHD.Tests;
 

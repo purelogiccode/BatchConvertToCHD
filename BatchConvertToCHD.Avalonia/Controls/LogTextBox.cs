@@ -6,8 +6,8 @@ using Avalonia.VisualTree;
 namespace BatchConvertToCHD.Controls;
 
 /// <summary>
-///     Terminal-style, read-only text box for the activity log. Adds the small WPF
-///     <c>TextBox</c> conveniences the ported code relies on (<see cref="AppendText" />,
+///     Terminal-style, read-only text box for the activity log. Adds the small
+///     <c>TextBox</c> conveniences the log writer relies on (<see cref="AppendText" />,
 ///     <see cref="ScrollToEnd" />, <see cref="SelectionLength" /> and <see cref="SelectedText" />).
 /// </summary>
 internal sealed class LogTextBox : TextBox

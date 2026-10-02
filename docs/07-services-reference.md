@@ -5,7 +5,7 @@ nav_order: 8
 
 # 7. Services Reference
 
-All classes live in `BatchConvertToCHD/Services/`. Namespaces are `BatchConvertToCHD.Services` unless noted.
+All classes live in `BatchConvertToCHD.Avalonia/Services/`. Namespaces are `BatchConvertToCHD.Services` unless noted.
 
 ---
 
@@ -117,14 +117,14 @@ All failures are silently ignored (files may be in use).
 
 ## 7.7 ScreenshotService
 
-`internal class ScreenshotService` (`ScreenshotService.cs:16`)
+`internal sealed class ScreenshotService` (`ScreenshotService.cs:14`)
 
-Captures the foreground window via GDI (`GetForegroundWindow` → `GetWindowRect` → `BitBlt`) and saves a PNG:
+Captures the focused application window and saves it as a PNG. **F8** is handled by the window itself (`MainWindow_KeyDown` in `MainWindow.axaml.cs`), so the hotkey only fires while the app window is focused; the capture is rendered with Avalonia's `RenderTargetBitmap` (sized from the window bounds and `RenderScaling`), so it works the same on every platform:
 
-- Location: `%LocalAppData%\BatchConvertToCHD\screenshots` (created on demand).
+- Location: `%LocalAppData%\BatchConvertToCHD\screenshots` (created on demand; the platform equivalent elsewhere).
 - Filename: `screenshot_yyyy-MM-dd_HH-mm-ss-fff.png`.
-- `TakeScreenshot()` (static) returns the saved path, or `null` (no foreground window / zero-size / failure).
-- Triggered by the global F8 hotkey (see [User Guide](04-user-guide.md#44-global-hotkey--screenshot-f8)).
+- `TakeScreenshot(Window)` (static) returns the saved path, or `null` on failure (the error is logged).
+- Triggered by the F8 hotkey (see [User Guide](04-user-guide.md#44-screenshot-hotkey-f8)).
 
 ---
 

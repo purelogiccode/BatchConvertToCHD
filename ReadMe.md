@@ -1,11 +1,11 @@
-[![Platform: Windows](https://img.shields.io/badge/Platform-Windows%20x64%20%7C%20ARM64-0078d7.svg)](https://www.microsoft.com/windows)
+[![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-0078d7.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
 [![.NET 10.0](https://img.shields.io/badge/.NET-10.0-512bd4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE.txt)
 [![GitHub release](https://img.shields.io/github/v/release/purelogiccode/BatchConvertToCHD)](https://github.com/purelogiccode/BatchConvertToCHD/releases)
 
 # Batch Convert to CHD
 
-**Batch Convert to CHD** is a high-performance Windows desktop utility designed to streamline the conversion of various disk image formats into the **Compressed Hunks of Data (CHD)** format.
+**Batch Convert to CHD** is a high-performance cross-platform desktop utility designed to streamline the conversion of various disk image formats into the **Compressed Hunks of Data (CHD)** format.
 
 ![Batch Convert to CHD Screenshot](screenshot.png)
 ![Batch Convert to CHD Screenshot](screenshot2.png)
@@ -78,11 +78,11 @@ A file's extension is the least reliable thing about it. Every input is identifi
 *   **Real-time Telemetry**: Monitor disk write/read speeds and elapsed time during operations.
 *   **Optimized Logging**: High-performance logging system with automatic truncation to keep the application responsive during long-running tasks.
 *   **AppData Storage**: Logs and F8 screenshots are stored under `%LocalAppData%\BatchConvertToCHD` (`logs` / `screenshots`); the title-bar **AppData** button opens the folder.
-*   **WPF-UI Theming**: Modern dark-themed UI powered by [WPF-UI](https://github.com/lepoco/wpfui) with a static dark background, rounded corners, and native Windows 11 aesthetics.
+*   **Avalonia Theming**: Modern dark-themed UI powered by [Avalonia](https://avaloniaui.net/) 12.1 with its Fluent theme, a static dark background, rounded corners, and a custom title bar.
 
 ### 🔄 Updates & Stability
 *   **Automatic Update Checks**: Notifies you immediately if a newer version is available on GitHub at startup.
-*   **Automated Bug Reporting**: Built-in error reporting system helps improve the application by automatically sending crash reports (no personal data collected). Known OS-level issues (e.g. WPF tooltip accessibility-bridge failures) and user-data conditions (corrupt files, chdman's own failures, stats API rate limits) are filtered out automatically, while genuine application defects — including CHDSharp/PBPSharp extraction failures (with debug details) — still reach the developer. A safety timer prevents the report throttle from hanging indefinitely on network issues.
+*   **Automated Bug Reporting**: Built-in error reporting system helps improve the application by automatically sending crash reports (no personal data collected). Known OS-level issues and user-data conditions (corrupt files, chdman's own failures, stats API rate limits) are filtered out automatically, while genuine application defects — including CHDSharp/PBPSharp extraction failures (with debug details) — still reach the developer. A safety timer prevents the report throttle from hanging indefinitely on network issues.
 
 ---
 
@@ -122,14 +122,14 @@ Generated cue sheets reference the disc image where it already lies rather than 
 
 ## 💻 Requirements
 
-*   **Operating System**: Windows 10 / 11 (x64 or ARM64)
-*   **Runtime**: [.NET 10.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)
+*   **Operating System**: Windows 10 / 11 (x64 or ARM64); Linux and macOS are supported from source
+*   **Runtime**: [.NET 10.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) on Windows; the .NET 10.0 runtime on Linux and macOS
 *   **Bundled Dependencies**:
     *   `chdman.exe` / `chdman_arm64.exe` (MAME Project — conversion only)
     *   `7za.exe` / `7za_arm64.exe` (7-Zip fallback extraction)
 *   **No Other Dependencies**: every format above is handled inside the application. There is nothing else to download, and both x64 and ARM64 get the same feature set.
 *   **Library Dependencies**:
-    * [WPF-UI](https://github.com/lepoco/wpfui) (v4.3.0) — Modern Fluent Design theming and controls
+    * [Avalonia](https://avaloniaui.net/) (v12.1.3) — Cross-platform Fluent Design UI framework and controls
     * [CHDSharp](https://www.nuget.org/packages/CHDSharp) (v1.4.3) — Pure C# CHD reading, verification, extraction, and creation (chdman byte-identical output)
     * [CSOSharp](https://) (v1.0.0) — Pure C# CSO/CISO decompression (deflate + LZ4)
     * [PBPSharp](https://) (v1.1.0) — Pure C# PBP extraction and SFO parsing
@@ -137,7 +137,7 @@ Generated cue sheets reference the disc image where it already lies rather than 
     * [MDSSharp](https://) (v1.1.0) — Pure C# Alcohol 120% (.mds/.mdf) parsing and cue preparation
     * [ISZSharp](https://www.nuget.org/packages/ISZSharp) (v1.0.1) — Pure C# UltraISO ISZ decompression
     * [SharpCompress](https://github.com/adamhathcock/sharpcompress) (v0.50.4) — Archive extraction, and bzip2 decompression for ISZ images
-    * [NAudio](https://github.com/naudio/NAudio) (v3.1.0) — MP3 audio track decoding (Media Foundation)
+    * [NAudio](https://github.com/naudio/NAudio) (v3.1.0) — MP3 audio track decoding on Windows (Media Foundation); Linux and macOS use `ffmpeg` from `PATH`
     * [Serilog](https://serilog.net/) (v4.4.0) — Structured diagnostic logging
 
 ---
@@ -225,7 +225,7 @@ This project is licensed under the **GNU General Public License v3.0**. See the 
 **Acknowledgements:**
 *   [MAME Team](https://www.mamedev.org/) for `chdman`.
 *   [CHDSharp](https://www.nuget.org/packages/CHDSharp) by Peterson Fernandes — Pure C# CHD library supporting V1-V5, all 10 codecs, parent/child chaining, parallel verification, and CHD creation that is byte-identical to `chdman` (verified across a 56-disc battle corpus).
-*   [WPF-UI](https://github.com/lepoco/wpfui) by lepoco — Modern Windows 11 Fluent Design theming and controls.
+*   [Avalonia](https://avaloniaui.net/) by the Avalonia community — Cross-platform .NET UI framework powering the application front end.
 *   [CSOSharp](https://) by Peterson Fernandes — Pure C# CSO/CISO decompression library.
 *   [PBPSharp](https://) by Peterson Fernandes — Pure C# PlayStation PBP extraction library.
 *   [CCDSharp](https://) by Peterson Fernandes — Pure C# CloneCD disc image parsing and conversion library.

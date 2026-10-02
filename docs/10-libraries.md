@@ -22,8 +22,8 @@ The solution ships five in-house libraries that replace external tools (maxcso, 
 **Purpose**: read CloneCD disc-image sets (`.ccd` descriptor + `.img` data + optional `.sub` subchannel) and convert them to CUE/BIN for chdman.
 
 - Main type: `CcdConverter` — `Parse(inputFile)` returns a parsed disc model (`DiscImage` with `ImgFilePath`, subchannel info, track table); `ConvertToCueBin(inputFile, tempCuePath)` writes the CUE/BIN pair.
-- Integration: `ProcessCcdFileForConversionAsync` (`MainWindow.xaml.cs:1702`) parses the `.ccd`, converts to CUE/BIN in a temp dir, then converts the cue with chdman. On success the `.ccd`/`.img`/`.sub`/`.cdt` set is deleted when "delete originals" is enabled.
-- Archive extractions skip `.img` files that belong to a `.ccd` set to avoid double conversion (`MainWindow.xaml.cs:1562–1573`).
+- Integration: `ProcessCcdFileForConversionAsync` (`MainWindow.axaml.cs:1702`) parses the `.ccd`, converts to CUE/BIN in a temp dir, then converts the cue with chdman. On success the `.ccd`/`.img`/`.sub`/`.cdt` set is deleted when "delete originals" is enabled.
+- Archive extractions skip `.img` files that belong to a `.ccd` set to avoid double conversion (`MainWindow.axaml.cs:1562–1573`).
 - Failure messages are prefixed `"CCDSharp: Conversion error"` and are excluded from bug reports.
 - Reference sources live under `References/` (`ccd2cue-master`, `ccd2iso-main`, `myccd2cue-main`) — third-party material used to build the library, not part of the build.
 - **Testing note**: the test project does not reference CCDSharp, so there are currently no CCDSharp unit tests (see [Testing](11-testing.md)).
@@ -53,7 +53,7 @@ The solution ships five in-house libraries that replace external tools (maxcso, 
 - **SFO parsing is best effort**: a missing or corrupt PARAM.SFO (bad magic, malformed table, offsets beyond EOF) leaves `Title`/`DiscId` null with empty `Entries` instead of failing `Open` — none of the reference tools read the SFO when extracting disc images.
 - `PbpError` enum: `None=0, InvalidHeader=1, FileNotFound=2, IoError=3, CorruptFile=4, InvalidPsarHeader=5, DiscOutOfRange=6, ResourceNotFound=7, DecompressionError=8, TruncatedPsar=9, InvalidSfo=10`. `TruncatedPsar` is returned when the PSAR container parses but no ISO index follows (see `NoIsoIndexException`), when an index points past the end of the file, or when a block read hits end-of-stream — any file that ends before the data it declares. `InvalidSfo` is retained for API compatibility but is no longer returned by `Open` (SFO problems are tolerated). The app treats `TruncatedPsar` and `InvalidPsarHeader` as user-data conditions ("truncated or incomplete — re-download") that are logged without a bug report.
 - **Block decompression** uses SharpZipLib's raw `Inflater` (the same decompressor the popstation reference implementation uses for PSAR blocks), which tolerates a few streams the stricter .NET `DeflateStream` rejects; a failed block surfaces as `PbpError.DecompressionError`.
-- Integration: `ExtractPbpToCueBinAsync` (`MainWindow.xaml.cs:2959`) — multi-disc PBPs produce `"{name} - Disc N.bin/.cue"` sets; the result (`PbpExtractionResult`) carries `ErrorCode` + a human-readable `Error` so the caller can distinguish skippable conditions from real failures.
+- Integration: `ExtractPbpToCueBinAsync` (`MainWindow.axaml.cs:2959`) — multi-disc PBPs produce `"{name} - Disc N.bin/.cue"` sets; the result (`PbpExtractionResult`) carries `ErrorCode` + a human-readable `Error` so the caller can distinguish skippable conditions from real failures.
 - Tests: `PbpFileTests`, `PbpHeaderTests`, `SfoDataTests`, `SfoEntryTests`, `TocEntryTests`, `CueSheetWriterTests`, plus real-file integration tests (`PbpFileIntegrationTests`).
 
 ## 10.4 CHDSharp (NuGet)

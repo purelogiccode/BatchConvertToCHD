@@ -18,7 +18,7 @@ nav_order: 3
 
 ### Build (developers)
 - .NET SDK **10.0.x** (`global.json` pins `10.0.0` with `rollForward: latestMajor`)
-- Windows SDK for WPF development
+- No Windows SDK required — Avalonia 12.1 and the Windows-only NAudio package are restored via NuGet, and the project sets `EnableWindowsTargeting` for the Windows TFM
 - No other global tools required
 
 ---
@@ -27,7 +27,7 @@ nav_order: 3
 
 1. Download the latest binary from the [Releases page](https://github.com/purelogiccode/BatchConvertToCHD/releases).
 2. Extract the contents to a permanent folder (do **not** run from a temp/Downloads folder if you want update/self-containment to behave).
-3. **Important**: keep all `.exe` files (including ARM64 variants) in the same directory as `BatchConvertToCHD.exe` — `chdman.exe` and `7za.exe` are located relative to the app's base directory (`MainWindow.xaml.cs:96–101`).
+3. **Important** (Windows): keep all `.exe` files (including ARM64 variants) in the same directory as `BatchConvertToCHD.exe` — tool discovery probes the app's base directory first, then `PATH` (`MainWindow.axaml.cs`). On Linux and macOS the tools are found on `PATH`.
 4. Launch `BatchConvertToCHD.exe`.
 
 ---
@@ -46,14 +46,14 @@ dotnet build CSharp_BatchConvertToCHD.sln -c Release
 dotnet test CSharp_BatchConvertToCHD.sln -c Release
 
 # Or just the application
-dotnet build BatchConvertToCHD/BatchConvertToCHD.csproj -c Release
+dotnet build BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c Release
 ```
 
 The solution contains seven projects:
 
 | Project | Kind | Target framework |
 |---------|------|------------------|
-| `BatchConvertToCHD` | WPF application (WinExe) | `net10.0-windows` |
+| `BatchConvertToCHD.Avalonia` | Avalonia application (WinExe) | `net10.0;net10.0-windows` |
 | `BatchConvertToCHD.Tests` | xUnit test suite | `net10.0-windows` |
 | `MDSSharp` | class library (Alcohol 120% .mds/.mdf parsing) | `net8.0;net9.0;net10.0` |
 | `CCDSharp` | class library (CloneCD parsing) | `net8.0;net9.0;net10.0` |
@@ -61,14 +61,14 @@ The solution contains seven projects:
 | `PBPSharp` | class library (PBP/SFO parsing) | `net8.0;net9.0;net10.0` |
 | `ISZSharp` | class library (ISZ decompression) | `net8.0;net9.0;net10.0` |
 
-> **Note**: `chdman.exe` and `7za.exe` are copied to the output directory by the build (`BatchConvertToCHD.csproj:26–40`). The libraries are referenced as project references, not NuGet packages, except `CHDSharp` (NuGet 1.4.3) and other packages listed below.
+> **Note**: on Windows, `chdman.exe` and `7za.exe` are copied to the output directory by the build (`BatchConvertToCHD.Avalonia.csproj`); on Linux and macOS they are discovered on `PATH`. The libraries are referenced as project references, not NuGet packages, except `CHDSharp` (NuGet 1.4.3) and other packages listed below.
 
 ### NuGet dependencies (application)
 
 | Package | Version | Purpose |
 |---------|---------|---------|
 | CHDSharp | 1.4.3 | Pure C# CHD reading, verification, extraction, and creation (chdman byte-identical output) |
-| WPF-UI | 4.3.0 | Fluent Design theming and controls |
+| Avalonia (+ Desktop, Fluent theme, DataGrid) | 12.1.x | Cross-platform Fluent Design UI framework and controls |
 | SharpCompress | 0.50.x | Archive extraction (7z/rar), and bzip2 decompression for ISZ chunks |
 | NAudio | 3.1.0 | MP3 decoding via Media Foundation |
 | Serilog | 4.4.0 | Structured logging |
@@ -90,7 +90,7 @@ The application accepts an optional folder path argument to pre-populate the **C
 BatchConvertToCHD.exe "C:\ROMs\MyGames"
 ```
 
-The path is applied in `MainWindow_LoadedAsync` via `SetInputFolder` (`MainWindow.xaml.cs:148–153`).
+The path is applied in `MainWindow_LoadedAsync` via `SetInputFolder` (`MainWindow.axaml.cs:148–153`).
 
 ### First launch
 
@@ -101,7 +101,7 @@ The path is applied in `MainWindow_LoadedAsync` via `SetInputFolder` (`MainWindo
 
 ### Single-instance behavior
 
-Only one instance can run: a global mutex `Global\BatchConvertToCHD_SingleInstance` is acquired at startup; a second launch shows *"Another instance of BatchConvertToCHD is already running."* and exits (`App.xaml.cs:80–105`).
+Only one instance can run: a global mutex `Global\BatchConvertToCHD_SingleInstance` is acquired at startup; a second launch shows *"Another instance of BatchConvertToCHD is already running."* and exits (`App.axaml.cs:80–105`).
 
 ---
 

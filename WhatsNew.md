@@ -1,5 +1,25 @@
 # What's New
 
+## 3.9.0 (2026-10-02)
+
+### Avalonia becomes the application front end
+
+*   **The Windows-only WPF front end is gone**; the cross-platform Avalonia app is now the base project and builds `BatchConvertToCHD.exe`. It runs on Windows, Linux and macOS; official release zips remain the two Windows architectures.
+*   **Shared code and the bundled tools moved into `BatchConvertToCHD.Avalonia/`**, so the project no longer links files from another folder. Windows keeps the bundled `chdman`/`7za`/`CHDSharp`; Linux and macOS discover them (plus `ffmpeg` for MP3 tracks) on `PATH`.
+*   **UI parity with the old WPF build** was restored: Alt+letter button mnemonics, click-to-sort grid columns with the original header tooltips, and accessibility names on the main controls.
+*   **F8 screenshots are now window-scoped**: while the app window is focused, F8 captures it with `RenderTargetBitmap` on every platform (previously a system-wide hotkey captured the foreground window on Windows only).
+
+### New CHD Explorer tab
+
+*   **Browse a CHD like a disc**: pick a `.chd`, choose the file-system parser matching its console/system (35 formats, PlayStation auto-detection by default), and navigate the folder tree in a grid. Double-click a folder to open it, a file to extract and open it, or use Extract to save a folder to disk.
+*   **Backed by VideoGameFileSystemParser 1.3.0** (<https://www.nuget.org/packages/VideoGameFileSystemParser>), rebuilt against CHDSharp 1.4.3 and published for this release.
+
+### Housekeeping
+
+*   Version bumps: application 3.9.0, Meziantou.Analyzer 3.0.292.
+*   Release script strips native `.pdb` debug symbols from the zip and verifies the Avalonia native libraries are present.
+*   Docs, AGENTS.md and CI updated for the new base project; tests now reference the Avalonia assembly.
+
 ## 3.8.0 (2026-09-19)
 
 ### Multi-part RAR archives now convert end to end (#67305)

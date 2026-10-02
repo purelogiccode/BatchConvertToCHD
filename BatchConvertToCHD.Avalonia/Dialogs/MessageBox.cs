@@ -59,9 +59,8 @@ internal enum MessageBoxResult
 }
 
 /// <summary>
-///     Framework-agnostic replacement for the WPF <c>MessageBox</c>, rendering a themed modal
-///     <see cref="MessageDialog" />. Keeps the original call sites readable while running on
-///     Windows, Linux and macOS.
+///     Themed modal message box rendering a <see cref="MessageDialog" />. Keeps the call
+///     sites readable while running on Windows, Linux and macOS.
 /// </summary>
 internal static class MessageBox
 {
