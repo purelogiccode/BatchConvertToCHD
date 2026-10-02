@@ -5,7 +5,7 @@ nav_order: 6
 
 # 5. Conversion Pipeline (Technical)
 
-This page is a deep dive into the conversion machinery. All references are to `BatchConvertToCHD.Avalonia/MainWindow.axaml.cs` unless noted.
+This page is a deep dive into the conversion machinery. All references are to `BatchConvertToCHD/MainWindow.axaml.cs` unless noted.
 
 ---
 

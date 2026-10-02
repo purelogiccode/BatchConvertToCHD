@@ -46,14 +46,14 @@ dotnet build CSharp_BatchConvertToCHD.sln -c Release
 dotnet test CSharp_BatchConvertToCHD.sln -c Release
 
 # Or just the application
-dotnet build BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c Release
+dotnet build BatchConvertToCHD/BatchConvertToCHD.csproj -c Release
 ```
 
 The solution contains seven projects:
 
 | Project | Kind | Target framework |
 |---------|------|------------------|
-| `BatchConvertToCHD.Avalonia` | Avalonia application (WinExe) | `net10.0;net10.0-windows` |
+| `BatchConvertToCHD` | Avalonia application (WinExe) | `net10.0;net10.0-windows` |
 | `BatchConvertToCHD.Tests` | xUnit test suite | `net10.0-windows` |
 | `MDSSharp` | class library (Alcohol 120% .mds/.mdf parsing) | `net8.0;net9.0;net10.0` |
 | `CCDSharp` | class library (CloneCD parsing) | `net8.0;net9.0;net10.0` |
@@ -61,7 +61,7 @@ The solution contains seven projects:
 | `PBPSharp` | class library (PBP/SFO parsing) | `net8.0;net9.0;net10.0` |
 | `ISZSharp` | class library (ISZ decompression) | `net8.0;net9.0;net10.0` |
 
-> **Note**: on Windows, `chdman.exe` and `7za.exe` are copied to the output directory by the build (`BatchConvertToCHD.Avalonia.csproj`); on Linux and macOS the matching `tools/7zz*` binary (official 7-Zip 26.03) is copied as `7zz`, while a `chdman` on `PATH` is only used for extraction fallback and never for encoding. The libraries are referenced as project references, not NuGet packages, except `CHDSharp` (NuGet 1.4.3) and other packages listed below.
+> **Note**: on Windows, `chdman.exe` and `7za.exe` are copied to the output directory by the build (`BatchConvertToCHD.csproj`); on Linux and macOS the matching `tools/7zz*` binary (official 7-Zip 26.03) is copied as `7zz`, while a `chdman` on `PATH` is only used for extraction fallback and never for encoding. The libraries are referenced as project references, not NuGet packages, except `CHDSharp` (NuGet 1.4.3) and other packages listed below.
 
 ### NuGet dependencies (application)
 

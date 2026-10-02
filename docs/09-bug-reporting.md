@@ -33,7 +33,7 @@ Serilog Logger                             (App.axaml.cs:56–78)
 Additionally, **unhandled exceptions** are reported directly (not via the sink):
 
 - `AppDomain.CurrentDomain.UnhandledException` → `Log.Fatal` + synchronous `ReportException` (the process is about to terminate, so the report must complete inline — `App.axaml.cs:236–250`). For dispatcher and task-scheduler exceptions the report is fire-and-forget to avoid blocking the UI thread.
-- `Dispatcher.UIThread.UnhandledException` → `Log.Error` + `ReportException`, then `e.Handled = true` so the application survives the exception (`BatchConvertToCHD.Avalonia/App.axaml.cs`). There is no framework-specific suppression allowlist: every dispatcher exception is logged and reported, and known-noise filtering happens downstream in the Serilog sink's exclusion patterns (see §9.4).
+- `Dispatcher.UIThread.UnhandledException` → `Log.Error` + `ReportException`, then `e.Handled = true` so the application survives the exception (`BatchConvertToCHD/App.axaml.cs`). There is no framework-specific suppression allowlist: every dispatcher exception is logged and reported, and known-noise filtering happens downstream in the Serilog sink's exclusion patterns (see §9.4).
 - `TaskScheduler.UnobservedTaskException` → `Log.Error` + `ReportException`, then `SetObserved()`.
 - **Stats-rate-limit handling**: `StatsService.RecordUsageAsync` returns early on HTTP 429 (Too Many Requests) and logs at Debug level, so these transient conditions never reach the warning-level sink.
 

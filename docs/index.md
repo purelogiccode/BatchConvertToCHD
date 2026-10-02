@@ -50,7 +50,7 @@ This documentation covers the project from both a user and a developer perspecti
 ```
 CSharp_BatchConvertToCHD/
 ├── MDSSharp/                       # Alcohol 120% (.mds/.mdf) parsing library
-├── BatchConvertToCHD.Avalonia/     # Avalonia application (net10.0;net10.0-windows)
+├── BatchConvertToCHD/            # Avalonia application (net10.0;net10.0-windows)
 │   ├── MainWindow.axaml(.cs)       # Main UI + conversion/extraction/verification logic
 │   ├── App.axaml(.cs)              # Startup, Serilog, exception handlers
 │   ├── AppConfig.cs                # Central configuration constants

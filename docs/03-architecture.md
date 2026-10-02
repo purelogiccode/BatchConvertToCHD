@@ -13,7 +13,7 @@ This page describes the solution structure, the runtime startup sequence, and th
 
 ```
 CSharp_BatchConvertToCHD.sln
-├── BatchConvertToCHD.Avalonia/            (Avalonia app, net10.0;net10.0-windows)
+├── BatchConvertToCHD/                     (Avalonia app, net10.0;net10.0-windows)
 │   ├── App.axaml(.cs)                     → startup, Serilog, exception handlers
 │   ├── AppConfig.cs                       → central configuration
 │   ├── MainWindow.axaml(.cs)              → UI + all batch logic

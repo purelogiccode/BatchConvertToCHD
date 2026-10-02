@@ -1,7 +1,7 @@
 # Builds the two Windows release zips and attaches them to a GitHub release.
 #
 # Cut a release by pushing a tag that matches the version in
-# BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj, e.g.:
+# BatchConvertToCHD/BatchConvertToCHD.csproj, e.g.:
 #   git tag release_3.9.0 && git push origin release_3.9.0
 #
 # Artifacts: release_<version>_win-x64.zip and release_<version>_win-arm64.zip.
@@ -105,7 +105,7 @@ jobs:
 
       - name: Publish single-file (framework-dependent)
         run: >
-          dotnet publish BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj
+          dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj
           -c Release
           -f net10.0-windows
           -r ${{ matrix.rid }}

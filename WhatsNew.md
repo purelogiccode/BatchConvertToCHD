@@ -5,7 +5,7 @@
 ### Avalonia becomes the application front end
 
 *   **The Windows-only WPF front end is gone**; the cross-platform Avalonia app is now the base project and builds `BatchConvertToCHD.exe`. It runs on Windows, Linux and macOS; official release zips remain the two Windows architectures.
-*   **Shared code and the bundled tools moved into `BatchConvertToCHD.Avalonia/`**, so the project no longer links files from another folder. Windows keeps the bundled `chdman`/`7za`/`CHDSharp`; Linux and macOS discover them (plus `ffmpeg` for MP3 tracks) on `PATH`.
+*   **Shared code and the bundled tools moved into `BatchConvertToCHD/`**, so the project no longer links files from another folder. Windows keeps the bundled `chdman`/`7za`/`CHDSharp`; Linux and macOS discover them (plus `ffmpeg` for MP3 tracks) on `PATH`.
 *   **UI parity with the old WPF build** was restored: Alt+letter button mnemonics, click-to-sort grid columns with the original header tooltips, and accessibility names on the main controls.
 *   **F8 screenshots are now window-scoped**: while the app window is focused, F8 captures it with `RenderTargetBitmap` on every platform (previously a system-wide hotkey captured the foreground window on Windows only).
 

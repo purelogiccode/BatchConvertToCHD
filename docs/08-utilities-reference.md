@@ -5,7 +5,7 @@ nav_order: 9
 
 # 8. Utilities Reference
 
-All classes live in `BatchConvertToCHD.Avalonia/Utilities/` (and `Models/` where noted).
+All classes live in `BatchConvertToCHD/Utilities/` (and `Models/` where noted).
 
 ---
 
