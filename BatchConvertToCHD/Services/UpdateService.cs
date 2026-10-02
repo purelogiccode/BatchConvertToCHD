@@ -1,9 +1,7 @@
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
-using System.Windows;
 using BatchConvertToCHD.Models;
 
 namespace BatchConvertToCHD.Services;
@@ -31,6 +29,13 @@ internal class UpdateService
         _applicationName = applicationName;
         _httpClient = httpClient;
     }
+
+    /// <summary>
+    ///     Gets or sets an optional callback invoked when a newer version is found. The handler owns
+    ///     the user-facing prompt (including any browser-launch fallback), so the service itself
+    ///     stays UI-framework agnostic. When null, the check only logs and updates the status bar.
+    /// </summary>
+    internal Func<GitHubRelease, Task>? ShowUpdatePromptAsync { get; set; }
 
     /// <summary>
     ///     Checks GitHub for a newer version of the application and prompts the user to download if available.
@@ -189,57 +194,9 @@ internal class UpdateService
 
                 if (normalizedRemote > normalizedCurrent)
                 {
-                    if (Application.Current != null)
+                    if (ShowUpdatePromptAsync is { } showUpdatePrompt)
                     {
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                        {
-                            var result = MessageBox.Show(
-                                $"A new version ({remoteVersionString}) of {_applicationName} is available!\n\nWould you like to go to the download page?",
-                                "New Version Available",
-                                MessageBoxButton.YesNo,
-                                MessageBoxImage.Information
-                            );
-
-                            if (result == MessageBoxResult.Yes)
-                            {
-                                try
-                                {
-                                    Process.Start(
-                                        new ProcessStartInfo(latestRelease.HtmlUrl)
-                                        {
-                                            UseShellExecute = true
-                                        }
-                                    );
-                                }
-                                catch (Exception urlEx)
-                                {
-                                    onLog($"Failed to open browser: {urlEx.Message}");
-                                    _ = onBugReport("Failed to open browser", urlEx);
-
-                                    try
-                                    {
-                                        Clipboard.SetText(latestRelease.HtmlUrl);
-                                    }
-                                    catch (Exception clipboardEx)
-                                    {
-                                        onLog(
-                                            $"Failed to copy URL to clipboard: {clipboardEx.Message}"
-                                        );
-                                        _ = onBugReport(
-                                            "Failed to copy URL to clipboard",
-                                            clipboardEx
-                                        );
-                                    }
-
-                                    MessageBox.Show(
-                                        $"Unable to open browser automatically. The update URL has been copied to your clipboard.\n\nURL: {latestRelease.HtmlUrl}\n\nPlease paste it into your browser manually.",
-                                        "Browser Launch Failed",
-                                        MessageBoxButton.OK,
-                                        MessageBoxImage.Information
-                                    );
-                                }
-                            }
-                        });
+                        await showUpdatePrompt(latestRelease).ConfigureAwait(false);
                     }
 
                     onStatusUpdate($"Update available: v{remoteVersionString}");

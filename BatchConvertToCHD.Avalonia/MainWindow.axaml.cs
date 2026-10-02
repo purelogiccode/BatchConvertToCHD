@@ -7,11 +7,16 @@ using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Interop;
-using System.Windows.Media;
-using System.Windows.Threading;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
+using Avalonia.Media;
+using Avalonia.Platform.Storage;
+using Avalonia.Threading;
+using BatchConvertToCHD.Controls;
+using BatchConvertToCHD.Diagnostics;
 using BatchConvertToCHD.Models;
 using BatchConvertToCHD.Services;
 using BatchConvertToCHD.Utilities;
@@ -21,7 +26,6 @@ using CCDSharp.Models;
 using CHDSharp;
 using CHDSharp.Models;
 using MDSSharp;
-using Microsoft.Win32;
 using PBPSharp;
 using PBPSharp.Models;
 using Serilog;
@@ -33,13 +37,8 @@ namespace BatchConvertToCHD;
 ///     Main application window for BatchConvertToCHD.
 ///     Provides functionality for converting, verifying, and extracting CHD files.
 /// </summary>
-internal partial class MainWindow : IDisposable
+internal partial class MainWindow : Window, IDisposable
 {
-    // Global hotkey for F8 screenshot
-    private const int HotkeyId = 9001;
-    private const int VkF8 = 0x77;
-    private const int WmHotkey = 0x0312;
-
     // Temp Directory Prefix
     private const string TempDirPrefix = "BatchConvertToCHD_Temp_";
 
@@ -93,7 +92,7 @@ internal partial class MainWindow : IDisposable
     private readonly ObservableCollection<FileItem> _verificationFiles = new();
     private CancellationTokenSource _cts;
     private volatile int _failedCount;
-    private HwndSource? _hwndSource;
+    private bool _uiInitialized;
 
     // Operation state tracking (0 = idle, >0 = running) - using Interlocked for thread safety
     private int _operationRunningState;
@@ -101,12 +100,12 @@ internal partial class MainWindow : IDisposable
     // Tracks whether a close was requested while an operation was running
     private bool _pendingClose;
     private volatile int _processedOkCount;
-    private PerformanceCounter? _readBytesCounter;
+    private IoThroughputCounter? _readBytesCounter;
 
     // Statistics
     private volatile int _totalFilesProcessed;
     private bool _wasCancelled;
-    private PerformanceCounter? _writeBytesCounter;
+    private IoThroughputCounter? _writeBytesCounter;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="MainWindow" /> class.
@@ -120,7 +119,7 @@ internal partial class MainWindow : IDisposable
         // Ticks once a second while an operation runs so the elapsed-time stat card keeps
         // counting during long single-file conversions (e.g. a CHDSharp run), which produce
         // no per-file UI updates for the batch loops to refresh from.
-        _elapsedTimeTimer = new DispatcherTimer(DispatcherPriority.Background)
+        _elapsedTimeTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(1)
         };
@@ -138,15 +137,15 @@ internal partial class MainWindow : IDisposable
         // back to and the missing-dependency messaging stays accurate.
         (_chdmanExePath, _chdmanResolvedName, _isChdmanAvailable) = ResolveToolExecutable(
             appDirectory,
-            AppConfig.ChdmanExeCandidates
+            GetChdmanCandidates()
         );
         (_chdSharpExePath, _chdSharpResolvedName, _isChdSharpAvailable) = ResolveToolExecutable(
             appDirectory,
-            AppConfig.ChdSharpExeCandidates
+            GetChdSharpCandidates()
         );
         (_sevenZipExePath, _, var isSevenZipAvailable) = ResolveToolExecutable(
             appDirectory,
-            AppConfig.SevenZipExeCandidates
+            GetSevenZipCandidates()
         );
 
         // Initialize Services
@@ -157,8 +156,8 @@ internal partial class MainWindow : IDisposable
         _archiveService = new ArchiveService(_sevenZipExePath, isSevenZipAvailable);
         _screenshotService = new ScreenshotService();
 
-        // Register global F8 hotkey once the window handle is available
-        SourceInitialized += MainWindow_SourceInitialized;
+        // F8 screenshot hotkey (window-scoped on every platform)
+        KeyDown += MainWindow_KeyDown;
 
         InitializeStatusBar();
         _ = Task.Run(
@@ -182,10 +181,13 @@ internal partial class MainWindow : IDisposable
         LogEnvironmentDetails();
 
         // Defer heavy initialization until after window is shown
-        Loaded += MainWindow_LoadedAsync;
+        Opened += MainWindow_OpenedAsync;
 
         // Hide speed display initially until we know counters are available
-        SpeedStatCard.Visibility = Visibility.Collapsed;
+        SpeedStatCard.IsVisible = false;
+
+        // From here on the ported WPF event handlers can safely touch every named control.
+        _uiInitialized = true;
     }
 
     /// <summary>
@@ -194,23 +196,6 @@ internal partial class MainWindow : IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (_hwndSource != null)
-        {
-            try
-            {
-                var handle = new WindowInteropHelper(this).Handle;
-                if (handle != IntPtr.Zero)
-                    UnregisterHotKey(handle, HotkeyId);
-            }
-            catch (InvalidOperationException)
-            {
-                // Window handle already destroyed; skip hotkey cleanup
-            }
-
-            _hwndSource.RemoveHook(WndProc);
-            _hwndSource = null;
-        }
-
         lock (_ctsLock)
         {
             _cts.Cancel();
@@ -227,13 +212,7 @@ internal partial class MainWindow : IDisposable
         KillOrphanedProcesses();
     }
 
-    [DllImport("user32.dll")]
-    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-
-    [DllImport("user32.dll")]
-    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-
-    private async void MainWindow_LoadedAsync(object sender, RoutedEventArgs e)
+    private async void MainWindow_OpenedAsync(object? sender, EventArgs e)
     {
         try
         {
@@ -256,7 +235,7 @@ internal partial class MainWindow : IDisposable
             }
 
             // Show speed display if counters are available
-            if (_writeBytesCounter != null || _readBytesCounter != null) SpeedStatCard.Visibility = Visibility.Visible;
+            if (_writeBytesCounter != null || _readBytesCounter != null) SpeedStatCard.IsVisible = true;
 
             // Check for missing dependencies and notify user
             CheckDependenciesAndNotifyUser();
@@ -283,42 +262,64 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private void MainWindow_SourceInitialized(object? sender, EventArgs e)
+    private void MainWindow_KeyDown(object? sender, KeyEventArgs e)
     {
-        _hwndSource = PresentationSource.FromVisual(this) as HwndSource;
-        _hwndSource?.AddHook(WndProc);
+        if (e.Key != Key.F8) return;
 
-        var handle = new WindowInteropHelper(this).Handle;
-        RegisterHotKey(handle, HotkeyId, 0, VkF8);
-    }
-
-    private IntPtr WndProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-    {
-        if (msg == WmHotkey && wParam.ToInt32() == HotkeyId)
+        try
         {
-            try
+            var filePath = _screenshotService.TakeScreenshot(this);
+            if (filePath != null)
             {
-                var filePath = ScreenshotService.TakeScreenshot();
-                if (filePath != null)
-                {
-                    LogMessage($"Screenshot saved: {filePath}");
-                    UpdateStatusBarMessage("Screenshot captured");
-                }
-                else
-                {
-                    LogMessage("Screenshot failed: could not capture active window.");
-                    UpdateStatusBarMessage("Screenshot failed");
-                }
+                LogMessage($"Screenshot saved: {filePath}");
+                UpdateStatusBarMessage("Screenshot captured");
             }
-            catch (Exception ex)
+            else
             {
-                LogError($"Screenshot error: {ex.Message}", ex);
+                LogMessage("Screenshot failed: could not capture the application window.");
+                UpdateStatusBarMessage("Screenshot failed");
             }
-
-            handled = true;
+        }
+        catch (Exception ex)
+        {
+            LogError($"Screenshot error: {ex.Message}", ex);
         }
 
-        return IntPtr.Zero;
+        e.Handled = true;
+    }
+
+    private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            BeginMoveDrag(e);
+        }
+    }
+
+    private void TitleBar_DoubleTapped(object? sender, TappedEventArgs e)
+    {
+        ToggleMaximize();
+    }
+
+    private void MinimizeButton_Click(object? sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void MaximizeButton_Click(object? sender, RoutedEventArgs e)
+    {
+        ToggleMaximize();
+    }
+
+    private void CloseButton_Click(object? sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void ToggleMaximize()
+    {
+        WindowState =
+            WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     }
 
     /// <summary>
@@ -339,8 +340,78 @@ internal partial class MainWindow : IDisposable
             if (File.Exists(path)) return (path, name, true);
         }
 
+        // On Linux and macOS the tools are normally installed system-wide (MAME's chdman,
+        // p7zip, ...) rather than next to the app, so fall back to PATH.
+        foreach (var name in candidateNames)
+        {
+            var path = FindOnPath(name);
+            if (path != null) return (path, name, true);
+        }
+
         var preferred = candidateNames[0];
         return (Path.Combine(baseDirectory, preferred), preferred, false);
+    }
+
+    /// <summary>
+    ///     Returns the chdman executable names to probe, best first, for the current platform.
+    /// </summary>
+    private static IReadOnlyList<string> GetChdmanCandidates()
+    {
+        return OperatingSystem.IsWindows() ? AppConfig.ChdmanExeCandidates : ["chdman"];
+    }
+
+    /// <summary>
+    ///     Returns the CHDSharp executable names to probe, best first, for the current platform.
+    /// </summary>
+    private static IReadOnlyList<string> GetChdSharpCandidates()
+    {
+        return OperatingSystem.IsWindows() ? AppConfig.ChdSharpExeCandidates : ["CHDSharp"];
+    }
+
+    /// <summary>
+    ///     Returns the 7-Zip executable names to probe, best first, for the current platform.
+    /// </summary>
+    private static IReadOnlyList<string> GetSevenZipCandidates()
+    {
+        return OperatingSystem.IsWindows()
+            ? AppConfig.SevenZipExeCandidates
+            : ["7z", "7za", "7zz"];
+    }
+
+    /// <summary>
+    ///     Returns the full path of the first executable named <paramref name="executableName" />
+    ///     found in the <c>PATH</c> environment variable, or null when it is not present.
+    /// </summary>
+    /// <param name="executableName">The executable file name to locate.</param>
+    private static string? FindOnPath(string executableName)
+    {
+        var pathVariable = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrWhiteSpace(pathVariable)) return null;
+
+        foreach (
+            var directory in pathVariable.Split(
+                Path.PathSeparator,
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+            )
+        )
+        {
+            string candidate;
+            try
+            {
+                candidate = Path.Combine(directory, executableName);
+            }
+            catch (ArgumentException)
+            {
+                continue;
+            }
+
+            if (File.Exists(candidate)) return candidate;
+
+            if (OperatingSystem.IsWindows() && File.Exists(candidate + ".exe"))
+                return candidate + ".exe";
+        }
+
+        return null;
     }
 
     private void CheckDependenciesAndNotifyUser()
@@ -360,7 +431,7 @@ internal partial class MainWindow : IDisposable
                 + "Conversion will NOT work without an encoder.";
 
             LogError(" " + msg.Replace("\n", " "));
-            ShowMessageBox(msg, "Missing Dependency", MessageBoxButton.OK, MessageBoxImage.Error);
+            _ = ShowMessageBoxAsync(msg, "Missing Dependency", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
@@ -370,7 +441,7 @@ internal partial class MainWindow : IDisposable
                 "chdman.exe was not found, so conversions will run on the CHDSharp fallback.";
 
             LogWarning(" " + msg.Replace("\n", " "));
-            ShowMessageBox(msg, "Encoder Notice", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _ = ShowMessageBoxAsync(msg, "Encoder Notice", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         else if (chdSharpMissing)
         {
@@ -379,24 +450,15 @@ internal partial class MainWindow : IDisposable
                 + "Place CHDSharp.exe in the application folder to restore the fallback encoder.";
 
             LogWarning(" " + msg.Replace("\n", " "));
-            ShowMessageBox(msg, "Encoder Notice", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _ = ShowMessageBoxAsync(msg, "Encoder Notice", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
-    private static PerformanceCounter? CreateWritePerformanceCounter()
+    private static IoThroughputCounter? CreateWritePerformanceCounter()
     {
         try
         {
-            // Check if category exists first to avoid registry errors
-            if (!PerformanceCounterCategory.Exists("PhysicalDisk")) return null;
-
-            // Create a performance counter for disk write operations
-            return new PerformanceCounter("PhysicalDisk", "Disk Write Bytes/sec", "_Total");
-        }
-        catch (InvalidOperationException)
-        {
-            // System configuration issue - counters unavailable
-            return null;
+            return IoThroughputCounter.CreateForWrites();
         }
         catch
         {
@@ -405,20 +467,11 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private static PerformanceCounter? CreateReadPerformanceCounter()
+    private static IoThroughputCounter? CreateReadPerformanceCounter()
     {
         try
         {
-            // Check if category exists first to avoid registry errors
-            if (!PerformanceCounterCategory.Exists("PhysicalDisk")) return null;
-
-            // Create a performance counter for disk read operations
-            return new PerformanceCounter("PhysicalDisk", "Disk Read Bytes/sec", "_Total");
-        }
-        catch (InvalidOperationException)
-        {
-            // System configuration issue - counters unavailable
-            return null;
+            return IoThroughputCounter.CreateForReads();
         }
         catch
         {
@@ -429,26 +482,18 @@ internal partial class MainWindow : IDisposable
 
     private void InitializeStatusBar()
     {
-        _ = Application.Current.Dispatcher.InvokeAsync(() =>
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
             try
             {
                 StatusBarChdSharp.Text = " CHDSharp ";
                 StatusBarChdSharp.Foreground = _isChdSharpAvailable
-                    ? (Brush?)
-                      Application.Current.FindResource("SuccessTextBrush")
-                      ?? Brushes.Gray
-                    : (Brush?)
-                      Application.Current.FindResource("FailedTextBrush")
-                      ?? Brushes.Gray;
+                    ? FindBrush("SuccessTextBrush")
+                    : FindBrush("FailedTextBrush");
                 StatusBarChdman.Text = " CHDMAN ";
                 StatusBarChdman.Foreground = _isChdmanAvailable
-                    ? (Brush?)
-                      Application.Current.FindResource("SuccessTextBrush")
-                      ?? Brushes.Gray
-                    : (Brush?)
-                      Application.Current.FindResource("FailedTextBrush")
-                      ?? Brushes.Gray;
+                    ? FindBrush("SuccessTextBrush")
+                    : FindBrush("FailedTextBrush");
                 StatusBarMessage.Text = "Ready";
                 SpeedValue.Text = "0.0 MB/s";
             }
@@ -457,6 +502,24 @@ internal partial class MainWindow : IDisposable
                 LogError("StatusBar Initialization Error", ex);
             }
         });
+    }
+
+    /// <summary>
+    ///     Looks up a brush resource from the application resources, falling back to gray.
+    /// </summary>
+    /// <param name="resourceKey">The resource key to look up.</param>
+    private static IBrush FindBrush(string resourceKey)
+    {
+        if (
+            Application.Current is { } app
+            && app.TryFindResource(resourceKey, out var resource)
+            && resource is IBrush brush
+        )
+        {
+            return brush;
+        }
+
+        return Brushes.Gray;
     }
 
     private static void CleanupLeftoverTempDirectories()
@@ -497,7 +560,7 @@ internal partial class MainWindow : IDisposable
 
     private void UpdateStatusBarMessage(string message)
     {
-        _ = Application.Current.Dispatcher.InvokeAsync(() => StatusBarMessage.Text = message);
+        _ = Dispatcher.UIThread.InvokeAsync(() => StatusBarMessage.Text = message);
     }
 
     private async Task<bool> ValidateExecutableAccessAsync(string exePath, string exeName)
@@ -511,8 +574,11 @@ internal partial class MainWindow : IDisposable
                 return false;
             }
 
-            // Check if file has executable extension
-            if (!exePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            // Check if file has executable extension (Windows only; Unix tools have no extension)
+            if (
+                OperatingSystem.IsWindows()
+                && !exePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+            )
             {
                 LogError($" {exeName} is not an executable file.");
                 ShowError($"{exeName} is not a valid executable.");
@@ -767,11 +833,15 @@ internal partial class MainWindow : IDisposable
 
     private void MainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        // Avalonia raises selection changes while the XAML is still being populated, before the
+        // named controls exist; ignore those and react only to user/programmatic changes later.
+        if (!_uiInitialized) return;
+
         if (e.Source is not TabControl control) return;
 
         if (!StartConversionButton.IsEnabled && !StartVerificationButton.IsEnabled) return;
 
-        _ = Application.Current.Dispatcher.InvokeAsync((Action)(() => LogViewer.Clear()));
+        _ = Dispatcher.UIThread.InvokeAsync((Action)(() => LogViewer.Clear()));
         if (control.SelectedItem is TabItem selectedTab)
         {
             switch (selectedTab.Name)
@@ -796,7 +866,7 @@ internal partial class MainWindow : IDisposable
         UpdateReadSpeedDisplay(0);
     }
 
-    private void Window_Closing(object sender, CancelEventArgs e)
+    private void Window_Closing(object? sender, WindowClosingEventArgs e)
     {
         // Check if any operation is currently running using thread-safe Interlocked check
         var isOperationRunning = Interlocked.CompareExchange(ref _operationRunningState, 0, 0) != 0;
@@ -819,7 +889,7 @@ internal partial class MainWindow : IDisposable
 
         Dispose();
 
-        Application.Current.Shutdown();
+        App.ShutdownApp();
     }
 
     private void LogMessage(string message)
@@ -844,7 +914,7 @@ internal partial class MainWindow : IDisposable
     {
         var timestampedMessage = $"[{DateTime.Now:HH:mm:ss.fff}] {message}";
 
-        _ = Application.Current.Dispatcher.InvokeAsync(() =>
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
             try
             {
@@ -890,36 +960,36 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private void BrowseConversionInputButton_Click(object sender, RoutedEventArgs e)
+    private async void BrowseConversionInputButton_Click(object? sender, RoutedEventArgs e)
     {
-        HandleFolderBrowse(ConversionInputFolderTextBox, "Conversion input");
+        await HandleFolderBrowseAsync(ConversionInputFolderTextBox, "Conversion input");
     }
 
-    private void BrowseConversionOutputButton_Click(object sender, RoutedEventArgs e)
+    private async void BrowseConversionOutputButton_Click(object? sender, RoutedEventArgs e)
     {
-        HandleFolderBrowse(ConversionOutputFolderTextBox, "Conversion output");
+        await HandleFolderBrowseAsync(ConversionOutputFolderTextBox, "Conversion output");
     }
 
-    private void BrowseVerificationInputButton_Click(object sender, RoutedEventArgs e)
+    private async void BrowseVerificationInputButton_Click(object? sender, RoutedEventArgs e)
     {
-        HandleFolderBrowse(VerificationInputFolderTextBox, "Verification input");
+        await HandleFolderBrowseAsync(VerificationInputFolderTextBox, "Verification input");
     }
 
-    private void BrowseExtractionInputButton_Click(object sender, RoutedEventArgs e)
+    private async void BrowseExtractionInputButton_Click(object? sender, RoutedEventArgs e)
     {
-        HandleFolderBrowse(ExtractionInputFolderTextBox, "Extraction input");
+        await HandleFolderBrowseAsync(ExtractionInputFolderTextBox, "Extraction input");
     }
 
-    private void BrowseExtractionOutputButton_Click(object sender, RoutedEventArgs e)
+    private async void BrowseExtractionOutputButton_Click(object? sender, RoutedEventArgs e)
     {
-        HandleFolderBrowse(ExtractionOutputFolderTextBox, "Extraction output");
+        await HandleFolderBrowseAsync(ExtractionOutputFolderTextBox, "Extraction output");
     }
 
     private async void StartExtractionButton_ClickAsync(object sender, RoutedEventArgs e)
     {
         try
         {
-            await Application.Current.Dispatcher.InvokeAsync((Action)(() => LogViewer.Clear()));
+            await Dispatcher.UIThread.InvokeAsync((Action)(() => LogViewer.Clear()));
             DisplayExtractionInstructionsInLog();
 
             var inputFolder = PathUtils.ValidateAndNormalizePath(
@@ -1012,9 +1082,9 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private void HandleFolderBrowse(TextBox targetBox, string logName)
+    private async Task HandleFolderBrowseAsync(TextBox targetBox, string logName)
     {
-        var folder = SelectFolder($"Select {logName} folder");
+        var folder = await SelectFolderAsync($"Select {logName} folder");
         if (string.IsNullOrEmpty(folder))
         {
             return;
@@ -1111,7 +1181,7 @@ internal partial class MainWindow : IDisposable
                         })
                     ;
 
-                Application.Current.Dispatcher.Invoke(() => _conversionFiles.Clear());
+                Dispatcher.UIThread.Invoke(() => _conversionFiles.Clear());
 
                 // Add items in chunks to avoid freezing the UI thread if there are thousands of files
                 const int chunkSize = 100;
@@ -1120,7 +1190,7 @@ internal partial class MainWindow : IDisposable
                     for (var i = 0; i < files.Count; i += chunkSize)
                     {
                         var chunk = files.Skip(i).Take(chunkSize).ToList();
-                        await Application.Current.Dispatcher.InvokeAsync(
+                        await Dispatcher.UIThread.InvokeAsync(
                             () =>
                             {
                                 foreach (var item in chunk)
@@ -1180,7 +1250,7 @@ internal partial class MainWindow : IDisposable
                     })
                     .ToList();
 
-                Application.Current.Dispatcher.Invoke(() => _verificationFiles.Clear());
+                Dispatcher.UIThread.Invoke(() => _verificationFiles.Clear());
 
                 // Add items in chunks to avoid freezing the UI thread
                 const int chunkSize = 100;
@@ -1189,7 +1259,7 @@ internal partial class MainWindow : IDisposable
                     for (var i = 0; i < files.Count; i += chunkSize)
                     {
                         var chunk = files.Skip(i).Take(chunkSize).ToList();
-                        await Application.Current.Dispatcher.InvokeAsync(
+                        await Dispatcher.UIThread.InvokeAsync(
                             () =>
                             {
                                 foreach (var item in chunk)
@@ -1249,7 +1319,7 @@ internal partial class MainWindow : IDisposable
                     })
                     .ToList();
 
-                Application.Current.Dispatcher.Invoke(() => _extractionFiles.Clear());
+                Dispatcher.UIThread.Invoke(() => _extractionFiles.Clear());
 
                 // Add items in chunks to avoid freezing the UI thread
                 const int chunkSize = 100;
@@ -1258,7 +1328,7 @@ internal partial class MainWindow : IDisposable
                     for (var i = 0; i < files.Count; i += chunkSize)
                     {
                         var chunk = files.Skip(i).Take(chunkSize).ToList();
-                        await Application.Current.Dispatcher.InvokeAsync(
+                        await Dispatcher.UIThread.InvokeAsync(
                             () =>
                             {
                                 foreach (var item in chunk)
@@ -1315,7 +1385,7 @@ internal partial class MainWindow : IDisposable
     {
         try
         {
-            await Application.Current.Dispatcher.InvokeAsync((Action)(() => LogViewer.Clear()));
+            await Dispatcher.UIThread.InvokeAsync((Action)(() => LogViewer.Clear()));
             DisplayConversionInstructionsInLog();
 
             if (!_isChdSharpAvailable && !_isChdmanAvailable)
@@ -1434,7 +1504,7 @@ internal partial class MainWindow : IDisposable
     {
         try
         {
-            await Application.Current.Dispatcher.InvokeAsync((Action)(() => LogViewer.Clear()));
+            await Dispatcher.UIThread.InvokeAsync((Action)(() => LogViewer.Clear()));
             DisplayVerificationInstructionsInLog();
 
             var inputFolder = PathUtils.ValidateAndNormalizePath(
@@ -1584,11 +1654,11 @@ internal partial class MainWindow : IDisposable
         MainTabControl.IsEnabled = enabled;
 
         // Toggle progress area visibility
-        ProgressAreaGrid.Visibility = enabled ? Visibility.Collapsed : Visibility.Visible;
-        ProgressText.Visibility = enabled ? Visibility.Collapsed : Visibility.Visible;
-        ProgressBar.Visibility = enabled ? Visibility.Collapsed : Visibility.Visible;
+        ProgressAreaGrid.IsVisible = !enabled;
+        ProgressText.IsVisible = !enabled;
+        ProgressBar.IsVisible = !enabled;
         ProgressBar.IsIndeterminate = !enabled; // Start moving immediately
-        CancelButton.Visibility = enabled ? Visibility.Collapsed : Visibility.Visible;
+        CancelButton.IsVisible = !enabled;
 
         if (!enabled)
         {
@@ -1610,14 +1680,20 @@ internal partial class MainWindow : IDisposable
         }
     }
 
-    private static string? SelectFolder(string description)
+    private async Task<string?> SelectFolderAsync(string description)
     {
         try
         {
-            var dialog = new OpenFolderDialog { Title = description };
-            return dialog.ShowDialog() == true ? dialog.FolderName : null;
+            var storageProvider = GetTopLevel(this)?.StorageProvider;
+            if (storageProvider is null) return null;
+
+            var folders = await storageProvider.OpenFolderPickerAsync(
+                new FolderPickerOpenOptions { Title = description, AllowMultiple = false }
+            );
+
+            return folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
         }
-        catch (COMException)
+        catch
         {
             return null;
         }
@@ -1766,7 +1842,7 @@ internal partial class MainWindow : IDisposable
             return;
         }
 
-        await Application.Current.Dispatcher.InvokeAsync(() =>
+        await Dispatcher.UIThread.InvokeAsync(() =>
             ProgressBar.Maximum = _totalFilesProcessed
         );
         var processedCount = 0;
@@ -1830,7 +1906,7 @@ internal partial class MainWindow : IDisposable
 
         CheckDiskSpace(outputFolder, selectedFiles, false);
 
-        await Application.Current.Dispatcher.InvokeAsync(() =>
+        await Dispatcher.UIThread.InvokeAsync(() =>
             ProgressBar.Maximum = _totalFilesProcessed
         );
         var processedCount = 0;
@@ -4580,7 +4656,7 @@ internal partial class MainWindow : IDisposable
         if (moveFailed && !string.IsNullOrEmpty(failedFolder) && !Directory.Exists(failedFolder))
             Directory.CreateDirectory(failedFolder);
 
-        await Application.Current.Dispatcher.InvokeAsync(() =>
+        await Dispatcher.UIThread.InvokeAsync(() =>
             ProgressBar.Maximum = _totalFilesProcessed
         );
         var processed = 0;
@@ -6876,7 +6952,7 @@ internal partial class MainWindow : IDisposable
 
     private void UpdateStatsDisplay()
     {
-        _ = Application.Current.Dispatcher.InvokeAsync(() =>
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
             TotalFilesValue.Text = $"{_totalFilesProcessed}";
             SuccessValue.Text = $"{_processedOkCount}";
@@ -6886,14 +6962,14 @@ internal partial class MainWindow : IDisposable
 
     private void UpdateProcessingTimeDisplay()
     {
-        _ = Application.Current.Dispatcher.InvokeAsync(() =>
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
             ProcessingTimeValue.Text = $@"{_operationTimer.Elapsed:hh\:mm\:ss}"
         );
     }
 
     private void UpdateWriteSpeedDisplay(double speed)
     {
-        _ = Application.Current.Dispatcher.InvokeAsync(() =>
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
             // Update the actual label
             SpeedValue.Text = $"{speed:F1} MB/s";
@@ -6904,7 +6980,7 @@ internal partial class MainWindow : IDisposable
 
     private void UpdateReadSpeedDisplay(double speed)
     {
-        _ = Application.Current.Dispatcher.InvokeAsync(() =>
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
             SpeedValue.Text = $"{speed:F1} MB/s";
             StatusBarMessage.Text = speed switch
@@ -6918,7 +6994,7 @@ internal partial class MainWindow : IDisposable
 
     private void UpdateProgressDisplay(int completedCount, int tot, string name, string verb)
     {
-        _ = Application.Current.Dispatcher.InvokeAsync(() =>
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
             // If we haven't finished all files, show the next one in the text (completed + 1)
             var displayIndex = Math.Min(completedCount + 1, tot);
@@ -6930,19 +7006,19 @@ internal partial class MainWindow : IDisposable
             ProgressBar.IsIndeterminate = false;
             ProgressBar.Value = completedCount;
             ProgressBar.Maximum = tot > 0 ? tot : 1;
-            ProgressText.Visibility = Visibility.Visible;
-            ProgressBar.Visibility = Visibility.Visible;
+            ProgressText.IsVisible = true;
+            ProgressBar.IsVisible = true;
         });
     }
 
     private void ClearProgressDisplay()
     {
-        _ = Application.Current.Dispatcher.InvokeAsync(() =>
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
             ProgressBar.Value = 0;
-            ProgressBar.Visibility = Visibility.Collapsed;
+            ProgressBar.IsVisible = false;
             ProgressText.Text = "";
-            ProgressText.Visibility = Visibility.Collapsed;
+            ProgressText.IsVisible = false;
         });
     }
 
@@ -7496,14 +7572,22 @@ internal partial class MainWindow : IDisposable
         if (IsLoaded) RefreshFileListForActiveTab();
     }
 
-    private void ForceCreateCdCheckBox_Checked(object sender, RoutedEventArgs e)
+    private void ForceCreateCdCheckBox_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        ForceCreateDvdCheckBox.IsChecked = false;
+        // Only react to the box becoming checked: IsCheckedChanged also fires when it is
+        // unchecked, and clearing the other box then would undo the user's selection.
+        if (ForceCreateCdCheckBox.IsChecked == true)
+        {
+            ForceCreateDvdCheckBox.IsChecked = false;
+        }
     }
 
-    private void ForceCreateDvdCheckBox_Checked(object sender, RoutedEventArgs e)
+    private void ForceCreateDvdCheckBox_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        ForceCreateCdCheckBox.IsChecked = false;
+        if (ForceCreateDvdCheckBox.IsChecked == true)
+        {
+            ForceCreateCdCheckBox.IsChecked = false;
+        }
     }
 
     private void LogOperationSummary(string op)
@@ -7513,7 +7597,7 @@ internal partial class MainWindow : IDisposable
             $"--- {op} {verb}. Total: {_totalFilesProcessed}, OK: {_processedOkCount}, Failed: {_failedCount}"
         );
         UpdateStatusBarMessage($"{op} {verb}" + (_failedCount > 0 ? " with errors" : ""));
-        ShowMessageBox(
+        _ = ShowMessageBoxAsync(
             $"{op} {verb}.\nTotal: {_totalFilesProcessed}\nOK: {_processedOkCount}\nFailed: {_failedCount}",
             "Complete",
             MessageBoxButton.OK,
@@ -7521,69 +7605,84 @@ internal partial class MainWindow : IDisposable
         );
     }
 
-    private void ShowMessageBox(
+    private Task<MessageBoxResult> ShowMessageBoxAsync(
         string msg,
         string title,
         MessageBoxButton btns,
         MessageBoxImage icon
     )
     {
-        MessageBox.Show(this, msg, title, btns, icon);
+        return MessageBox.ShowAsync(this, msg, title, btns, icon);
     }
 
     private void ShowError(string msg)
     {
-        _ = Application.Current.Dispatcher.InvokeAsync(() =>
-            ShowMessageBox(msg, "Error", MessageBoxButton.OK, MessageBoxImage.Error)
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
+            _ = MessageBox.ShowAsync(
+                this,
+                msg,
+                "Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error
+            )
         );
     }
 
     /// <summary>
     ///     Shows the "new version available" prompt and opens the release page when accepted.
-    ///     Invoked by <see cref="UpdateService" /> when a newer GitHub release is detected.
+    ///     Invoked by <see cref="UpdateService" /> when a newer GitHub release is detected; the
+    ///     callback may arrive on a background thread, so the UI work is marshalled explicitly.
     /// </summary>
     private async Task ShowUpdatePromptAsync(GitHubRelease release)
     {
+        await Dispatcher.UIThread.InvokeAsync(() => ShowUpdatePromptCoreAsync(release));
+    }
+
+    private async Task ShowUpdatePromptCoreAsync(GitHubRelease release)
+    {
         var remoteVersionString = UpdateService.ParseVersionFromTag(release.TagName);
 
-        await await Application.Current.Dispatcher.InvokeAsync(async () =>
-        {
-            var result = MessageBox.Show(
-                $"A new version ({remoteVersionString}) of {AppConfig.ApplicationName} is available!\n\nWould you like to go to the download page?",
-                "New Version Available",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Information
-            );
+        var result = await MessageBox.ShowAsync(
+            this,
+            $"A new version ({remoteVersionString}) of {AppConfig.ApplicationName} is available!\n\nWould you like to go to the download page?",
+            "New Version Available",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Information
+        );
 
-            if (result != MessageBoxResult.Yes) return;
+        if (result != MessageBoxResult.Yes) return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(release.HtmlUrl) { UseShellExecute = true });
+        }
+        catch (Exception urlEx)
+        {
+            LogMessage($"Failed to open browser: {urlEx.Message}");
+            await ReportBugAsync("Failed to open browser", urlEx);
 
             try
             {
-                Process.Start(new ProcessStartInfo(release.HtmlUrl) { UseShellExecute = true });
+                var clipboard = GetTopLevel(this)?.Clipboard;
+                if (clipboard is not null)
+                {
+                    await clipboard.SetTextAsync(release.HtmlUrl);
+                }
             }
-            catch (Exception urlEx)
+            catch (Exception clipboardEx)
             {
-                LogMessage($"Failed to open browser: {urlEx.Message}");
-                await ReportBugAsync("Failed to open browser", urlEx);
-
-                try
-                {
-                    Clipboard.SetText(release.HtmlUrl);
-                }
-                catch (Exception clipboardEx)
-                {
-                    LogMessage($"Failed to copy URL to clipboard: {clipboardEx.Message}");
-                    await ReportBugAsync("Failed to copy URL to clipboard", clipboardEx);
-                }
-
-                MessageBox.Show(
-                    $"Unable to open browser automatically. The update URL has been copied to your clipboard.\n\nURL: {release.HtmlUrl}\n\nPlease paste it into your browser manually.",
-                    "Browser Launch Failed",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information
-                );
+                LogMessage($"Failed to copy URL to clipboard: {clipboardEx.Message}");
+                await ReportBugAsync("Failed to copy URL to clipboard", clipboardEx);
             }
-        });
+
+            await MessageBox.ShowAsync(
+                this,
+                $"Unable to open browser automatically. The update URL has been copied to your clipboard.\n\nURL: {release.HtmlUrl}\n\nPlease paste it into your browser manually.",
+                "Browser Launch Failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information
+            );
+        }
     }
 
     private static void SafeFireAndForget(Task task)
@@ -7627,9 +7726,9 @@ internal partial class MainWindow : IDisposable
         Close();
     }
 
-    private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
+    private void AboutMenuItem_Click(object? sender, RoutedEventArgs e)
     {
-        new AboutWindow { Owner = this }.ShowDialog();
+        _ = new AboutWindow().ShowDialog(this);
     }
 
     private void OpenAppDataFolderMenuItem_Click(object sender, RoutedEventArgs e)

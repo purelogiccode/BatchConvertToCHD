@@ -1,0 +1,86 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <!-- net10.0-windows adds the Windows-only NAudio Media Foundation / ACM MP3 decoders on
+             Windows; the neutral TFM (Linux, macOS) uses ffmpeg instead. -->
+        <TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
+        <EnableWindowsTargeting>true</EnableWindowsTargeting>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <AssemblyName>BatchConvertToCHD.Avalonia</AssemblyName>
+        <RootNamespace>BatchConvertToCHD</RootNamespace>
+        <ApplicationIcon>..\BatchConvertToCHD\icon\chd.ico</ApplicationIcon>
+        <AssemblyVersion>3.8.0</AssemblyVersion>
+        <FileVersion>3.8.0</FileVersion>
+        <IsPackable>false</IsPackable>
+        <NeutralLanguage>en</NeutralLanguage>
+        <DebugType>embedded</DebugType>
+        <DebugSymbols>true</DebugSymbols>
+        <Company>PureLogicCode.com</Company>
+        <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <AvaloniaResource Include="..\BatchConvertToCHD\icon\chd.png" Link="Assets\chd.png" />
+        <AvaloniaResource Include="..\BatchConvertToCHD\images\logo.png" Link="Assets\logo.png" />
+        <AvaloniaResource Include="..\BatchConvertToCHD\images\about.png" Link="Assets\about.png" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="12.1.3" />
+        <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.3" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.1.2" />
+        <PackageReference Include="CHDSharp" Version="1.4.3" />
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.291">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Roslynator.Analyzers" Version="5.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Serilog" Version="4.4.0" />
+        <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
+        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+        <PackageReference Include="SharpCompress" Version="0.50.4" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+        <PackageReference Include="NAudio" Version="3.1.0" />
+        <None Include="..\BatchConvertToCHD\7za.exe" Link="7za.exe" CopyToOutputDirectory="Always" />
+        <None Include="..\BatchConvertToCHD\7za_arm64.exe" Link="7za_arm64.exe" CopyToOutputDirectory="Always" />
+        <None Include="..\BatchConvertToCHD\chdman.exe" Link="chdman.exe" CopyToOutputDirectory="Always" />
+        <None Include="..\BatchConvertToCHD\chdman_arm64.exe" Link="chdman_arm64.exe" CopyToOutputDirectory="Always" />
+        <None Include="..\BatchConvertToCHD\CHDSharp.exe" Link="CHDSharp.exe" CopyToOutputDirectory="Always" />
+        <None Include="..\BatchConvertToCHD\CHDSharp_arm64.exe" Link="CHDSharp_arm64.exe" CopyToOutputDirectory="Always" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\MDSSharp\MDSSharp.csproj" />
+        <ProjectReference Include="..\CCDSharp\CCDSharp.csproj" />
+        <ProjectReference Include="..\CSOSharp\CSOSharp.csproj" />
+        <ProjectReference Include="..\PBPSharp\PBPSharp.csproj" />
+        <ProjectReference Include="..\ISZSharp\ISZSharp.csproj" />
+    </ItemGroup>
+
+    <!-- Shared, platform-neutral application code lives in the WPF project and is linked
+         here so both front ends use one source of truth. UI-layer files are not linked. -->
+    <ItemGroup>
+        <Compile Include="..\BatchConvertToCHD\AppConfig.cs" Link="AppConfig.cs" />
+        <Compile Include="..\BatchConvertToCHD\Models\**\*.cs" Link="Models\%(RecursiveDir)%(Filename)%(Extension)" />
+        <Compile Include="..\BatchConvertToCHD\Utilities\**\*.cs" Link="Utilities\%(RecursiveDir)%(Filename)%(Extension)" />
+        <Compile
+            Include="..\BatchConvertToCHD\Services\**\*.cs"
+            Exclude="..\BatchConvertToCHD\Services\ScreenshotService.cs"
+            Link="Services\%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+            <_Parameter1>BatchConvertToCHD.Avalonia.Tests</_Parameter1>
+        </AssemblyAttribute>
+    </ItemGroup>
+</Project>

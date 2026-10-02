@@ -1,0 +1,815 @@
+<Window
+    x:Class="BatchConvertToCHD.MainWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:BatchConvertToCHD.Controls"
+    Title="Batch Convert to CHD"
+    Height="800"
+    Width="1064"
+    MinHeight="650"
+    MinWidth="700"
+    WindowStartupLocation="CenterScreen"
+    Background="#202020"
+    Icon="/Assets/chd.png"
+    ExtendClientAreaToDecorationsHint="True"
+    ExtendClientAreaTitleBarHeightHint="-1"
+    WindowDecorations="BorderOnly"
+    Closing="Window_Closing">
+    <Grid RowDefinitions="Auto,*">
+        <!--  Custom title bar (replaces the WPF-UI FluentWindow chrome)  -->
+        <Grid
+            x:Name="TitleBarGrid"
+            Grid.Row="0"
+            Height="42"
+            Background="#202020"
+            ColumnDefinitions="Auto,*,Auto,Auto"
+            DoubleTapped="TitleBar_DoubleTapped"
+            PointerPressed="TitleBar_PointerPressed">
+            <StackPanel
+                Grid.Column="0"
+                Orientation="Horizontal"
+                Spacing="10"
+                Margin="15,0,0,0"
+                VerticalAlignment="Center">
+                <Image Source="/Assets/logo.png" Width="20" Height="20" />
+                <TextBlock Text="Batch Convert to CHD" Classes="headerTitle" />
+            </StackPanel>
+
+            <StackPanel
+                Grid.Column="2"
+                Orientation="Horizontal"
+                Spacing="8"
+                Margin="0,0,10,0"
+                VerticalAlignment="Center">
+                <Button
+                    Classes="info"
+                    Click="AboutMenuItem_Click"
+                    ToolTip.Tip="View application information and acknowledgements">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <Grid Width="16" Height="16" VerticalAlignment="Center">
+                            <Ellipse Width="14" Height="14" Stroke="White" StrokeThickness="1.5" />
+                            <TextBlock
+                                Text="i"
+                                FontSize="9"
+                                FontWeight="Bold"
+                                Foreground="White"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock Text="About" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Classes="info"
+                    Click="OpenAppDataFolderMenuItem_Click"
+                    ToolTip.Tip="Open the AppData folder for this application (logs, screenshots)">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <Path
+                            Width="16"
+                            Height="16"
+                            Fill="White"
+                            VerticalAlignment="Center"
+                            Data="M1,4 C1,2.9 1.9,2 3,2 L6.2,2 L8,4.2 L13,4.2 C14.1,4.2 15,5.1 15,6.2 L15,12 C15,13.1 14.1,14 13,14 L3,14 C1.9,14 1,13.1 1,12 Z" />
+                        <TextBlock Text="AppData" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Classes="secondary"
+                    Click="ExitMenuItem_Click"
+                    ToolTip.Tip="Close the application">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <Path
+                            Width="12"
+                            Height="12"
+                            Stroke="White"
+                            StrokeThickness="1.6"
+                            VerticalAlignment="Center"
+                            Data="M1,1 L11,11 M11,1 L1,11" />
+                        <TextBlock Text="Exit" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button
+                    x:Name="MinimizeButton"
+                    Classes="caption"
+                    Click="MinimizeButton_Click"
+                    ToolTip.Tip="Minimize">
+                    <Path Data="M0,5 L10,5" Stroke="White" StrokeThickness="1" />
+                </Button>
+                <Button
+                    x:Name="MaximizeButton"
+                    Classes="caption"
+                    Click="MaximizeButton_Click"
+                    ToolTip.Tip="Maximize or restore">
+                    <Path
+                        Data="M0.5,0.5 L9.5,0.5 L9.5,9.5 L0.5,9.5 Z"
+                        Stroke="White"
+                        StrokeThickness="1"
+                        Fill="Transparent" />
+                </Button>
+                <Button
+                    x:Name="CloseButton"
+                    Classes="caption captionClose"
+                    Click="CloseButton_Click"
+                    ToolTip.Tip="Close">
+                    <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="White" StrokeThickness="1.2" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="15,15,15,10" RowDefinitions="*,Auto">
+            <!--  Main Content Area  -->
+            <Grid Grid.Row="0" RowDefinitions="*,Auto,Auto">
+                <Grid Grid.Row="0" ColumnDefinitions="*,10,*">
+                    <TabControl
+                        Grid.Column="0"
+                        x:Name="MainTabControl"
+                        MinWidth="400"
+                        SelectionChanged="MainTabControl_SelectionChanged"
+                        ToolTip.Tip="Switch between Convert, Verify, and Extract operations">
+                        <TabItem
+                            Header="Convert to CHD"
+                            x:Name="ConvertTab"
+                            ToolTip.Tip="Batch convert various disc image formats to CHD">
+                            <Border
+                                Background="#2B2B2B"
+                                BorderBrush="#3A3A3A"
+                                BorderThickness="1"
+                                CornerRadius="0,0,6,6"
+                                Padding="15">
+                                <Grid
+                                    RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto">
+                                    <Grid Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto">
+                                        <TextBlock
+                                            Text="Source Files:"
+                                            FontWeight="Bold"
+                                            Foreground="#e6edf3"
+                                            VerticalAlignment="Center"
+                                            ToolTip.Tip="Select the folder containing files you want to convert" />
+                                        <TextBox
+                                            x:Name="ConversionInputFolderTextBox"
+                                            Grid.Column="1"
+                                            Margin="5,0"
+                                            IsReadOnly="True"
+                                            VerticalContentAlignment="Center"
+                                            ToolTip.Tip="The selected folder path for conversion input" />
+                                        <Button
+                                            x:Name="BrowseConversionInputButton"
+                                            Grid.Column="2"
+                                            Classes="primary"
+                                            Content="Browse"
+                                            Click="BrowseConversionInputButton_Click"
+                                            ToolTip.Tip="Open a folder browser to select the source directory containing files to convert" />
+                                    </Grid>
+
+                                    <Grid Grid.Row="1" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto">
+                                        <TextBlock
+                                            Text="Output CHD:"
+                                            FontWeight="Bold"
+                                            Foreground="#e6edf3"
+                                            VerticalAlignment="Center"
+                                            ToolTip.Tip="Select where the converted CHD files should be saved" />
+                                        <TextBox
+                                            x:Name="ConversionOutputFolderTextBox"
+                                            Grid.Column="1"
+                                            Margin="5,0"
+                                            IsReadOnly="True"
+                                            VerticalContentAlignment="Center"
+                                            ToolTip.Tip="The selected folder path for CHD output" />
+                                        <Button
+                                            x:Name="BrowseConversionOutputButton"
+                                            Grid.Column="2"
+                                            Classes="primary"
+                                            Content="Browse"
+                                            Click="BrowseConversionOutputButton_Click"
+                                            ToolTip.Tip="Open a folder browser to select where the converted CHD files will be saved" />
+                                    </Grid>
+
+                                    <Expander
+                                        Grid.Row="2"
+                                        Header="Options"
+                                        Margin="0,5,0,5"
+                                        IsExpanded="False"
+                                        ToolTip.Tip="Configure conversion settings">
+                                        <Border
+                                            Classes="groupBox"
+                                            Margin="0,5,0,0"
+                                            ToolTip.Tip="Conversion options: recursive search, deletion, time limits, and force format settings">
+                                            <StackPanel Spacing="5" ToolTip.Tip="Conversion option toggles and settings">
+                                                <CheckBox
+                                                    x:Name="SearchSubfoldersConversionCheckBox"
+                                                    Content="Search subfolders (recursive search)"
+                                                    HorizontalAlignment="Left"
+                                                    ToolTip.Tip="Recursively search for files in all subfolders"
+                                                    IsCheckedChanged="SearchSubfoldersCheckBox_Changed" />
+                                                <CheckBox
+                                                    x:Name="DeleteOriginalsCheckBox"
+                                                    Content="Delete originals after a successful conversion"
+                                                    HorizontalAlignment="Left"
+                                                    ToolTip.Tip="Automatically delete source files once they are successfully converted to CHD" />
+                                                <CheckBox
+                                                    x:Name="ProcessSmallerFirstCheckBox"
+                                                    Content="Process smaller files first"
+                                                    HorizontalAlignment="Left"
+                                                    ToolTip.Tip="Sort files by size and process the smallest ones first" />
+                                                <StackPanel
+                                                    Orientation="Horizontal"
+                                                    Spacing="5"
+                                                    ToolTip.Tip="Set a per-file conversion time limit">
+                                                    <CheckBox
+                                                        x:Name="EnableConversionTimeoutCheckBox"
+                                                        Content="Time limit per file:"
+                                                        VerticalAlignment="Center"
+                                                        ToolTip.Tip="Abort conversion of a file if it exceeds the specified time limit" />
+                                                    <TextBox
+                                                        x:Name="ConversionTimeoutTextBox"
+                                                        Width="60"
+                                                        Text="15"
+                                                        VerticalAlignment="Center"
+                                                        VerticalContentAlignment="Center"
+                                                        ToolTip.Tip="Timeout in minutes per file (default: 15)" />
+                                                    <TextBlock
+                                                        Text="minutes"
+                                                        Margin="5,0,0,0"
+                                                        Foreground="#e6edf3"
+                                                        VerticalAlignment="Center"
+                                                        ToolTip.Tip="Time limit unit in minutes" />
+                                                </StackPanel>
+                                                <StackPanel
+                                                    Orientation="Horizontal"
+                                                    Spacing="10"
+                                                    ToolTip.Tip="Force a specific conversion mode">
+                                                    <CheckBox
+                                                        x:Name="ForceCreateCdCheckBox"
+                                                        Content="Force CD"
+                                                        IsCheckedChanged="ForceCreateCdCheckBox_IsCheckedChanged"
+                                                        ToolTip.Tip="Force CHDMAN to use the 'createcd' command" />
+                                                    <CheckBox
+                                                        x:Name="ForceCreateDvdCheckBox"
+                                                        Content="Force DVD"
+                                                        IsCheckedChanged="ForceCreateDvdCheckBox_IsCheckedChanged"
+                                                        ToolTip.Tip="Force CHDMAN to use the 'createdvd' command" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </Expander>
+
+                                    <TextBlock
+                                        Grid.Row="3"
+                                        Text="Select Files to Convert:"
+                                        Margin="0,5,0,0"
+                                        Classes="sectionLabel"
+                                        ToolTip.Tip="Mark or unmark files to include in the batch conversion" />
+                                    <DataGrid
+                                        Grid.Row="4"
+                                        x:Name="ConversionFilesDataGrid"
+                                        Margin="0,5"
+                                        AutoGenerateColumns="False"
+                                        CanUserSortColumns="False"
+                                        ToolTip.Tip="List of files available for conversion. Select files to include in batch processing.">
+                                        <DataGrid.Columns>
+                                            <DataGridTemplateColumn Header="Select" Width="95">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <CheckBox
+                                                            IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center" />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*" IsReadOnly="True" />
+                                            <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="130" IsReadOnly="True" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                    <StackPanel
+                                        Grid.Row="5"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Right"
+                                        Spacing="10"
+                                        Margin="0,0,0,10"
+                                        ToolTip.Tip="Select or deselect all files in the conversion list">
+                                        <Button
+                                            Classes="primary"
+                                            Content="Select All"
+                                            Click="SelectAllConversion_Click"
+                                            ToolTip.Tip="Select all files in the list" />
+                                        <Button
+                                            Classes="primary"
+                                            Content="Deselect All"
+                                            Click="DeselectAllConversion_Click"
+                                            ToolTip.Tip="Deselect all files in the list" />
+                                    </StackPanel>
+
+                                    <Button
+                                        Grid.Row="6"
+                                        x:Name="StartConversionButton"
+                                        Classes="success"
+                                        Content="Start Conversion"
+                                        Click="StartConversionButton_ClickAsync"
+                                        HorizontalAlignment="Stretch"
+                                        ToolTip.Tip="Begin the batch conversion process" />
+                                </Grid>
+                            </Border>
+                        </TabItem>
+
+                        <TabItem
+                            Header="Verify CHD"
+                            x:Name="VerifyTab"
+                            ToolTip.Tip="Verify the integrity of existing CHD files">
+                            <Border
+                                Background="#2B2B2B"
+                                BorderBrush="#3A3A3A"
+                                BorderThickness="1"
+                                CornerRadius="0,0,6,6"
+                                Padding="15">
+                                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto">
+                                    <Grid Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto">
+                                        <TextBlock
+                                            Text="CHD Files:"
+                                            FontWeight="Bold"
+                                            Foreground="#e6edf3"
+                                            VerticalAlignment="Center"
+                                            ToolTip.Tip="Select the folder containing the CHD files you want to verify" />
+                                        <TextBox
+                                            x:Name="VerificationInputFolderTextBox"
+                                            Grid.Column="1"
+                                            Margin="5,0"
+                                            IsReadOnly="True"
+                                            VerticalContentAlignment="Center"
+                                            ToolTip.Tip="The selected folder path for verification" />
+                                        <Button
+                                            x:Name="BrowseVerificationInputButton"
+                                            Grid.Column="2"
+                                            Classes="primary"
+                                            Content="Browse"
+                                            Click="BrowseVerificationInputButton_Click"
+                                            ToolTip.Tip="Open a folder browser to select the directory containing CHD files to verify" />
+                                    </Grid>
+
+                                    <Expander
+                                        Grid.Row="1"
+                                        Header="Options"
+                                        Margin="0,5,0,5"
+                                        IsExpanded="False"
+                                        ToolTip.Tip="Configure verification settings">
+                                        <Border
+                                            Classes="groupBox"
+                                            Margin="0,5,0,0"
+                                            ToolTip.Tip="Verification options: recursive search and file sorting after verification">
+                                            <StackPanel Spacing="5" ToolTip.Tip="Verification option toggles">
+                                                <CheckBox
+                                                    x:Name="SearchSubfoldersVerificationCheckBox"
+                                                    Content="Search subfolders (recursive search)"
+                                                    HorizontalAlignment="Left"
+                                                    ToolTip.Tip="Recursively search for files in all subfolders"
+                                                    IsCheckedChanged="SearchSubfoldersCheckBox_Changed" />
+                                                <CheckBox
+                                                    x:Name="MoveSuccessFilesCheckBox"
+                                                    Content="Move successful to 'Success' folder"
+                                                    HorizontalAlignment="Left"
+                                                    ToolTip.Tip="Move CHD files that pass verification into a 'Success' subfolder" />
+                                                <CheckBox
+                                                    x:Name="MoveFailedFilesCheckBox"
+                                                    Content="Move failed to 'Failed' folder"
+                                                    HorizontalAlignment="Left"
+                                                    ToolTip.Tip="Move CHD files that fail verification into a 'Failed' subfolder" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Expander>
+
+                                    <TextBlock
+                                        Grid.Row="2"
+                                        Text="Select Files to Verify:"
+                                        Margin="0,5,0,0"
+                                        Classes="sectionLabel"
+                                        ToolTip.Tip="Mark or unmark files to include in the batch verification" />
+                                    <DataGrid
+                                        Grid.Row="3"
+                                        x:Name="VerificationFilesDataGrid"
+                                        Margin="0,5"
+                                        AutoGenerateColumns="False"
+                                        CanUserSortColumns="False"
+                                        ToolTip.Tip="List of CHD files available for verification. Select files to include in batch verification.">
+                                        <DataGrid.Columns>
+                                            <DataGridTemplateColumn Header="Select" Width="95">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <CheckBox
+                                                            IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center" />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*" IsReadOnly="True" />
+                                            <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="130" IsReadOnly="True" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                    <StackPanel
+                                        Grid.Row="4"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Right"
+                                        Spacing="10"
+                                        Margin="0,0,0,10"
+                                        ToolTip.Tip="Select or deselect all files in the verification list">
+                                        <Button Classes="primary" Content="Select All" Click="SelectAllVerification_Click" ToolTip.Tip="Select all files in the list" />
+                                        <Button Classes="primary" Content="Deselect All" Click="DeselectAllVerification_Click" ToolTip.Tip="Deselect all files in the list" />
+                                    </StackPanel>
+
+                                    <Button
+                                        Grid.Row="5"
+                                        x:Name="StartVerificationButton"
+                                        Classes="success"
+                                        Content="Start Verification"
+                                        Click="StartVerificationButton_ClickAsync"
+                                        HorizontalAlignment="Stretch"
+                                        ToolTip.Tip="Begin the batch verification process" />
+                                </Grid>
+                            </Border>
+                        </TabItem>
+
+                        <TabItem
+                            Header="Extract"
+                            x:Name="ExtractTab"
+                            ToolTip.Tip="Extract CHD files back to their original formats">
+                            <Border
+                                Background="#2B2B2B"
+                                BorderBrush="#3A3A3A"
+                                BorderThickness="1"
+                                CornerRadius="0,0,6,6"
+                                Padding="15">
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto">
+                                    <Grid Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto">
+                                        <TextBlock
+                                            Text="CHD Files:"
+                                            FontWeight="Bold"
+                                            Foreground="#e6edf3"
+                                            VerticalAlignment="Center"
+                                            ToolTip.Tip="Select the folder containing CHD files for extraction" />
+                                        <TextBox
+                                            x:Name="ExtractionInputFolderTextBox"
+                                            Grid.Column="1"
+                                            Margin="5,0"
+                                            IsReadOnly="True"
+                                            VerticalContentAlignment="Center"
+                                            ToolTip.Tip="The selected folder path for extraction input" />
+                                        <Button
+                                            x:Name="BrowseExtractionInputButton"
+                                            Grid.Column="2"
+                                            Classes="primary"
+                                            Content="Browse"
+                                            Click="BrowseExtractionInputButton_Click"
+                                            ToolTip.Tip="Open a folder browser to select the directory containing CHD files to extract" />
+                                    </Grid>
+
+                                    <Grid Grid.Row="1" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto">
+                                        <TextBlock
+                                            Text="Output Folder:"
+                                            FontWeight="Bold"
+                                            Foreground="#e6edf3"
+                                            VerticalAlignment="Center"
+                                            ToolTip.Tip="Select the folder where extracted files will be saved" />
+                                        <TextBox
+                                            x:Name="ExtractionOutputFolderTextBox"
+                                            Grid.Column="1"
+                                            Margin="5,0"
+                                            IsReadOnly="True"
+                                            VerticalContentAlignment="Center"
+                                            ToolTip.Tip="The selected folder path for extraction output" />
+                                        <Button
+                                            x:Name="BrowseExtractionOutputButton"
+                                            Grid.Column="2"
+                                            Classes="primary"
+                                            Content="Browse"
+                                            Click="BrowseExtractionOutputButton_Click"
+                                            ToolTip.Tip="Open a folder browser to select where the extracted files will be saved" />
+                                    </Grid>
+
+                                    <Expander
+                                        Grid.Row="2"
+                                        Header="Options"
+                                        Margin="0,5,0,5"
+                                        IsExpanded="False"
+                                        ToolTip.Tip="Configure extraction settings">
+                                        <Grid Margin="0,5,0,0" RowDefinitions="Auto" ColumnDefinitions="*,*">
+                                            <Border
+                                                Grid.Column="0"
+                                                Classes="groupBox"
+                                                Margin="0,0,5,0"
+                                                ToolTip.Tip="Select the output format for extracted files">
+                                                <StackPanel Spacing="4" ToolTip.Tip="Extraction output format options">
+                                                    <TextBlock Text="Format" Classes="groupBoxHeader" Margin="0,0,0,4" />
+                                                    <RadioButton
+                                                        x:Name="ExtractAutoRadioButton"
+                                                        Content="Auto"
+                                                        IsChecked="True"
+                                                        GroupName="ExtractFormat"
+                                                        ToolTip.Tip="Automatically detect the best output format based on the CHD file type" />
+                                                    <RadioButton
+                                                        x:Name="ExtractCdRadioButton"
+                                                        Content="CD (.cue)"
+                                                        GroupName="ExtractFormat"
+                                                        ToolTip.Tip="Force CD image extraction" />
+                                                    <RadioButton
+                                                        x:Name="ExtractDvdRadioButton"
+                                                        Content="DVD (.iso)"
+                                                        GroupName="ExtractFormat"
+                                                        ToolTip.Tip="Force DVD image extraction" />
+                                                    <RadioButton
+                                                        x:Name="ExtractGdiRadioButton"
+                                                        Content="GDI (.gdi)"
+                                                        GroupName="ExtractFormat"
+                                                        ToolTip.Tip="Force Dreamcast GDI extraction" />
+                                                    <RadioButton
+                                                        x:Name="ExtractHdRadioButton"
+                                                        Content="HDD (.img)"
+                                                        GroupName="ExtractFormat"
+                                                        ToolTip.Tip="Force Hard Disk extraction" />
+                                                </StackPanel>
+                                            </Border>
+
+                                            <Border
+                                                Grid.Column="1"
+                                                Classes="groupBox"
+                                                Margin="5,0,0,0"
+                                                ToolTip.Tip="Configure extraction settings">
+                                                <StackPanel Spacing="5" ToolTip.Tip="Extraction option toggles">
+                                                    <TextBlock Text="Options" Classes="groupBoxHeader" Margin="0,0,0,4" />
+                                                    <CheckBox
+                                                        x:Name="SearchSubfoldersExtractionCheckBox"
+                                                        Content="Search subfolders (recursive search)"
+                                                        HorizontalAlignment="Left"
+                                                        ToolTip.Tip="Recursively search for files in all subfolders"
+                                                        IsCheckedChanged="SearchSubfoldersCheckBox_Changed" />
+                                                    <CheckBox
+                                                        x:Name="DeleteOriginalChdCheckBox"
+                                                        Content="Delete original CHD after a successful extraction"
+                                                        HorizontalAlignment="Left"
+                                                        ToolTip.Tip="Delete the original CHD file once it is successfully extracted to the selected format" />
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </Expander>
+
+                                    <TextBlock
+                                        Grid.Row="3"
+                                        Text="Select Files to Extract:"
+                                        Margin="0,5,0,0"
+                                        Classes="sectionLabel"
+                                        ToolTip.Tip="Mark or unmark files to include in the batch extraction" />
+                                    <DataGrid
+                                        Grid.Row="4"
+                                        x:Name="ExtractionFilesDataGrid"
+                                        Margin="0,5"
+                                        AutoGenerateColumns="False"
+                                        CanUserSortColumns="False"
+                                        ToolTip.Tip="List of CHD files available for extraction. Select files to include in batch extraction.">
+                                        <DataGrid.Columns>
+                                            <DataGridTemplateColumn Header="Select" Width="95">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <CheckBox
+                                                            IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center" />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*" IsReadOnly="True" />
+                                            <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="130" IsReadOnly="True" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                    <StackPanel
+                                        Grid.Row="5"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Right"
+                                        Spacing="10"
+                                        Margin="0,0,0,10"
+                                        ToolTip.Tip="Select or deselect all files in the extraction list">
+                                        <Button Classes="primary" Content="Select All" Click="SelectAllExtraction_Click" ToolTip.Tip="Select all files in the list" />
+                                        <Button Classes="primary" Content="Deselect All" Click="DeselectAllExtraction_Click" ToolTip.Tip="Deselect all files in the list" />
+                                    </StackPanel>
+
+                                    <Button
+                                        Grid.Row="6"
+                                        x:Name="StartExtractionButton"
+                                        Classes="success"
+                                        Content="Start Extraction"
+                                        Click="StartExtractionButton_ClickAsync"
+                                        HorizontalAlignment="Stretch"
+                                        ToolTip.Tip="Begin the batch extraction process" />
+                                </Grid>
+                            </Border>
+                        </TabItem>
+                    </TabControl>
+
+                    <GridSplitter
+                        Grid.Column="1"
+                        Width="10"
+                        HorizontalAlignment="Stretch"
+                        ResizeDirection="Columns"
+                        ToolTip.Tip="Drag to resize the log panel" />
+
+                    <Border
+                        Grid.Column="2"
+                        MinWidth="300"
+                        BorderBrush="#1A1A1A"
+                        BorderThickness="2"
+                        CornerRadius="4"
+                        Background="#0A0A0A"
+                        ToolTip.Tip="Real-time application activity log">
+                        <local:LogTextBox
+                            x:Name="LogViewer"
+                            Classes="log"
+                            Background="#0A0A0A"
+                            Foreground="#FFFFFF"
+                            BorderThickness="0"
+                            Padding="10"
+                            FontFamily="Consolas, Menlo, DejaVu Sans Mono, monospace"
+                            FontSize="12"
+                            AcceptsReturn="True"
+                            IsReadOnly="True"
+                            TextWrapping="NoWrap"
+                            VerticalContentAlignment="Top"
+                            ScrollViewer.VerticalScrollBarVisibility="Auto"
+                            ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                            ToolTip.Tip="Application activity log" />
+                    </Border>
+                </Grid>
+
+                <!--  Stats Panel  -->
+                <Grid Grid.Row="1" Margin="0,15,0,0" ColumnDefinitions="*,*,*,*,*">
+                    <Border Grid.Column="0" Classes="statCard" ToolTip.Tip="Total number of files to process">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock
+                                Text="TOTAL FILES"
+                                Classes="statLabel"
+                                Foreground="#8b949e"
+                                ToolTip.Tip="Total number of files selected for processing" />
+                            <TextBlock
+                                x:Name="TotalFilesValue"
+                                Text="0"
+                                Classes="statValue"
+                                Foreground="White"
+                                ToolTip.Tip="Number of files detected in the current batch" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Classes="statCard" ToolTip.Tip="Number of successfully processed files">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock
+                                Text="SUCCESS"
+                                Classes="statLabel"
+                                Foreground="#4CAF50"
+                                ToolTip.Tip="Number of files that were successfully processed" />
+                            <TextBlock
+                                x:Name="SuccessValue"
+                                Text="0"
+                                Classes="statValue"
+                                Foreground="#4CAF50"
+                                ToolTip.Tip="Count of files that completed without errors" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Classes="statCard" ToolTip.Tip="Number of files that failed processing">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock
+                                Text="FAILED"
+                                Classes="statLabel"
+                                Foreground="#F85149"
+                                ToolTip.Tip="Number of files that failed during processing" />
+                            <TextBlock
+                                x:Name="FailedValue"
+                                Text="0"
+                                Classes="statValue"
+                                Foreground="#F85149"
+                                ToolTip.Tip="Count of files that encountered errors" />
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="3" Classes="statCard" ToolTip.Tip="Total processing time">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock
+                                Text="ELAPSED"
+                                Classes="statLabel"
+                                Foreground="#8b949e"
+                                ToolTip.Tip="Total time elapsed during the current or last batch operation" />
+                            <TextBlock
+                                x:Name="ProcessingTimeValue"
+                                Text="00:00:00"
+                                Classes="statValue"
+                                Foreground="White"
+                                ToolTip.Tip="The total processing time in HH:MM:SS format" />
+                        </StackPanel>
+                    </Border>
+                    <Border
+                        x:Name="SpeedStatCard"
+                        Grid.Column="4"
+                        Classes="statCard"
+                        IsVisible="False"
+                        ToolTip.Tip="Average processing speed">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock
+                                Text="SPEED"
+                                Classes="statLabel"
+                                Foreground="#8b949e"
+                                ToolTip.Tip="Average processing speed of the current batch operation" />
+                            <TextBlock
+                                x:Name="SpeedValue"
+                                Text="0.0 MB/s"
+                                Classes="statValue"
+                                Foreground="White"
+                                ToolTip.Tip="The average throughput in megabytes per second" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!--  Progress Area  -->
+                <Grid
+                    x:Name="ProgressAreaGrid"
+                    Grid.Row="2"
+                    Margin="0,15,0,0"
+                    IsVisible="False"
+                    ColumnDefinitions="*,Auto"
+                    ToolTip.Tip="Processing progress and cancel button area. Visible only during batch operations.">
+                    <Border
+                        BorderBrush="#3A3A3A"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="1"
+                        Background="#2B2B2B"
+                        ToolTip.Tip="Processing progress indicator">
+                        <Grid>
+                            <ProgressBar
+                                x:Name="ProgressBar"
+                                Height="28"
+                                Foreground="#73C2FF"
+                                Background="#313131"
+                                ToolTip.Tip="Overall processing progress" />
+                            <TextBlock
+                                x:Name="ProgressText"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                FontWeight="SemiBold"
+                                Foreground="White"
+                                ToolTip.Tip="Currently processing file details" />
+                        </Grid>
+                    </Border>
+                    <Button
+                        x:Name="CancelButton"
+                        Grid.Column="1"
+                        Classes="danger"
+                        Content="Cancel"
+                        Margin="10,0,0,0"
+                        Click="CancelButton_Click"
+                        ToolTip.Tip="Stop the current operation" />
+                </Grid>
+            </Grid>
+
+            <!--  Status Bar  -->
+            <Border
+                Grid.Row="1"
+                Margin="0,15,0,0"
+                Padding="8,5"
+                Background="#202020"
+                BorderBrush="#3A3A3A"
+                BorderThickness="0,1,0,0"
+                CornerRadius="4"
+                ToolTip.Tip="Status bar showing application state and external tool availability">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock
+                        Grid.Column="0"
+                        x:Name="StatusBarMessage"
+                        Text="Ready"
+                        Foreground="#8b949e"
+                        VerticalAlignment="Center"
+                        ToolTip.Tip="Current application status" />
+                    <StackPanel
+                        Grid.Column="1"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center"
+                        Spacing="5"
+                        ToolTip.Tip="Status of required external tools">
+                        <TextBlock
+                            Text="Dependencies:"
+                            Foreground="#8b949e"
+                            ToolTip.Tip="External tools required for processing"
+                            VerticalAlignment="Center" />
+                        <TextBlock
+                            x:Name="StatusBarChdSharp"
+                            Text="CHDSharp"
+                            Foreground="#4CAF50"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Status of the CHDSharp fallback encoder" />
+                        <TextBlock
+                            x:Name="StatusBarChdman"
+                            Text="CHDMAN"
+                            Foreground="#4CAF50"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Status of chdman (primary encoder)" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

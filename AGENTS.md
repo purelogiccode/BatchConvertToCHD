@@ -9,7 +9,25 @@ GitHub wiki and GitHub Pages).
 `Batch Convert to CHD` - a Windows WPF desktop app (`net10.0-windows`) that batch
 converts disc images (cue/iso/img/ccd/mds/pbp/cso/isz/ecm/split sets/archives)
 to CHD using a bundled `chdman.exe` with a managed CHDSharp fallback. The
-solution also contains six library projects and an xUnit test project.
+solution also contains six library projects, an xUnit test project, and
+`BatchConvertToCHD.Avalonia`, a cross-platform (Windows/Linux/macOS) front end
+with the same UI.
+
+### The Avalonia front end
+
+- `BatchConvertToCHD.Avalonia` multi-targets `net10.0` (Linux/macOS) and
+  `net10.0-windows` (Windows). The Windows TFM adds NAudio (Media Foundation/ACM
+  MP3 decoding); the neutral TFM decodes MP3 via `ffmpeg` on PATH.
+- Shared, UI-free code lives in the WPF project and is **linked** into the
+  Avalonia project (`Models`, `Utilities`, `Services`, `AppConfig.cs`). Edit the
+  file in `BatchConvertToCHD/` and both front ends pick it up; never fork a
+  copy. UI-layer files (`MainWindow`, `AboutWindow`, `App`, `ScreenshotService`)
+  exist separately per front end.
+- Tool discovery is platform-aware: bundled `chdman`/`7za`/`CHDSharp` binaries
+  next to the app come first (Windows only), then `chdman`, `7z`/`7za`/`7zz` and
+  `CHDSharp` on `PATH` (Linux/macOS).
+- The custom title bar, status colors and terminal log are styled in
+  `App.axaml`; keep UI changes in both front ends visually consistent.
 
 ## Toolchain
 
@@ -17,6 +35,8 @@ solution also contains six library projects and an xUnit test project.
   lower `TargetFramework` below `net10.0-windows`; the WPF UI depends on it.
 - Node.js 24 - used only for the zero-dependency helper scripts in
   `scripts/ci/`. Do not add npm packages or a `package.json`.
+- Avalonia 12.1 (desktop, Fluent theme, DataGrid); the neutral TFM must keep
+  building without Windows-only packages so Linux/macOS publishes stay clean.
 
 ## Commands
 
@@ -36,6 +56,14 @@ dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -r win-arm6
 
 # Release zip (same command CI runs)
 ./scripts/ci/package-release.ps1 -Rid win-x64 -Version 3.7.0 -PublishDir publish/win-x64 -OutputDir dist
+
+# Avalonia front end: run on Windows (multi-targeted, so pick the Windows TFM)
+dotnet run --project BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -f net10.0-windows
+
+# Avalonia front end: framework-dependent publishes per OS
+dotnet publish BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c Release -f net10.0-windows -r win-x64 --self-contained false -o publish/avalonia-win-x64
+dotnet publish BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c Release -f net10.0 -r linux-x64 --self-contained false -o publish/avalonia-linux-x64
+dotnet publish BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c Release -f net10.0 -r osx-arm64 --self-contained false -o publish/avalonia-osx-arm64
 ```
 
 ## Release engineering (do not break)
