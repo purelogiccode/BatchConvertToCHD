@@ -37,9 +37,9 @@ This documentation covers the project from both a user and a developer perspecti
 | **Target framework** | .NET 10.0 (`net10.0;net10.0-windows`), Avalonia |
 | **Platform** | Windows 10 / 11 (x64 and ARM64); Linux and macOS from source |
 | **License** | GPL v3.0 |
-| **Primary encoder** | `chdman` (MAME Project, 0.289), bundled as `chdman.exe` / `chdman_arm64.exe` |
-| **Fallback encoder** | `CHDSharp` (PureLogicCode), bundled as `CHDSharp.exe` / `CHDSharp_arm64.exe` — chdman byte-identical output |
-| **External tools needed** | None beyond the bundled `CHDSharp`, `chdman` and `7za` — every input format is handled in-process |
+| **Primary encoder** | `chdman` (MAME Project, 0.289), bundled as `chdman.exe` / `chdman_arm64.exe` on Windows; built-in CHDSharp on Linux/macOS |
+| **Fallback encoder** | Built-in `CHDSharp` encoder (CHDSharpLib NuGet 1.4.3, in-process) — always available, chdman byte-identical output |
+| **External tools needed** | None beyond the bundled `chdman` (Windows) and 7-Zip (`7za` on Windows, `7zz` on Linux/macOS) — every input format is handled in-process |
 | **Output format** | `.chd` (Compressed Hunks of Data) |
 | **Logs** | `%LocalAppData%\BatchConvertToCHD\logs` |
 | **Screenshots** | `%LocalAppData%\BatchConvertToCHD\screenshots` (F8 hotkey) |

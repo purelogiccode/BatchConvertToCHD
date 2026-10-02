@@ -47,12 +47,12 @@ if (-not (Test-Path -LiteralPath $OutputDir)) {
 $outputDir = (Resolve-Path -LiteralPath $OutputDir).Path
 
 if ($Rid -eq 'win-x64') {
-    $toolFiles = @('7za.exe', 'chdman.exe', 'CHDSharp.exe')
-    $otherArchFiles = @('7za_arm64.exe', 'chdman_arm64.exe', 'CHDSharp_arm64.exe')
+    $toolFiles = @('7za.exe', 'chdman.exe')
+    $otherArchFiles = @('7za_arm64.exe', 'chdman_arm64.exe')
 }
 else {
-    $toolFiles = @('7za_arm64.exe', 'chdman_arm64.exe', 'CHDSharp_arm64.exe')
-    $otherArchFiles = @('7za.exe', 'chdman.exe', 'CHDSharp.exe')
+    $toolFiles = @('7za_arm64.exe', 'chdman_arm64.exe')
+    $otherArchFiles = @('7za.exe', 'chdman.exe')
 }
 
 $stage = Join-Path ([IO.Path]::GetTempPath()) ("bctchd-stage-" + [Guid]::NewGuid().ToString('N'))

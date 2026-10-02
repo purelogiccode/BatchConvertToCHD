@@ -20,13 +20,14 @@ Developed by [Pure Logic Code](https://www.purelogiccode.com), the application c
 - **Resizable layout** — built-in grid splitter between file explorer and log view.
 
 ### Multi-Architecture Support
-- **Native x64 & ARM64** — `AppConfig.IsArm64` selects `chdman_arm64.exe`/`7za_arm64.exe` on ARM64 hardware, `chdman.exe`/`7za.exe` elsewhere (`AppConfig.cs:17–29`).
+- **Native x64 & ARM64** — on Windows, `AppConfig.IsArm64` selects `chdman_arm64.exe`/`7za_arm64.exe` on ARM64 hardware, `chdman.exe`/`7za.exe` elsewhere (`AppConfig.cs:17–29`). Linux/macOS use the bundled managed encoder plus the platform `7zz`.
 
 ### Intelligent Conversion & Extraction
 - **Automated batch processing** — convert entire directories with real-time progress, immediate cancellation, and per-file timeouts.
+- **Built-in encoder** — the [CHDSharp](https://www.nuget.org/packages/CHDSharp) library (CHDSharpLib 1.4.3) encodes in-process: the automatic fallback behind chdman on Windows and the only encoder on Linux/macOS. Its output is byte-identical to `chdman` 0.289, and because it is managed code there is no encoder executable to ship or probe.
 - **Recursive structure preservation** — the output folder mirrors the input folder's directory hierarchy (`PathUtils.GetSafeRelativePath`).
 - **Robust extraction** — CHD → `.cue` (CD), `.iso` (DVD), `.gdi` (Dreamcast/Naomi), `.img` (HDD), with automatic metadata-based command detection via CHDSharp.
-- **Archive integration** — `.zip`, `.7z`, `.rar` are extracted and processed transparently (SharpCompress, with a `7za.exe` fallback); multi-part RAR sets (`.partNN.rar`, renamed `.001` volumes) are decoded from their first volume.
+- **Archive integration** — `.zip`, `.7z`, `.rar` are extracted and processed transparently (SharpCompress, with a bundled 7-Zip fallback — `7za` on Windows, `7zz` on Linux/macOS — for archives the built-in extractor cannot read); multi-part RAR sets (`.partNN.rar`, renamed `.001` volumes) are decoded from their first volume.
 - **CloneCD support** — `.ccd` sets are parsed by CCDSharp and converted via an auto-generated CUE/BIN.
 - **CSO decompression** — `.cso`/`.ciso` via CSOSharp (deflate/zlib and LZ4).
 - **PBP extraction** — PlayStation `.pbp` via PBPSharp; PSP-homebrew-style files (no PlayStation disc image) are detected and skipped with a clear message.
@@ -58,12 +59,12 @@ A file's extension is the least reliable thing about it. Every input's leading b
 - **Disk-space preflight** — free space on the output drive is checked immediately before chdman starts; clearly insufficient space skips the file with both figures named instead of failing an hour in.
 - **Output-folder preflight** — the destination is probed for write access before a batch starts; an unwritable folder (e.g. inside `Program Files` without elevation) produces one clear message instead of a run of per-file "Permission denied" failures.
 - **chdman-safe path handling** — non-ASCII characters anywhere along a path (`C:\Users\Kauê Chacon\...`, `D:\Emulátory\...`) and paths at or beyond MAX_PATH are routed through short ASCII staging directories, because older chdman builds mangle or cannot open such paths. Cue work directories avoid a non-ASCII system temp folder the same way.
-- **Crash-aware error reporting** — when Windows kills chdman outright (e.g. exit code `0xC000001D` on a CPU lacking the build's instruction sets), the code is decoded into plain language with guidance, and a startup check refuses to begin a batch that would fail on every file. Startup logs record the process and OS architectures and which tool binary was selected.
+- **Crash-aware error reporting** — when Windows kills chdman outright (e.g. exit code `0xC000001D` on a CPU lacking the build's instruction sets), the built-in CHDSharp encoder takes over automatically and the crash is decoded into plain language with guidance; a startup check warns when the bundled chdman cannot run. Startup logs record the process and OS architectures and which tool binary was selected.
 - **Safe deletion** — source files (and dependencies such as `.bin`, `.sub`) are only deleted after confirmed success.
 - **Batch verification** — checksums and structural integrity of existing CHD files via CHDSharp.
 - **Automated organization** — optionally move verified/failed files into `Success`/`Failed` subfolders; these folders are excluded from subsequent scans.
 - **Empty-folder cleanup** — empty subdirectories are removed after files are moved or deleted.
-- **Dependency check at startup** — the user is notified if `chdman.exe` is missing.
+- **Dependency check at startup** — on Windows the user is notified if `chdman.exe` is missing; conversions then run on the always-available built-in CHDSharp encoder, so a batch never refuses to start for a missing encoder.
 - **File-system monitoring** — the input folder is watched during batch processing to explain why a file went missing mid-operation.
 - **Corrupt-image early warning** — ISO sizes that don't match any standard sector layout are flagged before conversion.
 - **Resilient file operations** — deletions and moves retry with backoff (~45 s) against transient locks (antivirus, indexer) and clear read-only attributes when needed.
@@ -93,7 +94,7 @@ A file's extension is the least reliable thing about it. Every input's leading b
 
 The full input set is defined in `FileExtensions.AllSupportedInputExtensionsForConversion`: `.cue`, `.iso`, `.img`, `.gdi`, `.toc`, `.raw`, `.ccd`, `.bin`, `.mds`, `.ecm`, `.isz`, `.001`, `.i00`, `.zip`, `.7z`, `.rar`, `.cso`, `.pbp`. All extension checks are case-insensitive.
 
-Only the descriptor or first volume of a multi-file set is listed for conversion: the `.mdf` behind a `.mds`, the `.bin` behind a `.cue`, and the later parts of a split set are found automatically, so each disc converts once. Every format above is handled in-process — apart from the bundled `chdman` and `7za` there is nothing else to install, and x64 and ARM64 get the same feature set.
+Only the descriptor or first volume of a multi-file set is listed for conversion: the `.mdf` behind a `.mds`, the `.bin` behind a `.cue`, and the later parts of a split set are found automatically, so each disc converts once. Every format above is handled in-process — the built-in CHDSharp encoder, plus the bundled `chdman` (Windows) and 7-Zip (`7za` on Windows, `7zz` on Linux/macOS), are all that ship; there is nothing else to install, and x64 and ARM64 get the same feature set.
 
 ---
 

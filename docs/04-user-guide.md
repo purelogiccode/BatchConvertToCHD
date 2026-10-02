@@ -5,7 +5,7 @@ nav_order: 5
 
 # 4. User Guide
 
-The main window has three tabs: **Convert to CHD**, **Verify CHD Files**, and **Extract CHD Files**. A terminal-style log view sits on the right, stat cards and the progress bar at the bottom, and a status bar with the CHDMAN dependency indicator at the very bottom.
+The main window has three tabs: **Convert to CHD**, **Verify CHD Files**, and **Extract CHD Files**. A terminal-style log view sits on the right, stat cards and the progress bar at the bottom, and a status bar with the CHDSharp and CHDMAN encoder indicators at the very bottom.
 
 Title-bar buttons: **About** (info dialog), **AppData** (opens `%LocalAppData%\BatchConvertToCHD`), **Exit**.
 
@@ -39,18 +39,19 @@ Title-bar buttons: **About** (info dialog), **AppData** (opens `%LocalAppData%\B
 
 ### What happens during conversion
 
-1. **Archives** (`.zip`/`.7z`/`.rar`) are extracted to a temp directory first (SharpCompress, with a `7za.exe` fallback for zip/7z), then each supported file inside is converted. Multi-part RAR sets (`.partNN.rar`, `.001` volumes) are decoded from their first volume; only that volume is offered as an input. Cue/GDI/TOC entries whose referenced data files are missing are skipped with a warning.
+1. **Archives** (`.zip`/`.7z`/`.rar`) are extracted to a temp directory first (SharpCompress, with a bundled 7-Zip fallback — `7za` on Windows, `7zz` on Linux/macOS — for archives the built-in extractor cannot read), then each supported file inside is converted. Multi-part RAR sets (`.partNN.rar`, `.001` volumes) are decoded from their first volume; only that volume is offered as an input. Cue/GDI/TOC entries whose referenced data files are missing are skipped with a warning.
 2. **`.cso`** is decompressed to a temp ISO (CSOSharp), then converted.
 3. **`.pbp`** is extracted to CUE/BIN (PBPSharp), then converted. Files without a PlayStation disc image (PSP homebrew, corrupt variants) are skipped with an informational message.
 4. **`.ccd`** is converted to CUE/BIN (CCDSharp), then converted.
-5. **Everything else** (`.cue`, `.gdi`, `.toc`, `.iso`, `.img`, `.raw`) is handed directly to `chdman` — after cue normalization when applicable and a dependent-file check.
+5. **Everything else** (`.cue`, `.gdi`, `.toc`, `.iso`, `.img`, `.raw`) goes straight to the encoder — `chdman` on Windows, the built-in CHDSharp encoder on Linux/macOS — after cue normalization when applicable and a dependent-file check. On Windows a missing or failing `chdman` also routes the file to the built-in encoder.
 
-Each file's `chdman` command is chosen automatically (see [Technical Logic](01-overview.md#13-technical-logic-command-selection)) unless Force CD/DVD is set.
+Each file's encoder mode is chosen automatically (see [Technical Logic](01-overview.md#13-technical-logic-command-selection)) unless Force CD/DVD is set.
 
 ### Advanced behaviors you may observe in the log
 
 - **"Retrying with createdvd (unrecognized track type)"** — a `createcd` attempt failed because chdman did not recognize the track type; the app automatically retries with `createdvd`.
 - **"chdman exited with code N but produced a valid output file"** — a non-zero exit that still produced a non-empty output CHD is treated as success.
+- **"Falling back to the built-in CHDSharp encoder..."** and **"CHDSHARP: createcd game.cue"** — Windows: chdman failed or is missing, so the in-process CHDSharp encoder is encoding the file instead. This is routine and conversion continues automatically.
 - **"Prepared self-contained cue set ..."** — the cue was normalized (BOM, encoding, zero-padding, MP3 tracks) into a work directory before conversion.
 - **"Falling back to system temp"** — the preferred temp drive was not writable; the system temp is used instead.
 - **"TIMEOUT: Conversion ... exceeded N minute(s). Marking as failed."** — the per-file timeout fired.
@@ -118,6 +119,6 @@ The path is shown in the log ("Screenshot saved: ..."). Capture uses Avalonia's 
 
 ## 4.5 Status Bar & Stats
 
-- **Status bar**: current operation message + the CHDMAN dependency indicator (green = available, red = missing).
+- **Status bar**: current operation message + the CHDSharp and CHDMAN encoder indicators. CHDSharp is always green (built-in, always available). CHDMAN is green when found, red when missing on Windows (conversions then use the built-in encoder) and gray on Linux/macOS, where it is optional and never used for encoding.
 - **Stat cards**: TOTAL FILES, SUCCESS, FAILED, ELAPSED, SPEED (disk write/read MB/s, sampled via performance counters while an operation runs).
 - **Progress bar**: per-batch progress with a **Cancel** button that stops the current operation (cancelling chdman kills the process and cleans up temp files).

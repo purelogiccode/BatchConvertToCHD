@@ -68,8 +68,6 @@ internal partial class MainWindow : Window, IDisposable
     // MP3 audio track decoder (Media Foundation) for cue sheets with MP3 tracks.
     private static readonly IMp3Decoder Mp3Decoder = new Mp3ToWavDecoder();
     private readonly ArchiveService _archiveService;
-    private readonly string _chdSharpExePath;
-    private readonly string _chdSharpResolvedName;
     private readonly string _chdmanExePath;
     private readonly string _chdmanResolvedName;
 
@@ -78,7 +76,6 @@ internal partial class MainWindow : Window, IDisposable
     private readonly Lock _ctsLock = new();
     private readonly ObservableCollection<FileItem> _extractionFiles = new();
     private readonly FileWatcherService _fileWatcher = new();
-    private readonly bool _isChdSharpAvailable;
     private readonly bool _isChdmanAvailable;
     private readonly Stopwatch _operationTimer = new();
     private readonly DispatcherTimer _elapsedTimeTimer;
@@ -136,10 +133,6 @@ internal partial class MainWindow : Window, IDisposable
         (_chdmanExePath, _chdmanResolvedName, _isChdmanAvailable) = ResolveToolExecutable(
             appDirectory,
             GetChdmanCandidates()
-        );
-        (_chdSharpExePath, _chdSharpResolvedName, _isChdSharpAvailable) = ResolveToolExecutable(
-            appDirectory,
-            GetChdSharpCandidates()
         );
         (_sevenZipExePath, _, var isSevenZipAvailable) = ResolveToolExecutable(
             appDirectory,
@@ -359,14 +352,6 @@ internal partial class MainWindow : Window, IDisposable
     }
 
     /// <summary>
-    ///     Returns the CHDSharp executable names to probe, best first, for the current platform.
-    /// </summary>
-    private static IReadOnlyList<string> GetChdSharpCandidates()
-    {
-        return OperatingSystem.IsWindows() ? AppConfig.ChdSharpExeCandidates : ["CHDSharp"];
-    }
-
-    /// <summary>
     ///     Returns the 7-Zip executable names to probe, best first, for the current platform.
     /// </summary>
     private static IReadOnlyList<string> GetSevenZipCandidates()
@@ -414,40 +399,16 @@ internal partial class MainWindow : Window, IDisposable
 
     private void CheckDependenciesAndNotifyUser()
     {
-        var chdmanMissing = !_isChdmanAvailable;
-        var chdSharpMissing = !_isChdSharpAvailable;
-
-        // chdman is the primary encoder and CHDSharp the automatic fallback, so only the loss of
-        // both is fatal. A single missing encoder downgrades the conversion path and gets a warning.
-        if (chdmanMissing && chdSharpMissing)
-        {
-            var msg =
-                "CRITICAL ERROR: The following required components are missing:\n\n"
-                + $"{_chdmanResolvedName}\n"
-                + $"{_chdSharpResolvedName}\n\n"
-                + "Please place at least one encoder in the application folder.\n\n"
-                + "Conversion will NOT work without an encoder.";
-
-            LogError(" " + msg.Replace("\n", " "));
-            _ = ShowMessageBoxAsync(msg, "Missing Dependency", MessageBoxButton.Ok, MessageBoxImage.Error);
-            return;
-        }
-
-        if (chdmanMissing)
+        // The built-in CHDSharp encoder always exists, so conversion can never hard-fail on a
+        // missing encoder. chdman is the primary encoder on Windows and is bundled with the app;
+        // on Linux and macOS the built-in encoder is the expected path, and a system-installed
+        // chdman on PATH is only a bonus, so its absence is not worth a warning there.
+        if (!_isChdmanAvailable && OperatingSystem.IsWindows())
         {
             const string msg =
-                "chdman.exe was not found, so conversions will run on the CHDSharp fallback.";
+                "chdman.exe was not found, so conversions will run on the built-in CHDSharp encoder.";
 
-            LogWarning(" " + msg.Replace("\n", " "));
-            _ = ShowMessageBoxAsync(msg, "Encoder Notice", MessageBoxButton.Ok, MessageBoxImage.Warning);
-        }
-        else if (chdSharpMissing)
-        {
-            const string msg =
-                "CHDSharp.exe was not found, so conversions run on chdman without an automatic fallback.\n\n"
-                + "Place CHDSharp.exe in the application folder to restore the fallback encoder.";
-
-            LogWarning(" " + msg.Replace("\n", " "));
+            LogWarning(" " + msg);
             _ = ShowMessageBoxAsync(msg, "Encoder Notice", MessageBoxButton.Ok, MessageBoxImage.Warning);
         }
     }
@@ -485,13 +446,13 @@ internal partial class MainWindow : Window, IDisposable
             try
             {
                 StatusBarChdSharp.Text = " CHDSharp ";
-                StatusBarChdSharp.Foreground = _isChdSharpAvailable
-                    ? FindBrush("SuccessTextBrush")
-                    : FindBrush("FailedTextBrush");
+                StatusBarChdSharp.Foreground = FindBrush("SuccessTextBrush");
                 StatusBarChdman.Text = " CHDMAN ";
                 StatusBarChdman.Foreground = _isChdmanAvailable
                     ? FindBrush("SuccessTextBrush")
-                    : FindBrush("FailedTextBrush");
+                    : OperatingSystem.IsWindows()
+                        ? FindBrush("FailedTextBrush")
+                        : Brushes.Gray;
                 StatusBarMessage.Text = "Ready";
                 SpeedValue.Text = "0.0 MB/s";
             }
@@ -780,10 +741,7 @@ internal partial class MainWindow : Window, IDisposable
                 CultureInfo.InvariantCulture,
                 $"chdman executable: {_chdmanResolvedName} ({(_isChdmanAvailable ? "found" : "NOT FOUND")})"
             );
-            sb.AppendLine(
-                CultureInfo.InvariantCulture,
-                $"CHDSharp executable: {_chdSharpResolvedName} ({(_isChdSharpAvailable ? "found" : "NOT FOUND")})"
-            );
+            sb.AppendLine("CHDSharp encoder: built-in (always available)");
             LogMessage(sb.ToString());
         }
         catch
@@ -795,17 +753,10 @@ internal partial class MainWindow : Window, IDisposable
     private void DisplayConversionInstructionsInLog()
     {
         LogMessage($"Welcome to {AppConfig.ApplicationName}. (Conversion Mode)");
-        if (!_isChdmanAvailable)
+        if (!_isChdmanAvailable && OperatingSystem.IsWindows())
         {
             LogWarning(
-                " chdman.exe not found! chdman is the primary encoder."
-            );
-        }
-
-        if (!_isChdSharpAvailable)
-        {
-            LogWarning(
-                " CHDSharp.exe not found! CHDSharp is used as a fallback encoder. Place it in the application folder."
+                " chdman.exe not found; conversions will use the built-in CHDSharp encoder."
             );
         }
 
@@ -1427,14 +1378,6 @@ internal partial class MainWindow : Window, IDisposable
             await Dispatcher.UIThread.InvokeAsync((Action)(() => LogViewer.Clear()));
             DisplayConversionInstructionsInLog();
 
-            if (!_isChdSharpAvailable && !_isChdmanAvailable)
-            {
-                ShowError(
-                    $"Neither {AppConfig.ChdSharpExeName} nor {AppConfig.ChdmanExeName} was found. Place at least one encoder in the application folder."
-                );
-                return;
-            }
-
             var inputFolder = PathUtils.ValidateAndNormalizePath(
                 ConversionInputFolderTextBox.Text,
                 "Source Files Folder",
@@ -1751,42 +1694,32 @@ internal partial class MainWindow : Window, IDisposable
         CancellationToken token
     )
     {
-        // chdman is the primary encoder, so it is probed once up front: an executable the OS
-        // cannot start must fail here with one actionable message, not once per file. A chdman
-        // that launches but crashes the CPU-compatibility probe is a different case — when the
-        // CHDSharp fallback is available the batch still runs, because ConvertToChdAsync falls
-        // back to CHDSharp per file. The batch is refused only when neither encoder is usable.
-        var chdSharpUsable = _isChdSharpAvailable && File.Exists(_chdSharpExePath);
-
-        if (File.Exists(chdmanPath))
+        // The built-in CHDSharp encoder is always available, so a batch can never be refused for a
+        // missing encoder. On Windows chdman is the primary encoder and is probed once up front: an
+        // executable the OS cannot start must fail here with one actionable message, not once per
+        // file. A chdman that launches but crashes the CPU-compatibility probe is a different case —
+        // the built-in encoder takes over per file.
+        if (OperatingSystem.IsWindows() && File.Exists(chdmanPath))
         {
             if (!await ValidateExecutableAccessAsync(chdmanPath, "chdman.exe"))
                 return;
 
             if (!await ValidateChdmanCompatibilityAsync(chdmanPath, token))
             {
-                if (!chdSharpUsable)
-                    return;
-
                 LogWarning(
-                    " Continuing without chdman: CHDSharp.exe is available and takes over whenever chdman fails."
+                    " Continuing without chdman: the built-in CHDSharp encoder takes over whenever chdman fails."
                 );
             }
         }
-        else if (!chdSharpUsable)
+        else if (OperatingSystem.IsWindows())
         {
-            LogError($" chdman.exe not found at: {chdmanPath}");
-            ShowError(
-                "chdman.exe was not found, and CHDSharp.exe is not available as a fallback.\n\n"
-                + "Place at least one encoder in the application folder."
+            LogMessage(
+                " chdman.exe not found; every file will be converted with the built-in CHDSharp encoder."
             );
-            return;
         }
         else
         {
-            LogMessage(
-                " chdman.exe not found; every file will be converted with the CHDSharp fallback."
-            );
+            LogMessage(" Using the built-in CHDSharp encoder.");
         }
 
         var filesToConvert = selectedFiles;
@@ -5405,165 +5338,6 @@ internal partial class MainWindow : Window, IDisposable
         return (work.WorkCuePath, work.WorkDir);
     }
 
-    /// <summary>
-    ///     Runs an encoder process (CHDSharp or chdman) with the given arguments and waits for completion.
-    ///     Returns true if the process exited successfully (exit code 0) and was not cancelled/timed out.
-    /// </summary>
-    private async Task<bool> RunEncoderProcessAsync(
-        string exePath,
-        string args,
-        string toolLabel,
-        int? timeoutMinutes,
-        CancellationToken token
-    )
-    {
-        using var process = new Process();
-        process.StartInfo = new ProcessStartInfo
-        {
-            FileName = exePath,
-            Arguments = args,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            ErrorDialog = false
-        };
-
-        var errorBuffer = new StringBuilder();
-        process.OutputDataReceived += (_, a) =>
-        {
-            if (string.IsNullOrEmpty(a.Data))
-                return;
-
-            if (
-                a.Data.Contains("Compression complete", StringComparison.Ordinal)
-                || a.Data.Contains("final ratio", StringComparison.Ordinal)
-            )
-            {
-                LogMessage($"[{toolLabel} ✓] {a.Data}");
-            }
-            else if (
-                !a.Data.Contains("% complete", StringComparison.Ordinal)
-                && !a.Data.Contains("Compressing", StringComparison.Ordinal)
-                && !a.Data.Contains("Output bytes", StringComparison.Ordinal)
-                && !a.Data.Contains("Compression ratio", StringComparison.Ordinal)
-            )
-            {
-                LogMessage($"[{toolLabel}] {a.Data}");
-            }
-        };
-
-        process.ErrorDataReceived += (_, a) =>
-        {
-            if (string.IsNullOrEmpty(a.Data))
-                return;
-
-            errorBuffer.AppendLine(a.Data);
-
-            if (
-                a.Data.Contains("Compression complete", StringComparison.Ordinal)
-                || a.Data.Contains("final ratio", StringComparison.Ordinal)
-            )
-            {
-                LogMessage($"[{toolLabel} ✓] {a.Data}");
-            }
-            else if (
-                !a.Data.Contains("% complete", StringComparison.Ordinal)
-                && !a.Data.Contains("Compressing", StringComparison.Ordinal)
-                && !a.Data.Contains("Output bytes", StringComparison.Ordinal)
-                && !a.Data.Contains("Compression ratio", StringComparison.Ordinal)
-            )
-            {
-                LogMessage($"[{toolLabel}] {a.Data}");
-            }
-        };
-
-        try
-        {
-            process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-        }
-        catch (Exception ex) when (!IsCancellationException(ex))
-        {
-            LogError($" Failed to start {toolLabel}: {ex.Message}");
-            return false;
-        }
-
-        // Sample the system-wide write speed for as long as the encoder runs, so the speed
-        // stat card shows live MB/s regardless of which CLI engine is driving the conversion.
-        // (The chdman path in ConvertToChdAsync does the same; this shared runner used to skip
-        // it, which froze the display at 0.0 MB/s while CHDSharp was converting.)
-        using var ctsSpeed = CancellationTokenSource.CreateLinkedTokenSource(token);
-        var speedToken = ctsSpeed.Token;
-        var speedMonitoringTask = Task.Run(
-            async () =>
-            {
-                try
-                {
-                    while (!speedToken.IsCancellationRequested)
-                    {
-                        UpdateWriteSpeedFromPerformanceCounter();
-                        await Task.Delay(AppConfig.WriteSpeedUpdateIntervalMs, speedToken);
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                }
-            },
-            speedToken
-        );
-
-        try
-        {
-            token.ThrowIfCancellationRequested();
-
-            if (timeoutMinutes is > 0)
-            {
-                using var timeoutCts = new CancellationTokenSource();
-                timeoutCts.CancelAfter(TimeSpan.FromMinutes(timeoutMinutes.Value));
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                    token,
-                    timeoutCts.Token
-                );
-
-                await process.WaitForExitAsync(linkedCts.Token);
-            }
-            else
-            {
-                await process.WaitForExitAsync(token);
-            }
-        }
-        catch (Exception ex) when (ex is OperationCanceledException)
-        {
-            if (token.IsCancellationRequested)
-                throw;
-
-            if (timeoutMinutes != null)
-            {
-                LogMessage(
-                    $"TIMEOUT: {toolLabel} conversion exceeded {timeoutMinutes.Value} minute(s). Marking as failed."
-                );
-            }
-
-            return false;
-        }
-        finally
-        {
-            if (!process.HasExited)
-            {
-                process.Kill(true);
-                await Task.Run(() => process.WaitForExit(5000), CancellationToken.None);
-            }
-
-            ctsSpeed.Cancel();
-            await Task.WhenAny(speedMonitoringTask, Task.Delay(500, CancellationToken.None));
-            process.CancelOutputRead();
-            process.CancelErrorRead();
-        }
-
-        return process.ExitCode == 0 && !token.IsCancellationRequested;
-    }
 
     private async Task<bool> ConvertToChdAsync(
         string chdmanPath,
@@ -5577,16 +5351,6 @@ internal partial class MainWindow : Window, IDisposable
         int recursionDepth = 0
     )
     {
-        // chdman is the primary encoder and CHDSharp.exe the automatic fallback, so a missing
-        // chdman.exe must not refuse the file outright — refuse only when neither encoder exists.
-        if (!File.Exists(chdmanPath) && !(_isChdSharpAvailable && File.Exists(_chdSharpExePath)))
-        {
-            LogError(
-                $" chdman.exe not found at '{chdmanPath}'."
-            );
-            return false;
-        }
-
         // An .img sitting next to a .cue of the same name is the data half of a cue/bin pair. The cue
         // is the only file that carries the track layout, so hand chdman the cue: passing the raw
         // image instead selects createhd and reports "Data size ... is not divisible by sector size
@@ -5761,22 +5525,19 @@ internal partial class MainWindow : Window, IDisposable
             return false;
         }
 
-        // --- Primary encoder: chdman ---
-        if (!File.Exists(chdmanPath))
+        // --- Primary encoder: chdman on Windows; the built-in CHDSharp encoder elsewhere ---
+        var useChdman = OperatingSystem.IsWindows() && File.Exists(chdmanPath);
+        if (!useChdman)
         {
-            // chdman is missing but the CHDSharp fallback exists (checked at the top of this
-            // method): skip the chdman run and hand the file straight to the fallback.
-            LogMessage(
-                $" chdman.exe not found; converting {Path.GetFileName(originalInputFile)} with CHDSharp."
-            );
-            if (await TryChdSharpFallbackAsync())
+            LogMessage($"CHDSHARP: {command} {Path.GetFileName(originalInputFile)}");
+            if (await TryChdSharpInProcessAsync())
             {
                 TryCleanupAsciiTemp();
                 return true;
             }
 
             LogError(
-                $" Failed to convert '{Path.GetFileName(originalInputFile)}': the CHDSharp fallback did not produce a usable output."
+                $" Failed to convert '{Path.GetFileName(originalInputFile)}': the built-in CHDSharp encoder did not produce a usable output."
             );
             TryCleanupAsciiTemp();
             return false;
@@ -6049,13 +5810,13 @@ internal partial class MainWindow : Window, IDisposable
 
             if (token.IsCancellationRequested) return false;
 
-            // --- Fallback encoder: CHDSharp ---
+            // --- Fallback encoder: built-in CHDSharp ---
             // Informational only: chdman failing on a user file is routine and the fallback
             // usually succeeds. When both encoders fail, the classified LogError below reports.
             LogMessage(
-                $"chdman failed for '{Path.GetFileName(originalInputFile)}'. Falling back to CHDSharp..."
+                $"chdman failed for '{Path.GetFileName(originalInputFile)}'. Falling back to the built-in CHDSharp encoder..."
             );
-            if (await TryChdSharpFallbackAsync())
+            if (await TryChdSharpInProcessAsync())
                 return true;
 
             // --- Both encoders failed: report the chdman diagnostics ---
@@ -6226,12 +5987,12 @@ internal partial class MainWindow : Window, IDisposable
             }
         }
 
-        // Runs CHDSharp against the same command the primary chdman attempt used, on a fresh
-        // output staging path. The prepared input (ASCII copy or cue work directory) is kept —
-        // only the stale output staging is replaced — so the fallback never re-prepares and a
+        // Runs the built-in CHDSharp encoder for the same command the chdman attempt used, on a
+        // fresh output staging path. The prepared input (ASCII copy or cue work directory) is kept
+        // — only the stale output staging is replaced — so the encoder never re-prepares and a
         // cue's work set stays valid. Mutates asciiOutputFile/outputFile so the cleanup above
-        // removes the path the fallback actually wrote to.
-        async Task<bool> TryChdSharpFallbackAsync()
+        // removes the path the encoder actually wrote to.
+        async Task<bool> TryChdSharpInProcessAsync()
         {
             if (asciiOutputFile != null)
             {
@@ -6286,39 +6047,69 @@ internal partial class MainWindow : Window, IDisposable
 
             outputFile = asciiOutputFile;
 
-            var fallbackArgs = $"{command} -i \"{inputFile}\" -o \"{outputFile}\" -f -np {cores}";
-            if (isRaw)
-            {
-                fallbackArgs += " -us 2352";
-            }
-            else if (string.Equals(command, "createcd", StringComparison.Ordinal) && isCueDescriptor)
-            {
-                var refs = await GameFileParser
-                    .GetReferencedFilesFromCueAsync(inputFile, static _ => { }, token)
-                    .ConfigureAwait(false);
-                if (
-                    refs.Any(static r =>
-                        r.EndsWith(FileExtensions.Raw, StringComparison.OrdinalIgnoreCase)
-                    )
-                )
+            LogMessage($"CHDSHARP: {command} {Path.GetFileName(originalInputFile)}");
+
+            // Same live speed display as the chdman path: sample the process write throughput for
+            // as long as the encoder runs.
+            using var fallbackSpeedCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            var fallbackSpeedToken = fallbackSpeedCts.Token;
+            var fallbackSpeedTask = Task.Run(
+                async () =>
                 {
-                    fallbackArgs += " -us 2352";
-                }
-            }
+                    try
+                    {
+                        while (!fallbackSpeedToken.IsCancellationRequested)
+                        {
+                            UpdateWriteSpeedFromPerformanceCounter();
+                            await Task.Delay(AppConfig.WriteSpeedUpdateIntervalMs, fallbackSpeedToken);
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
+                },
+                fallbackSpeedToken
+            );
 
-            LogMessage($"CHDSharp: {command} {Path.GetFileName(originalInputFile)}");
+            using var fallbackTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            if (timeoutMinutes is > 0)
+                fallbackTimeoutCts.CancelAfter(TimeSpan.FromMinutes(timeoutMinutes.Value));
 
-            if (
-                !await RunEncoderProcessAsync(
-                    _chdSharpExePath,
-                    fallbackArgs,
-                    "CHDSharp",
-                    timeoutMinutes,
-                    token
-                )
-            )
+            try
             {
+                await Task.Run(
+                    () =>
+                        ChdSharpEncoderService.Encode(
+                            command,
+                            inputFile,
+                            outputFile,
+                            isRaw,
+                            cores,
+                            fallbackTimeoutCts.Token
+                        ),
+                    fallbackTimeoutCts.Token
+                );
+            }
+            catch (OperationCanceledException)
+            {
+                if (!token.IsCancellationRequested && timeoutMinutes is not null)
+                {
+                    LogMessage(
+                        $"TIMEOUT: Conversion of '{Path.GetFileName(originalInputFile)}' exceeded {timeoutMinutes.Value} minute(s). Marking as failed."
+                    );
+                }
+
                 return false;
+            }
+            catch (Exception ex)
+            {
+                LogError($" CHDSharp encoding failed: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                fallbackSpeedCts.Cancel();
+                await Task.WhenAny(fallbackSpeedTask, Task.Delay(500, CancellationToken.None));
             }
 
             // CHDSharp internally validates its output; trust the exit code.

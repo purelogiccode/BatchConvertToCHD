@@ -14,6 +14,12 @@
 *   **Browse a CHD like a disc**: pick a `.chd`, choose the file-system parser matching its console/system (35 formats, PlayStation auto-detection by default), and navigate the folder tree in a grid. Double-click a folder to open it, a file to extract and open it, or use Extract to save a folder to disk.
 *   **Backed by VideoGameFileSystemParser 1.3.0** (<https://www.nuget.org/packages/VideoGameFileSystemParser>), rebuilt against CHDSharp 1.4.3 and published for this release.
 
+### Built-in CHD encoder — no CHDSharp CLI
+
+*   **CHDSharp now runs in-process** (the NuGet library, not the bundled `CHDSharp.exe` CLI, which has been removed). On Linux and macOS it is the encoder, so those builds need no bundled native tool; on Windows the bundled `chdman` remains the primary encoder and the built-in CHDSharp is the automatic fallback. It mirrors chdman's commands and defaults (`createcd`/`createdvd`/`createhd`/`createraw`) and produces byte-identical CHDs.
+*   **Conversion can no longer fail for a missing encoder**; a missing Windows `chdman.exe` only logs that the built-in encoder will be used. The status bar shows CHDSharp as always available.
+*   **Official 7-Zip 26.03 console binaries for Linux and macOS are now bundled** (`7zz`, static builds on Linux and a universal binary on macOS) and copied next to the app for the matching runtime; `7-Zip-License.txt` is included. Windows keeps `7za.exe`.
+
 ### Housekeeping
 
 *   Version bumps: application 3.9.0, Meziantou.Analyzer 3.0.292.

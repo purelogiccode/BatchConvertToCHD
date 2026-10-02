@@ -31,12 +31,6 @@ internal static class AppConfig
     public static string ChdmanExeName => IsArm64 ? "chdman_arm64.exe" : "chdman.exe";
 
     /// <summary>
-    ///     Gets the appropriate CHDSharp executable name based on the current architecture.
-    ///     Returns "CHDSharp_arm64.exe" for ARM64 or "CHDSharp.exe" for other architectures.
-    /// </summary>
-    public static string ChdSharpExeName => IsArm64 ? "CHDSharp_arm64.exe" : "CHDSharp.exe";
-
-    /// <summary>
     ///     Gets the appropriate 7-Zip executable name based on the current architecture.
     ///     Returns "7za_arm64.exe" for ARM64 or "7za.exe" for other architectures.
     /// </summary>
@@ -49,13 +43,6 @@ internal static class AppConfig
     /// </summary>
     public static IReadOnlyList<string> ChdmanExeCandidates =>
         IsArm64Os ? ["chdman_arm64.exe", "chdman.exe"] : ["chdman.exe"];
-
-    /// <summary>
-    ///     Gets the CHDSharp executable names to probe, best first, following the same rules as
-    ///     <see cref="ChdmanExeCandidates" />.
-    /// </summary>
-    public static IReadOnlyList<string> ChdSharpExeCandidates =>
-        IsArm64Os ? ["CHDSharp_arm64.exe", "CHDSharp.exe"] : ["CHDSharp.exe"];
 
     /// <summary>
     ///     Gets the 7-Zip executable names to probe, best first, following the same rules as

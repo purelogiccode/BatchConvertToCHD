@@ -33,17 +33,15 @@ internal class BugReportService
         "No supported primary files found in archive",
         "chdman.exe not found",
         // Encoder-presence notices depend on the user's installation, not app logic.
-        "CHDSharp.exe not found",
-        "CHDSharp.exe was not found",
         "chdman.exe was not found",
         "Not a valid CHD file",
         "Invalid or corrupt data",
         "Cannot open file",
         "Partial extraction:",
-        // chdman failing on a user file is routine and the CHDSharp fallback usually succeeds.
-        // When both encoders fail, the classified LogError below reports the real cause.
+        // chdman failing on a user file is routine and the built-in CHDSharp fallback usually
+        // succeeds. When both encoders fail, the classified LogError below reports the real cause.
         "chdman failed for",
-        "Falling back to CHDSharp",
+        "Falling back to the built-in CHDSharp",
         // chdman-side failures on user data: its exit summary and C++ runtime crashes.
         // CHDSharp and PBPSharp extraction failures are intentionally NOT excluded —
         // their maintainer wants extraction bugs (with debug details) in the bug API.

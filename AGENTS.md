@@ -22,9 +22,13 @@ project.
 - UI-free code (`AppConfig.cs`, `Models`, `Utilities`, `Services`) lives in the
   app project alongside the UI layer (`MainWindow`, `AboutWindow`, `App`,
   `ScreenshotService`). There is no separate WPF front end any more.
-- Tool discovery is platform-aware: bundled `chdman`/`7za`/`CHDSharp` binaries
-  next to the app come first (Windows only), then `chdman`, `7z`/`7za`/`7zz` and
-  `CHDSharp` on `PATH` (Linux/macOS).
+- Encoder model: CHD creation uses the in-process CHDSharp library
+  (`Services/ChdSharpEncoderService.cs`) on every platform. On Windows the
+  bundled `chdman` is preferred and the built-in encoder is the automatic
+  fallback; on Linux/macOS the built-in encoder is always used.
+- Tool discovery is platform-aware: bundled tools next to the app come first
+  (Windows: `chdman`/`7za`; Linux/macOS: `7zz`), then `chdman`, `7z`/`7za`/`7zz`
+  on `PATH`. There is no bundled CHDSharp CLI any more.
 - The custom title bar, status colors and terminal log are styled in
   `App.axaml`.
 
@@ -73,10 +77,12 @@ dotnet publish BatchConvertToCHD.Avalonia/BatchConvertToCHD.Avalonia.csproj -c R
   `BatchConvertToCHD.exe` (plus the bundled tool exes, which are content files
   and stay outside the bundle).
 - **Release zips contain exactly one architecture's tools.** For `win-x64`:
-  `7za.exe`, `chdman.exe`, `CHDSharp.exe`. For `win-arm64`: the `*_arm64.exe`
-  variants. `scripts/ci/package-release.ps1` removes the other architecture and
-  the library `.xml` IntelliSense files (never used at runtime), and adds
-  `LICENSE.txt` and `ReadMe.md`. Do not put both architectures in one zip.
+  `7za.exe`, `chdman.exe`. For `win-arm64`: the `*_arm64.exe` variants.
+  `scripts/ci/package-release.ps1` removes the other architecture, the library
+  `.xml` IntelliSense files and the native `.pdb` debug symbols (never used at
+  runtime), and adds `LICENSE.txt` and `ReadMe.md`. Do not put both
+  architectures in one zip. CHD creation works without any bundled tool thanks
+  to the built-in CHDSharp encoder.
 - **Zip naming is fixed:** `release_<version>_win-<rid>.zip`, e.g.
   `release_3.7.0_win-x64.zip`. One zip per architecture, both attached to the
   GitHub release.
@@ -183,9 +189,11 @@ the runner's Node 24 runtime is used.
 - Match existing code style; `DebugType` is `embedded` and analyzers
   (Meziantou, Roslynator) run on every build. Do not add code comments unless
   asked.
-- Bundled binaries (`7za*.exe`, `chdman*.exe`, `CHDSharp*.exe`) are committed
-  in `BatchConvertToCHD.Avalonia/` and copied to the output with
-  `CopyToOutputDirectory=Always`; only replace them deliberately.
+- Bundled binaries are committed in `BatchConvertToCHD.Avalonia/`: Windows
+  `7za*.exe` and `chdman*.exe`, and `tools/7zz_*` (official 7-Zip console builds
+  for Linux/macOS, copied next to the app as `7zz` for the matching RID). They
+  are copied to the output with `CopyToOutputDirectory=Always`; only replace
+  them deliberately and keep `tools/7-Zip-License.txt`.
 - `BatchConvertToCHD/bin/Release/` is the local release archive: every
   version's `release_<version>_win-<rid>.zip` lives there. The WPF project it
   belonged to is gone; the folder is kept solely as the archive. Copy new zips

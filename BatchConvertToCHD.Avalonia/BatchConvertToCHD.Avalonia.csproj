@@ -19,6 +19,10 @@
         <Company>PureLogicCode.com</Company>
         <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <!-- Platform whose bundled console tools are copied next to the app. Publish sets
+             RuntimeIdentifier; a plain build falls back to the host RID. -->
+        <BundledToolRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</BundledToolRid>
+        <BundledToolRid Condition="'$(BundledToolRid)' == ''">$(NETCoreSdkRuntimeIdentifier)</BundledToolRid>
     </PropertyGroup>
 
     <ItemGroup>
@@ -63,10 +67,37 @@
         <None Update="chdman_arm64.exe">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
-        <None Update="CHDSharp.exe">
+    </ItemGroup>
+
+    <!-- Official 7-Zip 26.03 console builds for Linux/macOS (the macOS binary is universal).
+         They are copied as "7zz" so the app's tool discovery finds them next to the app. -->
+    <ItemGroup Condition="'$(BundledToolRid)' == 'linux-x64'">
+        <None Update="tools\7zz_linux_x64">
+            <Link>7zz</Link>
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
-        <None Update="CHDSharp_arm64.exe">
+        <None Update="tools\7-Zip-License.txt">
+            <Link>7-Zip-License.txt</Link>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+    <ItemGroup Condition="'$(BundledToolRid)' == 'linux-arm64'">
+        <None Update="tools\7zz_linux_arm64">
+            <Link>7zz</Link>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="tools\7-Zip-License.txt">
+            <Link>7-Zip-License.txt</Link>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+    <ItemGroup Condition="'$(BundledToolRid)' == 'osx-x64' Or '$(BundledToolRid)' == 'osx-arm64'">
+        <None Update="tools\7zz_osx">
+            <Link>7zz</Link>
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="tools\7-Zip-License.txt">
+            <Link>7-Zip-License.txt</Link>
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>

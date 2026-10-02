@@ -11,9 +11,9 @@ nav_order: 3
 - **OS**: Windows 10 / 11, x64 or ARM64
 - **Runtime**: [.NET 10.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)
 - **Bundled executables** (shipped with the app, must stay next to `BatchConvertToCHD.exe`):
-  - `chdman.exe` / `chdman_arm64.exe` (0.289) — MAME CHD tool (primary encoder, and extraction fallback)
-  - `CHDSharp.exe` / `CHDSharp_arm64.exe` — managed encoder (automatic conversion fallback; chdman byte-identical output)
-  - `7za.exe` / `7za_arm64.exe` — 7-Zip fallback extractor
+  - Windows: `chdman.exe` / `chdman_arm64.exe` (0.289) — MAME CHD tool (primary encoder and extraction fallback); `7za.exe` / `7za_arm64.exe` — 7-Zip fallback extractor
+  - Linux/macOS: `7zz` (official 7-Zip 26.03 console build, copied from `tools/` at publish time) — 7-Zip fallback extractor
+- **Built-in encoder**: [CHDSharp](https://www.nuget.org/packages/CHDSharp) (CHDSharpLib 1.4.3) runs in-process on every platform — the automatic fallback behind chdman on Windows and the only encoder on Linux/macOS. Its output is byte-identical to chdman 0.289, and being a managed assembly there is no encoder executable to ship.
 - **Nothing else to install** — CSO, ISZ, ECM, Alcohol `.mds`/`.mdf` and split volume sets are all handled inside the application, so x64 and ARM64 get the same feature set.
 
 ### Build (developers)
@@ -27,7 +27,7 @@ nav_order: 3
 
 1. Download the latest binary from the [Releases page](https://github.com/purelogiccode/BatchConvertToCHD/releases).
 2. Extract the contents to a permanent folder (do **not** run from a temp/Downloads folder if you want update/self-containment to behave).
-3. **Important** (Windows): keep all `.exe` files (including ARM64 variants) in the same directory as `BatchConvertToCHD.exe` — tool discovery probes the app's base directory first, then `PATH` (`MainWindow.axaml.cs`). On Linux and macOS the tools are found on `PATH`.
+3. **Important** (Windows): keep all `.exe` files (including ARM64 variants) in the same directory as `BatchConvertToCHD.exe` — tool discovery probes the app's base directory first, then `PATH` (`MainWindow.axaml.cs`). On Linux and macOS, `7zz` ships next to the app and other tools are discovered on `PATH`; the built-in CHDSharp encoder needs nothing on disk.
 4. Launch `BatchConvertToCHD.exe`.
 
 ---
@@ -61,7 +61,7 @@ The solution contains seven projects:
 | `PBPSharp` | class library (PBP/SFO parsing) | `net8.0;net9.0;net10.0` |
 | `ISZSharp` | class library (ISZ decompression) | `net8.0;net9.0;net10.0` |
 
-> **Note**: on Windows, `chdman.exe` and `7za.exe` are copied to the output directory by the build (`BatchConvertToCHD.Avalonia.csproj`); on Linux and macOS they are discovered on `PATH`. The libraries are referenced as project references, not NuGet packages, except `CHDSharp` (NuGet 1.4.3) and other packages listed below.
+> **Note**: on Windows, `chdman.exe` and `7za.exe` are copied to the output directory by the build (`BatchConvertToCHD.Avalonia.csproj`); on Linux and macOS the matching `tools/7zz*` binary (official 7-Zip 26.03) is copied as `7zz`, while a `chdman` on `PATH` is only used for extraction fallback and never for encoding. The libraries are referenced as project references, not NuGet packages, except `CHDSharp` (NuGet 1.4.3) and other packages listed below.
 
 ### NuGet dependencies (application)
 
@@ -94,7 +94,7 @@ The path is applied in `MainWindow_LoadedAsync` via `SetInputFolder` (`MainWindo
 
 ### First launch
 
-1. The app checks the bundled encoders: a critical error is shown only when neither `chdman.exe` nor `CHDSharp.exe` is present; when just one is missing, a warning explains which encoder will carry conversions (status bar indicators + a message box). A batch likewise refuses to start only when neither encoder is usable.
+1. The built-in CHDSharp encoder is always available, so a batch can never be refused for a missing encoder. On Windows only, when the bundled `chdman.exe` is missing or fails the startup probe, a notice explains that every conversion will run on the built-in encoder (status bar indicators + a message box).
 2. Usage statistics are recorded once (anonymous `{ applicationId, version }` POST — see [Services Reference](07-services-reference.md#stats-service)).
 3. An update check against GitHub releases runs in the background.
 4. Leftover temp directories from crashed sessions and legacy files are cleaned up after a short delay.

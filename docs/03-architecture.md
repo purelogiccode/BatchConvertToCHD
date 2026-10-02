@@ -27,6 +27,7 @@ CSharp_BatchConvertToCHD.sln
 │   │   ├── ArchiveService.cs              → zip/7z/rar extraction, CSO, 7za fallback
 │   │   ├── BugReportApiSink.cs            → Serilog sink → bug API
 │   │   ├── BugReportService.cs            → bug report client + exclusion list
+│   │   ├── ChdSharpEncoderService.cs      → in-process CHD encoder (CHDSharp library)
 │   │   ├── FileEventRecord.cs / FileWatchEventType.cs
 │   │   ├── FileWatcherService.cs          → missing-file diagnostics
 │   │   ├── LegacyCleanupService.cs        → removes legacy files/folders
@@ -109,7 +110,7 @@ OnStartup
  └─ type preloading on background thread
 
 MainWindow ctor
- ├─ probe CHDSharp/chdman/7za (app directory first, then PATH)
+ ├─ probe chdman/7za (app directory first, then PATH); the CHDSharp encoder is built in
  ├─ construct services (ArchiveService, ScreenshotService, FileWatcherService)
  ├─ wire F8 screenshot hotkey (window KeyDown)
  ├─ InitializeStatusBar
@@ -119,7 +120,7 @@ MainWindow ctor
 MainWindow Loaded
  ├─ create performance counters (write/read speed)
  ├─ apply CLI folder argument if present
- ├─ CheckDependenciesAndNotifyUser (CHDSharp + chdman presence)
+ ├─ CheckDependenciesAndNotifyUser (chdman presence on Windows; built-in CHDSharp always available)
  └─ UpdateService.CheckForNewVersionAsync (background)
 ```
 
@@ -136,9 +137,10 @@ User clicks Start Conversion
        ├─ read options (delete originals, smaller-first, force CD/DVD, timeout)
        ├─ RenewCancellationTokenSource
        ├─ SetControlsState(false)
-       └─ PerformBatchConversionAsync              (:1606)
-             ├─ encoder preflight: probe chdman access + compatibility; continue on
-             │   the CHDSharp fallback when chdman is missing or fails the probe
+       └─ PerformBatchConversionAsync              (:1684)
+             ├─ encoder preflight (Windows): probe chdman access + compatibility;
+             │   continue on the built-in CHDSharp encoder when missing or failing
+             │   (on Linux/macOS the built-in encoder is used directly)
              ├─ optional sort by size (smaller first)
              ├─ CheckDiskSpace (free space warnings)
              ├─ InputFileFilter + ResolveOutputCollisions (batch preflight)
@@ -159,8 +161,10 @@ User clicks Start Conversion
                   │    other  → TryStageCueForRawImageAsync → direct conversion
                   ├─ ValidateDependentFilesAsync (cue/gdi/toc)
                   ├─ TryDirectConversionAsync
-                  │    └─ ConvertToChdAsync  → chdman primary, CHDSharp fallback;
-                  │                             writes <name>.<hex>.chdtmp, moves on success
+                  │    └─ ConvertToChdAsync  → chdman primary on Windows with the
+                  │                             built-in CHDSharp fallback; built-in only
+                  │                             on Linux/macOS; writes <name>.<hex>.chdtmp,
+                  │                             moves on success
                   ├─ fallback: TryRetryConversionViaTempCopyAsync
                   └─ HandleConversionResultAsync
                        ├─ success → optionally delete originals + prune empty dirs
@@ -188,7 +192,7 @@ Verification: StartVerificationButton_ClickAsync (:1413)
 ## 3.5 Concurrency & Threading Model
 
 - **UI thread**: all Avalonia controls; dispatcher invocations are used from worker contexts (`Dispatcher.UIThread.Invoke`/`InvokeAsync`, with `DispatcherPriority.Background` for chunked list loading).
-- **Worker threads**: `Task.Run` for file scanning, archive extraction, chdman process orchestration, screenshot rendering.
+- **Worker threads**: `Task.Run` for file scanning, archive extraction, chdman process orchestration, in-process CHDSharp encoding, screenshot rendering.
 - **Cancellation**: one `CancellationTokenSource` per operation, guarded by a `Lock` (`_cts`, `_ctsLock`, `MainWindow.axaml.cs:31–32`); cancellation is observed at every loop iteration and propagated into chdman via a linked timeout CTS.
 - **Chdman process**: stdout/stderr are redirected and parsed asynchronously (`OutputDataReceived`/`ErrorDataReceived`); the process is killed (`process.Kill(true)`) on cancellation/timeout, and the app waits 300 ms before temp cleanup so file handles are released.
 - **Speed telemetry**: `PerformanceCounter`-based disk write/read rates sampled every second (`AppConfig.WriteSpeedUpdateIntervalMs = 1000`).

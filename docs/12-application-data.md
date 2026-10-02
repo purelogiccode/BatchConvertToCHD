@@ -42,9 +42,10 @@ Temp directories are **not** under AppData — they live on the drive with the m
 | Item | Purpose |
 |------|---------|
 | `BatchConvertToCHD.exe` | The application |
-| `chdman.exe` / `chdman_arm64.exe` | MAME CHD tool (must stay next to the exe) |
-| `7za.exe` / `7za_arm64.exe` | 7-Zip fallback extractor |
-| `CHDSharp.dll`, `Avalonia` assemblies, etc. | Managed dependencies (copy-local) |
+| `chdman.exe` / `chdman_arm64.exe` | MAME CHD tool (Windows; must stay next to the exe) |
+| `7za.exe` / `7za_arm64.exe` | 7-Zip fallback extractor (Windows) |
+| `7zz` + `7-Zip-License.txt` | Official 7-Zip 26.03 console build (Linux/macOS) |
+| `CHDSharp.dll`, `Avalonia` assemblies, etc. | Managed dependencies (copy-local); CHDSharp powers the built-in in-process encoder |
 | `CCDSharp.dll`, `CSOSharp.dll`, `PBPSharp.dll`, `MDSSharp.dll`, `ISZSharp.dll` | In-house libraries |
 
 Legacy leftovers (`logs`, `Resources`, `Screenshot` folders; `maxcso.exe`, `psxpackager.exe`) are deleted automatically at startup by `LegacyCleanupService` (see [Services Reference](07-services-reference.md#76-legacycleanupservice)).

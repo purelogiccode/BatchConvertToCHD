@@ -60,10 +60,10 @@ The solution ships five in-house libraries that replace external tools (maxcso, 
 
 **Purpose**: pure C# CHD (Compressed Hunks of Data) reading, verification, extraction, and **creation** — the engine behind the app's extraction and verification tabs.
 
-- Consumed as a NuGet package (`CHDSharp` v1.4.3), not a project reference; the app also bundles the project's CLI (`CHDSharp.exe`) and MAME's `chdman.exe` side by side, preferring the native-architecture binary on ARM64.
+- Consumed as a NuGet package (`CHDSharp` v1.4.3), not a project reference. There is **no bundled CHDSharp CLI**: verification and extraction use the library directly, and creation goes through the in-process encoder `Services/ChdSharpEncoderService.cs` (see [Conversion Pipeline §5.3](05-conversion-pipeline.md#53-converttochdasync--encoder-selection-chdman-first-built-in-chdsharp-fallback)).
 - Capabilities: CHD V1–V5, all 10 compression codecs (zlib, lzma, huffman, flac, zstd, avhu + CD variants), parent/child chaining, parallel verification, and full CHD creation (`createcd`/`createdvd`/`createhd`/`copy`) with output that is **byte-identical to `chdman`**.
 - The byte-parity claim was validated by the (since-removed) `CHDBattleTest` battleground project — see [Testing §11.6](11-testing.md#116-chdbattletest-battleground-historical) — which reported zero mismatches against `chdman` 0.289 across decode, encode, and cross-verification battles on a 56-disc corpus.
-- In the conversion pipeline CHDSharp is the **automatic fallback**: the bundled `chdman` is the primary encoder, and a file that chdman cannot convert is retried with `CHDSharp.exe` — see [Conversion Pipeline §5.3](05-conversion-pipeline.md#53-converttochdasync--encoder-selection-chdman-first-chdsharp-fallback).
+- In the conversion pipeline CHDSharp is the encoder for every file on Linux/macOS and the **automatic fallback** on Windows: bundled `chdman` is the primary encoder there, and a file chdman cannot convert (or when chdman is missing) is encoded by `ChdSharpEncoderService.Encode` — see [Conversion Pipeline §5.3](05-conversion-pipeline.md#53-converttochdasync--encoder-selection-chdman-first-built-in-chdsharp-fallback) and [Services Reference §7.10](07-services-reference.md#710-chdsharpencoderservice).
 - When the library cannot decode a CHD (corrupt file, A/V laserdisc), the app falls back to `chdman` for extraction — see [Extraction & Verification](06-extraction-and-verification.md).
 
 ## 10.5 MDSSharp

@@ -381,9 +381,8 @@ public class BugReportServiceTests
 
     [Theory]
     [InlineData("chdman.exe not found")]
-    [InlineData("CHDSharp.exe not found! CHDSharp is used as a fallback encoder. Place it in the application folder.")]
-    [InlineData("CHDSharp.exe was not found, so conversions run on chdman without an automatic fallback.")]
-    [InlineData("chdman.exe was not found, so conversions will run on the CHDSharp fallback.")]
+    [InlineData("chdman.exe was not found, so conversions will run on the built-in CHDSharp encoder.")]
+    [InlineData("chdman failed for 'game.cue'. Falling back to the built-in CHDSharp encoder...")]
     [InlineData(
         "Conversion of 'game.cue' failed due to an I/O error. The source file may be on a failing disk, a disconnected network drive, or the file may be corrupt.")]
     [InlineData(@"Failed to convert 'game.cue': Error parsing input file (C:\temp\game.cue: Unsupported format)")]

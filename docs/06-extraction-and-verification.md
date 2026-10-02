@@ -66,7 +66,7 @@ Two properties make it safe to do without asking:
 
 ### Decompression failures and the chdman fallback
 
-When CHDSharp fails to decode a hunk during extraction ("Failed to read hunk N: Chderrdecompressionerror"), the error is mapped through `GetChdExtractionErrorMessage` (`:2950`) into a user-friendly message, logged at informational level, **and the extraction is retried with chdman** (`TryExtractWithChdmanAsync`, `:2982`):
+When CHDSharp fails to decode a hunk during extraction ("Failed to read hunk N: Chderrdecompressionerror"), the error is mapped through `GetChdExtractionErrorMessage` (`:6188`) into a user-friendly message, logged at informational level, **and the extraction is retried with chdman** (`TryExtractWithChdmanAsync`, `:6260`) when a chdman binary is available — the bundled one on Windows, or a system `chdman` on `PATH` elsewhere (verification stays library-only):
 
 1. chdman runs the user's selected command (`extractcd`/`extractdvd`/`extracthd`, `-f` to force overwrite; `extractcd` also pins the bin name with `-ob`).
 2. If the CHD carries **no CD/DVD/HDD metadata** (`IsAvChdAsync`, `:3042`) it is an A/V (laserdisc) CHD: `extractcd` cannot handle it, so chdman is retried with `extractld` (writes an `.avi`, MAME 0.285+) and then `extractraw` (raw dump) for older chdman builds.

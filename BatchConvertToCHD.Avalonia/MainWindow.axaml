@@ -974,13 +974,13 @@
                             Text="CHDSharp"
                             Foreground="#4CAF50"
                             VerticalAlignment="Center"
-                            ToolTip.Tip="Status of the CHDSharp fallback encoder" />
+                            ToolTip.Tip="Status of the built-in CHDSharp encoder" />
                         <TextBlock
                             x:Name="StatusBarChdman"
                             Text="CHDMAN"
                             Foreground="#4CAF50"
                             VerticalAlignment="Center"
-                            ToolTip.Tip="Status of chdman (primary encoder)" />
+                            ToolTip.Tip="Status of chdman (primary encoder on Windows)" />
                     </StackPanel>
                 </Grid>
             </Border>

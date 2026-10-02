@@ -35,7 +35,7 @@ Decompresses archives and compressed images for the conversion pipeline.
 
 ### Construction
 
-`ArchiveService(string sevenZipExePath, bool isSevenZipAvailable)` — the app passes `Path.Combine(baseDirectory, AppConfig.SevenZipExeName)` plus whether the file exists.
+`ArchiveService(string sevenZipExePath, bool isSevenZipAvailable)` — the app passes the resolved 7-Zip executable path (`7za.exe` on Windows, `7zz` on Linux/macOS; probed in the app directory first, then `PATH`) plus whether it exists.
 
 ### API
 
@@ -52,7 +52,7 @@ Decompresses archives and compressed images for the conversion pipeline.
 
 - **Pre-extraction disk check** (`CheckTempDiskSpace`): estimates the uncompressed size (sum of ZIP entry lengths; for RAR the summed volume sizes; otherwise the archive file size) and requires `estimated + max(est/10, 100 MB)` free, else extraction is refused with a clear message.
 - **Zip-slip protection**: every entry destination must be under the normalized output directory, otherwise `SecurityException` ("Attempted to extract file outside of the target directory.").
-- **7za.exe fallback**: zip/7z failures (except cancellation) fall back to `7za x "<archive>" -o"<output>" -y` when the exe is available. 7za exit code 2 or "Is not archive"/"Cannot open" output → `InvalidDataException` "archive is invalid or corrupt".
+- **7-Zip fallback** (`7za.exe` on Windows, `7zz` on Linux/macOS): zip/7z failures (except cancellation) fall back to `x "<archive>" -o"<output>" -y` when the tool is available. Exit code 2 or "Is not archive"/"Cannot open" output → `InvalidDataException` "archive is invalid or corrupt".
 - **RAR extraction** (`ExtractRarArchive`): resolves the first volume of the set via `RarVolumeSet.FindFirstVolume` (a later `.partNN.rar` is redirected; a missing first volume raises a multi-part error) and opens `RarArchive.OpenArchive(new FileInfo(firstVolume))`, which lets SharpCompress follow the remaining volumes. A direct-read failure that is not archive damage copies every volume to a temp folder and retries there. Archive-damage exceptions (including SharpCompress's `NullReferenceException`/`ArgumentOutOfRangeException`/`IndexOutOfRangeException` decoder crashes) are rethrown for classification instead of retried.
 - **Retries**: ZIP open/entry writes retry 3 times on `IOException`/`UnauthorizedAccessException` with `attempt * 1000 ms` sleeps; `CopyFileWithRetry` copies the source archive to temp with the same 4-attempt schedule before the extraction fallback (missing-source errors are not retried), so a transient NAS/SMB hiccup that breaks direct streaming also gets a second chance on the temp copy; SharpCompress temp-copy fallback covers locked source files. A failed direct extraction is logged at `Debug` ("will fall back to temp-copy extraction") instead of `Error`.
 - **Error categorization** (converted to user-facing messages): unsupported ZIP compression method (Deflate64/LZMA/PPMd — re-compress advice), corrupt/incomplete archive (including SharpCompress RAR-decoder `NullReferenceException`/`ArgumentOutOfRangeException`/`IndexOutOfRangeException`), encrypted archive (`CryptographicException`), missing multi-part RAR volume, disk full (HResult `-2147024784`/`-2147024783`), locked file, network unavailable.
@@ -158,3 +158,35 @@ Checks GitHub for new releases at startup.
   7. Newer version → Dispatcher message box ("A new version ... Would you like to go to the download page?"); on **Yes** opens `html_url`. If the browser fails, the URL is copied to the clipboard (with its own bug-report path on failure) and a "Browser Launch Failed" dialog shows the URL.
   8. Network/SSL errors → logged, no bug report. HTTP errors with a status code and generic exceptions → logged **and** reported via `onBugReport`.
 - `TryNormalizeVersions` / `ParseVersionFromTag` are `internal static` and heavily unit-tested.
+
+---
+
+## 7.10 ChdSharpEncoderService
+
+`internal static class ChdSharpEncoderService` (`ChdSharpEncoderService.cs:11`)
+
+In-process CHD encoder backed by the [CHDSharp](https://www.nuget.org/packages/CHDSharp) library (CHDSharpLib 1.4.3). It replaced the bundled `CHDSharp.exe` command-line tool, so every platform has an encoder without shipping a native executable: on Windows it is the automatic fallback behind `chdman`; on Linux/macOS it is the only encoder and is always used.
+
+### API
+
+| Member | Purpose |
+|--------|---------|
+| `Encode(command, inputPath, outputPath, rawUnits2352, taskCount, token)` (static) | Encodes `inputPath` to `outputPath` using chdman's commands and defaults. Writes to the caller's staging path; throws `ArgumentException` for an unsupported command, `OperationCanceledException` on cancellation, and encoding exceptions on failure. Output is byte-identical to `chdman` 0.289. |
+
+`taskCount` (chdman's `-np`) is clamped to `1–64` before it reaches `ChdEncodeOptions.TaskCount`.
+
+### Command / default mapping
+
+| Command | CHDSharp call | Hunk | Unit | Codecs | Metadata / extras |
+|---------|---------------|------|------|--------|-------------------|
+| `createcd` | `ChdEncoder.EncodeCd` | 19584 | 2448 | `cdlz,cdzl,cdfl` | CUE/GDI/TOC/ISO parsed by the library; a 2352-byte source gets its 96-byte subcode portion zero-filled by the reader, so `-us 2352` is not needed. |
+| `createdvd` | `ChdEncoder.EncodeRaw` | 4096 | 2048 | `lzma,zlib,huff,flac` | `MetadataWriter.BuildDvdMetadata()` — the `DVD ` tag that makes it a DVD. |
+| `createhd` | `ChdEncoder.EncodeRaw` | 4096 | 512 | `lzma,zlib,huff,flac` | CHS geometry guessed from the image size (`MetadataWriter.GuessChs`), `GDDD` metadata, logical length = geometry product (sub-geometry inputs round up past the file length). |
+| `createraw` | `ChdEncoder.EncodeRaw` | largest multiple of the unit ≤ 4096 | 2352 when `rawUnits2352`, else 512 | `lzma,zlib,huff,flac` | `-us 2352` equivalent for raw CD tracks. |
+
+### Integration
+
+- Called from `ConvertToChdAsync`'s local `TryChdSharpInProcessAsync` (`MainWindow.axaml.cs:5995`) on a background thread (`Task.Run`), after the input has been prepared (ASCII copy or cue work directory). The staged output is moved into place only after `Encode` returns.
+- The log line is `CHDSHARP: <command> <file>` and mirrors the chdman invocation it replaces.
+- Because the encoder is always present, `CheckDependenciesAndNotifyUser` never refuses conversion; a missing `chdman` on Windows is only a notice.
+- Tests: `ChdSharpEncoderServiceTests` round-trips `createcd`/`createdvd`/`createhd`/`createraw` and verifies each output with `Chd.CheckFile` — see [Testing §11.6](11-testing.md#116-chdbattletest-battleground-historical).
