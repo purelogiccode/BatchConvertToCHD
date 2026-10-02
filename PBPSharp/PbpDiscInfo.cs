@@ -361,6 +361,13 @@ public sealed class PbpDiscInfo
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
+                // Every byte the disc declares has been written. Any index entries after this point
+                // are not part of the image (padding or data an authoring tool appended to the
+                // index area) and reading them would fail the extraction of a complete image.
+                // When the size is unknown (0) every entry is still validated, as before.
+                if (IsoSize > 0 && totalWritten >= IsoSize)
+                    break;
+
                 ReadBlock(i, outBuffer, out var bufferSize);
 
                 if (totalWritten + bufferSize > IsoSize) bufferSize = (int)(IsoSize - totalWritten);
@@ -398,6 +405,11 @@ public sealed class PbpDiscInfo
         {
             using var binStream = File.Create(binPath);
             ExtractTo(binStream, progress, cancellationToken);
+        }
+        catch (EndOfStreamException)
+        {
+            // The index points past the end of the file: the download is truncated or incomplete.
+            return PbpError.TruncatedPsar;
         }
         catch (IOException)
         {

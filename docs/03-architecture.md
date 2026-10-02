@@ -153,7 +153,7 @@ User clicks Start Conversion
                   ├─ else route by extension:
                   │    .cso   → ProcessCsoFileForConversionAsync
                   │    archive→ ProcessArchiveFileForConversionAsync
-                  │    .pbp   → ProcessPbpFileForConversionAsync
+                  │    .pbp   → ProcessPbpFileForConversionAsync (InvalidHeader → content-routed)
                   │    .ccd   → ProcessCcdFileForConversionAsync
                   │    .mds   → ProcessMdsFileForConversionAsync   (MDSSharp)
                   │    other  → TryStageCueForRawImageAsync → direct conversion

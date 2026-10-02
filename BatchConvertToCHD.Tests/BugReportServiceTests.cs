@@ -389,6 +389,8 @@ public class BugReportServiceTests
     [InlineData(@"Failed to convert 'game.cue': Error parsing input file (C:\temp\game.cue: Unsupported format)")]
     [InlineData(
         "game.zip: the extension says an archive but the content is an unrecognised format, and it is not a usable disc image. The download is probably incomplete.")]
+    [InlineData(
+        "Alone In The Dark - The New Nightmare CD1.iso: this file is already a CHD. Copy it to the output folder rather than converting it.")]
     [InlineData("CRITICAL ERROR: The following required component is missing")]
     [InlineData("Failed to record usage statistics")]
     [InlineData("Not a valid CHD file")]

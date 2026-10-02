@@ -218,16 +218,46 @@ internal class ArchiveService
                     )
                     .ConfigureAwait(false);
             }
-            else if (DiscImageSignature.Detect(originalArchivePath) is DiscImageKind.Rar)
+            else if (DiscImageSignature.Detect(originalArchivePath) is var detected
+                     && detected is DiscImageKind.Zip or DiscImageKind.SevenZip or DiscImageKind.Rar)
             {
-                // A .001 (or similarly renamed) first volume of a RAR set: the extension hides
-                // what the content says, and SharpCompress can read the set from this path.
-                await Task.Run(
-                        () =>
-                            ExtractRarArchive(originalArchivePath, tempDirectoryRoot, onLog, token),
-                        token
-                    )
-                    .ConfigureAwait(false);
+                // A renamed archive (a .001-named RAR first volume, or an archive wearing a
+                // disc-image extension such as .pbp): the extension hides what the content
+                // says, so extract by the format the bytes actually are.
+                switch (detected)
+                {
+                    case DiscImageKind.Zip:
+                        await ExtractZipWith7ZaFallbackAsync(
+                                originalArchivePath,
+                                tempDirectoryRoot,
+                                onLog,
+                                token
+                            )
+                            .ConfigureAwait(false);
+                        break;
+                    case DiscImageKind.SevenZip:
+                        await ExtractSevenZipArchiveAsync(
+                                originalArchivePath,
+                                tempDirectoryRoot,
+                                onLog,
+                                token
+                            )
+                            .ConfigureAwait(false);
+                        break;
+                    default:
+                        await Task.Run(
+                                () =>
+                                    ExtractRarArchive(
+                                        originalArchivePath,
+                                        tempDirectoryRoot,
+                                        onLog,
+                                        token
+                                    ),
+                                token
+                            )
+                            .ConfigureAwait(false);
+                        break;
+                }
             }
             else
             {

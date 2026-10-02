@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Text;
 using PBPSharp;
 using PBPSharp.Models;
@@ -190,6 +191,73 @@ public class PbpFileTests : IDisposable
         var error = PbpFile.Open(path, out var pbp);
         Assert.Equal(PbpError.TruncatedPsar, error);
         Assert.Null(pbp);
+    }
+
+    [Fact]
+    public void OpenTruncatedInIndexAreaReturnsTruncatedPsar()
+    {
+        // The file ends before the ISO index table: the PSAR header is readable but declares
+        // data that is not there, which is a truncated download rather than an I/O fault.
+        var bytes = new PbpTestFileBuilder().WithBlockCount(2).Build();
+        var psarOffset = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(0x24, 4));
+
+        var path = Path.Combine(_tempDir, $"truncatedindex_{Guid.NewGuid():N}.pbp");
+        File.WriteAllBytes(path, bytes[..(psarOffset + 0x3000)]);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.TruncatedPsar, error);
+        Assert.Null(pbp);
+    }
+
+    [Fact]
+    public void ExtractToBinCueWithTruncatedDataReturnsTruncatedPsar()
+    {
+        // The tail of the ISO data is missing. Reading a block runs into the end of the file and
+        // must be classified as truncation (user data), not as a generic I/O error.
+        var path = Path.Combine(_tempDir, $"truncateddata_{Guid.NewGuid():N}.pbp");
+        var bytes = new PbpTestFileBuilder()
+            .WithIncompressibleBlocks()
+            .WithBlockCount(4)
+            .Build();
+        File.WriteAllBytes(path, bytes[..^1024]);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        using (pbp)
+        {
+            var binPath = Path.Combine(_tempDir, $"{Guid.NewGuid():N}.bin");
+            var extractError = pbp.Discs[0].ExtractToBinCue(binPath);
+            Assert.Equal(PbpError.TruncatedPsar, extractError);
+        }
+    }
+
+    [Fact]
+    public void ExtractToIgnoresIndexEntriesBeyondDeclaredIsoSize()
+    {
+        // Authoring tools can leave non-zero data after the real index entries (pop-fe writes a
+        // subchannel blob there). Entries past the ISO size the disc declares are not image data
+        // and must not fail the extraction of a complete image.
+        var bytes = new PbpTestFileBuilder().WithBlockCount(2).Build();
+        var psarOffset = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(0x24, 4));
+        var trailingEntry = psarOffset + 0x4000 + (2 * 32);
+        BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(trailingEntry, 4), 0u);
+        BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(trailingEntry + 4, 2), 0xFFFF);
+
+        var path = Path.Combine(_tempDir, $"trailingindex_{Guid.NewGuid():N}.pbp");
+        File.WriteAllBytes(path, bytes);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        using (pbp)
+        {
+            using var outputStream = new MemoryStream();
+            pbp.Discs[0].ExtractTo(outputStream);
+            Assert.Equal(pbp.Discs[0].IsoSize, (uint)outputStream.Length);
+        }
     }
 
     [Fact]

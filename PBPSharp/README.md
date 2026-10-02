@@ -401,13 +401,13 @@ switch (error)
 | `None` | 0 | Success. |
 | `InvalidHeader` | 1 | Missing or invalid PBP magic/header. |
 | `FileNotFound` | 2 | The file does not exist or could not be opened. |
-| `IoError` | 3 | An I/O error occurred (also returned for non-readable/non-seekable streams). |
+| `IoError` | 3 | An I/O error occurred (also returned for non-readable/non-seekable streams). Data that ends early is reported as `TruncatedPsar`, not here. |
 | `CorruptFile` | 4 | The container is corrupt or its internal structure is invalid. |
 | `InvalidPsarHeader` | 5 | The PSAR is not a PlayStation disc image (for example a PSP application). |
 | `DiscOutOfRange` | 6 | The requested disc index does not exist. |
 | `ResourceNotFound` | 7 | The requested resource is not present. |
 | `DecompressionError` | 8 | An ISO block could not be decompressed. |
-| `TruncatedPsar` | 9 | The PSAR parses but has no ISO index entries - typically a truncated/incomplete download. |
+| `TruncatedPsar` | 9 | The file ends before the disc data it declares: a valid PSAR with no ISO index, an index that runs past the end of the file, or a block read that hits end-of-stream - typically a truncated/incomplete download. |
 | `InvalidSfo` | 10 | Retained for API compatibility; `Open` no longer returns it (SFO problems are tolerated). |
 
 Notes:
@@ -487,7 +487,8 @@ PBP files are produced by several authoring tools, and PBPSharp reads the layout
 - **popstation / PSX2PSP / iPoPS** — 32-bit ISO index size field, raw deflate blocks.
 - **pop-fe** — official 16-bit index size field with a stored/uncompressed flag byte, uncompressed (stored) blocks when compression is disabled, zlib-wrapped deflate blocks, and multi-disc `PSTITLEIMG` headers with zeroed template fields.
 - **Incompressible blocks** — deflate streams a few bytes larger than the raw 16-sector block are accepted.
-- **Truncated PBPs** — a valid disc container with no ISO index is reported as `PbpError.TruncatedPsar` rather than a generic corruption error.
+- **Truncated PBPs** — a valid disc container with no ISO index, an index that points past the end of the file, or a block whose data runs past end-of-stream is reported as `PbpError.TruncatedPsar` rather than a generic corruption or I/O error.
+- **Trailing index-area data** — entries listed after the ISO size the disc declares (for example the subchannel blob pop-fe can append to the index area) are not image data and are not read, so a complete image still extracts.
 - **PSP applications** — PBPs whose PSAR is not a PlayStation disc image are reported as `PbpError.InvalidPsarHeader` and are skipped cleanly.
 
 ## How it works

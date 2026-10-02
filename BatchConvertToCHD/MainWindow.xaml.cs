@@ -3320,13 +3320,37 @@ internal partial class MainWindow : IDisposable
         var result = await ExtractPbpToCueBinAsync(inputFile, tempDir, LogMessage, token);
         if (!result.Success || result.CueFilePaths.Count == 0)
         {
+            // A file whose PBP magic is wrong is not a PBP at all. Route it by what its bytes
+            // actually are, so a mislabelled archive or disc image still converts.
+            if (result.ErrorCode == PbpError.InvalidHeader)
+            {
+                var mislabelled = await TryConvertMislabelledPbpAsync(
+                    inputFile,
+                    originalName,
+                    inputFolder,
+                    outputFolder,
+                    tempDirs,
+                    token,
+                    chdmanPath,
+                    cores,
+                    forceCd,
+                    forceDvd,
+                    timeoutMinutes,
+                    deleteOriginal
+                );
+                if (mislabelled is not null)
+                    return mislabelled.Value;
+            }
+
             // PSP homebrew / application EBOOT.PBPs have no PlayStation disc image to convert,
-            // and truncated/corrupt PSX eboots report the same header error. Inform the user
-            // without raising a bug report either way.
-            if (result.ErrorCode == PbpError.InvalidPsarHeader)
+            // and a truncated PSX eboot has no readable index. Both are user-data conditions,
+            // so they are reported to the user without raising a bug report.
+            if (result.ErrorCode is PbpError.InvalidPsarHeader or PbpError.TruncatedPsar)
             {
                 LogMessage(
-                    $" {originalName} does not contain a PlayStation disc image (PSP application, unsupported variant, or corrupt file) — skipping."
+                    result.ErrorCode == PbpError.TruncatedPsar
+                        ? $" {originalName} does not contain a complete PlayStation disc image (the PBP is truncated or incomplete) — skipping. Re-download the file."
+                        : $" {originalName} does not contain a PlayStation disc image (PSP application, unsupported variant, or corrupt file) — skipping."
                 );
             }
             else
@@ -3339,9 +3363,9 @@ internal partial class MainWindow : IDisposable
 
                 switch (result.ErrorCode)
                 {
-                    case PbpError.TruncatedPsar:
+                    case PbpError.InvalidHeader:
                         LogMessage(
-                            "       The PlayStation data section has no readable tracks - the file is most likely truncated or incomplete. Re-download it."
+                            "       The file does not begin with a PBP header - it is not a PlayStation EBOOT."
                         );
                         break;
                     case PbpError.CorruptFile or PbpError.DecompressionError or PbpError.InvalidSfo:
@@ -3394,6 +3418,155 @@ internal partial class MainWindow : IDisposable
             await TryDeleteFileAsync(inputFile, "original PBP", token);
 
         return allSucceeded;
+    }
+
+    /// <summary>
+    ///     Handles a .pbp whose content is not a PBP at all: an archive is extracted, a CSO is
+    ///     decompressed, an ISZ/ECM is restored, and a plain disc image is converted directly.
+    ///     Returns null when the content is not a format the app knows, so the caller keeps the
+    ///     original PBP error report.
+    /// </summary>
+    /// <param name="inputFile">The mislabelled .pbp input.</param>
+    /// <param name="originalName">File name used in log messages.</param>
+    /// <param name="inputFolder">Root of the conversion input folder.</param>
+    /// <param name="outputFolder">Root of the conversion output folder.</param>
+    /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <param name="chdmanPath">Path of chdman.exe.</param>
+    /// <param name="cores">Worker threads to give chdman.</param>
+    /// <param name="forceCd">Force the CD verb.</param>
+    /// <param name="forceDvd">Force the DVD verb.</param>
+    /// <param name="timeoutMinutes">Per-file timeout, or null for none.</param>
+    /// <param name="deleteOriginal">Whether to delete the input after a successful conversion.</param>
+    private async Task<bool?> TryConvertMislabelledPbpAsync(
+        string inputFile,
+        string originalName,
+        string inputFolder,
+        string outputFolder,
+        List<string> tempDirs,
+        CancellationToken token,
+        string chdmanPath,
+        int cores,
+        bool forceCd,
+        bool forceDvd,
+        int? timeoutMinutes,
+        bool deleteOriginal
+    )
+    {
+        var kind = DiscImageSignature.Detect(inputFile);
+        if (kind is DiscImageKind.Pbp or DiscImageKind.Unknown) return null;
+
+        var outputChd = ComputeOutputChdPath(inputFile, inputFolder, outputFolder);
+
+        if (DiscImageSignature.IsArchive(kind))
+        {
+            LogMessage(
+                $" {originalName} is named .pbp but contains {DiscImageSignature.Describe(kind)}; extracting it instead."
+            );
+            return await ProcessArchiveFileForConversionAsync(
+                inputFile,
+                inputFolder,
+                outputFolder,
+                tempDirs,
+                token,
+                chdmanPath,
+                cores,
+                forceCd,
+                forceDvd,
+                timeoutMinutes,
+                deleteOriginal
+            );
+        }
+
+        if (kind == DiscImageKind.Cso)
+        {
+            LogMessage(
+                $" {originalName} is named .pbp but contains {DiscImageSignature.Describe(kind)}; decompressing it instead."
+            );
+            return await ProcessCsoFileForConversionAsync(
+                inputFile,
+                originalName,
+                outputFolder,
+                tempDirs,
+                token,
+                chdmanPath,
+                outputChd,
+                cores,
+                forceCd,
+                forceDvd,
+                timeoutMinutes,
+                deleteOriginal,
+                inputFolder
+            );
+        }
+
+        var resolved = kind switch
+        {
+            DiscImageKind.Ecm => await ResolveEcmAsync(
+                inputFile,
+                originalName,
+                outputFolder,
+                tempDirs,
+                token
+            ),
+            DiscImageKind.Isz => await ResolveIszAsync(
+                inputFile,
+                originalName,
+                outputFolder,
+                tempDirs,
+                token
+            ),
+            DiscImageKind.Chd => ResolvedInput.Skip(
+                "this file is already a CHD. Copy it to the output folder rather than converting it."
+            ),
+            _ => await ResolveMislabelledContainerAsync(
+                inputFile,
+                originalName,
+                "a PlayStation PBP",
+                kind,
+                tempDirs,
+                token
+            )
+        };
+
+        if (resolved.SkipReason is not null)
+        {
+            LogWarning($" {originalName}: {resolved.SkipReason}");
+            return false;
+        }
+
+        if (resolved.PathToConvert is null)
+        {
+            LogWarning($" {originalName}: resolved path is null; skipping.");
+            return false;
+        }
+
+        var outputDir = Path.GetDirectoryName(outputChd) ?? outputFolder;
+        if (!Directory.Exists(outputDir))
+            Directory.CreateDirectory(outputDir);
+
+        UpdateWriteSpeedDisplay(0);
+        var success = await ConvertToChdAsync(
+            chdmanPath,
+            resolved.PathToConvert,
+            outputChd,
+            cores,
+            forceCd,
+            resolved.ForceDvd || forceDvd,
+            timeoutMinutes,
+            token
+        );
+
+        return await HandleConversionResultAsync(
+            success,
+            inputFile,
+            originalName,
+            FileExtensions.Pbp,
+            inputFolder,
+            outputChd,
+            deleteOriginal,
+            token
+        );
     }
 
     private async Task<bool> ProcessCcdFileForConversionAsync(
@@ -4674,16 +4847,17 @@ internal partial class MainWindow : IDisposable
             }
             else
             {
-                LogError(
-                    $" Failed to extract '{Path.GetFileName(chdFile)}': {GetChdExtractionErrorMessage(ex.Message)}",
-                    ex
-                );
-
                 // CHDSharp could not decode this CHD (corrupt file, A/V laserdisc CHD, or a
                 // library limitation). Fall back to chdman, which supports every CHD variant
                 // (extractcd/dvd/hd, plus extractld/extractraw for laserdisc CHDs). The
-                // CHDSharp failure above is still reported as a bug — the CHDSharp
-                // maintainer wants extraction failures to reach the bug API.
+                // CHDSharp failure is reported only when chdman cannot extract it either - a
+                // successful fallback means the extraction worked and is not an app bug. The
+                // reason still goes to the user's log at informational level.
+                var reason = GetChdExtractionErrorMessage(ex.Message);
+                LogMessage(
+                    $" Built-in reader could not extract '{Path.GetFileName(chdFile)}': {reason} Trying chdman..."
+                );
+
                 try
                 {
                     var chdmanExtracted = await TryExtractWithChdmanAsync(
@@ -4699,12 +4873,16 @@ internal partial class MainWindow : IDisposable
                     if (chdmanExtracted)
                     {
                         LogMessage(
-                            $" Extracted '{Path.GetFileName(chdFile)}' using chdman fallback (built-in reader failed)."
+                            $" Extracted '{Path.GetFileName(chdFile)}' using chdman fallback (the built-in reader could not decode this CHD)."
                         );
                         success = true;
                     }
                     else
                     {
+                        LogError(
+                            $" Failed to extract '{Path.GetFileName(chdFile)}': {reason}",
+                            ex
+                        );
                         LogError(
                             $" chdman could not extract '{Path.GetFileName(chdFile)}' either. The file may be corrupt or use an unsupported codec."
                         );
@@ -6133,7 +6311,8 @@ internal partial class MainWindow : IDisposable
     ///     Maps CHDSharp extraction exception messages to user-friendly text. Decompression failures
     ///     ("Failed to read hunk N", Chderrdecompressionerror) occur when a CHD is corrupt or uses the
     ///     A/V (laserdisc) codec variant that the built-in reader cannot decode; the message says so
-    ///     instead of showing a cryptic codec error, and the extraction pipeline then retries with chdman.
+    ///     instead of showing a cryptic codec error. It is logged only when the chdman fallback has
+    ///     also failed, so the guidance covers both causes.
     /// </summary>
     internal static string GetChdExtractionErrorMessage(string? message)
     {
@@ -6145,7 +6324,7 @@ internal partial class MainWindow : IDisposable
         )
         {
             return message
-                   + " The CHD file may be corrupt, or it may be an A/V (laserdisc) CHD, which the built-in reader cannot decode. Retrying with chdman...";
+                   + " The CHD file may be corrupt, or it may be an A/V (laserdisc) CHD, which the built-in reader cannot decode.";
         }
 
         return message;

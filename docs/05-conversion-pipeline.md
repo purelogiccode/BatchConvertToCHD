@@ -37,7 +37,7 @@ The order matters:
 1. Text descriptors (`.cue`, `.gdi`, `.toc`, `.ccd`, `.mds`) are skipped — they have their own handlers and there is nothing to sniff.
 2. An archive extension whose content really is an archive returns `null` (the archive handler owns it).
 3. `SplitImageJoiner.TryGetVolumeSet` — a `.001`/`.i00` first volume is rejoined via `ResolveSplitVolumeSetAsync`, then classified.
-4. `DiscImageSignature.Detect` decides the rest: `Ecm` → `ResolveEcmAsync`, `Isz` → `ResolveIszAsync`, `Chd` → skip ("this file is already a CHD").
+4. `DiscImageSignature.Detect` decides the rest: `Ecm` → `ResolveEcmAsync`, `Isz` → `ResolveIszAsync`, `Chd` → skip ("this file is already a CHD", an informational notice excluded from bug reports).
 5. An extension promising a container (`.zip`/`.7z`/`.rar`/`.isz`) whose content is a plain image → `ResolveMislabelledContainerAsync`.
 
 `ClassifyRecoveredImageAsync` is the shared tail for anything recovered into a temp directory (joined from parts, decoded from ECM, decompressed from ISZ, extracted from an archive). It hands the image to `RecoveredImageClassifier` ([§8.9](08-utilities-reference.md#recoveredimageclassifier-recoveredimageclassifiercs)): raw 2352-byte CD sectors are sniffed by their sync header and get a generated cue for `createcd`; a whole number of 2048-byte sectors converts as a DVD image; a whole number of 2336- or 2324-byte Mode 2 sectors gets a `MODE2/2336`/`MODE2/2324` cue; a 2448/2368-byte rip has its subchannel tail stripped to 2352 first; anything else is skipped with a reason naming the likely cause.
@@ -48,7 +48,7 @@ The order matters:
 |-----------|---------|--------------|
 | `.cso` | `ProcessCsoFileForConversionAsync` | `_archiveService.ExtractCsoAsync` decompresses to a temp `.iso`, then converts. |
 | `.zip`/`.7z`/`.rar` | `ProcessArchiveFileForConversionAsync` | Extracts to a temp dir; drops raw images already covered by a descriptor in the archive (`InputFileFilter.RemoveCompanionDataFilesAsync`); maps auto-cue outputs; validates cue/gdi/toc dependencies; converts each supported file. `.ccd` goes through CCDSharp, `.mds` through the Alcohol parser, `.isz` through `ConvertIszViaImageAsync`. |
-| `.pbp` | `ProcessPbpFileForConversionAsync` | `ExtractPbpToCueBinAsync` via PBPSharp; `PbpError.InvalidPsarHeader` → informational skip; converts each disc cue. |
+| `.pbp` | `ProcessPbpFileForConversionAsync` | `ExtractPbpToCueBinAsync` via PBPSharp; `PbpError.InvalidPsarHeader`/`TruncatedPsar` → informational skip (user-data conditions, not reported); `PbpError.InvalidHeader` → the bytes are sniffed and a mislabelled archive/CSO/ISZ/ECM/disc image is routed by content; converts each disc cue. |
 | `.ccd` | `ProcessCcdFileForConversionAsync` | `CcdConverter.Parse` + `ConvertToCueBin` into a temp dir, then converts the cue. |
 | `.mds` | `ProcessMdsFileForConversionAsync` | `MdsParser` + `MdsInputPreparer` produce a cue (or a stripped image, or a DVD image), then convert. |
 | everything else | direct path | `TryStageCueForRawImageAsync` may generate a cue for a raw CD image, then `ValidateDependentFilesAsync` → `TryDirectConversionAsync`. |
@@ -61,7 +61,7 @@ The source and output folders may be the same, and the output may sit inside the
 
 - The output name is always `<base>.chd`, and `.chd` is not a conversion input, so a **source file can never be the target**.
 - Conversions stage to `.chdtmp` and move into place only on success (§5.3), so an existing CHD of the same name survives a failed run.
-- Content inspection recognises an existing CHD and skips it (`"this file is already a CHD"`), so outputs cannot be reprocessed on a later run.
+- Content inspection recognises an existing CHD and skips it (`"this file is already a CHD"`), so outputs cannot be reprocessed on a later run. The notice is informational: it is shown in the log but excluded from automatic bug reports.
 
 `PathUtils.IsSameOrInsideDirectory` detects the situation and the log notes it once. Extraction is the tab where in-place needs care, because its output shares the source's base name — see [Extraction & Verification](06-extraction-and-verification.md).
 
@@ -174,7 +174,7 @@ See [Services Reference → ArchiveService](07-services-reference.md#archive-ser
 - Zip-slip protection: every extracted path must stay under the output directory.
 - Post-extraction scan for primary targets (`.cue/.iso/.img/.gdi/.toc/.raw/.ccd/.mds/.isz`); if none and bare `.bin` files exist, a `(Track N)` set becomes a multi-FILE cue via `TrackBinCueBuilder`, otherwise `BinCueGenerator` produces a MODE2/2352 auto-cue for the largest bin (auto-cues are retried once with MODE1/2352 on failure).
 - Error categorization maps SharpCompress/7za failures to actionable messages (missing RAR volume, encrypted archive, unsupported compression method, disk full, locked file, network unavailable). SharpCompress's RAR-decoder crashes on malformed data (`NullReferenceException`, `ArgumentOutOfRangeException`, `IndexOutOfRangeException` from inside its PPMd/UnpackV1 code) are classified as corrupt/incomplete archive rather than app errors, so they neither retry through a local copy nor reach the bug-report API.
-- A `.rar` that does not start with `Rar!` is no longer assumed corrupt: content sniffing catches the two real cases, a disc image simply given a `.rar` extension and a `.rar` set that is a plain byte split rather than an archive.
+- A `.rar` that does not start with `Rar!` is no longer assumed corrupt: content sniffing catches the two real cases, a disc image simply given a `.rar` extension and a `.rar` set that is a plain byte split rather than an archive. The same content sniffing extracts ZIP/7z/RAR archives that wear a non-archive extension (for example a `.pbp` input that is really a ZIP).
 
 > **Still unhandled**: an `.ecm` inside an archive. `.ecm` is not an archive primary target, so an archive containing only `.ecm` files reports `No supported primary files found in archive`. `.isz` *is* a primary target and shows the pattern to follow.
 

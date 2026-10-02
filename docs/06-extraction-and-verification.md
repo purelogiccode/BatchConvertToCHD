@@ -56,15 +56,9 @@ Two properties make it safe to do without asking:
 
 1. Creates `_extract_temp_<guid>` **inside the target directory**.
 2. Calls `chd.ExtractToDirectory(tempExtractDir, baseFileName)` (CHDSharp).
-<<<<<<< HEAD
 3. Picks the destination: the target dir, or a fresh subfolder named after the disc when any extracted file would clash with something already there (`ReserveFreeSubdirectory`). Then moves each extracted file into it.
 4. On success the temp dir is deleted; on failure the temp dir is **kept** and a warning logs the number of remaining files ("Partial extraction: N file(s) remain in temp directory: ...") so the user can inspect/clean up.
 5. Moves go through `RetryingFileOperations.TryMoveAsync` (retry with backoff, ~45 s) so transient locks (antivirus/indexer) don't abort the whole disc extraction; a move that still fails after retries throws and the partial-extraction path handles the rest. The `TryDeleteAsync` on the destination remains only as a guard against a file appearing between the clash test and the move — after step 3 the destination is expected to be free.
-=======
-3. Moves each extracted file into the target dir, overwriting existing files.
-4. On success the temp dir is deleted; on failure the leftover files are removed **best-effort with a single-shot delete per file** (deliberately not the ~45 s retrying delete, so a locked file cannot stall the whole batch), the temp dir is then deleted, and only what truly remains is logged as a warning ("Partial extraction: N file(s) remain in temp directory: ..."). A `Debug` log records how many leftovers were cleaned up.
-5. Moves and destination-deletes go through `RetryingFileOperations.TryMoveAsync`/`TryDeleteAsync` (retry with backoff, ~45 s) so transient locks (antivirus/indexer) don't abort the whole disc extraction; a move that still fails after retries throws and the partial-extraction path handles the rest.
->>>>>>> 62504b8aa71f316c2dbf0d22e648ba6223160110
 
 ### CHD open failures
 
@@ -72,13 +66,13 @@ Two properties make it safe to do without asking:
 
 ### Decompression failures and the chdman fallback
 
-When CHDSharp fails to decode a hunk during extraction ("Failed to read hunk N: Chderrdecompressionerror"), the error is mapped through `GetChdExtractionErrorMessage` (`:2950`) into a user-friendly message, **and the extraction is retried with chdman** (`TryExtractWithChdmanAsync`, `:2982`):
+When CHDSharp fails to decode a hunk during extraction ("Failed to read hunk N: Chderrdecompressionerror"), the error is mapped through `GetChdExtractionErrorMessage` (`:2950`) into a user-friendly message, logged at informational level, **and the extraction is retried with chdman** (`TryExtractWithChdmanAsync`, `:2982`):
 
 1. chdman runs the user's selected command (`extractcd`/`extractdvd`/`extracthd`, `-f` to force overwrite; `extractcd` also pins the bin name with `-ob`).
 2. If the CHD carries **no CD/DVD/HDD metadata** (`IsAvChdAsync`, `:3042`) it is an A/V (laserdisc) CHD: `extractcd` cannot handle it, so chdman is retried with `extractld` (writes an `.avi`, MAME 0.285+) and then `extractraw` (raw dump) for older chdman builds.
 3. On failure, truncated outputs are deleted; on success the file is marked extracted and the batch continues normally (including the "delete original" option).
 
-The CHDSharp failure itself is **still reported as a bug** — the CHDSharp maintainer wants extraction failures to reach the bug API (see [Bug Reporting System](09-bug-reporting.md)); only chdman-side failures are filtered out there.
+The CHDSharp failure is reported to the bug API **only when the chdman fallback also fails** — if chdman extracts the file, the extraction succeeded and nothing went wrong that needs the maintainer's attention. The reader's failure reason still reaches the user's log file at informational level.
 
 ---
 

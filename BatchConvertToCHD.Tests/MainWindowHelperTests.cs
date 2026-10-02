@@ -159,7 +159,7 @@ public class MainWindowHelperTests : IDisposable
         );
 
         Assert.Contains("A/V (laserdisc)", message, StringComparison.Ordinal);
-        Assert.Contains("Retrying with chdman", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Retrying with chdman", message, StringComparison.Ordinal);
         Assert.StartsWith(
             "Failed to read hunk 0: Chderrdecompressionerror",
             message,

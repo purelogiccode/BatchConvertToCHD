@@ -156,6 +156,12 @@ public sealed class PbpFile : IDisposable
             pbp = new PbpFile(stream, ownsStream, header, sfoData, discs);
             return PbpError.None;
         }
+        catch (EndOfStreamException)
+        {
+            // The stream ended before the structure it declares: the download is truncated or
+            // incomplete, which is a different condition from a failing device or permission.
+            return PbpError.TruncatedPsar;
+        }
         catch (IOException)
         {
             return PbpError.IoError;

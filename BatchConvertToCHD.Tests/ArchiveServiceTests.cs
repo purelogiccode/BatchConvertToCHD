@@ -104,6 +104,37 @@ public class ArchiveServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ExtractArchiveAsyncZipWithNonArchiveExtensionExtractsByContent()
+    {
+        // A ZIP that lost its extension (for example a renamed .pbp input) is still extracted by
+        // what its bytes are, instead of being rejected as an unsupported archive type.
+        var service = new ArchiveService("7za.exe", false);
+        var archivePath = Path.Combine(_tempDir, "mislabelled.pbp");
+        var tempDir = Path.Combine(_tempDir, "extract");
+        Directory.CreateDirectory(tempDir);
+
+        await using (var archive = ZipFile.Open(archivePath, ZipArchiveMode.Create))
+        {
+            var entry = archive.CreateEntry("game.iso");
+            await using (var stream = entry.Open())
+            {
+                stream.WriteByte(0x01);
+            }
+        }
+
+        var result = await service.ExtractArchiveAsync(
+            archivePath,
+            tempDir,
+            static _ => { },
+            CancellationToken.None
+        );
+
+        Assert.True(result.Success);
+        Assert.Single(result.FilePaths);
+        Assert.EndsWith("game.iso", result.FilePaths[0], StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task ExtractArchiveAsyncValidZipNoPrimaryFilesReturnsFailure()
     {
         var service = new ArchiveService("7za.exe", false);
@@ -509,7 +540,8 @@ public class ArchiveServiceTests : IDisposable
                 _ =>
                 {
                     openCallCount++;
-                    throw new ArgumentOutOfRangeException("index");
+                    int index;
+                    throw new ArgumentOutOfRangeException(nameof(index));
                 },
                 CancellationToken.None
             );

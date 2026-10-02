@@ -60,6 +60,9 @@ internal class BugReportService
         // Skip notices for files whose content does not match their extension (incomplete
         // downloads etc.); skipping is the intended behaviour.
         "and it is not a usable disc image",
+        // A file that is already a CHD is skipped by design (the batch would otherwise feed its
+        // own outputs back in); the user is told to copy it to the output folder instead.
+        "this file is already a CHD",
         "CRITICAL ERROR: The following required component",
         "referenced files are missing",
         "could not be resolved",
