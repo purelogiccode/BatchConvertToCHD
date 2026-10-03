@@ -7,19 +7,103 @@ using Serilog;
 namespace BatchConvertToCHD.Services;
 
 /// <summary>
-///     Captures a screenshot of the application window and saves it as a PNG file in the
-///     screenshots folder under <c>%LocalAppData%\BatchConvertToCHD\screenshots</c> (or the
-///     platform equivalent).
+///     Captures a screenshot of the application window and saves it as a PNG file. The
+///     <c>Screenshot</c> folder next to the application executable is tried first; when that
+///     folder cannot be written (for example a read-only install location), the service falls
+///     back to <c>%LocalAppData%\BatchConvertToCHD</c> (or the platform equivalent).
 /// </summary>
-internal sealed class ScreenshotService
+internal static class ScreenshotService
 {
-    private static readonly ILogger Logger = Log.ForContext<ScreenshotService>();
+    /// <summary>The name of the folder screenshots are saved into.</summary>
+    internal const string FolderName = "Screenshot";
+
+    private static readonly ILogger Logger = Log.ForContext(typeof(ScreenshotService));
 
     /// <summary>
-    ///     Captures the given window and saves it as a PNG. Returns the saved file path, or null
-    ///     when the capture failed.
+    ///     Returns the preferred screenshot directory: the <c>Screenshot</c> folder inside the
+    ///     application folder.
+    /// </summary>
+    /// <param name="applicationBaseDirectory">The application's base directory.</param>
+    /// <returns>The preferred directory path.</returns>
+    internal static string GetPreferredDirectory(string applicationBaseDirectory)
+    {
+        return Path.Combine(applicationBaseDirectory, FolderName);
+    }
+
+    /// <summary>
+    ///     Returns the fallback screenshot directory used when the preferred folder cannot be
+    ///     written: <c>%LocalAppData%\BatchConvertToCHD</c> (or the platform equivalent).
+    /// </summary>
+    /// <returns>The fallback directory path.</returns>
+    internal static string GetFallbackDirectory()
+    {
+        return GetFallbackDirectory(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+        );
+    }
+
+    /// <summary>
+    ///     Returns the fallback screenshot directory for a given application-data root. Exposed so
+    ///     tests can supply a temporary directory.
+    /// </summary>
+    /// <param name="applicationDataRoot">The application-data root folder.</param>
+    /// <returns>The fallback directory path.</returns>
+    internal static string GetFallbackDirectory(string applicationDataRoot)
+    {
+        return Path.Combine(applicationDataRoot, AppConfig.ApplicationName);
+    }
+
+    /// <summary>
+    ///     Builds a unique, timestamped screenshot file name.
+    /// </summary>
+    /// <param name="timestamp">The capture time.</param>
+    /// <returns>The file name, including the <c>.png</c> extension.</returns>
+    internal static string BuildFileName(DateTime timestamp)
+    {
+        return $"screenshot_{timestamp.ToString("yyyy-MM-dd_HH-mm-ss-fff", CultureInfo.InvariantCulture)}.png";
+    }
+
+    /// <summary>
+    ///     Saves a screenshot into the preferred directory and falls back to the application-data
+    ///     directory when the preferred save fails. The target folder is created when missing.
+    /// </summary>
+    /// <param name="saveToFile">Delegate that writes the image to the supplied path.</param>
+    /// <param name="preferredDirectory">Directory tried first.</param>
+    /// <param name="fallbackDirectory">Directory tried when the preferred one fails.</param>
+    /// <returns>The saved file path, or <see langword="null" /> when both attempts failed.</returns>
+    internal static string? SaveScreenshot(
+        Action<string> saveToFile,
+        string preferredDirectory,
+        string fallbackDirectory
+    )
+    {
+        var savedPath = TrySave(saveToFile, preferredDirectory);
+        if (savedPath != null) return savedPath;
+
+        Logger.Debug(
+            "Screenshot folder {Directory} is not writable; using fallback {Fallback}",
+            preferredDirectory,
+            fallbackDirectory
+        );
+
+        savedPath = TrySave(saveToFile, fallbackDirectory);
+        if (savedPath == null)
+        {
+            Logger.Error(
+                "Failed to save screenshot to both {Directory} and {Fallback}",
+                preferredDirectory,
+                fallbackDirectory
+            );
+        }
+
+        return savedPath;
+    }
+
+    /// <summary>
+    ///     Captures the given window and saves it as a PNG.
     /// </summary>
     /// <param name="window">The window to capture.</param>
+    /// <returns>The saved file path, or <see langword="null" /> when the capture failed.</returns>
     internal static string? TakeScreenshot(Window window)
     {
         try
@@ -37,26 +121,58 @@ internal sealed class ScreenshotService
             );
             bitmap.Render(window);
 
-            var screenshotDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                AppConfig.ApplicationName,
-                "screenshots"
+            return SaveScreenshot(
+                filePath => bitmap.Save(filePath, PngBitmapEncoderOptions.Default),
+                GetPreferredDirectory(AppDomain.CurrentDomain.BaseDirectory),
+                GetFallbackDirectory()
             );
-            Directory.CreateDirectory(screenshotDir);
-
-            var timestamp = DateTime.Now.ToString(
-                "yyyy-MM-dd_HH-mm-ss-fff",
-                CultureInfo.InvariantCulture
-            );
-            var filePath = Path.Combine(screenshotDir, $"screenshot_{timestamp}.png");
-
-            bitmap.Save(filePath, PngBitmapEncoderOptions.Default);
-
-            return filePath;
         }
         catch (Exception ex)
         {
             Logger.Error(ex, "Failed to take screenshot");
+            return null;
+        }
+    }
+
+    /// <summary>
+    ///     Captures the given window and logs the outcome through Serilog. Used by windows that
+    ///     have no terminal log of their own.
+    /// </summary>
+    /// <param name="window">The window to capture.</param>
+    /// <returns>The saved file path, or <see langword="null" /> when the capture failed.</returns>
+    internal static string? CaptureAndLog(Window window)
+    {
+        var filePath = TakeScreenshot(window);
+        if (filePath != null)
+        {
+            Logger.Information("Screenshot saved: {Path}", filePath);
+        }
+        else
+        {
+            Logger.Warning("Screenshot failed: could not capture the window.");
+        }
+
+        return filePath;
+    }
+
+    /// <summary>
+    ///     Creates the directory when missing and writes one timestamped screenshot into it.
+    /// </summary>
+    /// <param name="saveToFile">Delegate that writes the image to the supplied path.</param>
+    /// <param name="directory">The directory to save into.</param>
+    /// <returns>The saved file path, or <see langword="null" /> when the save failed.</returns>
+    private static string? TrySave(Action<string> saveToFile, string directory)
+    {
+        try
+        {
+            Directory.CreateDirectory(directory);
+            var filePath = Path.Combine(directory, BuildFileName(DateTime.Now));
+            saveToFile(filePath);
+            return filePath;
+        }
+        catch (Exception ex)
+        {
+            Logger.Debug(ex, "Failed to save screenshot to {Directory}", directory);
             return null;
         }
     }

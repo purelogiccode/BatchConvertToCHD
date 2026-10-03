@@ -406,7 +406,7 @@ internal sealed class PbpTestFileBuilder
             var seed = 0x2F6E2B1 ^ (blockIndex * 0x9E3779B1);
             for (var i = 0; i < BlockSize; i++)
             {
-                seed = (seed * 1103515245) + 12345;
+                seed = seed * 1103515245 + 12345;
                 randomBlock[i] = (byte)((seed >> 16) & 0xFF);
             }
 
@@ -452,7 +452,7 @@ internal sealed class PbpTestFileBuilder
         // Other blocks: fill with pattern
         var block = new byte[BlockSize];
         for (var i = 0; i < BlockSize; i++)
-            block[i] = (byte)((i + (blockIndex * 17)) & 0xFF);
+            block[i] = (byte)((i + blockIndex * 17) & 0xFF);
         return block;
     }
 
@@ -543,7 +543,7 @@ internal sealed class PbpTestFileBuilder
         foreach (var dirEntry in dirEntries)
             ms.Write(dirEntry);
 
-        var keyTableOffset = (uint)(20 + (entries.Count * 16));
+        var keyTableOffset = (uint)(20 + entries.Count * 16);
         var dataTableOffset = (uint)(keyTableOffset + keyTable.Length);
 
         ms.Write(keyTable.ToArray());

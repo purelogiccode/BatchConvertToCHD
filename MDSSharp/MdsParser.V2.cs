@@ -108,7 +108,7 @@ public static partial class MdsParser
 
         for (var session = 0; session < sessionCount; session++)
         {
-            var sessionBase = sessionBlockOffset + ((long)session * V2SessionBlockSize);
+            var sessionBase = sessionBlockOffset + (long)session * V2SessionBlockSize;
             if (sessionBase < 0 || sessionBase + V2SessionBlockSize > bytes.Length) break;
 
             var trackCount = bytes[sessionBase + V2SessionTrackCountOffset];
@@ -119,12 +119,11 @@ public static partial class MdsParser
 
             for (var track = 0; track < trackCount; track++)
             {
-                var trackBase = trackBlockOffset + ((long)track * V2TrackBlockSize);
+                var trackBase = trackBlockOffset + (long)track * V2TrackBlockSize;
                 if (trackBase < 0 || trackBase + V2TrackBlockSize > bytes.Length) break;
 
-                var sectorType = (byte)(
-                    bytes[trackBase + V2TrackModeOffset] & V2SectorTypeMask
-                );
+                var modeByte = bytes[trackBase + V2TrackModeOffset];
+                var sectorType = (byte)(modeByte & V2SectorTypeMask);
 
                 // Sector type 0 is a maintenance entry; POINT outside 1-99 is lead-in/lead-out.
                 if (sectorType == 0) continue;
@@ -150,7 +149,7 @@ public static partial class MdsParser
                     : (0, (long)trackLength64);
 
                 tracks.Add(
-                    new MdsTrack(point, sectorType, sectorSize, startSector)
+                    new MdsTrack(point, modeByte, sectorSize, startSector)
                     {
                         PregapSectors = pregap,
                         LengthSectors = length,
@@ -236,7 +235,7 @@ public static partial class MdsParser
         var count = (int)Math.Min(fileCount, MaxFooterFiles);
         for (var index = 0; index < count; index++)
         {
-            var footerBase = (long)footerOffset + ((long)index * V2FooterBlockSize);
+            var footerBase = (long)footerOffset + (long)index * V2FooterBlockSize;
             if (footerBase < 0 || footerBase + V2FooterBlockSize > bytes.Length) break;
 
             var nameOffset = BinaryPrimitives.ReadUInt32LittleEndian(
@@ -265,7 +264,7 @@ public static partial class MdsParser
         var count = (int)Math.Min(fileCount, MaxFooterFiles);
         for (var index = 0; index < count; index++)
         {
-            var footerBase = (long)footerOffset + ((long)index * V2FooterBlockSize);
+            var footerBase = (long)footerOffset + (long)index * V2FooterBlockSize;
             if (footerBase < 0 || footerBase + V2FooterBlockSize > bytes.Length) break;
 
             if ((bytes[footerBase + V2FooterFlagsOffset] & V2FooterCompressedFlag) != 0)

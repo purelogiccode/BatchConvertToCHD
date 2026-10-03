@@ -81,10 +81,7 @@ internal static class PathUtils
         )
         {
             var candidate = Path.Combine(
-                drive.RootDirectory.FullName.TrimEnd(
-                    Path.DirectorySeparatorChar,
-                    Path.AltDirectorySeparatorChar
-                ),
+                TrimRootSeparator(drive.RootDirectory.FullName),
                 "BatchConvertToCHD_Temp",
                 $"{tempDirPrefix}{guid}"
             );
@@ -279,7 +276,12 @@ internal static class PathUtils
         var guid = Guid.NewGuid().ToString("N");
         string basePath;
 
-        if (selectedRoot != null && selectedFree >= minFreeBytes)
+        if (
+            selectedRoot != null
+            && (requiredBytes > 0
+                ? selectedFree >= requiredBytes
+                : selectedFree >= minFreeBytes)
+        )
         {
             // Prefer the system temp folder when it sits on the selected volume AND its own path
             // is safe to hand to chdman. %TEMP% lives under the user profile and can contain
@@ -290,13 +292,7 @@ internal static class PathUtils
                 string.Equals(selectedRoot, systemTempRoot, StringComparison.OrdinalIgnoreCase)
                 && IsChdmanSafePath(Path.GetTempPath())
                     ? Path.GetTempPath()
-                    : Path.Combine(
-                        selectedRoot.TrimEnd(
-                            Path.DirectorySeparatorChar,
-                            Path.AltDirectorySeparatorChar
-                        ),
-                        "BatchConvertToCHD_Temp"
-                    );
+                    : Path.Combine(TrimRootSeparator(selectedRoot), "BatchConvertToCHD_Temp");
         }
         else
         {
@@ -476,6 +472,11 @@ internal static class PathUtils
         if (systemTempOnVolume && !IsChdmanSafePath(systemTemp)) yield return systemTemp;
     }
 
+    /// <summary>
+    ///     Tests whether a directory can be created and removed under <paramref name="rootPath" />.
+    /// </summary>
+    /// <param name="rootPath">The directory to test.</param>
+    /// <returns><see langword="true" /> when the directory is writable.</returns>
     private static bool IsRootDirectoryWritable(string rootPath)
     {
         var testDir = Path.Combine(rootPath, $"writetest_{Guid.NewGuid():N}");
@@ -503,6 +504,19 @@ internal static class PathUtils
     }
 
     /// <summary>
+    ///     Removes a trailing directory separator from a root path while keeping the Unix root
+    ///     <c>"/"</c> intact, so <see cref="Path.Combine(string, string)" /> never turns it into a
+    ///     relative path.
+    /// </summary>
+    /// <param name="root">The root path to trim.</param>
+    /// <returns>The trimmed root path.</returns>
+    private static string TrimRootSeparator(string root)
+    {
+        var trimmed = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return trimmed.Length == 0 ? root : trimmed;
+    }
+
+    /// <summary>
     ///     Collects all base paths that may contain BatchConvertToCHD temp directories,
     ///     for use by startup cleanup. Includes the system temp path and the
     ///     BatchConvertToCHD_Temp folder on the root of every ready fixed drive.
@@ -518,10 +532,7 @@ internal static class PathUtils
                 if (drive is { IsReady: true, DriveType: DriveType.Fixed })
                 {
                     var altPath = Path.Combine(
-                        drive.RootDirectory.FullName.TrimEnd(
-                            Path.DirectorySeparatorChar,
-                            Path.AltDirectorySeparatorChar
-                        ),
+                        TrimRootSeparator(drive.RootDirectory.FullName),
                         "BatchConvertToCHD_Temp"
                     );
                     if (Directory.Exists(altPath))

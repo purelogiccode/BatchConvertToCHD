@@ -18,7 +18,12 @@ internal sealed class IoThroughputCounter : IDisposable
     private long _lastTotalBytes;
     private bool _hasBaseline;
 
-    private IoThroughputCounter(Func<long?> readTotalBytes)
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="IoThroughputCounter" /> class around a
+    ///     caller-supplied byte-count source. Exposed so tests can supply a deterministic source.
+    /// </summary>
+    /// <param name="readTotalBytes">Reads the process's cumulative transfer count.</param>
+    internal IoThroughputCounter(Func<long?> readTotalBytes)
     {
         _readTotalBytes = readTotalBytes;
     }
@@ -46,7 +51,7 @@ internal sealed class IoThroughputCounter : IDisposable
     /// <summary>
     ///     Returns the average throughput in bytes per second since the previous call.
     /// </summary>
-    public double NextValue()
+    internal double NextValue()
     {
         try
         {

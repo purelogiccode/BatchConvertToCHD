@@ -47,7 +47,7 @@ internal static class GameFileParser
         var gdiDir = Path.GetDirectoryName(gdiPath) ?? string.Empty;
         try
         {
-            var lines = await File.ReadAllLinesAsync(gdiPath, Encoding.UTF8, token)
+            var (lines, _, _) = await ReadLinesWithDetectedEncodingAsync(gdiPath, token)
                 .ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
             for (var i = 1; i < lines.Length; i++)
@@ -306,6 +306,14 @@ internal static class GameFileParser
         return !string.IsNullOrWhiteSpace(fileName);
     }
 
+    /// <summary>
+    ///     Parses FILE lines from a cue/gdi/toc file and returns the referenced full paths.
+    /// </summary>
+    /// <param name="filePath">Path of the descriptor file.</param>
+    /// <param name="onLog">Log callback for unreadable descriptors.</param>
+    /// <param name="fileType">Descriptor type name used in log messages.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>The referenced file paths that could be parsed.</returns>
     private static async Task<List<string>> ParseFileReferenceLinesAsync(
         string filePath,
         Action<string> onLog,
@@ -346,6 +354,12 @@ internal static class GameFileParser
         return referencedFiles;
     }
 
+    /// <summary>
+    ///     Decodes bytes with the given encoding and splits them on any line ending.
+    /// </summary>
+    /// <param name="bytes">Raw file bytes.</param>
+    /// <param name="encoding">Encoding to decode with.</param>
+    /// <returns>The decoded lines.</returns>
     private static string[] DecodeLines(byte[] bytes, Encoding encoding)
     {
         var text = encoding.GetString(bytes);

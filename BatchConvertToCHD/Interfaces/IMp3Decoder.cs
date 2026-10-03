@@ -1,4 +1,4 @@
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD.Interfaces;
 
 /// <summary>
 ///     Decodes an MP3 file to a 16-bit PCM WAV file.

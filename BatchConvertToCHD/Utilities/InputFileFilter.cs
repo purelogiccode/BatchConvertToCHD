@@ -282,6 +282,12 @@ internal static class InputFileFilter
         return ([.. all.Where(f => !skippedFiles.Contains(f))], skipped);
     }
 
+    /// <summary>
+    ///     Reads a descriptor's text, returning an empty string when it cannot be read.
+    /// </summary>
+    /// <param name="descriptorPath">Path of the descriptor to read.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>The descriptor text, or an empty string.</returns>
     private static async Task<string> ReadDescriptorTextAsync(
         string descriptorPath,
         CancellationToken token

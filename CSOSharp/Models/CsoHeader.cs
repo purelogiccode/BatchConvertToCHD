@@ -92,6 +92,8 @@ public readonly struct CsoHeader
         BlockSize = blockSize;
         Version = version;
         IndexOffsetShift = indexOffsetShift;
-        TotalBlocks = blockSize > 0 ? (uint)(uncompressedSize / blockSize) : 0;
+        TotalBlocks = blockSize > 0
+            ? (uint)((uncompressedSize + blockSize - 1) / blockSize)
+            : 0;
     }
 }

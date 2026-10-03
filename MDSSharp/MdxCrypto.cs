@@ -149,7 +149,7 @@ internal static class MdxCrypto
             );
         }
 
-        var descriptorLength = (int)(((compressedSize + 15L) / 16L) * 16);
+        var descriptorLength = (int)((compressedSize + 15L) / 16L * 16);
         if (descriptorLength <= 0)
         {
             throw new InvalidDataException(
@@ -332,7 +332,7 @@ internal static class MdxCrypto
         for (var i = 0; i < SaltSize / 4; i++)
         {
             var value = BinaryPrimitives.ReadUInt32LittleEndian(password.AsSpan(i * 4));
-            modifier = (modifier * 0x35e85a6d) + 0x1548dce9;
+            modifier = modifier * 0x35e85a6d + 0x1548dce9;
             value = value ^ modifier ^ 0xec564717;
 
             if ((value & 0x000000ff) == 0) value |= 0x0000005f;
@@ -551,7 +551,7 @@ internal static class MdxCrypto
                 }
             }
 
-            var copy = Math.Min(20, length - ((block - 1) * 20));
+            var copy = Math.Min(20, length - (block - 1) * 20);
             Array.Copy(t, 0, result, (block - 1) * 20, copy);
         }
 

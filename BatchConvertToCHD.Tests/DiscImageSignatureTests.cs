@@ -1,3 +1,4 @@
+using BatchConvertToCHD.Models;
 using BatchConvertToCHD.Utilities;
 
 namespace BatchConvertToCHD.Tests;

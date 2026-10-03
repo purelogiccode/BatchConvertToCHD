@@ -1,4 +1,4 @@
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD.Models;
 
 /// <summary>What a file turned out to be once its leading bytes were read.</summary>
 internal enum DiscImageKind

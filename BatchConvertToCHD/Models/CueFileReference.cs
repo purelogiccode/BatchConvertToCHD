@@ -1,4 +1,4 @@
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD.Models;
 
 /// <summary>
 ///     A file referenced by a CUE sheet FILE line.

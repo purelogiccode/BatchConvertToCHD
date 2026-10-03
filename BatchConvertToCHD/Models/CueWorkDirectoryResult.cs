@@ -1,7 +1,7 @@
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD.Models;
 
 /// <summary>
-///     The outcome of <see cref="CueWorkDirectory.PrepareAsync" />.
+///     The outcome of <see cref="BatchConvertToCHD.Utilities.CueWorkDirectory.PrepareAsync" />.
 /// </summary>
 /// <param name="WorkCuePath">
 ///     Path of the canonicalized cue inside the work directory, or null when no work directory was

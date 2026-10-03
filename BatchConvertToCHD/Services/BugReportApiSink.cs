@@ -7,7 +7,9 @@ namespace BatchConvertToCHD.Services;
 ///     A Serilog log event sink that forwards warning-level and above log events to the
 ///     <see cref="BugReportService" /> for bug report submission. Events below
 ///     <see cref="LogEventLevel.Warning" /> are silently ignored. Messages matching
-///     known informational patterns are excluded via <see cref="BugReportService.IsExcludedFromBugReport" />.
+///     known informational patterns are excluded via <see cref="BugReportService.IsExcludedFromBugReport" />,
+///     and unhandled-exception entries already reported by the application's own handlers are
+///     excluded via <see cref="BugReportService.IsDirectlyReportedByApp" />.
 ///     Uses an interlocked flag to prevent concurrent API flood when many warnings fire rapidly.
 ///     A 10-second send timeout prevents the throttle flag from being held indefinitely.
 ///     An identical message repeated inside <see cref="DuplicateWindow" /> (a failing batch
@@ -48,6 +50,9 @@ internal class BugReportApiSink : ILogEventSink
         if (BugReportService.IsExcludedFromBugReport(message))
             return;
 
+        if (BugReportService.IsDirectlyReportedByApp(message))
+            return;
+
         lock (DedupeLock)
         {
             if (
@@ -57,15 +62,18 @@ internal class BugReportApiSink : ILogEventSink
             {
                 return;
             }
-
-            _lastSentMessage = message;
-            _lastSentAt = DateTimeOffset.UtcNow;
         }
 
         var ex = logEvent.Exception;
 
         if (Interlocked.CompareExchange(ref _isSending, 1, 0) == 0)
         {
+            lock (DedupeLock)
+            {
+                _lastSentMessage = message;
+                _lastSentAt = DateTimeOffset.UtcNow;
+            }
+
             // Use a 10-second timeout so a hung HTTP call doesn't permanently block
             // subsequent bug reports. The flag is always reset in the continuation.
             _ = _bugReportService

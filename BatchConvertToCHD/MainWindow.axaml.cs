@@ -16,6 +16,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using BatchConvertToCHD.Diagnostics;
 using BatchConvertToCHD.Dialogs;
+using BatchConvertToCHD.Interfaces;
 using BatchConvertToCHD.Models;
 using BatchConvertToCHD.Services;
 using BatchConvertToCHD.Utilities;
@@ -94,6 +95,9 @@ internal partial class MainWindow : Window, IDisposable
 
     // Tracks whether a close was requested while an operation was running
     private bool _pendingClose;
+
+    // Name of the operation currently running (Conversion, Verification or Extraction)
+    private string _activeOperation = string.Empty;
     private volatile int _processedOkCount;
     private IoThroughputCounter? _readBytesCounter;
 
@@ -203,6 +207,10 @@ internal partial class MainWindow : Window, IDisposable
         KillOrphanedProcesses();
     }
 
+    /// <summary>
+    ///     Runs deferred startup work once the window is shown: performance counters, a command-line
+    ///     input folder, the dependency notice and the update check.
+    /// </summary>
     private async void MainWindow_OpenedAsync(object? sender, EventArgs e)
     {
         try
@@ -253,6 +261,7 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Handles the F8 hotkey by saving a screenshot of the window.</summary>
     private void MainWindow_KeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.F8) return;
@@ -279,6 +288,7 @@ internal partial class MainWindow : Window, IDisposable
         e.Handled = true;
     }
 
+    /// <summary>Starts a window move drag when the title bar is pressed with the left mouse button.</summary>
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
@@ -287,26 +297,31 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Toggles the maximized state when the title bar is double-clicked.</summary>
     private void TitleBar_DoubleTapped(object? sender, TappedEventArgs e)
     {
         ToggleMaximize();
     }
 
+    /// <summary>Minimizes the window.</summary>
     private void MinimizeButton_Click(object? sender, RoutedEventArgs e)
     {
         WindowState = WindowState.Minimized;
     }
 
+    /// <summary>Toggles the maximized state of the window.</summary>
     private void MaximizeButton_Click(object? sender, RoutedEventArgs e)
     {
         ToggleMaximize();
     }
 
+    /// <summary>Closes the window.</summary>
     private void CloseButton_Click(object? sender, RoutedEventArgs e)
     {
         Close();
     }
 
+    /// <summary>Switches the window between the maximized and normal states.</summary>
     private void ToggleMaximize()
     {
         WindowState =
@@ -397,6 +412,10 @@ internal partial class MainWindow : Window, IDisposable
         return null;
     }
 
+    /// <summary>
+    ///     Warns the user on Windows when chdman was not found, since conversions then use the
+    ///     built-in CHDSharp encoder.
+    /// </summary>
     private void CheckDependenciesAndNotifyUser()
     {
         // The built-in CHDSharp encoder always exists, so conversion can never hard-fail on a
@@ -413,6 +432,8 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Creates the write-throughput performance counter.</summary>
+    /// <returns>The counter, or null when it is unavailable.</returns>
     private static IoThroughputCounter? CreateWritePerformanceCounter()
     {
         try
@@ -426,6 +447,8 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Creates the read-throughput performance counter.</summary>
+    /// <returns>The counter, or null when it is unavailable.</returns>
     private static IoThroughputCounter? CreateReadPerformanceCounter()
     {
         try
@@ -439,6 +462,10 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>
+    ///     Initializes the status bar labels, colors and initial message from the resolved tool
+    ///     availability.
+    /// </summary>
     private void InitializeStatusBar()
     {
         _ = Dispatcher.UIThread.InvokeAsync(() =>
@@ -481,6 +508,7 @@ internal partial class MainWindow : Window, IDisposable
         return Brushes.Gray;
     }
 
+    /// <summary>Deletes leftover temp directories from previous runs in the background.</summary>
     private static void CleanupLeftoverTempDirectories()
     {
         _ = Task.Run(static () =>
@@ -517,11 +545,20 @@ internal partial class MainWindow : Window, IDisposable
         });
     }
 
+    /// <summary>Updates the status bar message on the UI thread.</summary>
+    /// <param name="message">The message to show.</param>
     private void UpdateStatusBarMessage(string message)
     {
         _ = Dispatcher.UIThread.InvokeAsync(() => StatusBarMessage.Text = message);
     }
 
+    /// <summary>
+    ///     Checks that an executable exists and can be opened for reading, reporting a user-facing
+    ///     error when it cannot.
+    /// </summary>
+    /// <param name="exePath">Full path of the executable.</param>
+    /// <param name="exeName">Name used in log and error messages.</param>
+    /// <returns>True when the executable is accessible.</returns>
     private async Task<bool> ValidateExecutableAccessAsync(string exePath, string exeName)
     {
         try
@@ -721,6 +758,7 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Writes OS, architecture and resolved tool details to the activity log.</summary>
     private void LogEnvironmentDetails()
     {
         try
@@ -750,6 +788,7 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Writes the conversion mode welcome and readiness messages to the activity log.</summary>
     private void DisplayConversionInstructionsInLog()
     {
         LogMessage($"Welcome to {AppConfig.ApplicationName}. (Conversion Mode)");
@@ -763,6 +802,7 @@ internal partial class MainWindow : Window, IDisposable
         LogMessage("--- Ready for Conversion ---");
     }
 
+    /// <summary>Writes the verification mode welcome and readiness messages to the activity log.</summary>
     private void DisplayVerificationInstructionsInLog()
     {
         LogMessage($"Welcome to {AppConfig.ApplicationName}. (Verification Mode)");
@@ -770,6 +810,7 @@ internal partial class MainWindow : Window, IDisposable
         LogMessage("--- Ready for Verification ---");
     }
 
+    /// <summary>Writes the extraction mode welcome, guidance and readiness messages to the activity log.</summary>
     private void DisplayExtractionInstructionsInLog()
     {
         LogMessage($"Welcome to {AppConfig.ApplicationName}. (Extraction Mode)");
@@ -780,6 +821,9 @@ internal partial class MainWindow : Window, IDisposable
         LogMessage("--- Ready for Extraction ---");
     }
 
+    /// <summary>
+    ///     Updates the activity log, status message and Explorer layout when the selected tab changes.
+    /// </summary>
     private void MainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         // Avalonia raises selection changes while the XAML is still being populated, before the
@@ -821,6 +865,10 @@ internal partial class MainWindow : Window, IDisposable
         UpdateReadSpeedDisplay(0);
     }
 
+    /// <summary>
+    ///     Cancels a running operation before closing, then disposes resources and shuts the
+    ///     application down.
+    /// </summary>
     private void Window_Closing(object? sender, WindowClosingEventArgs e)
     {
         // Check if any operation is currently running using thread-safe Interlocked check
@@ -833,13 +881,14 @@ internal partial class MainWindow : Window, IDisposable
                 if (!_cts.IsCancellationRequested)
                 {
                     _cts.Cancel();
-                    _pendingClose = true;
                     LogMessage("Cancelling operations before closing...");
                     UpdateStatusBarMessage("Cancelling...");
-                    e.Cancel = true;
-                    return;
                 }
             }
+
+            _pendingClose = true;
+            e.Cancel = true;
+            return;
         }
 
         Dispose();
@@ -847,24 +896,36 @@ internal partial class MainWindow : Window, IDisposable
         App.ShutdownApp();
     }
 
+    /// <summary>Writes an informational message to the Serilog log and the on-screen activity log.</summary>
+    /// <param name="message">The message to log.</param>
     private void LogMessage(string message)
     {
         Log.Information("{Message}", message);
         AppendToUiLog(message);
     }
 
+    /// <summary>Writes an error message to the Serilog log and the on-screen activity log.</summary>
+    /// <param name="message">The message to log.</param>
+    /// <param name="ex">Optional exception to log with the message.</param>
     private void LogError(string message, Exception? ex = null)
     {
         Log.Error(ex, "{Message}", message.TrimStart());
         AppendToUiLog($"ERROR: {message.TrimStart()}");
     }
 
+    /// <summary>Writes a warning message to the Serilog log and the on-screen activity log.</summary>
+    /// <param name="message">The message to log.</param>
+    /// <param name="ex">Optional exception to log with the message.</param>
     private void LogWarning(string message, Exception? ex = null)
     {
         Log.Warning(ex, "{Message}", message.TrimStart());
         AppendToUiLog($"WARNING: {message.TrimStart()}");
     }
 
+    /// <summary>
+    ///     Appends a timestamped line to the UI log, truncating its oldest half when it grows too large.
+    /// </summary>
+    /// <param name="message">The message to append.</param>
     private void AppendToUiLog(string message)
     {
         var timestampedMessage = $"[{DateTime.Now:HH:mm:ss.fff}] {message}";
@@ -875,7 +936,7 @@ internal partial class MainWindow : Window, IDisposable
             {
                 if (LogViewer.Text.Length > MaxLogLength)
                 {
-                    var excess = LogViewer.Text.Length - (MaxLogLength / 2);
+                    var excess = LogViewer.Text.Length - MaxLogLength / 2;
                     LogViewer.SelectionStart = 0;
                     LogViewer.SelectionLength = excess;
                     LogViewer.SelectedText =
@@ -907,7 +968,7 @@ internal partial class MainWindow : Window, IDisposable
             }
 
             LogMessage($"Input folder set from command line: {path}");
-            _ = LoadFilesForConversionAsync();
+            SafeFireAndForget(LoadFilesForConversionAsync());
         }
         else
         {
@@ -915,7 +976,8 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
-    private async void BrowseConversionInputButton_Click(object? sender, RoutedEventArgs e)
+    /// <summary>Opens the folder picker for the conversion input folder.</summary>
+    private async void BrowseConversionInputButton_ClickAsync(object? sender, RoutedEventArgs e)
     {
         try
         {
@@ -923,11 +985,12 @@ internal partial class MainWindow : Window, IDisposable
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error in method BrowseConversionInputButton_Click");
+            Log.Error(ex, "Error in method BrowseConversionInputButton_ClickAsync");
         }
     }
 
-    private async void BrowseConversionOutputButton_Click(object? sender, RoutedEventArgs e)
+    /// <summary>Opens the folder picker for the conversion output folder.</summary>
+    private async void BrowseConversionOutputButton_ClickAsync(object? sender, RoutedEventArgs e)
     {
         try
         {
@@ -935,11 +998,12 @@ internal partial class MainWindow : Window, IDisposable
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error in method BrowseConversionOutputButton_Click");
+            Log.Error(ex, "Error in method BrowseConversionOutputButton_ClickAsync");
         }
     }
 
-    private async void BrowseVerificationInputButton_Click(object? sender, RoutedEventArgs e)
+    /// <summary>Opens the folder picker for the verification input folder.</summary>
+    private async void BrowseVerificationInputButton_ClickAsync(object? sender, RoutedEventArgs e)
     {
         try
         {
@@ -947,11 +1011,12 @@ internal partial class MainWindow : Window, IDisposable
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error in method BrowseVerificationInputButton_Click");
+            Log.Error(ex, "Error in method BrowseVerificationInputButton_ClickAsync");
         }
     }
 
-    private async void BrowseExtractionInputButton_Click(object? sender, RoutedEventArgs e)
+    /// <summary>Opens the folder picker for the extraction input folder.</summary>
+    private async void BrowseExtractionInputButton_ClickAsync(object? sender, RoutedEventArgs e)
     {
         try
         {
@@ -959,11 +1024,12 @@ internal partial class MainWindow : Window, IDisposable
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error in method BrowseExtractionInputButton_Click");
+            Log.Error(ex, "Error in method BrowseExtractionInputButton_ClickAsync");
         }
     }
 
-    private async void BrowseExtractionOutputButton_Click(object? sender, RoutedEventArgs e)
+    /// <summary>Opens the folder picker for the extraction output folder.</summary>
+    private async void BrowseExtractionOutputButton_ClickAsync(object? sender, RoutedEventArgs e)
     {
         try
         {
@@ -971,10 +1037,11 @@ internal partial class MainWindow : Window, IDisposable
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error in method BrowseExtractionOutputButton_Click");
+            Log.Error(ex, "Error in method BrowseExtractionOutputButton_ClickAsync");
         }
     }
 
+    /// <summary>Validates the extraction inputs and options and runs the batch CHD extraction.</summary>
     private async void StartExtractionButton_ClickAsync(object sender, RoutedEventArgs e)
     {
         try
@@ -1027,6 +1094,7 @@ internal partial class MainWindow : Window, IDisposable
 
             ResetOperationStats();
             SetControlsState(false);
+            _activeOperation = "Extraction";
             await Task.Yield();
             StartOperationTimer();
             ResetSpeedCounters();
@@ -1072,6 +1140,12 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>
+    ///     Shows a folder picker for a text box, stores the chosen path and refreshes the active tab's
+    ///     file list.
+    /// </summary>
+    /// <param name="targetBox">Text box that receives the chosen folder.</param>
+    /// <param name="logName">Folder type name used in the picker title and log messages.</param>
     private async Task HandleFolderBrowseAsync(TextBox targetBox, string logName)
     {
         var folder = await SelectFolderAsync($"Select {logName} folder");
@@ -1104,6 +1178,7 @@ internal partial class MainWindow : Window, IDisposable
         UpdateStatusBarMessage($"{logName} folder selected");
     }
 
+    /// <summary>Reloads the file list for the currently selected tab.</summary>
     private void RefreshFileListForActiveTab()
     {
         if (MainTabControl.SelectedItem is TabItem selectedTab)
@@ -1123,12 +1198,20 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Scans the conversion input folder and populates the conversion file grid.</summary>
+    /// <returns>A task that completes when the file list has been loaded.</returns>
     private Task LoadFilesForConversionAsync()
     {
         var inputFolder = ConversionInputFolderTextBox.Text;
         if (string.IsNullOrEmpty(inputFolder) || !Directory.Exists(inputFolder)) return Task.CompletedTask;
 
         var includeSub = SearchSubfoldersConversionCheckBox.IsChecked ?? false;
+
+        CancellationToken token;
+        lock (_ctsLock)
+        {
+            token = _cts.Token;
+        }
 
         return Task.Run(
             async () =>
@@ -1155,7 +1238,7 @@ internal partial class MainWindow : Window, IDisposable
                 paths = await InputFileFilter.RemoveCompanionDataFilesAsync(
                     paths,
                     LogMessage,
-                    _cts.Token
+                    token
                 );
 
                 // A multi-part RAR is decoded from its first volume, so only that volume is offered.
@@ -1203,6 +1286,8 @@ internal partial class MainWindow : Window, IDisposable
         );
     }
 
+    /// <summary>Scans the verification input folder for CHD files and populates the verification grid.</summary>
+    /// <returns>A task that completes when the file list has been loaded.</returns>
     private Task LoadFilesForVerificationAsync()
     {
         var inputFolder = VerificationInputFolderTextBox.Text;
@@ -1272,6 +1357,8 @@ internal partial class MainWindow : Window, IDisposable
         );
     }
 
+    /// <summary>Scans the extraction input folder for CHD files and populates the extraction grid.</summary>
+    /// <returns>A task that completes when the file list has been loaded.</returns>
     private Task LoadFilesForExtractionAsync()
     {
         var inputFolder = ExtractionInputFolderTextBox.Text;
@@ -1341,36 +1428,43 @@ internal partial class MainWindow : Window, IDisposable
         );
     }
 
+    /// <summary>Selects every conversion input file.</summary>
     private void SelectAllConversion_Click(object sender, RoutedEventArgs e)
     {
         foreach (var f in _conversionFiles) f.IsSelected = true;
     }
 
+    /// <summary>Clears the selection of every conversion input file.</summary>
     private void DeselectAllConversion_Click(object sender, RoutedEventArgs e)
     {
         foreach (var f in _conversionFiles) f.IsSelected = false;
     }
 
+    /// <summary>Selects every verification CHD file.</summary>
     private void SelectAllVerification_Click(object sender, RoutedEventArgs e)
     {
         foreach (var f in _verificationFiles) f.IsSelected = true;
     }
 
+    /// <summary>Clears the selection of every verification CHD file.</summary>
     private void DeselectAllVerification_Click(object sender, RoutedEventArgs e)
     {
         foreach (var f in _verificationFiles) f.IsSelected = false;
     }
 
+    /// <summary>Selects every extraction CHD file.</summary>
     private void SelectAllExtraction_Click(object sender, RoutedEventArgs e)
     {
         foreach (var f in _extractionFiles) f.IsSelected = true;
     }
 
+    /// <summary>Clears the selection of every extraction CHD file.</summary>
     private void DeselectAllExtraction_Click(object sender, RoutedEventArgs e)
     {
         foreach (var f in _extractionFiles) f.IsSelected = false;
     }
 
+    /// <summary>Validates the conversion inputs and options and runs the batch conversion.</summary>
     private async void StartConversionButton_ClickAsync(object sender, RoutedEventArgs e)
     {
         try
@@ -1403,10 +1497,21 @@ internal partial class MainWindow : Window, IDisposable
                 );
             }
 
+            var selectedFiles = _conversionFiles
+                .Where(static f => f.IsSelected)
+                .Select(static f => f.FullPath)
+                .ToArray();
+            if (selectedFiles.Length == 0)
+            {
+                ShowError("No files selected for conversion.");
+                return;
+            }
+
             RenewCancellationTokenSource();
 
             ResetOperationStats();
             SetControlsState(false);
+            _activeOperation = "Conversion";
             await Task.Yield();
             StartOperationTimer();
             ResetSpeedCounters();
@@ -1425,18 +1530,8 @@ internal partial class MainWindow : Window, IDisposable
                     out var mins
                 )
                 && mins > 0
-                    ? (int?)mins
+                    ? (int?)Math.Min(mins, AppConfig.MaxConversionTimeoutHours * 60)
                     : null;
-
-            var selectedFiles = _conversionFiles
-                .Where(static f => f.IsSelected)
-                .Select(static f => f.FullPath)
-                .ToArray();
-            if (selectedFiles.Length == 0)
-            {
-                ShowError("No files selected for conversion.");
-                return;
-            }
 
             LogMessage("--- Starting batch conversion process... ---");
             _wasCancelled = false;
@@ -1482,6 +1577,7 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Validates the verification inputs and options and runs the batch CHD verification.</summary>
     private async void StartVerificationButton_ClickAsync(object sender, RoutedEventArgs e)
     {
         try
@@ -1497,20 +1593,6 @@ internal partial class MainWindow : Window, IDisposable
             );
             if (inputFolder == null) return;
 
-            RenewCancellationTokenSource();
-
-            ResetOperationStats();
-            SetControlsState(false);
-            await Task.Yield();
-            StartOperationTimer();
-            ResetSpeedCounters();
-
-            var includeSubfolders = SearchSubfoldersVerificationCheckBox.IsChecked ?? false;
-            var moveSuccess = MoveSuccessFilesCheckBox.IsChecked ?? false;
-            var moveFailed = MoveFailedFilesCheckBox.IsChecked ?? false;
-            var successFolder = moveSuccess ? Path.Combine(inputFolder, "Success") : string.Empty;
-            var failedFolder = moveFailed ? Path.Combine(inputFolder, "Failed") : string.Empty;
-
             var selectedFiles = _verificationFiles
                 .Where(static f => f.IsSelected)
                 .Select(static f => f.FullPath)
@@ -1520,6 +1602,21 @@ internal partial class MainWindow : Window, IDisposable
                 ShowError("No files selected for verification.");
                 return;
             }
+
+            RenewCancellationTokenSource();
+
+            ResetOperationStats();
+            SetControlsState(false);
+            _activeOperation = "Verification";
+            await Task.Yield();
+            StartOperationTimer();
+            ResetSpeedCounters();
+
+            var includeSubfolders = SearchSubfoldersVerificationCheckBox.IsChecked ?? false;
+            var moveSuccess = MoveSuccessFilesCheckBox.IsChecked ?? false;
+            var moveFailed = MoveFailedFilesCheckBox.IsChecked ?? false;
+            var successFolder = moveSuccess ? Path.Combine(inputFolder, "Success") : string.Empty;
+            var failedFolder = moveFailed ? Path.Combine(inputFolder, "Failed") : string.Empty;
 
             LogMessage("--- Starting batch verification process... ---");
             _wasCancelled = false;
@@ -1563,8 +1660,14 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>
+    ///     Stops the operation timers, restores the controls, logs the summary and closes the window
+    ///     when a close was pending.
+    /// </summary>
+    /// <param name="opName">Name of the finished operation.</param>
     private void FinishOperation(string opName)
     {
+        _activeOperation = string.Empty;
         _operationTimer.Stop();
         _elapsedTimeTimer.Stop();
         UpdateProcessingTimeDisplay();
@@ -1579,6 +1682,7 @@ internal partial class MainWindow : Window, IDisposable
         if (_pendingClose) Close();
     }
 
+    /// <summary>Replaces the cancellation token source with a fresh one for the next operation.</summary>
     private void RenewCancellationTokenSource()
     {
         lock (_ctsLock)
@@ -1589,6 +1693,7 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Requests cancellation of the running operation.</summary>
     private void CancelButton_Click(object sender, RoutedEventArgs e)
     {
         lock (_ctsLock)
@@ -1600,6 +1705,10 @@ internal partial class MainWindow : Window, IDisposable
         UpdateStatusBarMessage("Cancelling...");
     }
 
+    /// <summary>
+    ///     Enables or disables the input controls and toggles the progress area while an operation runs.
+    /// </summary>
+    /// <param name="enabled">True when the UI should be idle and interactive.</param>
     private void SetControlsState(bool enabled)
     {
         // Thread-safely update operation state (0 = idle, 1 = running)
@@ -1662,6 +1771,9 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Shows a folder picker and returns the chosen local path.</summary>
+    /// <param name="description">Title shown in the picker.</param>
+    /// <returns>The chosen folder path, or null when no folder was chosen.</returns>
     private async Task<string?> SelectFolderAsync(string description)
     {
         try
@@ -1681,6 +1793,21 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>
+    ///     Runs the conversion batch: checks the encoder and output folder, filters the selected inputs
+    ///     and converts each file.
+    /// </summary>
+    /// <param name="chdmanPath">Path of the chdman executable.</param>
+    /// <param name="inputFolder">Root of the conversion input folder.</param>
+    /// <param name="outputFolder">Root of the conversion output folder.</param>
+    /// <param name="deleteFiles">Whether to delete each source after a successful conversion.</param>
+    /// <param name="processSmallerFirst">Whether to convert the smallest files first.</param>
+    /// <param name="forceCd">Whether to force the createcd verb.</param>
+    /// <param name="forceDvd">Whether to force the createdvd verb.</param>
+    /// <param name="timeoutMinutes">Per-file timeout in minutes, or null for none.</param>
+    /// <param name="selectedFiles">Full paths of the files to convert.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>A task that completes when the batch has finished.</returns>
     private async Task PerformBatchConversionAsync(
         string chdmanPath,
         string inputFolder,
@@ -1863,6 +1990,13 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Runs the extraction batch over the selected CHD files.</summary>
+    /// <param name="inputFolder">Root of the extraction input folder.</param>
+    /// <param name="outputFolder">Root of the extraction output folder.</param>
+    /// <param name="deleteOriginal">Whether to delete each CHD after a successful extraction.</param>
+    /// <param name="selectedFiles">Full paths of the CHD files to extract.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>A task that completes when the batch has finished.</returns>
     private async Task PerformBatchExtractionAsync(
         string inputFolder,
         string outputFolder,
@@ -1921,6 +2055,20 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>
+    ///     Converts a single input file to CHD, routing it to the handler for its resolved content type.
+    /// </summary>
+    /// <param name="chdmanPath">Path of the chdman executable.</param>
+    /// <param name="inputFile">Full path of the input file.</param>
+    /// <param name="inputFolder">Root of the conversion input folder.</param>
+    /// <param name="outputFolder">Root of the conversion output folder.</param>
+    /// <param name="deleteOriginal">Whether to delete the source after a successful conversion.</param>
+    /// <param name="cores">Worker threads to give the encoder.</param>
+    /// <param name="forceCd">Whether to force the createcd verb.</param>
+    /// <param name="forceDvd">Whether to force the createdvd verb.</param>
+    /// <param name="timeoutMinutes">Per-file timeout in minutes, or null for none.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>True when the file was converted successfully.</returns>
     private async Task<bool> ProcessSingleFileForConversionAsync(
         string chdmanPath,
         string inputFile,
@@ -1957,7 +2105,7 @@ internal partial class MainWindow : Window, IDisposable
             return false;
         }
 
-        var ext = Path.GetExtension(inputFile);
+        var ext = Path.GetExtension(inputFile).ToLowerInvariant();
         var tempDirs = new List<string>();
 
         try
@@ -2297,7 +2445,7 @@ internal partial class MainWindow : Window, IDisposable
         CancellationToken token
     )
     {
-        var ext = Path.GetExtension(chdmanInputPath);
+        var ext = Path.GetExtension(chdmanInputPath).ToLowerInvariant();
         if (ext is FileExtensions.Cue or FileExtensions.Toc or FileExtensions.Gdi)
         {
             var referenced = ext switch
@@ -2359,7 +2507,7 @@ internal partial class MainWindow : Window, IDisposable
         CancellationToken token
     )
     {
-        var ext = Path.GetExtension(inputFile);
+        var ext = Path.GetExtension(inputFile).ToLowerInvariant();
 
         // Descriptors are text and have their own handlers; there is nothing to sniff.
         if (
@@ -2671,7 +2819,7 @@ internal partial class MainWindow : Window, IDisposable
         }
 
         var selected = primaries[0];
-        var selectedExt = Path.GetExtension(selected);
+        var selectedExt = Path.GetExtension(selected).ToLowerInvariant();
         switch (selectedExt)
         {
             // An archived ISZ is decompressed exactly like a loose one before anything can read it.
@@ -2933,7 +3081,7 @@ internal partial class MainWindow : Window, IDisposable
         CancellationToken token
     )
     {
-        var ext = Path.GetExtension(inputFile);
+        var ext = Path.GetExtension(inputFile).ToLowerInvariant();
         if (!RawCdImageDetector.IsCandidateExtension(ext)) return null;
 
         // A companion cue already describes this image, and ConvertToChdAsync redirects to it.
@@ -3025,6 +3173,15 @@ internal partial class MainWindow : Window, IDisposable
         return kept;
     }
 
+    /// <summary>
+    ///     Computes the output CHD path for a file extracted from an archive, mirroring the original
+    ///     input's folder structure.
+    /// </summary>
+    /// <param name="extractedFilePath">Full path of the extracted file.</param>
+    /// <param name="originalInputFile">Full path of the archive the file came from.</param>
+    /// <param name="inputFolder">Root of the conversion input folder.</param>
+    /// <param name="outputFolder">Root of the conversion output folder.</param>
+    /// <returns>The full output CHD path.</returns>
     private static string ComputeOutputChdPathForExtractedFile(
         string extractedFilePath,
         string originalInputFile,
@@ -3044,6 +3201,21 @@ internal partial class MainWindow : Window, IDisposable
         return Path.Combine(targetDir, PathUtils.SanitizeFileName(chdBase) + FileExtensions.Chd);
     }
 
+    /// <summary>Decompresses a CSO image to a temporary ISO and converts it to CHD.</summary>
+    /// <param name="inputFile">Full path of the CSO file.</param>
+    /// <param name="originalName">File name used in log messages.</param>
+    /// <param name="outputFolder">Root of the conversion output folder.</param>
+    /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <param name="chdmanPath">Path of the chdman executable.</param>
+    /// <param name="outputChd">Destination CHD path.</param>
+    /// <param name="cores">Worker threads to give the encoder.</param>
+    /// <param name="forceCd">Whether to force the createcd verb.</param>
+    /// <param name="forceDvd">Whether to force the createdvd verb.</param>
+    /// <param name="timeoutMinutes">Per-file timeout in minutes, or null for none.</param>
+    /// <param name="deleteOriginal">Whether to delete the source after a successful conversion.</param>
+    /// <param name="inputFolder">Root of the conversion input folder.</param>
+    /// <returns>True when the file was converted successfully.</returns>
     private async Task<bool> ProcessCsoFileForConversionAsync(
         string inputFile,
         string originalName,
@@ -3111,7 +3283,7 @@ internal partial class MainWindow : Window, IDisposable
             success,
             inputFile,
             originalName,
-            Path.GetExtension(inputFile),
+            Path.GetExtension(inputFile).ToLowerInvariant(),
             inputFolder,
             outputChd,
             deleteOriginal,
@@ -3119,6 +3291,19 @@ internal partial class MainWindow : Window, IDisposable
         );
     }
 
+    /// <summary>Extracts an archive and converts each supported disc image it contains.</summary>
+    /// <param name="inputFile">Full path of the archive.</param>
+    /// <param name="inputFolder">Root of the conversion input folder.</param>
+    /// <param name="outputFolder">Root of the conversion output folder.</param>
+    /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <param name="chdmanPath">Path of the chdman executable.</param>
+    /// <param name="cores">Worker threads to give the encoder.</param>
+    /// <param name="forceCd">Whether to force the createcd verb.</param>
+    /// <param name="forceDvd">Whether to force the createdvd verb.</param>
+    /// <param name="timeoutMinutes">Per-file timeout in minutes, or null for none.</param>
+    /// <param name="deleteOriginal">Whether to delete the archive after all conversions succeed.</param>
+    /// <returns>True when every extracted image was converted successfully.</returns>
     private async Task<bool> ProcessArchiveFileForConversionAsync(
         string inputFile,
         string inputFolder,
@@ -3199,7 +3384,7 @@ internal partial class MainWindow : Window, IDisposable
             // missing (incomplete download, separate bin archive, CRC-skipped entries) would
             // otherwise fail deep inside chdman with a cryptic "couldn't find bin file" error.
             // Detect that up front and skip with a clear warning.
-            var extractedExt = Path.GetExtension(extractedFile);
+            var extractedExt = Path.GetExtension(extractedFile).ToLowerInvariant();
             if (extractedExt is FileExtensions.Cue or FileExtensions.Gdi or FileExtensions.Toc)
             {
                 try
@@ -3334,6 +3519,23 @@ internal partial class MainWindow : Window, IDisposable
         return allSucceeded;
     }
 
+    /// <summary>
+    ///     Extracts a PBP file's discs to cue/bin pairs and converts each disc to CHD, handling
+    ///     mislabelled PBPs.
+    /// </summary>
+    /// <param name="inputFile">Full path of the PBP file.</param>
+    /// <param name="originalName">File name used in log messages.</param>
+    /// <param name="inputFolder">Root of the conversion input folder.</param>
+    /// <param name="outputFolder">Root of the conversion output folder.</param>
+    /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <param name="chdmanPath">Path of the chdman executable.</param>
+    /// <param name="cores">Worker threads to give the encoder.</param>
+    /// <param name="forceCd">Whether to force the createcd verb.</param>
+    /// <param name="forceDvd">Whether to force the createdvd verb.</param>
+    /// <param name="timeoutMinutes">Per-file timeout in minutes, or null for none.</param>
+    /// <param name="deleteOriginal">Whether to delete the source after a successful conversion.</param>
+    /// <returns>True when every extracted disc was converted successfully.</returns>
     private async Task<bool> ProcessPbpFileForConversionAsync(
         string inputFile,
         string originalName,
@@ -3620,6 +3822,19 @@ internal partial class MainWindow : Window, IDisposable
         );
     }
 
+    /// <summary>Converts a CloneCD (.ccd) set to CHD and optionally deletes the source files.</summary>
+    /// <param name="inputFile">Full path of the .ccd descriptor.</param>
+    /// <param name="inputFolder">Root of the conversion input folder.</param>
+    /// <param name="outputFolder">Root of the conversion output folder.</param>
+    /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <param name="chdmanPath">Path of the chdman executable.</param>
+    /// <param name="cores">Worker threads to give the encoder.</param>
+    /// <param name="forceCd">Whether to force the createcd verb.</param>
+    /// <param name="forceDvd">Whether to force the createdvd verb.</param>
+    /// <param name="timeoutMinutes">Per-file timeout in minutes, or null for none.</param>
+    /// <param name="deleteOriginal">Whether to delete the source files after a successful conversion.</param>
+    /// <returns>True when the file was converted successfully.</returns>
     private async Task<bool> ProcessCcdFileForConversionAsync(
         string inputFile,
         string inputFolder,
@@ -3717,6 +3932,40 @@ internal partial class MainWindow : Window, IDisposable
     }
 
     /// <summary>
+    ///     Estimates the bytes the MDS preparation step writes to its work directory: the decoded
+    ///     track data for v2/MDX images, or a full copy of the source data when subchannel stripping,
+    ///     pregap rebuilding or joining several data files needs one.
+    /// </summary>
+    /// <param name="disc">The parsed Alcohol descriptor.</param>
+    /// <returns>The required bytes, or 0 when preparation works in place.</returns>
+    private static long EstimateMdsWorkBytes(MdsDisc disc)
+    {
+        if (disc.HasEncryptedTrackData || disc.HasCompressedTrackData || disc.IsMdxContainer)
+        {
+            return disc.Tracks.Sum(static t => t.LengthSectors * t.SectorSize);
+        }
+
+        if (
+            disc is { MdfPath: not null }
+            && (disc.NeedsSubchannelStrip || disc.HasPregapInfo || disc.DataFilePaths.Count > 1)
+        )
+        {
+            try
+            {
+                return disc.DataFilePaths.Count > 0
+                    ? disc.DataFilePaths.Sum(f => new FileInfo(f).Length)
+                    : new FileInfo(disc.MdfPath).Length;
+            }
+            catch
+            {
+                /* ignored */
+            }
+        }
+
+        return 0;
+    }
+
+    /// <summary>
     ///     Converts an Alcohol 120% .mds/.mdf pair. chdman cannot read either file, so the descriptor's
     ///     track table is turned into a cue and, when the sectors carry subchannel data, the image is
     ///     repacked to plain 2352-byte sectors first.
@@ -3763,32 +4012,7 @@ internal partial class MainWindow : Window, IDisposable
 
         // Stripping subchannel data, rebuilding pregaps or joining several data files writes a whole
         // second copy of the disc, so the work directory has to be chosen with room for it.
-        long requiredBytes = 0;
-        if (
-            disc.HasEncryptedTrackData
-            || disc.HasCompressedTrackData
-            || disc.IsMdxContainer
-        )
-        {
-            // MDS v2/MDX track data is decoded to a plain image in the work directory first.
-            requiredBytes = disc.Tracks.Sum(static t => t.LengthSectors * t.SectorSize);
-        }
-        else if (
-            disc is { MdfPath: not null }
-            && (disc.NeedsSubchannelStrip || disc.HasPregapInfo || disc.DataFilePaths.Count > 1)
-        )
-        {
-            try
-            {
-                requiredBytes = disc.DataFilePaths.Count > 0
-                    ? disc.DataFilePaths.Sum(f => new FileInfo(f).Length)
-                    : new FileInfo(disc.MdfPath).Length;
-            }
-            catch
-            {
-                /* ignored */
-            }
-        }
+        var requiredBytes = EstimateMdsWorkBytes(disc);
 
         var tempDir = PathUtils.GetBestTempDirectory(
             inputFile,
@@ -4026,6 +4250,21 @@ internal partial class MainWindow : Window, IDisposable
         );
     }
 
+    /// <summary>
+    ///     Converts an extracted Alcohol .mds set by preparing it and converting the resulting cue or
+    ///     image.
+    /// </summary>
+    /// <param name="chdmanPath">Path of the chdman executable.</param>
+    /// <param name="mdsPath">Path of the .mds descriptor.</param>
+    /// <param name="outputChd">Destination CHD path.</param>
+    /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
+    /// <param name="outputFolder">Root of the conversion output folder.</param>
+    /// <param name="cores">Worker threads to give the encoder.</param>
+    /// <param name="forceCd">Whether to force the createcd verb.</param>
+    /// <param name="forceDvd">Whether to force the createdvd verb.</param>
+    /// <param name="timeoutMinutes">Per-file timeout in minutes, or null for none.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>True when the file was converted successfully.</returns>
     private async Task<bool> ConvertMdsViaCueAsync(
         string chdmanPath,
         string mdsPath,
@@ -4054,26 +4293,7 @@ internal partial class MainWindow : Window, IDisposable
 
         LogMessage($"MDS: {Path.GetFileName(mdsPath)} - {disc.Summary}");
 
-        long requiredBytes = 0;
-        if (
-            disc.HasEncryptedTrackData
-            || disc.HasCompressedTrackData
-            || disc.IsMdxContainer
-        )
-        {
-            requiredBytes = disc.Tracks.Sum(static t => t.LengthSectors * t.SectorSize);
-        }
-        else if (disc is { NeedsSubchannelStrip: true, MdfPath: not null })
-        {
-            try
-            {
-                requiredBytes = new FileInfo(disc.MdfPath).Length;
-            }
-            catch
-            {
-                /* ignored */
-            }
-        }
+        var requiredBytes = EstimateMdsWorkBytes(disc);
 
         var tempDir = PathUtils.GetBestTempDirectory(
             mdsPath,
@@ -4231,6 +4451,12 @@ internal partial class MainWindow : Window, IDisposable
         );
     }
 
+    /// <summary>Checks that the files referenced by a cue, gdi or toc descriptor exist next to it.</summary>
+    /// <param name="ext">Descriptor extension.</param>
+    /// <param name="inputFile">Path of the descriptor.</param>
+    /// <param name="originalName">File name used in log messages.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>True when all referenced files are present.</returns>
     private async Task<bool> ValidateDependentFilesAsync(
         string ext,
         string inputFile,
@@ -4238,12 +4464,17 @@ internal partial class MainWindow : Window, IDisposable
         CancellationToken token
     )
     {
-        if (ext is not (FileExtensions.Cue or FileExtensions.Gdi or FileExtensions.Toc))
+        var normalizedExt = ext.ToLowerInvariant();
+        if (normalizedExt is not (FileExtensions.Cue or FileExtensions.Gdi or FileExtensions.Toc))
             return true;
 
         try
         {
-            var missingNames = await GetMissingDependentFileNamesAsync(ext, inputFile, token);
+            var missingNames = await GetMissingDependentFileNamesAsync(
+                normalizedExt,
+                inputFile,
+                token
+            );
             if (missingNames.Count > 0)
             {
                 LogWarning(
@@ -4272,6 +4503,7 @@ internal partial class MainWindow : Window, IDisposable
         CancellationToken token
     )
     {
+        ext = ext.ToLowerInvariant();
         if (string.Equals(ext, FileExtensions.Cue, StringComparison.Ordinal))
         {
             var normalization = await CueNormalizer
@@ -4320,6 +4552,17 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Runs a direct conversion and reports classified errors instead of letting them propagate.</summary>
+    /// <param name="chdmanPath">Path of the chdman executable.</param>
+    /// <param name="fileToProcess">File to hand to the encoder.</param>
+    /// <param name="outputChd">Destination CHD path.</param>
+    /// <param name="cores">Worker threads to give the encoder.</param>
+    /// <param name="forceCd">Whether to force the createcd verb.</param>
+    /// <param name="forceDvd">Whether to force the createdvd verb.</param>
+    /// <param name="timeoutMinutes">Per-file timeout in minutes, or null for none.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <param name="originalName">File name used in log messages.</param>
+    /// <returns>True when the conversion succeeded.</returns>
     private async Task<bool> TryDirectConversionAsync(
         string chdmanPath,
         string fileToProcess,
@@ -4368,6 +4611,20 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Retries a failed conversion from a temp copy of the input and its referenced files.</summary>
+    /// <param name="chdmanPath">Path of the chdman executable.</param>
+    /// <param name="inputFile">Full path of the input file.</param>
+    /// <param name="originalName">File name used in log messages.</param>
+    /// <param name="ext">Extension of the input file.</param>
+    /// <param name="outputFolder">Root of the conversion output folder.</param>
+    /// <param name="outputChd">Destination CHD path.</param>
+    /// <param name="cores">Worker threads to give the encoder.</param>
+    /// <param name="forceCd">Whether to force the createcd verb.</param>
+    /// <param name="forceDvd">Whether to force the createdvd verb.</param>
+    /// <param name="timeoutMinutes">Per-file timeout in minutes, or null for none.</param>
+    /// <param name="tempDirs">Temp directories to clean up when the file is done.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>True when the retry converted the file successfully.</returns>
     private async Task<bool> TryRetryConversionViaTempCopyAsync(
         string chdmanPath,
         string inputFile,
@@ -4386,6 +4643,8 @@ internal partial class MainWindow : Window, IDisposable
         LogMessage(
             $"Direct conversion failed for {originalName}. Retrying via temporary directory copy..."
         );
+
+        ext = ext.ToLowerInvariant();
 
         try
         {
@@ -4542,6 +4801,18 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>
+    ///     Logs the conversion outcome and deletes the source files when requested and successful.
+    /// </summary>
+    /// <param name="success">Whether the conversion succeeded.</param>
+    /// <param name="inputFile">Full path of the input file.</param>
+    /// <param name="originalName">File name used in log messages.</param>
+    /// <param name="ext">Extension of the input file.</param>
+    /// <param name="inputFolder">Root of the conversion input folder.</param>
+    /// <param name="outputChd">Destination CHD path.</param>
+    /// <param name="deleteOriginal">Whether to delete the source after a successful conversion.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>True when the conversion succeeded.</returns>
     private async Task<bool> HandleConversionResultAsync(
         bool success,
         string inputFile,
@@ -4605,6 +4876,19 @@ internal partial class MainWindow : Window, IDisposable
         return false;
     }
 
+    /// <summary>
+    ///     Runs the verification batch and moves each file into the success or failed folder when
+    ///     enabled.
+    /// </summary>
+    /// <param name="inputFolder">Root of the verification input folder.</param>
+    /// <param name="includeSub">Whether subfolders were included in the scan.</param>
+    /// <param name="moveSuccess">Whether verified files are moved into a success folder.</param>
+    /// <param name="successFolder">Folder that receives verified files.</param>
+    /// <param name="moveFailed">Whether failed files are moved into a failed folder.</param>
+    /// <param name="failedFolder">Folder that receives failed files.</param>
+    /// <param name="selectedFiles">Full paths of the CHD files to verify.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>A task that completes when the batch has finished.</returns>
     private async Task PerformBatchVerificationAsync(
         string inputFolder,
         bool includeSub,
@@ -4688,7 +4972,14 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
-    private static async Task MoveVerifiedFileAsync(
+    /// <summary>Moves a verified CHD into the target folder, preserving subfolders when requested.</summary>
+    /// <param name="sourceFile">Full path of the CHD to move.</param>
+    /// <param name="targetFolder">Folder that receives the file.</param>
+    /// <param name="inputFolder">Root of the verification input folder.</param>
+    /// <param name="includeSub">Whether to preserve the subfolder structure.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>A task that completes when the file has been moved.</returns>
+    private async Task MoveVerifiedFileAsync(
         string sourceFile,
         string targetFolder,
         string inputFolder,
@@ -4742,10 +5033,23 @@ internal partial class MainWindow : Window, IDisposable
         catch (Exception ex)
         {
             // Log error but don't fail the verification
+            LogError($"Failed to move file {sourceFile}", ex);
+            UpdateStatusBarMessage("Failed to move a verified file");
             SafeFireAndForget(ReportBugAsync($"Failed to move file {sourceFile}", ex));
         }
     }
 
+    /// <summary>
+    ///     Extracts a CHD with the built-in reader, falling back to chdman, and optionally deletes the
+    ///     source.
+    /// </summary>
+    /// <param name="chdmanPath">Path of the chdman executable.</param>
+    /// <param name="chdFile">Full path of the CHD file.</param>
+    /// <param name="inputFolder">Root of the extraction input folder.</param>
+    /// <param name="outputFolder">Root of the extraction output folder.</param>
+    /// <param name="deleteOriginal">Whether to delete the CHD after a successful extraction.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>True when the CHD was extracted successfully.</returns>
     private async Task<bool> ExtractChdAsync(
         string chdmanPath,
         string chdFile,
@@ -4845,7 +5149,7 @@ internal partial class MainWindow : Window, IDisposable
                             }
                             else
                             {
-                                await ExtractChdTracksToDirectory(
+                                await ExtractChdTracksToDirectoryAsync(
                                     chd,
                                     chdFile,
                                     targetDir,
@@ -4964,6 +5268,10 @@ internal partial class MainWindow : Window, IDisposable
         return success;
     }
 
+    /// <summary>Writes the whole CHD content to a single output file in chunks.</summary>
+    /// <param name="chd">The opened CHD.</param>
+    /// <param name="outputFile">Destination file path.</param>
+    /// <param name="token">Cancellation token.</param>
     private static void ExtractChdToSingleFile(
         ChdFile chd,
         string outputFile,
@@ -4993,7 +5301,17 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
-    private async Task ExtractChdTracksToDirectory(
+    /// <summary>
+    ///     Extracts a CHD's tracks into a temp directory and moves them into the destination, isolating
+    ///     them when names would clash.
+    /// </summary>
+    /// <param name="chd">The opened CHD.</param>
+    /// <param name="chdFile">Full path of the CHD file.</param>
+    /// <param name="targetDir">Directory that receives the extracted tracks.</param>
+    /// <param name="baseFileName">Base name for the extracted files.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>A task that completes when the tracks have been extracted.</returns>
+    private async Task ExtractChdTracksToDirectoryAsync(
         ChdFile chd,
         string chdFile,
         string targetDir,
@@ -5171,6 +5489,13 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>
+    ///     Returns the chdman extraction command for the selected output format, auto-detecting when
+    ///     needed.
+    /// </summary>
+    /// <param name="chdFile">Full path of the CHD file.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>The chdman extraction command name.</returns>
     private async Task<string> GetSelectedExtractCommandAsync(
         string chdFile,
         CancellationToken token
@@ -5187,6 +5512,10 @@ internal partial class MainWindow : Window, IDisposable
         return "extractcd";
     }
 
+    /// <summary>Returns whether the CHD's metadata identifies a GD-ROM image.</summary>
+    /// <param name="chdFile">Full path of the CHD file.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>True when the CHD is a GD-ROM image.</returns>
     private static Task<bool> IsGdiChdAsync(string chdFile, CancellationToken token)
     {
         return Task.Run(
@@ -5227,6 +5556,10 @@ internal partial class MainWindow : Window, IDisposable
         );
     }
 
+    /// <summary>Detects the chdman extraction command from the CHD's metadata (DVD, hard disk or CD).</summary>
+    /// <param name="chdFile">Full path of the CHD file.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>The detected extraction command, defaulting to extractcd.</returns>
     private static Task<string> DetectChdExtractCommandAsync(
         string chdFile,
         CancellationToken token
@@ -5339,6 +5672,20 @@ internal partial class MainWindow : Window, IDisposable
     }
 
 
+    /// <summary>
+    ///     Converts a single input to CHD with chdman on Windows and the built-in CHDSharp encoder
+    ///     elsewhere, staging the output and falling back between encoders.
+    /// </summary>
+    /// <param name="chdmanPath">Path of the chdman executable.</param>
+    /// <param name="inputFile">Full path of the input file.</param>
+    /// <param name="outputFile">Destination CHD path.</param>
+    /// <param name="cores">Worker threads to give the encoder.</param>
+    /// <param name="forceCd">Whether to force the createcd verb.</param>
+    /// <param name="forceDvd">Whether to force the createdvd verb.</param>
+    /// <param name="timeoutMinutes">Per-file timeout in minutes, or null for none.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <param name="recursionDepth">Retry depth used when switching from createcd to createdvd.</param>
+    /// <returns>True when the file was converted successfully.</returns>
     private async Task<bool> ConvertToChdAsync(
         string chdmanPath,
         string inputFile,
@@ -5534,6 +5881,12 @@ internal partial class MainWindow : Window, IDisposable
             {
                 TryCleanupAsciiTemp();
                 return true;
+            }
+
+            if (token.IsCancellationRequested)
+            {
+                TryCleanupAsciiTemp();
+                return false;
             }
 
             LogError(
@@ -5819,13 +6172,16 @@ internal partial class MainWindow : Window, IDisposable
             if (await TryChdSharpInProcessAsync())
                 return true;
 
+            if (token.IsCancellationRequested)
+                return false;
+
             // --- Both encoders failed: report the chdman diagnostics ---
             var errorTextFinal = errorBuffer.ToString().TrimEnd();
 
             try
             {
                 var effectiveInput = asciiInputFile ?? originalInputFile;
-                var inputExt = Path.GetExtension(effectiveInput);
+                var inputExt = Path.GetExtension(effectiveInput).ToLowerInvariant();
 
                 // Skip sector-size check for text-based descriptor files (.cue/.gdi/.toc).
                 // These are plain text files that reference separate data files (.bin/.iso/.raw);
@@ -6584,6 +6940,12 @@ internal partial class MainWindow : Window, IDisposable
         return builder.ToString();
     }
 
+    /// <summary>Extracts every disc in a PBP file to cue/bin pairs.</summary>
+    /// <param name="inputFile">Full path of the PBP file.</param>
+    /// <param name="outputFolder">Folder that receives the cue/bin pairs.</param>
+    /// <param name="onLog">Callback that receives progress messages.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>The extraction result, including the cue paths on success.</returns>
     private static async Task<PbpExtractionResult> ExtractPbpToCueBinAsync(
         string inputFile,
         string outputFolder,
@@ -6689,6 +7051,7 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Samples the write-throughput counter and updates the write speed display.</summary>
     private void UpdateWriteSpeedFromPerformanceCounter()
     {
         try
@@ -6707,6 +7070,7 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Samples the read-throughput counter and updates the read speed display.</summary>
     private void UpdateReadSpeedFromPerformanceCounter()
     {
         try
@@ -6725,6 +7089,10 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Verifies a CHD file and logs its version and SHA1.</summary>
+    /// <param name="chdFile">Full path of the CHD file.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>True when verification passed.</returns>
     private Task<bool> VerifyChdAsync(string chdFile, CancellationToken token)
     {
         return Task.Run(
@@ -6758,6 +7126,7 @@ internal partial class MainWindow : Window, IDisposable
         );
     }
 
+    /// <summary>Resets the operation statistics, timer and progress display.</summary>
     private void ResetOperationStats()
     {
         _totalFilesProcessed = 0;
@@ -6780,6 +7149,7 @@ internal partial class MainWindow : Window, IDisposable
         _elapsedTimeTimer.Start();
     }
 
+    /// <summary>Updates the total, success and failed counters in the UI.</summary>
     private void UpdateStatsDisplay()
     {
         _ = Dispatcher.UIThread.InvokeAsync(() =>
@@ -6790,6 +7160,7 @@ internal partial class MainWindow : Window, IDisposable
         });
     }
 
+    /// <summary>Updates the elapsed processing time in the UI.</summary>
     private void UpdateProcessingTimeDisplay()
     {
         _ = Dispatcher.UIThread.InvokeAsync(() =>
@@ -6797,6 +7168,8 @@ internal partial class MainWindow : Window, IDisposable
         );
     }
 
+    /// <summary>Updates the write speed label and status message.</summary>
+    /// <param name="speed">Speed in megabytes per second.</param>
     private void UpdateWriteSpeedDisplay(double speed)
     {
         _ = Dispatcher.UIThread.InvokeAsync(() =>
@@ -6808,6 +7181,8 @@ internal partial class MainWindow : Window, IDisposable
         });
     }
 
+    /// <summary>Updates the read speed label and status message for the active operation.</summary>
+    /// <param name="speed">Speed in megabytes per second.</param>
     private void UpdateReadSpeedDisplay(double speed)
     {
         _ = Dispatcher.UIThread.InvokeAsync(() =>
@@ -6815,13 +7190,20 @@ internal partial class MainWindow : Window, IDisposable
             SpeedValue.Text = $"{speed:F1} MB/s";
             StatusBarMessage.Text = speed switch
             {
-                > 0 when !StartExtractionButton.IsEnabled => "Extracting...",
-                > 0 when !StartVerificationButton.IsEnabled => "Verifying...",
+                > 0 when string.Equals(_activeOperation, "Extraction", StringComparison.Ordinal) =>
+                    "Extracting...",
+                > 0 when string.Equals(_activeOperation, "Verification", StringComparison.Ordinal) =>
+                    "Verifying...",
                 _ => StatusBarMessage.Text
             };
         });
     }
 
+    /// <summary>Updates the progress bar and text for the file currently being processed.</summary>
+    /// <param name="completedCount">Number of finished files.</param>
+    /// <param name="tot">Total number of files.</param>
+    /// <param name="name">Name of the file being processed.</param>
+    /// <param name="verb">Verb describing the operation.</param>
     private void UpdateProgressDisplay(int completedCount, int tot, string name, string verb)
     {
         _ = Dispatcher.UIThread.InvokeAsync(() =>
@@ -6841,6 +7223,7 @@ internal partial class MainWindow : Window, IDisposable
         });
     }
 
+    /// <summary>Hides the progress bar and clears the progress text.</summary>
     private void ClearProgressDisplay()
     {
         _ = Dispatcher.UIThread.InvokeAsync(() =>
@@ -6852,6 +7235,12 @@ internal partial class MainWindow : Window, IDisposable
         });
     }
 
+    /// <summary>
+    ///     Deletes the source files of a successfully converted game, including those referenced by its
+    ///     descriptor.
+    /// </summary>
+    /// <param name="inputFile">Full path of the descriptor or image.</param>
+    /// <param name="token">Cancellation token.</param>
     private async Task DeleteOriginalGameFilesAsync(string inputFile, CancellationToken token)
     {
         try
@@ -6937,6 +7326,11 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Copies a file with exponential-backoff retries for transient I/O failures.</summary>
+    /// <param name="source">Source file path.</param>
+    /// <param name="dest">Destination file path.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>A task that completes when the copy has finished.</returns>
     private static async Task CopyFileWithRetryAsync(
         string source,
         string dest,
@@ -6988,7 +7382,7 @@ internal partial class MainWindow : Window, IDisposable
     internal static bool IsDiskSpaceException(Exception ex)
     {
         // HResult 0x80070070 = ERROR_DISK_FULL, 0x80070079 = ERROR_SEM_TIMEOUT (can indicate disk issues)
-        return ex is IOException { HResult: -2147024784 or -2147024783 };
+        return ex is IOException { HResult: -2147024784 or -2147024775 };
     }
 
     /// <summary>
@@ -7004,7 +7398,7 @@ internal partial class MainWindow : Window, IDisposable
         // Also check message as fallback for cases where HResult may differ
         return ex is IOException
                && (
-                   ex.HResult == -2147024809
+                   ex.HResult == -2147024873
                    || ex.Message.Contains(
                        "cyclic redundancy check",
                        StringComparison.OrdinalIgnoreCase
@@ -7034,6 +7428,9 @@ internal partial class MainWindow : Window, IDisposable
                    or "SharpCompress.Compressors.LZMA.DataErrorException";
     }
 
+    /// <summary>Returns whether chdman's error output indicates a disk-full condition.</summary>
+    /// <param name="errorOutput">Captured chdman error output.</param>
+    /// <returns>True when the output mentions a lack of disk space.</returns>
     private static bool IsDiskSpaceError(string? errorOutput)
     {
         if (string.IsNullOrEmpty(errorOutput))
@@ -7046,6 +7443,9 @@ internal partial class MainWindow : Window, IDisposable
                || errorOutput.Contains("insufficient disk space", StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>Returns whether chdman's error output indicates an I/O error.</summary>
+    /// <param name="errorOutput">Captured chdman error output.</param>
+    /// <returns>True when the output mentions an I/O failure.</returns>
     private static bool IsIoError(string? errorOutput)
     {
         if (string.IsNullOrEmpty(errorOutput))
@@ -7057,6 +7457,9 @@ internal partial class MainWindow : Window, IDisposable
                || errorOutput.Contains("write error", StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>Returns whether chdman's error output indicates a permission error.</summary>
+    /// <param name="errorOutput">Captured chdman error output.</param>
+    /// <returns>True when the output mentions denied access.</returns>
     private static bool IsPermissionError(string? errorOutput)
     {
         if (string.IsNullOrEmpty(errorOutput))
@@ -7127,6 +7530,12 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>
+    ///     Logs a warning when the output or temp drive has less free space than the batch may need.
+    /// </summary>
+    /// <param name="outputFolder">Root of the output folder.</param>
+    /// <param name="filesToProcess">Files that will be processed.</param>
+    /// <param name="isConversion">True for conversion, false for extraction.</param>
     private void CheckDiskSpace(string outputFolder, string[] filesToProcess, bool isConversion)
     {
         try
@@ -7214,6 +7623,11 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Deletes a file with retries and logs the result.</summary>
+    /// <param name="path">Full path of the file.</param>
+    /// <param name="desc">Description used in log messages.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>A task that completes when the delete attempt has finished.</returns>
     private async Task TryDeleteFileAsync(string path, string desc, CancellationToken token)
     {
         var deleted = await RetryingFileOperations.TryDeleteAsync(
@@ -7232,33 +7646,71 @@ internal partial class MainWindow : Window, IDisposable
             LogError($"Failed to delete {desc}: {Path.GetFileName(path)}");
     }
 
+    /// <summary>Process names (without extension) of the bundled chdman builds.</summary>
+    private static readonly string[] ChdmanProcessNames = ["chdman", "chdman_arm64"];
+
+    /// <summary>Process names (without extension) of every bundled tool, across architectures.</summary>
+    private static readonly string[] OrphanedToolProcessNames =
+    [
+        "chdman",
+        "chdman_arm64",
+        "7za",
+        "7za_arm64",
+        "7zz"
+    ];
+
+    /// <summary>Kills any chdman processes other than the current process.</summary>
     private static void KillChdmanProcesses()
+    {
+        KillProcessesByName(ChdmanProcessNames);
+    }
+
+    /// <summary>Kills every running process whose name is in <paramref name="processNames" />.</summary>
+    /// <param name="processNames">Process names without extension.</param>
+    private static void KillProcessesByName(string[] processNames)
     {
         try
         {
             var currentPid = Environment.ProcessId;
-            foreach (var process in Process.GetProcessesByName("chdman"))
+            foreach (var processName in processNames)
             {
                 try
                 {
-                    if (process.Id != currentPid)
+                    foreach (var process in Process.GetProcessesByName(processName))
                     {
-                        process.Kill(true);
-                        process.WaitForExit(3000);
+                        try
+                        {
+                            if (process.Id != currentPid)
+                            {
+                                process.Kill(true);
+                                process.WaitForExit(3000);
+                            }
+                        }
+                        catch
+                        {
+                            // Process already exited or access denied.
+                        }
                     }
                 }
                 catch
                 {
-                    // ignored
+                    // Process name not found or access denied.
                 }
             }
         }
         catch
         {
-            // ignored
+            // Best-effort cleanup.
         }
     }
 
+    /// <summary>
+    ///     Deletes a directory with retries, clearing read-only attributes first and logging the result.
+    /// </summary>
+    /// <param name="path">Full path of the directory.</param>
+    /// <param name="desc">Description used in log messages.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>A task that completes when the delete attempt has finished.</returns>
     private async Task TryDeleteDirectoryAsync(string path, string desc, CancellationToken token)
     {
         for (var attempt = 0; attempt < MaxFileOperationRetries; attempt++)
@@ -7304,6 +7756,8 @@ internal partial class MainWindow : Window, IDisposable
         LogWarning($"Could not delete {desc}: {Path.GetFileName(path)}");
     }
 
+    /// <summary>Clears the read-only attribute on every file and directory under a path before deletion.</summary>
+    /// <param name="path">Root directory to clear.</param>
     private static void ClearDirectoryAttributes(string path)
     {
         try
@@ -7362,6 +7816,11 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Deletes a subfolder when it is empty, unless it is the input folder itself.</summary>
+    /// <param name="subfolderPath">Folder to delete when empty.</param>
+    /// <param name="inputFolder">Root of the input folder, which is never deleted.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>A task that completes when the delete attempt has finished.</returns>
     private async Task TryDeleteEmptySubfolderAsync(
         string subfolderPath,
         string inputFolder,
@@ -7397,11 +7856,13 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Reloads the active tab's file list when the search-subfolders option changes.</summary>
     private void SearchSubfoldersCheckBox_Changed(object sender, RoutedEventArgs e)
     {
         if (IsLoaded) RefreshFileListForActiveTab();
     }
 
+    /// <summary>Clears the force-DVD option when force-CD is checked.</summary>
     private void ForceCreateCdCheckBox_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
         // Only react to the box becoming checked: IsCheckedChanged also fires when it is
@@ -7412,6 +7873,7 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Clears the force-CD option when force-DVD is checked.</summary>
     private void ForceCreateDvdCheckBox_IsCheckedChanged(object? sender, RoutedEventArgs e)
     {
         if (ForceCreateDvdCheckBox.IsChecked == true)
@@ -7420,6 +7882,8 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Logs the operation result summary and shows the completion message box.</summary>
+    /// <param name="op">Name of the operation.</param>
     private void LogOperationSummary(string op)
     {
         var verb = _wasCancelled ? "canceled" : "completed";
@@ -7435,6 +7899,12 @@ internal partial class MainWindow : Window, IDisposable
         );
     }
 
+    /// <summary>Shows a message box owned by this window.</summary>
+    /// <param name="msg">Message text.</param>
+    /// <param name="title">Window title.</param>
+    /// <param name="btns">Buttons to show.</param>
+    /// <param name="icon">Icon to show.</param>
+    /// <returns>The result chosen by the user.</returns>
     private Task<MessageBoxResult> ShowMessageBoxAsync(
         string msg,
         string title,
@@ -7445,6 +7915,8 @@ internal partial class MainWindow : Window, IDisposable
         return MessageBox.ShowAsync(this, msg, title, btns, icon);
     }
 
+    /// <summary>Shows an error message box on the UI thread.</summary>
+    /// <param name="msg">Error message text.</param>
     private void ShowError(string msg)
     {
         _ = Dispatcher.UIThread.InvokeAsync(() =>
@@ -7468,6 +7940,9 @@ internal partial class MainWindow : Window, IDisposable
         await Dispatcher.UIThread.InvokeAsync(() => ShowUpdatePromptCoreAsync(release));
     }
 
+    /// <summary>Prompts the user about an available update and opens the release page or copies its URL.</summary>
+    /// <param name="release">The detected release.</param>
+    /// <returns>A task that completes when the prompt has been handled.</returns>
     private async Task ShowUpdatePromptCoreAsync(GitHubRelease release)
     {
         var remoteVersionString = UpdateService.ParseVersionFromTag(release.TagName);
@@ -7515,6 +7990,10 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>
+    ///     Observes a fire-and-forget task and logs its exception instead of letting it go unobserved.
+    /// </summary>
+    /// <param name="task">The task to observe.</param>
     private static void SafeFireAndForget(Task task)
     {
         _ = task.ContinueWith(
@@ -7527,6 +8006,10 @@ internal partial class MainWindow : Window, IDisposable
         );
     }
 
+    /// <summary>Sends a bug report through the shared bug report service, ignoring failures.</summary>
+    /// <param name="msg">Description of the problem.</param>
+    /// <param name="ex">Optional exception that caused the report.</param>
+    /// <returns>A task that completes when the report has been sent.</returns>
     private static async Task ReportBugAsync(string msg, Exception? ex = null)
     {
         try
@@ -7539,6 +8022,7 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Resets the read and write performance counters to take fresh readings.</summary>
     private void ResetSpeedCounters()
     {
         // Reset performance counters to get fresh readings
@@ -7549,6 +8033,7 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Closes the window from the Exit menu item.</summary>
     private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
     {
         // Ensure the window close process is initiated
@@ -7556,11 +8041,13 @@ internal partial class MainWindow : Window, IDisposable
         Close();
     }
 
+    /// <summary>Opens the About window.</summary>
     private void AboutMenuItem_Click(object? sender, RoutedEventArgs e)
     {
         _ = new AboutWindow().ShowDialog(this);
     }
 
+    /// <summary>Opens the application's local AppData folder in the file manager.</summary>
     private void OpenAppDataFolderMenuItem_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -7578,46 +8065,10 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Kills leftover chdman and 7-Zip processes from previous runs.</summary>
     private static void KillOrphanedProcesses()
     {
-        try
-        {
-            var currentProcessId = Environment.ProcessId;
-            var toolNames = new[] { "chdman", "7za", AppConfig.SevenZipExeName };
-
-            foreach (var toolName in toolNames)
-            {
-                try
-                {
-                    var processes = Process.GetProcessesByName(
-                        Path.GetFileNameWithoutExtension(toolName)
-                    );
-                    foreach (var process in processes)
-                    {
-                        try
-                        {
-                            if (process.Id != currentProcessId)
-                            {
-                                process.Kill(true);
-                                process.WaitForExit(3000);
-                            }
-                        }
-                        catch
-                        {
-                            // Process already exited or access denied
-                        }
-                    }
-                }
-                catch
-                {
-                    // Process name not found or access denied
-                }
-            }
-        }
-        catch
-        {
-            // Best-effort cleanup
-        }
+        KillProcessesByName(OrphanedToolProcessNames);
     }
 
     /// <summary>
@@ -7628,11 +8079,18 @@ internal partial class MainWindow : Window, IDisposable
     /// <param name="SkipReason">User-facing explanation, or null when there is something to convert.</param>
     private sealed record ResolvedInput(string? PathToConvert, bool ForceDvd, string? SkipReason)
     {
+        /// <summary>Creates a result that converts the given path.</summary>
+        /// <param name="path">File to convert.</param>
+        /// <param name="forceDvd">True when the file must be converted as a DVD image.</param>
+        /// <returns>A conversion result.</returns>
         internal static ResolvedInput Convert(string path, bool forceDvd)
         {
             return new ResolvedInput(path, forceDvd, null);
         }
 
+        /// <summary>Creates a result that skips the input with the given reason.</summary>
+        /// <param name="reason">User-facing explanation for the skip.</param>
+        /// <returns>A skip result.</returns>
         internal static ResolvedInput Skip(string reason)
         {
             return new ResolvedInput(null, false, reason);

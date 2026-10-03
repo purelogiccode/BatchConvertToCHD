@@ -10,6 +10,11 @@ namespace CSOSharp;
 ///     Provides functionality to open and read CSO/CISO (Compressed ISO) files.
 ///     Supports CSO v1 (deflate/zlib) and CSO v2/ZSO (LZ4) formats.
 /// </summary>
+/// <remarks>
+///     Missing files are reported through the returned <see cref="CsoError" />
+///     (<see cref="CsoError.FileNotFound" />) rather than exceptions, following the same convention
+///     as PBPSharp.
+/// </remarks>
 public sealed class CsoFile : IDisposable
 {
     private readonly bool _ownsStream;
@@ -142,8 +147,14 @@ public sealed class CsoFile : IDisposable
         header = default;
 
         Span<byte> headerBytes = stackalloc byte[CsoHeader.ExpectedHeaderSize];
-        if (stream.Read(headerBytes) != CsoHeader.ExpectedHeaderSize)
+        try
+        {
+            stream.ReadExactly(headerBytes);
+        }
+        catch (EndOfStreamException)
+        {
             return CsoError.InvalidHeader;
+        }
 
         var magic = BinaryPrimitives.ReadUInt32LittleEndian(headerBytes[..4]);
         if (magic != CsoHeader.MagicValue)
@@ -190,8 +201,14 @@ public sealed class CsoFile : IDisposable
         Span<byte> indexBytes = stackalloc byte[4];
         for (uint i = 0; i < totalEntries; i++)
         {
-            if (stream.Read(indexBytes) != 4)
+            try
+            {
+                stream.ReadExactly(indexBytes);
+            }
+            catch (EndOfStreamException)
+            {
                 return CsoError.CorruptIndex;
+            }
 
             indexTable[i] = BinaryPrimitives.ReadUInt32LittleEndian(indexBytes);
         }
@@ -245,7 +262,10 @@ public sealed class CsoFile : IDisposable
             var nextRawOffset = (long)(nextEntry & 0x7FFFFFFF) << Header.IndexOffsetShift;
             var compressedSize = (int)(nextRawOffset - rawOffset);
 
-            if (compressedSize <= 0)
+            if (compressedSize < 0)
+                return CsoError.CorruptIndex;
+
+            if (compressedSize == 0)
             {
                 Array.Clear(buffer, offset, (int)Header.BlockSize);
                 bytesRead = (int)Header.BlockSize;
@@ -256,7 +276,8 @@ public sealed class CsoFile : IDisposable
 
             if (isUncompressed)
             {
-                bytesRead = _stream.Read(buffer, offset, (int)Header.BlockSize);
+                _stream.ReadExactly(buffer, offset, (int)Header.BlockSize);
+                bytesRead = (int)Header.BlockSize;
                 return CsoError.None;
             }
 
@@ -299,7 +320,13 @@ public sealed class CsoFile : IDisposable
                 return CsoError.IoError;
 
             var dataOffset = 0;
-            if (actuallyRead >= 2 && compressedBuffer[0] == 0x78) dataOffset = 2;
+            if (actuallyRead >= 2)
+            {
+                var cmf = compressedBuffer[0];
+                var flg = compressedBuffer[1];
+                if ((cmf & 0x0F) == 8 && cmf >> 4 <= 7 && ((cmf << 8) + flg) % 31 == 0)
+                    dataOffset = 2;
+            }
 
             using var compressedStream = new MemoryStream(
                 compressedBuffer,
@@ -415,6 +442,8 @@ public sealed class CsoFile : IDisposable
         try
         {
             using var outputStream = File.Create(outputPath);
+            var totalSize = Header.UncompressedSize;
+            ulong written = 0;
             for (uint i = 0; i < Header.TotalBlocks; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -423,7 +452,12 @@ public sealed class CsoFile : IDisposable
                 if (error != CsoError.None)
                     return error;
 
-                outputStream.Write(buffer, 0, bytesRead);
+                var toWrite = (ulong)bytesRead;
+                if (written + toWrite > totalSize)
+                    toWrite = totalSize - written;
+
+                outputStream.Write(buffer, 0, (int)toWrite);
+                written += toWrite;
                 progress?.Invoke(i + 1, Header.TotalBlocks);
             }
 

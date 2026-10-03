@@ -123,7 +123,8 @@ Console.WriteLine(result.Success ? $"Wrote {result.OutputPath}" : $"Failed: {res
 ### Inspect a header without decoding
 
 `TryReadHeaderAsync` reads only the first 64 bytes, so a file can be checked before any space is committed
-to the restored image. It returns `null` when the file does not start with an ISZ header.
+to the restored image. It returns `null` when the file does not start with an ISZ header; I/O failures
+(for example a missing or unreadable file) are thrown.
 
 ```csharp
 using ISZSharp;
@@ -235,7 +236,7 @@ The entry point. A static class, because an ISZ is decoded in one pass to a file
 
 | Member | Description |
 |---|---|
-| `static Task<IszHeader?> TryReadHeaderAsync(string path, CancellationToken token)` | Reads and parses the header, or returns `null` when the file is not an ISZ image. |
+| `static Task<IszHeader?> TryReadHeaderAsync(string path, CancellationToken token)` | Reads and parses the header, or returns `null` when the file is not an ISZ image. I/O errors are thrown. |
 | `static Task<IszDecodeResult> DecodeAsync(string iszPath, string destinationPath, Action<string> onLog, CancellationToken token)` | Decompresses the image (whole or split) to `destinationPath`, reporting progress through `onLog`. |
 | `static string GetDecodedFileName(string iszPath)` | The name the restored image should be given: the stem plus `.iso`. |
 | `static string GetSegmentPath(string firstSegmentPath, int segmentIndex)` | Path of the given segment, following the first file's naming scheme. |

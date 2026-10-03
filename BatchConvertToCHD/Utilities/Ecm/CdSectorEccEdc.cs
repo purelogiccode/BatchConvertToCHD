@@ -117,6 +117,13 @@ internal static class CdSectorEccEdc
         WriteEdc(sector, UserDataOffset, 0x91C, Mode2Form2EdcOffset);
     }
 
+    /// <summary>
+    ///     Computes and writes the EDC for a region of a sector.
+    /// </summary>
+    /// <param name="sector">The sector to update.</param>
+    /// <param name="sourceOffset">Offset of the data the EDC covers.</param>
+    /// <param name="length">Number of bytes the EDC covers.</param>
+    /// <param name="destinationOffset">Offset where the 4-byte EDC is written.</param>
     private static void WriteEdc(
         Span<byte> sector,
         int sourceOffset,
@@ -128,6 +135,14 @@ internal static class CdSectorEccEdc
         BinaryPrimitives.WriteUInt32LittleEndian(sector[destinationOffset..], edc);
     }
 
+    /// <summary>
+    ///     Generates the P and Q parity bytes of a Mode 1 sector.
+    /// </summary>
+    /// <param name="sector">A full 2352-byte sector.</param>
+    /// <param name="zeroAddress">
+    ///     True for Mode 2 sectors, whose parity is computed with a zeroed address field so it stays
+    ///     valid in a 2336-byte-per-sector image.
+    /// </param>
     private static void GenerateEcc(Span<byte> sector, bool zeroAddress)
     {
         Span<byte> savedAddress = stackalloc byte[4];
@@ -161,6 +176,16 @@ internal static class CdSectorEccEdc
         if (zeroAddress) savedAddress.CopyTo(sector.Slice(AddressOffset, 4));
     }
 
+    /// <summary>
+    ///     Computes one ECC block (P or Q parity) over an interleaved region of the sector.
+    /// </summary>
+    /// <param name="sector">A full 2352-byte sector.</param>
+    /// <param name="sourceOffset">Offset of the data the parity covers.</param>
+    /// <param name="majorCount">Number of parity words to produce.</param>
+    /// <param name="minorCount">Bytes per parity word.</param>
+    /// <param name="majorMult">Interleave multiplier between major passes.</param>
+    /// <param name="minorInc">Interleave increment between minor passes.</param>
+    /// <param name="destinationOffset">Offset where the parity bytes are written.</param>
     private static void ComputeEccBlock(
         Span<byte> sector,
         int sourceOffset,
@@ -175,7 +200,7 @@ internal static class CdSectorEccEdc
 
         for (var major = 0; major < majorCount; major++)
         {
-            var index = ((major >> 1) * majorMult) + (major & 1);
+            var index = (major >> 1) * majorMult + (major & 1);
             byte eccA = 0;
             byte eccB = 0;
 

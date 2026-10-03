@@ -1,5 +1,4 @@
 using System.Net;
-using System.Reflection;
 using System.Text;
 using BatchConvertToCHD.Services;
 
@@ -16,39 +15,17 @@ public class BugReportServiceTests
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
 
-        var apiUrlField = typeof(BugReportService).GetField(
-            "_apiUrl",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        var apiKeyField = typeof(BugReportService).GetField(
-            "_apiKey",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        var appNameField = typeof(BugReportService).GetField(
-            "_applicationName",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-
-        Assert.NotNull(apiUrlField);
-        Assert.NotNull(apiKeyField);
-        Assert.NotNull(appNameField);
-        Assert.Equal(TestApiUrl, apiUrlField.GetValue(service));
-        Assert.Equal(TestApiKey, apiKeyField.GetValue(service));
-        Assert.Equal(TestAppName, appNameField.GetValue(service));
+        Assert.Equal(TestApiUrl, service.ApiUrl);
+        Assert.Equal(TestApiKey, service.ApiKey);
+        Assert.Equal(TestAppName, service.ApplicationName);
     }
 
     [Fact]
     public void BuildFormattedReportIncludesMessageAndAppName()
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
-        var method = typeof(BugReportService).GetMethod(
-            "BuildFormattedReport",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(method);
 
-        var result = method.Invoke(service, ["Test error message", null]) as string;
-        Assert.NotNull(result);
+        var result = service.BuildFormattedReport("Test error message", null);
         Assert.Contains("Test error message", result, StringComparison.Ordinal);
         Assert.Contains(TestAppName, result, StringComparison.Ordinal);
     }
@@ -57,15 +34,9 @@ public class BugReportServiceTests
     public void BuildFormattedReportIncludesExceptionDetails()
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
-        var method = typeof(BugReportService).GetMethod(
-            "BuildFormattedReport",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(method);
 
         var ex = new InvalidOperationException("Something went wrong");
-        var result = method.Invoke(service, ["Error summary", ex]) as string;
-        Assert.NotNull(result);
+        var result = service.BuildFormattedReport("Error summary", ex);
         Assert.Contains("Error summary", result, StringComparison.Ordinal);
         Assert.Contains("InvalidOperationException", result, StringComparison.Ordinal);
         Assert.Contains("Something went wrong", result, StringComparison.Ordinal);
@@ -75,18 +46,12 @@ public class BugReportServiceTests
     public void BuildFormattedReportIncludesInnerException()
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
-        var method = typeof(BugReportService).GetMethod(
-            "BuildFormattedReport",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(method);
 
 #pragma warning disable MA0015
         var inner = new ArgumentException("Inner error");
 #pragma warning restore MA0015
         var outer = new InvalidOperationException("Outer error", inner);
-        var result = method.Invoke(service, ["Error summary", outer]) as string;
-        Assert.NotNull(result);
+        var result = service.BuildFormattedReport("Error summary", outer);
         Assert.Contains("Inner Exception", result, StringComparison.Ordinal);
         Assert.Contains("Inner error", result, StringComparison.Ordinal);
     }
@@ -94,28 +59,15 @@ public class BugReportServiceTests
     [Fact]
     public void GetExceptionStackTraceNullReturnsNa()
     {
-        var method = typeof(BugReportService).GetMethod(
-            "GetExceptionStackTrace",
-            BindingFlags.NonPublic | BindingFlags.Static
-        );
-        Assert.NotNull(method);
-
-        var result = method.Invoke(null, [null]) as string;
+        var result = BugReportService.GetExceptionStackTrace(null);
         Assert.Equal("N/A", result);
     }
 
     [Fact]
     public void GetExceptionStackTraceIncludesExceptionDetails()
     {
-        var method = typeof(BugReportService).GetMethod(
-            "GetExceptionStackTrace",
-            BindingFlags.NonPublic | BindingFlags.Static
-        );
-        Assert.NotNull(method);
-
         var ex = new InvalidOperationException("Test error");
-        var result = method.Invoke(null, [ex]) as string;
-        Assert.NotNull(result);
+        var result = BugReportService.GetExceptionStackTrace(ex);
         Assert.Contains("InvalidOperationException", result, StringComparison.Ordinal);
         Assert.Contains("Test error", result, StringComparison.Ordinal);
     }
@@ -123,19 +75,12 @@ public class BugReportServiceTests
     [Fact]
     public void GetExceptionStackTraceHandlesNestedExceptions()
     {
-        var method = typeof(BugReportService).GetMethod(
-            "GetExceptionStackTrace",
-            BindingFlags.NonPublic | BindingFlags.Static
-        );
-        Assert.NotNull(method);
-
         var deep = new FormatException("Deep");
 #pragma warning disable MA0015
         var mid = new ArgumentException("Mid", deep);
 #pragma warning restore MA0015
         var top = new InvalidOperationException("Top", mid);
-        var result = method.Invoke(null, [top]) as string;
-        Assert.NotNull(result);
+        var result = BugReportService.GetExceptionStackTrace(top);
         Assert.Contains("Top", result, StringComparison.Ordinal);
         Assert.Contains("Mid", result, StringComparison.Ordinal);
         Assert.Contains("Deep", result, StringComparison.Ordinal);
@@ -144,46 +89,30 @@ public class BugReportServiceTests
     [Fact]
     public void GetExceptionStackTraceLimitsDepth()
     {
-        var method = typeof(BugReportService).GetMethod(
-            "GetExceptionStackTrace",
-            BindingFlags.NonPublic | BindingFlags.Static
-        );
-        Assert.NotNull(method);
-
         var inner = new InvalidOperationException("deepest");
         var current = inner;
         for (var i = 0; i < 10; i++) current = new InvalidOperationException($"level {i}", current);
 
-        var result = method.Invoke(null, [current]) as string;
-        Assert.NotNull(result);
+        var result = BugReportService.GetExceptionStackTrace(current);
+        Assert.Contains("level 9", result, StringComparison.Ordinal);
+        Assert.Contains("level 5", result, StringComparison.Ordinal);
+        Assert.DoesNotContain("level 4", result, StringComparison.Ordinal);
+        Assert.DoesNotContain("deepest", result, StringComparison.Ordinal);
     }
 
     [Fact]
     public void GetApplicationVersionReturnsValidValue()
     {
-        var method = typeof(BugReportService).GetMethod(
-            "GetApplicationVersion",
-            BindingFlags.NonPublic | BindingFlags.Static
-        );
-        Assert.NotNull(method);
-
-        var result = method.Invoke(null, null) as string;
-        Assert.NotNull(result);
+        var result = BugReportService.GetApplicationVersion();
         Assert.NotEmpty(result);
     }
 
     [Fact]
     public void AppendExceptionDetailsWithNullStackTraceDoesNotCrash()
     {
-        var method = typeof(BugReportService).GetMethod(
-            "AppendExceptionDetails",
-            BindingFlags.NonPublic | BindingFlags.Static
-        );
-        Assert.NotNull(method);
-
         var sb = new StringBuilder();
         var ex = new InvalidOperationException("No stack");
-        var record = Record.Exception(() => method.Invoke(null, [sb, ex, 0]));
+        var record = Record.Exception(() => BugReportService.AppendExceptionDetails(sb, ex, 0));
         Assert.Null(record);
         Assert.Contains("No stack", sb.ToString(), StringComparison.Ordinal);
     }
@@ -204,18 +133,12 @@ public class BugReportServiceTests
     public void BuildFormattedReportExceptionWithNullFieldsDoesNotCrash()
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
-        var method = typeof(BugReportService).GetMethod(
-            "BuildFormattedReport",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(method);
 
         var ex = Record.Exception(() =>
         {
             // Exception with no message and no stack trace
             var customEx = new InvalidOperationException(null);
-            var result = method.Invoke(service, ["Error summary", customEx]) as string;
-            Assert.NotNull(result);
+            var result = service.BuildFormattedReport("Error summary", customEx);
             Assert.Contains("Error summary", result, StringComparison.Ordinal);
         });
 
@@ -226,14 +149,8 @@ public class BugReportServiceTests
     public void BuildFormattedReportEmptyMessageDoesNotCrash()
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
-        var method = typeof(BugReportService).GetMethod(
-            "BuildFormattedReport",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(method);
 
-        var result = method.Invoke(service, ["", null]) as string;
-        Assert.NotNull(result);
+        var result = service.BuildFormattedReport("", null);
         Assert.Contains("=== Error Details ===", result, StringComparison.Ordinal);
     }
 
@@ -241,16 +158,10 @@ public class BugReportServiceTests
     public void BuildFormattedReportExceptionWithoutStackTraceDoesNotCrash()
     {
         var service = new BugReportService(TestApiUrl, TestApiKey, TestAppName);
-        var method = typeof(BugReportService).GetMethod(
-            "BuildFormattedReport",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(method);
 
         // Create exception using parameterless constructor which may not populate StackTrace immediately
         var customEx = new InvalidOperationException("Error with no explicit stack");
-        var result = method.Invoke(service, ["Error with null stack", customEx]) as string;
-        Assert.NotNull(result);
+        var result = service.BuildFormattedReport("Error with null stack", customEx);
         Assert.Contains("Error with null stack", result, StringComparison.Ordinal);
         Assert.Contains("InvalidOperationException", result, StringComparison.Ordinal);
     }
@@ -258,14 +169,10 @@ public class BugReportServiceTests
     [Fact]
     public void AppendExceptionDetailsHandlesExceptionWithoutSource()
     {
-        var method = typeof(BugReportService).GetMethod(
-            "AppendExceptionDetails",
-            BindingFlags.NonPublic | BindingFlags.Static
-        );
-        Assert.NotNull(method);
-
         var sb = new StringBuilder();
-        var ex = Record.Exception(() => method.Invoke(null, [sb, new InvalidOperationException(), 0]));
+        var ex = Record.Exception(
+            () => BugReportService.AppendExceptionDetails(sb, new InvalidOperationException(), 0)
+        );
 
         Assert.Null(ex);
         Assert.Contains("InvalidOperationException", sb.ToString(), StringComparison.Ordinal);
@@ -363,7 +270,7 @@ public class BugReportServiceTests
     }
 
     [Fact]
-    public async Task SendBugReportAsyncReturnsTrueOnBadRequest()
+    public async Task SendBugReportAsyncReturnsFalseOnBadRequest()
     {
         var handler = new FakeHttpMessageHandler(
             HttpStatusCode.BadRequest,
@@ -475,9 +382,32 @@ public class BugReportServiceTests
         "Failed to extract PBP file: Ridge Racer Type 4.PBP (650,000,000 bytes) - Failed to extract disc 1 of 2: DecompressionError (code 8)"
     )]
     [InlineData("Failed to read hunk 0: Chderrdecompressionerror")]
+    [InlineData("Unhandled Exception from AppDomain.UnhandledException")]
+    [InlineData("Unhandled Exception from Dispatcher.UnhandledException")]
+    [InlineData("Unhandled Exception from TaskScheduler.UnobservedTaskException")]
     public void IsExcludedFromBugReport_NormalMessages_ReturnsFalse(string message)
     {
         Assert.False(BugReportService.IsExcludedFromBugReport(message));
+    }
+
+    [Theory]
+    [InlineData("AppDomain.UnhandledException")]
+    [InlineData("Dispatcher.UnhandledException")]
+    [InlineData("TaskScheduler.UnobservedTaskException")]
+    [InlineData("dispatcher.unhandledexception")]
+    public void IsDirectlyReportedByApp_UnhandledExceptionSources_ReturnsTrue(string message)
+    {
+        Assert.True(BugReportService.IsDirectlyReportedByApp(message));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("A real application error occurred")]
+    [InlineData("Unhandled exception in conversion pipeline")]
+    [InlineData("Failed to start CHDSharp")]
+    public void IsDirectlyReportedByApp_OtherMessages_ReturnsFalse(string message)
+    {
+        Assert.False(BugReportService.IsDirectlyReportedByApp(message));
     }
 
     [Theory]

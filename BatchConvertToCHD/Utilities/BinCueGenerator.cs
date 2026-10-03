@@ -36,11 +36,23 @@ internal static class BinCueGenerator
             .EndsWith(AutoCueMarker + FileExtensions.Cue, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    ///     Builds the text of a single-track auto-generated cue.
+    /// </summary>
+    /// <param name="binFileName">Name of the referenced bin file.</param>
+    /// <param name="mode">The track mode to write (e.g. "MODE2/2352").</param>
+    /// <returns>The cue file content.</returns>
     internal static string BuildCueContent(string binFileName, string mode)
     {
         return $"FILE \"{binFileName}\" BINARY\r\n  TRACK 01 {mode}\r\n    INDEX 01 00:00:00\r\n";
     }
 
+    /// <summary>
+    ///     Returns the fallback track mode to try when the given mode fails (MODE2 → MODE1 and
+    ///     vice versa).
+    /// </summary>
+    /// <param name="mode">The mode that failed.</param>
+    /// <returns>The alternate mode.</returns>
     internal static string GetAlternateMode(string mode)
     {
         return string.Equals(mode, Mode2, StringComparison.Ordinal) ? Mode1 : Mode2;
@@ -70,7 +82,7 @@ internal static class BinCueGenerator
             }
         }
 #pragma warning disable RCS1075
-        catch (Exception)
+        catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore RCS1075
         {
             // ignored
@@ -94,6 +106,11 @@ internal static class BinCueGenerator
             .ConfigureAwait(false);
     }
 
+    /// <summary>
+    ///     Derives the bin file name from an auto-generated cue path when the cue cannot be read.
+    /// </summary>
+    /// <param name="cuePath">Path of the auto-generated cue.</param>
+    /// <returns>The derived bin file name.</returns>
     private static string GetFallbackBinName(string cuePath)
     {
         var baseName = Path.GetFileNameWithoutExtension(cuePath); // "Game.autocue"
@@ -103,6 +120,12 @@ internal static class BinCueGenerator
         return baseName + FileExtensions.Bin;
     }
 
+    /// <summary>
+    ///     Reads the bin file name from the first FILE line of a cue.
+    /// </summary>
+    /// <param name="cuePath">Path of the cue to read.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>The referenced file name, or null when none could be read.</returns>
     private static async Task<string?> ReadReferencedBinNameAsync(
         string cuePath,
         CancellationToken token
@@ -125,7 +148,7 @@ internal static class BinCueGenerator
             }
         }
 #pragma warning disable RCS1075
-        catch (Exception)
+        catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore RCS1075
         {
             // ignored

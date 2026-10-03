@@ -135,6 +135,12 @@ internal static class RetryingFileOperations
         return false;
     }
 
+    /// <summary>
+    ///     Waits for the backoff delay of the given attempt.
+    /// </summary>
+    /// <param name="backoffMsProvider">Optional backoff override (used by tests).</param>
+    /// <param name="attempt">The 0-based attempt number.</param>
+    /// <param name="token">Cancellation token.</param>
     private static async Task DelayAsync(
         Func<int, int>? backoffMsProvider,
         int attempt,
@@ -145,6 +151,10 @@ internal static class RetryingFileOperations
         if (delayMs > 0) await Task.Delay(delayMs, token).ConfigureAwait(false);
     }
 
+    /// <summary>
+    ///     Clears the ReadOnly attribute on <paramref name="path" /> when the file exists.
+    /// </summary>
+    /// <param name="path">Path of the file to make writable.</param>
     private static void TryClearReadOnly(string path)
     {
         try

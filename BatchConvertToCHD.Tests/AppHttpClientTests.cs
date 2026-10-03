@@ -1,5 +1,3 @@
-using System.Net.Security;
-using System.Reflection;
 using System.Security.Authentication;
 using BatchConvertToCHD.Services;
 
@@ -36,19 +34,11 @@ public class AppHttpClientTests
     [Fact]
     public void ClientUsesTls12And13()
     {
-        var handlerField = typeof(AppHttpClient).GetField(
-            "_handler",
-            BindingFlags.NonPublic | BindingFlags.Static
-        );
-        Assert.NotNull(handlerField);
-        var handler = handlerField.GetValue(null);
+        _ = AppHttpClient.Client;
+        var handler = AppHttpClient.ExistingHandler;
         Assert.NotNull(handler);
 
-        var sslOptionsProp = handler
-            .GetType()
-            .GetProperty("SslOptions", BindingFlags.Public | BindingFlags.Instance);
-        Assert.NotNull(sslOptionsProp);
-        var sslOptions = sslOptionsProp.GetValue(handler) as SslClientAuthenticationOptions;
+        var sslOptions = handler.SslOptions;
         Assert.NotNull(sslOptions);
 
         Assert.True(
@@ -69,19 +59,8 @@ public class AppHttpClientTests
 
         AppHttpClient.Dispose();
 
-        var clientField = typeof(AppHttpClient).GetField(
-            "_client",
-            BindingFlags.NonPublic | BindingFlags.Static
-        );
-        Assert.NotNull(clientField);
-        Assert.Null(clientField.GetValue(null));
-
-        var handlerField = typeof(AppHttpClient).GetField(
-            "_handler",
-            BindingFlags.NonPublic | BindingFlags.Static
-        );
-        Assert.NotNull(handlerField);
-        Assert.Null(handlerField.GetValue(null));
+        Assert.Null(AppHttpClient.ExistingClient);
+        Assert.Null(AppHttpClient.ExistingHandler);
     }
 
     [Fact]

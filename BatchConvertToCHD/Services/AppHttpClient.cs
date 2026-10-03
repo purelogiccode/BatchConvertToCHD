@@ -13,8 +13,6 @@ namespace BatchConvertToCHD.Services;
 /// </summary>
 internal static class AppHttpClient
 {
-    private static SocketsHttpHandler? _handler;
-    private static HttpClient? _client;
     private static readonly Lock Lock = new();
     private static readonly ILogger Logger = Log.ForContext(typeof(AppHttpClient));
 
@@ -28,9 +26,9 @@ internal static class AppHttpClient
         {
             lock (Lock)
             {
-                if (_client == null)
+                if (ExistingClient == null)
                 {
-                    _handler = new SocketsHttpHandler
+                    ExistingHandler = new SocketsHttpHandler
                     {
                         SslOptions = new SslClientAuthenticationOptions
                         {
@@ -40,15 +38,37 @@ internal static class AppHttpClient
                         },
                         PooledConnectionLifetime = TimeSpan.FromMinutes(10)
                     };
-                    _client = new HttpClient(_handler);
-                    _client.DefaultRequestHeaders.Add("Accept", "application/json");
+                    ExistingClient = new HttpClient(ExistingHandler);
+                    ExistingClient.DefaultRequestHeaders.Add("Accept", "application/json");
                 }
 
-                return _client;
+                return ExistingClient;
             }
         }
     }
 
+    /// <summary>
+    ///     Gets the shared handler once it has been created, or <see langword="null" />. Exposed for
+    ///     diagnostics and tests; accessing <see cref="Client" /> creates it on demand.
+    /// </summary>
+    internal static SocketsHttpHandler? ExistingHandler { get; private set; }
+
+    /// <summary>
+    ///     Gets the shared client once it has been created, or <see langword="null" />. Exposed for
+    ///     diagnostics and tests; accessing <see cref="Client" /> creates it on demand.
+    /// </summary>
+    internal static HttpClient? ExistingClient { get; private set; }
+
+    /// <summary>
+    ///     TLS validation callback: accepts a hostname mismatch only when no other validation error
+    ///     is present (typically a corporate proxy or firewall re-signing traffic), and rejects all
+    ///     other validation errors.
+    /// </summary>
+    /// <param name="sender">The request sender.</param>
+    /// <param name="certificate">The server certificate.</param>
+    /// <param name="chain">The certificate chain.</param>
+    /// <param name="sslPolicyErrors">The validation errors found.</param>
+    /// <returns><see langword="true" /> when the connection may proceed.</returns>
     private static bool ServerCertificateValidationCallback(
         object sender,
         X509Certificate? certificate,
@@ -59,7 +79,7 @@ internal static class AppHttpClient
         if (sslPolicyErrors == SslPolicyErrors.None)
             return true;
 
-        if (sslPolicyErrors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch))
+        if ((sslPolicyErrors & ~SslPolicyErrors.RemoteCertificateNameMismatch) == SslPolicyErrors.None)
         {
             var subject =
                 (certificate as X509Certificate2)?.Subject ?? certificate?.Subject ?? "unknown";
@@ -85,10 +105,10 @@ internal static class AppHttpClient
     {
         lock (Lock)
         {
-            _client?.Dispose();
-            _client = null;
-            _handler?.Dispose();
-            _handler = null;
+            ExistingClient?.Dispose();
+            ExistingClient = null;
+            ExistingHandler?.Dispose();
+            ExistingHandler = null;
         }
     }
 }

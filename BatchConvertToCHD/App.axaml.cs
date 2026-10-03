@@ -7,6 +7,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using BatchConvertToCHD.Dialogs;
+using BatchConvertToCHD.Models;
 using BatchConvertToCHD.Services;
 using Serilog;
 using Serilog.Events;
@@ -110,17 +111,20 @@ public class App : Application
             ? $"Global\\{AppConfig.ApplicationName}_SingleInstance"
             : $"{AppConfig.ApplicationName}_SingleInstance";
 
-        _singleInstanceMutex = new Mutex(false, name, out var createdNew);
+        _singleInstanceMutex = new Mutex(false, name, out _);
+
+        var acquired = false;
         try
         {
-            _singleInstanceMutex.WaitOne();
+            acquired = _singleInstanceMutex.WaitOne(0);
         }
         catch (AbandonedMutexException)
         {
             // Previous instance terminated abnormally; we now own the mutex
+            acquired = true;
         }
 
-        if (createdNew) return true;
+        if (acquired) return true;
 
         _singleInstanceMutex.Dispose();
         _singleInstanceMutex = null;

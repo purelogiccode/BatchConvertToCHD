@@ -23,6 +23,12 @@ namespace ISZSharp;
 ///     reported rather than guessed: a half-decompressed image that chdman happily accepts is the one
 ///     outcome worth avoiding, so a failed decode deletes its partial output.
 /// </summary>
+/// <remarks>
+///     <see cref="TryReadHeaderAsync" /> returns <see langword="null" /> when the file exists but
+///     does not start with an ISZ header; I/O failures (missing or unreadable files) propagate as
+///     exceptions. <see cref="DecodeAsync" /> never throws for data problems and reports them
+///     through its <see cref="IszDecodeResult" />.
+/// </remarks>
 public static class IszDecoder
 {
     /// <summary>Read and write buffer for the output image.</summary>
@@ -59,7 +65,10 @@ public static class IszDecoder
 
             return IszHeader.TryRead(buffer.AsSpan(0, read));
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
+            when (ex is not OperationCanceledException
+                      and not IOException
+                      and not UnauthorizedAccessException)
         {
             return null;
         }
@@ -568,10 +577,18 @@ public static class IszDecoder
                             storedLength,
                             plain,
                             index,
+                            IsFinalChunk(index, chunkCount, written, chunkSize, expected),
                             token
                         )
                         .ConfigureAwait(false),
-                    _ => await UnBzip2Async(compressed, storedLength, plain, index, token)
+                    _ => await UnBzip2Async(
+                            compressed,
+                            storedLength,
+                            plain,
+                            index,
+                            IsFinalChunk(index, chunkCount, written, chunkSize, expected),
+                            token
+                        )
                         .ConfigureAwait(false)
                 };
 
@@ -587,7 +604,7 @@ public static class IszDecoder
                 onLog(
                     $" Decompressed {percent.ToString(CultureInfo.InvariantCulture)}% of the ISZ image."
                 );
-                nextProgressPercent = percent - (percent % ProgressStepPercent) + ProgressStepPercent;
+                nextProgressPercent = percent - percent % ProgressStepPercent + ProgressStepPercent;
             }
         }
 
@@ -649,7 +666,7 @@ public static class IszDecoder
         ulong raw = 0;
         for (var i = 0; i < pointerLength; i++) raw |= (ulong)chunkTable[offset + i] << (8 * i);
 
-        var typeShift = (8 * pointerLength) - 2;
+        var typeShift = 8 * pointerLength - 2;
         var type = (IszChunkType)(int)((raw >> typeShift) & 0x03);
         var length = (int)(raw & ((1UL << typeShift) - 1));
 
@@ -664,19 +681,41 @@ public static class IszDecoder
         return storedLength;
     }
 
+    /// <summary>
+    ///     Whether the chunk at <paramref name="index" /> is the last one that contributes bytes to
+    ///     the image, and may therefore legitimately decompress short.
+    /// </summary>
+    /// <param name="index">Zero-based chunk index.</param>
+    /// <param name="chunkCount">Total number of chunks.</param>
+    /// <param name="written">Bytes written so far.</param>
+    /// <param name="chunkSize">Uncompressed chunk size in bytes.</param>
+    /// <param name="expected">Total image size in bytes.</param>
+    /// <returns><see langword="true" /> for the final contributing chunk.</returns>
+    private static bool IsFinalChunk(
+        uint index,
+        uint chunkCount,
+        long written,
+        int chunkSize,
+        long expected
+    )
+    {
+        return index + 1 >= chunkCount || written + chunkSize >= expected;
+    }
+
     /// <summary>Inflates a zlib-wrapped deflate chunk.</summary>
     private static async Task<int> InflateAsync(
         byte[] compressed,
         int storedLength,
         byte[] plain,
         uint index,
+        bool isFinalChunk,
         CancellationToken token
     )
     {
         await using var input = new MemoryStream(compressed, 0, storedLength, false);
         await using var inflate = new ZLibStream(input, CompressionMode.Decompress);
 
-        return await FillAsync(inflate, plain, index, token).ConfigureAwait(false);
+        return await FillAsync(inflate, plain, index, isFinalChunk, token).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -688,6 +727,7 @@ public static class IszDecoder
         int storedLength,
         byte[] plain,
         uint index,
+        bool isFinalChunk,
         CancellationToken token
     )
     {
@@ -706,26 +746,43 @@ public static class IszDecoder
             cancellationToken: token
         );
 
-        return await FillAsync(bzip2, plain, index, token).ConfigureAwait(false);
+        return await FillAsync(bzip2, plain, index, isFinalChunk, token).ConfigureAwait(false);
     }
 
     /// <summary>
     ///     Reads a decompressed chunk into <paramref name="plain" />. A chunk that does not fit is a
     ///     corrupt table rather than a large chunk - the spec caps the decompressed size at the chunk
     ///     size - and it has to be an error, because silently keeping the first part of it would put a
-    ///     gap in the middle of the image that still converts.
+    ///     gap in the middle of the image that still converts. A chunk that decompresses short is only
+    ///     allowed when it is the final chunk of the image.
     /// </summary>
+    /// <param name="source">The decompression stream.</param>
+    /// <param name="plain">Buffer that receives the chunk.</param>
+    /// <param name="index">Zero-based chunk index.</param>
+    /// <param name="isFinalChunk">Whether this chunk may legitimately be short.</param>
+    /// <param name="token">Cancellation token.</param>
     private static async Task<int> FillAsync(
         Stream source,
         byte[] plain,
         uint index,
+        bool isFinalChunk,
         CancellationToken token
     )
     {
         var produced = await source
             .ReadAtLeastAsync(plain, plain.Length, false, token)
             .ConfigureAwait(false);
-        if (produced < plain.Length) return produced;
+        if (produced < plain.Length)
+        {
+            if (!isFinalChunk)
+            {
+                throw new InvalidDataException(
+                    $"chunk {index.ToString("N0", CultureInfo.InvariantCulture)} decompressed to {produced.ToString("N0", CultureInfo.InvariantCulture)} bytes, less than the chunk size the header declares"
+                );
+            }
+
+            return produced;
+        }
 
         var overflow = new byte[1];
         if (await source.ReadAsync(overflow, token).ConfigureAwait(false) > 0)

@@ -16,7 +16,6 @@ internal static class FileExtensions
     internal const string Sub = ".sub";
     internal const string Bin = ".bin";
     internal const string Mds = ".mds";
-    internal const string Mdf = ".mdf";
     internal const string Mdx = ".mdx";
     internal const string Ecm = ".ecm";
 

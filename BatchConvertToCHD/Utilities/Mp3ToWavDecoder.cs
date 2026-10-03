@@ -5,6 +5,7 @@ using NAudio.MediaFoundation;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 #endif
+using BatchConvertToCHD.Interfaces;
 
 namespace BatchConvertToCHD.Utilities;
 
@@ -168,6 +169,12 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
     }
 
 #if WINDOWS
+    /// <summary>
+    ///     Decodes with Windows Media Foundation. Serialized because NAudio's startup flag is not
+    ///     thread-safe.
+    /// </summary>
+    /// <param name="mp3Path">Path of the MP3 file to decode.</param>
+    /// <param name="wavPath">Destination path for the decoded WAV file.</param>
     [SupportedOSPlatform("windows")]
     private static void DecodeWithMediaFoundation(string mp3Path, string wavPath)
     {
@@ -188,6 +195,12 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
         }
     }
 
+    /// <summary>
+    ///     Decodes with NAudio's ACM-backed MP3 reader; the fallback when Media Foundation is not
+    ///     available (Windows N editions).
+    /// </summary>
+    /// <param name="mp3Path">Path of the MP3 file to decode.</param>
+    /// <param name="wavPath">Destination path for the decoded WAV file.</param>
     [SupportedOSPlatform("windows")]
     private static void DecodeWithBuiltInDecoder(string mp3Path, string wavPath)
     {
@@ -307,6 +320,11 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
         return sample;
     }
 
+    /// <summary>
+    ///     Writes the sample provider as the 44100 Hz stereo 16-bit PCM WAV chdman requires.
+    /// </summary>
+    /// <param name="source">The decoded sample provider.</param>
+    /// <param name="wavPath">Destination path for the WAV file.</param>
     private static void WriteChdmanCompatibleWav(ISampleProvider source, string wavPath)
     {
         // Force 16-bit PCM output — some Media Foundation codecs produce IEEE float,

@@ -97,11 +97,20 @@ internal class FileItem : INotifyPropertyChanged
     /// </summary>
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    /// <summary>
+    ///     Raises <see cref="PropertyChanged" /> for the given property.
+    /// </summary>
+    /// <param name="propertyName">Name of the changed property (supplied by the compiler).</param>
     protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
+    /// <summary>
+    ///     Formats a byte count as a human-readable size (e.g. "1.5 GB").
+    /// </summary>
+    /// <param name="bytes">The size in bytes.</param>
+    /// <returns>The formatted size.</returns>
     private static string FormatSize(long bytes)
     {
         string[] suffix = ["B", "KB", "MB", "GB", "TB"];

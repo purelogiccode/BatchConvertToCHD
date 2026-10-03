@@ -131,10 +131,22 @@ internal class BugReportService
         "will fall back to temp-copy extraction"
     ];
 
-    private readonly string _apiKey;
-    private readonly string _apiUrl;
-    private readonly string _applicationName;
+    private static readonly string[] DirectlyReportedMessagePatterns =
+    [
+        "AppDomain.UnhandledException",
+        "Dispatcher.UnhandledException",
+        "TaskScheduler.UnobservedTaskException"
+    ];
     private readonly HttpClient _httpClient;
+
+    /// <summary>Gets the API endpoint URL. Exposed for diagnostics and tests.</summary>
+    internal string ApiUrl { get; }
+
+    /// <summary>Gets the API key used for authentication. Exposed for diagnostics and tests.</summary>
+    internal string ApiKey { get; }
+
+    /// <summary>Gets the application name sent with reports. Exposed for diagnostics and tests.</summary>
+    internal string ApplicationName { get; }
 
     internal BugReportService(string apiUrl, string apiKey, string applicationName)
         : this(apiUrl, apiKey, applicationName, AppHttpClient.Client)
@@ -148,16 +160,41 @@ internal class BugReportService
         HttpClient httpClient
     )
     {
-        _apiUrl = apiUrl ?? throw new ArgumentNullException(nameof(apiUrl));
-        _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
-        _applicationName =
+        ApiUrl = apiUrl ?? throw new ArgumentNullException(nameof(apiUrl));
+        ApiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+        ApplicationName =
             applicationName ?? throw new ArgumentNullException(nameof(applicationName));
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
     }
 
+    /// <summary>
+    ///     Returns whether the message matches a known-noise pattern that must never be sent to the
+    ///     bug-report API (user-data, environment and installation problems).
+    /// </summary>
+    /// <param name="message">The rendered log message to test.</param>
+    /// <returns><see langword="true" /> when the message must not be reported.</returns>
     internal static bool IsExcludedFromBugReport(string message)
     {
         foreach (var pattern in ExcludedMessagePatterns)
+        {
+            if (message.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    ///     Returns whether the message is an unhandled-exception log entry that the application
+    ///     reports through its own exception handlers. Those handlers send the report directly
+    ///     (synchronously for fatal AppDomain exceptions), so the Serilog sink must not forward the
+    ///     same event as well or every crash lands in the bug tracker twice.
+    /// </summary>
+    /// <param name="message">The rendered log message to test.</param>
+    /// <returns><see langword="true" /> when the sink must not forward the message.</returns>
+    internal static bool IsDirectlyReportedByApp(string message)
+    {
+        foreach (var pattern in DirectlyReportedMessagePatterns)
         {
             if (message.Contains(pattern, StringComparison.OrdinalIgnoreCase))
                 return true;
@@ -173,7 +210,7 @@ internal class BugReportService
     /// <param name="ex">The exception object, if available</param>
     /// <param name="token">The cancellation token to observe</param>
     /// <returns>A task representing the asynchronous operation</returns>
-    public virtual async Task<bool> SendBugReportAsync(
+    internal virtual async Task<bool> SendBugReportAsync(
         string message,
         Exception? ex = null,
         CancellationToken token = default
@@ -195,7 +232,7 @@ internal class BugReportService
             var requestPayload = new
             {
                 message = formattedMessage,
-                applicationName = _applicationName,
+                applicationName = ApplicationName,
                 version = versionString,
                 userInfo = Environment.UserName,
                 environment = AppConfig.BugReportEnvironment,
@@ -204,11 +241,11 @@ internal class BugReportService
 
             var content = JsonContent.Create(requestPayload);
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, _apiUrl);
-            request.Headers.Add("X-API-KEY", _apiKey);
+            using var request = new HttpRequestMessage(HttpMethod.Post, ApiUrl);
+            request.Headers.Add("X-API-KEY", ApiKey);
             request.Content = content;
 
-            var response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
+            using var response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
 
             return response.IsSuccessStatusCode;
         }
@@ -226,14 +263,14 @@ internal class BugReportService
     /// <summary>
     ///     Builds a formatted report string with all details for the message field
     /// </summary>
-    private string BuildFormattedReport(string message, Exception? ex)
+    internal string BuildFormattedReport(string message, Exception? ex)
     {
         var sb = new StringBuilder();
 
         // === Environment Details ===
         sb.AppendLine("=== Environment Details ===");
         sb.AppendLine(CultureInfo.InvariantCulture, $"Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        sb.AppendLine(CultureInfo.InvariantCulture, $"Application Name: {_applicationName}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"Application Name: {ApplicationName}");
         sb.AppendLine(
             CultureInfo.InvariantCulture,
             $"Application Version: {Assembly.GetExecutingAssembly().GetName().Version}"
@@ -251,9 +288,14 @@ internal class BugReportService
             CultureInfo.InvariantCulture,
             $"Bitness: {(Environment.Is64BitProcess ? "64-bit" : "32-bit")}"
         );
+        var osName = OperatingSystem.IsWindows()
+            ? "Windows"
+            : OperatingSystem.IsMacOS()
+                ? "MacOsX"
+                : "Linux";
         sb.AppendLine(
             CultureInfo.InvariantCulture,
-            $"Windows Version: {Environment.OSVersion.Version}"
+            $"{osName} Version: {Environment.OSVersion.Version}"
         );
         sb.AppendLine(
             CultureInfo.InvariantCulture,
@@ -284,7 +326,7 @@ internal class BugReportService
     /// <summary>
     ///     Appends exception details to the StringBuilder
     /// </summary>
-    private static void AppendExceptionDetails(StringBuilder sb, Exception exception, int level = 0)
+    internal static void AppendExceptionDetails(StringBuilder sb, Exception exception, int level = 0)
     {
         const int maxDepth = 5;
         while (level < maxDepth)
@@ -334,7 +376,7 @@ internal class BugReportService
     /// <summary>
     ///     Gets exception stack trace for structured API fields
     /// </summary>
-    private static string GetExceptionStackTrace(Exception? ex)
+    internal static string GetExceptionStackTrace(Exception? ex)
     {
         if (ex == null)
             return "N/A";
@@ -347,7 +389,7 @@ internal class BugReportService
     /// <summary>
     ///     Gets environment details for structured API fields
     /// </summary>
-    private static string GetApplicationVersion()
+    internal static string GetApplicationVersion()
     {
         return Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
     }

@@ -83,7 +83,18 @@ public static class IsoWriter
         }
 
         var imgLength = new FileInfo(disc.ImgFilePath).Length;
-        var totalSectors = imgLength / SectorConstants.RawSectorSize;
+        var fileSectors = imgLength / SectorConstants.RawSectorSize;
+
+        var startSector = dataTrack.Index01Lba > 0 ? dataTrack.Index01Lba : 0;
+        var endSector = fileSectors;
+        var nextTrack = disc.Tracks
+            .Where(t => t.Index01Lba > startSector)
+            .OrderBy(static t => t.Index01Lba)
+            .FirstOrDefault();
+        if (nextTrack != null)
+            endSector = Math.Min(endSector, nextTrack.Index01Lba);
+
+        var totalSectors = Math.Max(0, endSector - startSector);
 
         using var input = new FileStream(
             disc.ImgFilePath,
@@ -93,6 +104,7 @@ public static class IsoWriter
         );
         using var output = new FileStream(isoFilePath, FileMode.Create, FileAccess.Write);
 
+        input.Seek((long)startSector * SectorConstants.RawSectorSize, SeekOrigin.Begin);
         WriteSectors(input, output, totalSectors, progress);
 
         return isoFilePath;
@@ -119,7 +131,7 @@ public static class IsoWriter
         long bytesWritten = 0;
         long sectorIndex = 0;
 
-        while (true)
+        while (totalSectors < 0 || sectorIndex < totalSectors)
         {
             var bytesRead = ReadFully(input, sectorBuffer, SectorConstants.RawSectorSize);
             if (bytesRead == 0)

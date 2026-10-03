@@ -9,16 +9,18 @@
     ShowInTaskbar="False"
     WindowStartupLocation="CenterOwner"
     Background="#2B2B2B"
-    MinWidth="360">
-    <Grid Margin="20" RowDefinitions="Auto,Auto">
-        <Grid ColumnDefinitions="Auto,*">
+    MinWidth="360"
+    ToolTip.Tip="Application message dialog">
+    <Grid Margin="20" RowDefinitions="Auto,Auto" ToolTip.Tip="Message dialog layout">
+        <Grid ColumnDefinitions="Auto,*" ToolTip.Tip="Dialog icon and message">
             <Grid
                 x:Name="IconHost"
                 Width="32"
                 Height="32"
                 Margin="0,0,14,0"
-                VerticalAlignment="Top">
-                <Ellipse x:Name="IconCircle" Width="28" Height="28" Fill="#03A9F4" />
+                VerticalAlignment="Top"
+                ToolTip.Tip="Dialog icon">
+                <Ellipse x:Name="IconCircle" Width="28" Height="28" Fill="#03A9F4" ToolTip.Tip="Dialog icon background" />
                 <TextBlock
                     x:Name="IconGlyph"
                     HorizontalAlignment="Center"
@@ -26,14 +28,16 @@
                     FontSize="18"
                     FontWeight="Bold"
                     Foreground="#FFFFFF"
-                    Text="i" />
+                    Text="i"
+                    ToolTip.Tip="Dialog icon symbol" />
             </Grid>
             <TextBlock
                 x:Name="MessageText"
                 Grid.Column="1"
                 VerticalAlignment="Center"
                 Foreground="#e6edf3"
-                TextWrapping="Wrap" />
+                TextWrapping="Wrap"
+                ToolTip.Tip="Message shown by the application" />
         </Grid>
 
         <StackPanel
@@ -42,6 +46,7 @@
             Orientation="Horizontal"
             HorizontalAlignment="Right"
             Spacing="8"
-            Margin="0,20,0,0" />
+            Margin="0,20,0,0"
+            ToolTip.Tip="Dialog buttons" />
     </Grid>
 </Window>

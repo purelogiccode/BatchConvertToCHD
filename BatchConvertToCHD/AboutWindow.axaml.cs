@@ -4,6 +4,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using BatchConvertToCHD.Dialogs;
+using BatchConvertToCHD.Models;
+using BatchConvertToCHD.Services;
 
 namespace BatchConvertToCHD;
 
@@ -19,6 +21,21 @@ internal partial class AboutWindow : Window
         AppVersionTextBlock.Text = $"Version: {GetApplicationVersion()}";
         DescriptionTextBlock.Text =
             "A utility for batch converting various disc image formats to CHD and for verifying the integrity of CHD files.";
+
+        KeyDown += AboutWindow_KeyDown;
+    }
+
+    /// <summary>
+    ///     Handles the F8 hotkey by saving a screenshot of this window.
+    /// </summary>
+    /// <param name="sender">The event sender.</param>
+    /// <param name="e">The key event arguments.</param>
+    private void AboutWindow_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.F8) return;
+
+        ScreenshotService.CaptureAndLog(this);
+        e.Handled = true;
     }
 
     private void CloseButton_Click(object? sender, RoutedEventArgs e)

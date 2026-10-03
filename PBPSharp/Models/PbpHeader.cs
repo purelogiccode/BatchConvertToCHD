@@ -14,7 +14,7 @@ public readonly struct PbpHeader
     public const uint MagicValue = 0x50425000;
 
     /// <summary>
-    ///     The PBP header size (36 bytes: 9 uint32 fields).
+    ///     The PBP header size (40 bytes: 10 uint32 fields).
     /// </summary>
     public const int HeaderSize = 0x28;
 

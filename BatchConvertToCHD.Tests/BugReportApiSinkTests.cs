@@ -67,6 +67,22 @@ public class BugReportApiSinkTests
         Assert.Contains("Fatal message", service.LastMessage, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("AppDomain.UnhandledException")]
+    [InlineData("Dispatcher.UnhandledException")]
+    [InlineData("TaskScheduler.UnobservedTaskException")]
+    public void EmitSkipsUnhandledExceptionsReportedDirectlyByApp(string message)
+    {
+        var service = CreateTestService();
+        var sink = new BugReportApiSink(service);
+
+        var logger = new LoggerConfiguration().WriteTo.Sink(sink).CreateLogger();
+
+        logger.Fatal(new InvalidOperationException("Crash"), message);
+
+        Assert.Equal(0, service.CallCount);
+    }
+
     [Fact]
     public void EmitPassesExceptionToService()
     {
@@ -124,7 +140,7 @@ public class BugReportApiSinkTests
         public string LastMessage { get; private set; } = string.Empty;
         public Exception? LastException { get; private set; }
 
-        public override Task<bool> SendBugReportAsync(
+        internal override Task<bool> SendBugReportAsync(
             string message,
             Exception? ex = null,
             CancellationToken token = default

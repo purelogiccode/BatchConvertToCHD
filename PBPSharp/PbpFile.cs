@@ -8,6 +8,11 @@ namespace PBPSharp;
 ///     Provides functionality to open and read PBP (EBOOT.PBP) files.
 ///     Supports single-disc and multi-disc PlayStation PBP files.
 /// </summary>
+/// <remarks>
+///     Missing files are reported through the returned <see cref="PbpError" />
+///     (<see cref="PbpError.FileNotFound" />) rather than exceptions, following the CSOSharp
+///     convention for the compressed-image family.
+/// </remarks>
 public sealed class PbpFile : IDisposable
 {
     private readonly bool _ownsStream;
@@ -199,8 +204,14 @@ public sealed class PbpFile : IDisposable
         header = default;
 
         Span<byte> headerBytes = stackalloc byte[PbpHeader.HeaderSize];
-        if (stream.Read(headerBytes) != PbpHeader.HeaderSize)
+        try
+        {
+            stream.ReadExactly(headerBytes);
+        }
+        catch (EndOfStreamException)
+        {
             return PbpError.InvalidHeader;
+        }
 
         var magic = BinaryPrimitives.ReadUInt32LittleEndian(headerBytes[..4]);
         if (magic != PbpHeader.MagicValue)
@@ -270,7 +281,7 @@ public sealed class PbpFile : IDisposable
             for (var i = 0; i < entryCount; i++)
             {
                 var dirBuffer = new byte[16];
-                stream.Seek(header.SfoOffset + 20 + (i * 16), SeekOrigin.Begin);
+                stream.Seek(header.SfoOffset + 20 + i * 16, SeekOrigin.Begin);
                 stream.ReadExactly(dirBuffer, 0, 16);
 
                 // Layout: KeyOffset(2) + Format(2) + Length(4) + MaxLength(4) + DataOffset(4)

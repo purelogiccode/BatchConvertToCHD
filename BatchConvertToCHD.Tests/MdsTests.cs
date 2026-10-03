@@ -49,7 +49,7 @@ public class MdsTests : IDisposable
         params (byte Mode, byte Point, ushort SectorSize, uint StartLba)[] tracks
     )
     {
-        var bytes = new byte[TrackBlockStart + (TrackBlockSize * Math.Max(tracks.Length, 1))];
+        var bytes = new byte[TrackBlockStart + TrackBlockSize * Math.Max(tracks.Length, 1)];
         "MEDIA DESCRIPTOR"u8.ToArray().CopyTo(bytes, 0);
         BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(SessionCountOffset), 1);
         BinaryPrimitives.WriteUInt32LittleEndian(
@@ -65,7 +65,7 @@ public class MdsTests : IDisposable
 
         for (var i = 0; i < tracks.Length; i++)
         {
-            var offset = TrackBlockStart + (i * TrackBlockSize);
+            var offset = TrackBlockStart + i * TrackBlockSize;
             bytes[offset + 0x00] = tracks[i].Mode;
             bytes[offset + 0x04] = tracks[i].Point;
             BinaryPrimitives.WriteUInt16LittleEndian(
@@ -117,12 +117,12 @@ public class MdsTests : IDisposable
     private string WriteMds(string name, ushort mediumType, params TrackSpec[] tracks)
     {
         var trackCount = Math.Max(tracks.Length, 1);
-        var trackRegion = TrackBlockStart + (TrackBlockSize * trackCount);
+        var trackRegion = TrackBlockStart + TrackBlockSize * trackCount;
         var extraRegion =
             trackRegion
-            + (ExtraBlockSize * tracks.Count(static t => t.Pregap > 0 || t.Length > 0));
+            + ExtraBlockSize * tracks.Count(static t => t.Pregap > 0 || t.Length > 0);
         var footerRegion =
-            extraRegion + (FooterBlockSize * tracks.Sum(static t => t.Files?.Length ?? 0));
+            extraRegion + FooterBlockSize * tracks.Sum(static t => t.Files?.Length ?? 0);
 
         var extraOffsets = new uint[tracks.Length];
         var footerOffsets = new uint[tracks.Length];
@@ -172,7 +172,7 @@ public class MdsTests : IDisposable
 
         for (var i = 0; i < tracks.Length; i++)
         {
-            var offset = TrackBlockStart + (i * TrackBlockSize);
+            var offset = TrackBlockStart + i * TrackBlockSize;
             bytes[offset + 0x00] = tracks[i].Mode;
             bytes[offset + 0x04] = tracks[i].Point;
             BinaryPrimitives.WriteUInt16LittleEndian(
@@ -220,7 +220,7 @@ public class MdsTests : IDisposable
 
             for (var file = 0; file < tracks[i].Files!.Length; file++)
             {
-                var footerAt = footerOffsets[i] + (file * FooterBlockSize);
+                var footerAt = footerOffsets[i] + file * FooterBlockSize;
                 BinaryPrimitives.WriteUInt32LittleEndian(
                     bytes.AsSpan((int)footerAt),
                     names[nameIndex].Offset
@@ -394,7 +394,7 @@ public class MdsTests : IDisposable
             Assert.Equal((byte)(sector + 1), bytes[sector * MdsDisc.RawSectorSize]);
             Assert.Equal(
                 (byte)(sector + 1),
-                bytes[(sector * MdsDisc.RawSectorSize) + MdsDisc.RawSectorSize - 1]
+                bytes[sector * MdsDisc.RawSectorSize + MdsDisc.RawSectorSize - 1]
             );
         }
 
@@ -474,7 +474,11 @@ public class MdsTests : IDisposable
         var cue = await File.ReadAllTextAsync(result.CuePath!);
 
         // Referenced relatively, not duplicated.
-        Assert.Contains("FILE \"..\\FFT.mdf\" BINARY", cue, StringComparison.Ordinal);
+        Assert.Contains(
+            $"FILE \"..{Path.DirectorySeparatorChar}FFT.mdf\" BINARY",
+            cue,
+            StringComparison.Ordinal
+        );
         Assert.False(File.Exists(Path.Combine(workDir, "FFT.mdf")));
         Assert.Single(Directory.GetFiles(workDir));
     }
@@ -772,7 +776,11 @@ public class MdsTests : IDisposable
         Assert.Null(result.DvdImagePath);
         var cue = await File.ReadAllTextAsync(result.CuePath!);
         Assert.Contains("TRACK 01 MODE1/2048", cue, StringComparison.Ordinal);
-        Assert.Contains("FILE \"..\\Cooked.mdf\" BINARY", cue, StringComparison.Ordinal);
+        Assert.Contains(
+            $"FILE \"..{Path.DirectorySeparatorChar}Cooked.mdf\" BINARY",
+            cue,
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]

@@ -95,56 +95,84 @@ internal static class MdsV2DataDecoder
         if (keyData is not null)
             onLog?.Invoke(" The image's track data is encrypted; decrypting it with the supplied key.");
 
-        using var output = new FileStream(
-            outputPath,
-            FileMode.Create,
-            FileAccess.Write,
-            FileShare.None,
-            1024 * 1024
-        );
-
-        var streams = new Dictionary<string, FileStream>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            foreach (var track in tracks)
+            using (var output = new FileStream(
+                       outputPath,
+                       FileMode.Create,
+                       FileAccess.Write,
+                       FileShare.None,
+                       1024 * 1024
+                   ))
             {
-                token.ThrowIfCancellationRequested();
-
-                var dataPath = ResolveTrackDataFile(track, disc, isMdx);
-                if (dataPath is null)
+                var streams = new Dictionary<string, FileStream>(StringComparer.OrdinalIgnoreCase);
+                try
                 {
-                    return (
-                        null,
-                        $"the data file named by track {track.Point} was not found next to the descriptor."
-                    );
+                    foreach (var track in tracks)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        var dataPath = ResolveTrackDataFile(track, disc, isMdx);
+                        if (dataPath is null)
+                        {
+                            throw new InvalidDataException(
+                                $"the data file named by track {track.Point} was not found next to the descriptor."
+                            );
+                        }
+
+                        if (!streams.TryGetValue(dataPath, out var stream))
+                        {
+                            stream = new FileStream(
+                                dataPath,
+                                FileMode.Open,
+                                FileAccess.Read,
+                                FileShare.ReadWrite,
+                                1024 * 1024
+                            );
+                            streams[dataPath] = stream;
+                        }
+
+                        onLog?.Invoke(
+                            $" Decoding track {track.Point} ({track.LengthSectors:N0} sectors at {track.SectorSize} bytes)"
+                        );
+
+                        DecodeTrack(stream, output, track, keyData);
+                    }
+                }
+                finally
+                {
+                    foreach (var stream in streams.Values) stream.Dispose();
                 }
 
-                if (!streams.TryGetValue(dataPath, out var stream))
-                {
-                    stream = new FileStream(
-                        dataPath,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.ReadWrite,
-                        1024 * 1024
-                    );
-                    streams[dataPath] = stream;
-                }
-
-                onLog?.Invoke(
-                    $" Decoding track {track.Point} ({track.LengthSectors:N0} sectors at {track.SectorSize} bytes)"
-                );
-
-                DecodeTrack(stream, output, track, keyData);
+                output.Flush();
             }
-        }
-        finally
-        {
-            foreach (var stream in streams.Values) stream.Dispose();
-        }
 
-        output.Flush();
-        return (outputPath, null);
+            return (outputPath, null);
+        }
+        catch (InvalidDataException ex)
+        {
+            TryDelete(outputPath);
+            return (null, ex.Message);
+        }
+        catch
+        {
+            TryDelete(outputPath);
+            throw;
+        }
+    }
+
+    /// <summary>Deletes a partially decoded output file, ignoring any failure.</summary>
+    /// <param name="path">Path to delete.</param>
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch
+        {
+            // Best-effort cleanup.
+        }
     }
 
     /// <summary>
@@ -281,7 +309,7 @@ internal static class MdsV2DataDecoder
     private static byte[] ReadCompressionTable(FileStream data, TrackData track, int entries)
     {
         var expected = entries * 2;
-        var toRead = expected + (CompressionTableSlack * 2);
+        var toRead = expected + CompressionTableSlack * 2;
         var position = (long)track.StartOffset + (long)track.CompressionTableOffset;
 
         var available = (int)Math.Min(toRead, Math.Max(0, data.Length - position));
@@ -328,7 +356,7 @@ internal static class MdsV2DataDecoder
             var length = Math.Min(alignedSector, buffer.Length - offset);
             if (length <= 0) break;
 
-            var tweakCounter = 1UL + ((ulong)sector * (ulong)(alignedSector / 16));
+            var tweakCounter = 1UL + (ulong)sector * (ulong)(alignedSector / 16);
             var slice = new byte[length];
             Array.Copy(buffer, offset, slice, 0, length);
             MdxCrypto.DecipherLrw(aesKey, tweakKey, slice, tweakCounter);
@@ -353,7 +381,7 @@ internal static class MdsV2DataDecoder
 
         var alignedSector = track.SectorSize & ~15;
         var startSector = (ulong)groupIndex * track.BlocksInCompressionGroup;
-        var tweakCounter = 1UL + (startSector * (ulong)(alignedSector / 16));
+        var tweakCounter = 1UL + startSector * (ulong)(alignedSector / 16);
 
         var aesKey = keyData.AsSpan(32, 32).ToArray();
         var tweakKey = keyData.AsSpan(0, 16).ToArray();
@@ -392,7 +420,7 @@ internal static class MdsV2DataDecoder
 
         for (var session = 0; session < sessionCount; session++)
         {
-            var sessionBase = sessionOffset + (session * SessionBlockSize);
+            var sessionBase = sessionOffset + session * SessionBlockSize;
             if (sessionBase < 0 || sessionBase + SessionBlockSize > descriptor.Length) break;
 
             var trackCount = descriptor[sessionBase + 0x0A];
@@ -401,7 +429,7 @@ internal static class MdsV2DataDecoder
 
             for (var index = 0; index < trackCount; index++)
             {
-                var trackBase = trackOffset + (index * TrackBlockSize);
+                var trackBase = trackOffset + index * TrackBlockSize;
                 if (trackBase < 0 || trackBase + TrackBlockSize > descriptor.Length) break;
 
                 var sectorType = (byte)(descriptor[trackBase] & 0x07);

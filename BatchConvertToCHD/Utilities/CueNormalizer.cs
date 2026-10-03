@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using BatchConvertToCHD.Models;
 
 namespace BatchConvertToCHD.Utilities;
 
@@ -132,6 +133,15 @@ internal static class CueNormalizer
             .ConfigureAwait(false);
     }
 
+    /// <summary>
+    ///     Resolves one FILE line reference against the filesystem: as written, then beside the cue,
+    ///     then by extension swap, then by elimination for single-file data cues.
+    /// </summary>
+    /// <param name="directory">Directory holding the cue.</param>
+    /// <param name="referencedName">Name exactly as written in the cue.</param>
+    /// <param name="trackType">Track type token from the FILE line, or null.</param>
+    /// <param name="isSingleFileCue">True when the cue has exactly one FILE line.</param>
+    /// <returns>The resolved reference (unresolved when no strategy matched).</returns>
     private static CueFileReference ResolveReference(
         string directory,
         string referencedName,
@@ -166,8 +176,9 @@ internal static class CueNormalizer
         }
 
         // Strategy 3: same base name, different extension. Rips get re-saved between .bin, .img and
-        // .iso without the cue being updated.
-        if (match is null)
+        // .iso without the cue being updated. Restricted to the data track so a missing WAVE or MP3
+        // audio track is never silently answered with the disc image.
+        if (match is null && IsBinaryTrack(trackType))
         {
             match = FindExtensionSwapMatch(cueDirectoryFiles, referencedFileName);
             wasNameCorrected = match is not null;
@@ -213,6 +224,11 @@ internal static class CueNormalizer
         );
     }
 
+    /// <summary>
+    ///     Counts FILE lines that carry a parseable file name.
+    /// </summary>
+    /// <param name="lines">Lines of the cue.</param>
+    /// <returns>The number of usable FILE lines.</returns>
     private static int CountFileLines(string[] lines)
     {
         var count = 0;
@@ -232,6 +248,12 @@ internal static class CueNormalizer
         return count;
     }
 
+    /// <summary>
+    ///     Returns the files in <paramref name="directory" />, or an empty array when it cannot be
+    ///     listed.
+    /// </summary>
+    /// <param name="directory">Directory to enumerate.</param>
+    /// <returns>The file paths, or an empty array.</returns>
     private static string[] GetFiles(string directory)
     {
         try
@@ -287,11 +309,22 @@ internal static class CueNormalizer
         );
     }
 
+    /// <summary>
+    ///     Returns whether the track is a data track (no type token or BINARY).
+    /// </summary>
+    /// <param name="trackType">Track type token from the FILE line, or null.</param>
+    /// <returns><see langword="true" /> for data tracks.</returns>
     private static bool IsBinaryTrack(string? trackType)
     {
         return trackType is null || string.Equals(trackType, "BINARY", StringComparison.Ordinal);
     }
 
+    /// <summary>
+    ///     Finds a file whose "(Track N)" suffix differs from the reference only by zero-padding.
+    /// </summary>
+    /// <param name="files">Files in the directory being searched.</param>
+    /// <param name="fileName">The referenced name.</param>
+    /// <returns>The matching file, or null.</returns>
     private static string? FindPadTolerantMatch(string[] files, string fileName)
     {
         var match = TrackNumberRegex.Match(fileName);
@@ -333,11 +366,22 @@ internal static class CueNormalizer
         return null;
     }
 
+    /// <summary>
+    ///     Builds the canonical quoted FILE line for a name and optional track type.
+    /// </summary>
+    /// <param name="name">The resolved file name to write.</param>
+    /// <param name="trackType">Track type token, or null.</param>
+    /// <returns>The canonical FILE line.</returns>
     private static string BuildCanonicalFileLine(string name, string? trackType)
     {
         return trackType is null ? $"FILE \"{name}\"" : $"FILE \"{name}\" {trackType}";
     }
 
+    /// <summary>
+    ///     Extracts the track type token that follows the quoted file name, if any.
+    /// </summary>
+    /// <param name="trimmedFileLine">A trimmed FILE line.</param>
+    /// <returns>The track type token, or null.</returns>
     private static string? GetTrackType(string trimmedFileLine)
     {
         var firstQuote = trimmedFileLine.IndexOf('"');

@@ -17,9 +17,6 @@ internal class UpdateService
         PropertyNameCaseInsensitive = true
     };
 
-    private readonly string _applicationName;
-    private readonly HttpClient _httpClient;
-
     internal UpdateService(string applicationName)
         : this(applicationName, AppHttpClient.Client)
     {
@@ -27,9 +24,15 @@ internal class UpdateService
 
     internal UpdateService(string applicationName, HttpClient httpClient)
     {
-        _applicationName = applicationName;
-        _httpClient = httpClient;
+        ApplicationName = applicationName;
+        Client = httpClient;
     }
+
+    /// <summary>Gets the application name used in the User-Agent. Exposed for diagnostics and tests.</summary>
+    internal string ApplicationName { get; }
+
+    /// <summary>Gets the HTTP client used for requests. Exposed for diagnostics and tests.</summary>
+    internal HttpClient Client { get; }
 
     /// <summary>
     ///     Gets or sets an optional callback invoked when a newer version is found. The handler owns
@@ -51,7 +54,7 @@ internal class UpdateService
     )
     {
         return CheckForNewVersionAsync(
-            _httpClient,
+            Client,
             Assembly.GetExecutingAssembly().GetName().Version,
             onLog,
             onStatusUpdate,
@@ -61,17 +64,45 @@ internal class UpdateService
 
     /// <summary>
     ///     Internal overload for testing that accepts a custom <see cref="HttpClient" /> and version.
-    ///     Performs the actual update check against the GitHub API - trying each configured release
-    ///     source in order - compares versions, and prompts the user to download if a newer version
-    ///     is available.
+    ///     Performs the actual update check against the configured GitHub release URL.
     /// </summary>
     /// <param name="httpClient">The <see cref="HttpClient" /> to use for the request.</param>
     /// <param name="currentVersion">The current application version to compare against.</param>
     /// <param name="onLog">Callback for logging messages.</param>
     /// <param name="onStatusUpdate">Callback for status bar updates.</param>
     /// <param name="onBugReport">Callback for reporting errors.</param>
+    internal Task CheckForNewVersionAsync(
+        HttpClient httpClient,
+        Version? currentVersion,
+        Action<string> onLog,
+        Action<string> onStatusUpdate,
+        Func<string, Exception?, Task> onBugReport
+    )
+    {
+        return CheckForNewVersionAsync(
+            httpClient,
+            AppConfig.PrimaryGitHubApiLatestReleaseUrl,
+            currentVersion,
+            onLog,
+            onStatusUpdate,
+            onBugReport
+        );
+    }
+
+    /// <summary>
+    ///     Internal overload for testing that accepts a custom <see cref="HttpClient" />, release URL
+    ///     and version. Performs the actual update check against the GitHub API, compares versions,
+    ///     and prompts the user to download if a newer version is available.
+    /// </summary>
+    /// <param name="httpClient">The <see cref="HttpClient" /> to use for the request.</param>
+    /// <param name="releaseUrl">The release API URL to query.</param>
+    /// <param name="currentVersion">The current application version to compare against.</param>
+    /// <param name="onLog">Callback for logging messages.</param>
+    /// <param name="onStatusUpdate">Callback for status bar updates.</param>
+    /// <param name="onBugReport">Callback for reporting errors.</param>
     internal async Task CheckForNewVersionAsync(
         HttpClient httpClient,
+        string releaseUrl,
         Version? currentVersion,
         Action<string> onLog,
         Action<string> onStatusUpdate,
@@ -82,133 +113,84 @@ internal class UpdateService
         {
             onLog("Checking for updates on GitHub...");
 
-            var sources = AppConfig.GitHubApiLatestReleaseUrls;
+            using var request = new HttpRequestMessage(HttpMethod.Get, releaseUrl);
+            request.Headers.UserAgent.ParseAdd(ApplicationName);
 
-            for (var i = 0; i < sources.Count; i++)
+            using var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+
+            if (
+                response.StatusCode
+                is HttpStatusCode.Forbidden
+                or HttpStatusCode.TooManyRequests
+            )
             {
-                var isLastSource = i == sources.Count - 1;
-                var url = sources[i];
-
-                using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                request.Headers.UserAgent.ParseAdd(_applicationName);
-
-                HttpResponseMessage response;
-                try
-                {
-                    response = await httpClient.SendAsync(request).ConfigureAwait(false);
-                }
-                catch (HttpRequestException ex)
-                {
-                    // Transport-level failure: worth retrying against the next source, which may
-                    // resolve differently (DNS, redirect, CDN edge).
-                    if (!isLastSource)
-                    {
-                        onLog(
-                            $"Update source unreachable ({ex.Message}); trying the fallback source..."
-                        );
-                        continue;
-                    }
-
-                    throw;
-                }
-
-                if (
-                    response.StatusCode
-                    is HttpStatusCode.Forbidden
-                    or HttpStatusCode.TooManyRequests
-                )
-                {
-                    // Rate limits are per IP and shared by every api.github.com URL, so trying the
-                    // fallback cannot help.
-                    onLog("GitHub API rate limit exceeded. Skipping update check.");
-                    onStatusUpdate("Update check skipped (rate limit)");
-                    return;
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var statusCode = (int)response.StatusCode;
-
-                    if (statusCode is >= 500 and < 600 && !isLastSource)
-                    {
-                        onLog(
-                            $"Update source returned a server error ({statusCode}); trying the fallback source..."
-                        );
-                        continue;
-                    }
-
-                    if (!isLastSource)
-                    {
-                        // Client errors such as 404 mean this repository has no reachable releases
-                        // page (e.g. the ownership transfer has not completed yet), so fall through
-                        // to the next source before giving up.
-                        onLog(
-                            $"Update source unavailable ({statusCode} from {url}); trying the fallback source..."
-                        );
-                        continue;
-                    }
-
-                    if (statusCode is >= 500 and < 600)
-                    {
-                        onLog($"Update check skipped: GitHub server error ({statusCode}).");
-                        onStatusUpdate("Update check skipped (server error)");
-                        return;
-                    }
-
-                    response.EnsureSuccessStatusCode();
-                }
-
-                var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                var latestRelease = JsonSerializer.Deserialize<GitHubRelease>(
-                    responseBody,
-                    JsonSerializerOptions
-                );
-                if (
-                    latestRelease?.Draft != false
-                    || latestRelease.Prerelease
-                    || string.IsNullOrWhiteSpace(latestRelease.TagName)
-                )
-                {
-                    onLog("Latest release is invalid, draft, or prerelease. Skipping.");
-                    return;
-                }
-
-                var remoteVersionString = ParseVersionFromTag(latestRelease.TagName);
-
-                if (
-                    !TryNormalizeVersions(
-                        currentVersion,
-                        remoteVersionString,
-                        out var normalizedCurrent,
-                        out var normalizedRemote
-                    )
-                )
-                {
-                    onLog(
-                        $"Could not compare versions. Current: {currentVersion}, Remote: {remoteVersionString}"
-                    );
-                    return;
-                }
-
-                onLog($"Current version: {normalizedCurrent}");
-                onLog($"Latest version: {normalizedRemote}");
-
-                if (normalizedRemote > normalizedCurrent)
-                {
-                    if (ShowUpdatePromptAsync is { } showUpdatePrompt)
-                    {
-                        await showUpdatePrompt(latestRelease).ConfigureAwait(false);
-                    }
-
-                    onStatusUpdate($"Update available: v{remoteVersionString}");
-                }
-                else
-                {
-                    onLog("Application is up to date.");
-                    onStatusUpdate("Application is up to date");
-                }
-
+                onLog("GitHub API rate limit exceeded. Skipping update check.");
+                onStatusUpdate("Update check skipped (rate limit)");
                 return;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var statusCode = (int)response.StatusCode;
+
+                if (statusCode is >= 500 and < 600)
+                {
+                    onLog($"Update check skipped: GitHub server error ({statusCode}).");
+                    onStatusUpdate("Update check skipped (server error)");
+                    return;
+                }
+
+                response.EnsureSuccessStatusCode();
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var latestRelease = JsonSerializer.Deserialize<GitHubRelease>(
+                responseBody,
+                JsonSerializerOptions
+            );
+            if (
+                latestRelease?.Draft != false
+                || latestRelease.Prerelease
+                || string.IsNullOrWhiteSpace(latestRelease.TagName)
+            )
+            {
+                onLog("Latest release is invalid, draft, or prerelease. Skipping.");
+                return;
+            }
+
+            var remoteVersionString = ParseVersionFromTag(latestRelease.TagName);
+
+            if (
+                !TryNormalizeVersions(
+                    currentVersion,
+                    remoteVersionString,
+                    out var normalizedCurrent,
+                    out var normalizedRemote
+                )
+            )
+            {
+                onLog(
+                    $"Could not compare versions. Current: {currentVersion}, Remote: {remoteVersionString}"
+                );
+                return;
+            }
+
+            onLog($"Current version: {normalizedCurrent}");
+            onLog($"Latest version: {normalizedRemote}");
+
+            if (normalizedRemote > normalizedCurrent)
+            {
+                if (ShowUpdatePromptAsync is { } showUpdatePrompt)
+                {
+                    await showUpdatePrompt(latestRelease).ConfigureAwait(false);
+                }
+
+                onStatusUpdate($"Update available: v{remoteVersionString}");
+            }
+            else
+            {
+                onLog("Application is up to date.");
+                onStatusUpdate("Application is up to date");
             }
         }
         catch (HttpRequestException ex) when (ex.StatusCode == null)

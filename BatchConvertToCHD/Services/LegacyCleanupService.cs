@@ -10,7 +10,7 @@ internal static class LegacyCleanupService
 {
     private static readonly ILogger Logger = Log.ForContext(typeof(LegacyCleanupService));
 
-    private static readonly string[] FoldersToDelete = ["logs", "Resources", "Screenshot"];
+    private static readonly string[] FoldersToDelete = ["logs", "Resources"];
 
     private static readonly string[] FilesToDelete = ["maxcso.exe", "psxpackager.exe"];
 
@@ -19,50 +19,48 @@ internal static class LegacyCleanupService
     /// </summary>
     internal static void RunInBackground()
     {
-        _ = Task.Run(static () =>
+        _ = Task.Run(static () => Cleanup(AppDomain.CurrentDomain.BaseDirectory));
+    }
+
+    /// <summary>
+    ///     Removes the legacy folders and files from the given directory. Never throws; items
+    ///     that are missing or in use are skipped.
+    /// </summary>
+    /// <param name="baseDirectory">The application base directory to clean up.</param>
+    internal static void Cleanup(string baseDirectory)
+    {
+        foreach (var folder in FoldersToDelete)
         {
             try
             {
-                var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-
-                foreach (var folder in FoldersToDelete)
+                var folderPath = Path.Combine(baseDirectory, folder);
+                if (Directory.Exists(folderPath))
                 {
-                    try
-                    {
-                        var folderPath = Path.Combine(baseDirectory, folder);
-                        if (Directory.Exists(folderPath))
-                        {
-                            Directory.Delete(folderPath, true);
-                            Logger.Debug("Deleted legacy folder: {Folder}", folder);
-                        }
-                    }
-                    catch
-                    {
-                        /* ignore - file may be in use */
-                    }
-                }
-
-                foreach (var file in FilesToDelete)
-                {
-                    try
-                    {
-                        var filePath = Path.Combine(baseDirectory, file);
-                        if (File.Exists(filePath))
-                        {
-                            File.Delete(filePath);
-                            Logger.Debug("Deleted legacy file: {File}", file);
-                        }
-                    }
-                    catch
-                    {
-                        /* ignore - file may be in use */
-                    }
+                    Directory.Delete(folderPath, true);
+                    Logger.Debug("Deleted legacy folder: {Folder}", folder);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                /* ignore */
+                Logger.Debug(ex, "Could not delete legacy folder: {Folder}", folder);
             }
-        });
+        }
+
+        foreach (var file in FilesToDelete)
+        {
+            try
+            {
+                var filePath = Path.Combine(baseDirectory, file);
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                    Logger.Debug("Deleted legacy file: {File}", file);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Debug(ex, "Could not delete legacy file: {File}", file);
+            }
+        }
     }
 }

@@ -12,49 +12,53 @@
     Icon="/Assets/chd.png"
     ExtendClientAreaToDecorationsHint="True"
     ExtendClientAreaTitleBarHeightHint="-1"
-    WindowDecorations="BorderOnly">
-    <Grid RowDefinitions="Auto,*">
+    WindowDecorations="BorderOnly"
+    ToolTip.Tip="About Batch Convert to CHD">
+    <Grid RowDefinitions="Auto,*" ToolTip.Tip="About window layout">
         <Grid
             Grid.Row="0"
             Height="42"
             Background="#202020"
             ColumnDefinitions="Auto,*,Auto"
-            PointerPressed="TitleBar_PointerPressed">
+            PointerPressed="TitleBar_PointerPressed"
+            ToolTip.Tip="About window title bar. Drag to move the window.">
             <StackPanel
                 Grid.Column="0"
                 Orientation="Horizontal"
                 Spacing="10"
                 Margin="15,0,0,0"
-                VerticalAlignment="Center">
-                <Image Source="/Assets/logo.png" Width="20" Height="20" />
-                <TextBlock Text="About Batch Convert to CHD" Classes="headerTitle" />
+                VerticalAlignment="Center"
+                ToolTip.Tip="Application identity">
+                <Image Source="/Assets/logo.png" Width="20" Height="20" ToolTip.Tip="Batch Convert to CHD logo" />
+                <TextBlock Text="About Batch Convert to CHD" Classes="headerTitle" ToolTip.Tip="Window title" />
             </StackPanel>
             <Button
                 Grid.Column="2"
                 Classes="caption captionClose"
                 Click="CloseButton_Click"
                 ToolTip.Tip="Close">
-                <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="White" StrokeThickness="1.2" />
+                <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="White" StrokeThickness="1.2" ToolTip.Tip="Close icon" />
             </Button>
         </Grid>
 
-        <Grid Grid.Row="1" Margin="20" RowDefinitions="Auto,Auto,Auto,*,Auto">
+        <Grid Grid.Row="1" Margin="20" RowDefinitions="Auto,Auto,Auto,*,Auto" ToolTip.Tip="About information sections">
             <!--  Logo Section  -->
             <Border Grid.Row="0" Classes="statCard" Margin="0,0,0,15" Padding="15" ToolTip.Tip="Application logo">
-                <StackPanel HorizontalAlignment="Center">
+                <StackPanel HorizontalAlignment="Center" ToolTip.Tip="Application logo section">
                     <Image Width="130" Height="130" Source="/Assets/logo.png" ToolTip.Tip="Batch Convert to CHD application icon" />
                 </StackPanel>
             </Border>
 
             <!--  Title & Version Section  -->
             <Border Grid.Row="1" Classes="statCard" Margin="0,0,0,15" Padding="15" ToolTip.Tip="Application name and version">
-                <StackPanel>
+                <StackPanel ToolTip.Tip="Application name and version section">
                     <TextBlock
                         Text="Batch Convert to CHD"
                         FontWeight="Bold"
                         FontSize="20"
                         Foreground="#FFFFFF"
-                        HorizontalAlignment="Center" />
+                        HorizontalAlignment="Center"
+                        ToolTip.Tip="Application name" />
                     <TextBlock
                         x:Name="AppVersionTextBlock"
                         Margin="0,8,0,0"
@@ -68,18 +72,20 @@
 
             <!--  Description Section  -->
             <Border Grid.Row="2" Classes="statCard" Margin="0,0,0,15" Padding="15" ToolTip.Tip="Brief overview of the application purpose">
-                <StackPanel>
+                <StackPanel ToolTip.Tip="Description and links section">
                     <TextBlock
                         Text="Description"
                         FontWeight="Bold"
                         FontSize="14"
                         Foreground="#e6edf3"
-                        Margin="0,0,0,10" />
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Application description heading" />
                     <TextBlock
                         x:Name="DescriptionTextBlock"
                         TextWrapping="Wrap"
                         Foreground="#8b949e"
-                        LineHeight="20" />
+                        LineHeight="20"
+                        ToolTip.Tip="What this application does" />
                     <Button
                         Classes="link"
                         Content="https://github.com/purelogiccode/BatchConvertToCHD"
@@ -101,7 +107,7 @@
 
             <!--  Acknowledgements Section  -->
             <Border Grid.Row="3" Classes="statCard" Margin="0,0,0,15" Padding="15" ToolTip.Tip="Credits and third-party tools used">
-                <StackPanel>
+                <StackPanel ToolTip.Tip="Acknowledgements section">
                     <TextBlock
                         Text="Acknowledgements"
                         FontWeight="Bold"
@@ -167,3 +173,4 @@
         </Grid>
     </Grid>
 </Window>
+

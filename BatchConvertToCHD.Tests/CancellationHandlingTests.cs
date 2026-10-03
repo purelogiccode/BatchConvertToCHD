@@ -69,8 +69,8 @@ public class CancellationHandlingTests
     [Fact]
     public void IsDiskSpaceException_IoExceptionSemTimeout_ReturnsTrue()
     {
-        // HResult -2147024783 = 0x80070079 = ERROR_SEM_TIMEOUT
-        var ex = new IOException("The semaphore timeout period has expired.", -2147024783);
+        // HResult -2147024775 = 0x80070079 = ERROR_SEM_TIMEOUT
+        var ex = new IOException("The semaphore timeout period has expired.", -2147024775);
 
         Assert.True(MainWindow.IsDiskSpaceException(ex));
     }
@@ -158,8 +158,8 @@ public class CancellationHandlingTests
     [Fact]
     public void IsCrcErrorException_IoExceptionCrcHResult_ReturnsTrue()
     {
-        // HResult 0x80070017 = -2147024809 = ERROR_CRC
-        var ex = new IOException("Data error (cyclic redundancy check).", -2147024809);
+        // HResult 0x80070017 = -2147024873 = ERROR_CRC
+        var ex = new IOException("Data error (cyclic redundancy check).", -2147024873);
         Assert.True(MainWindow.IsCrcErrorException(ex));
     }
 
@@ -180,7 +180,7 @@ public class CancellationHandlingTests
     [Fact]
     public void IsCrcErrorException_DoesNotOverlapWithDiskSpace()
     {
-        var crcEx = new IOException("CRC error", -2147024809);
+        var crcEx = new IOException("CRC error", -2147024873);
         var diskEx = new IOException("disk full", -2147024784);
 
         Assert.True(MainWindow.IsCrcErrorException(crcEx));

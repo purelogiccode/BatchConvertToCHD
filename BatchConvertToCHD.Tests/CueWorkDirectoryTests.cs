@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Text;
+using BatchConvertToCHD.Interfaces;
+using BatchConvertToCHD.Models;
 using BatchConvertToCHD.Utilities;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -607,6 +609,7 @@ public class CueWorkDirectoryTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task BomCueEndToEndWithRealChdman()
     {
         // End-to-end regression test for "couldn't find bin file []": a cue with a UTF-8 BOM
@@ -794,6 +797,7 @@ public class CueWorkDirectoryTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task CueBinMp3EndToEndWithRealChdman()
     {
         // cue/bin/mp3: a data bin track plus MP3 audio tracks. The MP3 must be decoded to WAV
@@ -852,6 +856,7 @@ public class CueWorkDirectoryTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task CueIsoMp3EndToEndWithRealChdman()
     {
         // cue/iso/mp3: an ISO data track (MODE1/2048) plus MP3 audio tracks.

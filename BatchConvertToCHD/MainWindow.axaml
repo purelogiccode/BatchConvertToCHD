@@ -14,8 +14,9 @@
     ExtendClientAreaToDecorationsHint="True"
     ExtendClientAreaTitleBarHeightHint="-1"
     WindowDecorations="BorderOnly"
-    Closing="Window_Closing">
-    <Grid RowDefinitions="Auto,*">
+    Closing="Window_Closing"
+    ToolTip.Tip="Batch Convert to CHD main window">
+    <Grid RowDefinitions="Auto,*" ToolTip.Tip="Main application window layout">
         <!--  Custom title bar  -->
         <Grid
             x:Name="TitleBarGrid"
@@ -24,15 +25,17 @@
             Background="#202020"
             ColumnDefinitions="Auto,*,Auto,Auto"
             DoubleTapped="TitleBar_DoubleTapped"
-            PointerPressed="TitleBar_PointerPressed">
+            PointerPressed="TitleBar_PointerPressed"
+            ToolTip.Tip="Window title bar. Drag to move, double-click to maximize or restore.">
             <StackPanel
                 Grid.Column="0"
                 Orientation="Horizontal"
                 Spacing="10"
                 Margin="15,0,0,0"
-                VerticalAlignment="Center">
-                <Image Source="/Assets/logo.png" Width="20" Height="20" />
-                <TextBlock Text="Batch Convert to CHD" Classes="headerTitle" />
+                VerticalAlignment="Center"
+                ToolTip.Tip="Application identity">
+                <Image Source="/Assets/logo.png" Width="20" Height="20" ToolTip.Tip="Batch Convert to CHD logo" />
+                <TextBlock Text="Batch Convert to CHD" Classes="headerTitle" ToolTip.Tip="Application name" />
             </StackPanel>
 
             <StackPanel
@@ -40,63 +43,67 @@
                 Orientation="Horizontal"
                 Spacing="8"
                 Margin="0,0,10,0"
-                VerticalAlignment="Center">
+                VerticalAlignment="Center"
+                ToolTip.Tip="Information and application commands">
                 <Button
                     Classes="info"
                     Click="AboutMenuItem_Click"
                     ToolTip.Tip="View application information and acknowledgements">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                        <Grid Width="16" Height="16" VerticalAlignment="Center">
-                            <Ellipse Width="14" Height="14" Stroke="White" StrokeThickness="1.5" />
+                    <StackPanel Orientation="Horizontal" Spacing="7" ToolTip.Tip="About button contents">
+                        <Grid Width="16" Height="16" VerticalAlignment="Center" ToolTip.Tip="Information icon">
+                            <Ellipse Width="14" Height="14" Stroke="White" StrokeThickness="1.5" ToolTip.Tip="Information icon circle" />
                             <TextBlock
                                 Text="i"
                                 FontSize="9"
                                 FontWeight="Bold"
                                 Foreground="White"
                                 HorizontalAlignment="Center"
-                                VerticalAlignment="Center" />
+                                VerticalAlignment="Center"
+                                ToolTip.Tip="Information symbol" />
                         </Grid>
-                        <TextBlock Text="About" VerticalAlignment="Center" />
+                        <TextBlock Text="About" VerticalAlignment="Center" ToolTip.Tip="Open the About window" />
                     </StackPanel>
                 </Button>
                 <Button
                     Classes="info"
                     Click="OpenAppDataFolderMenuItem_Click"
                     ToolTip.Tip="Open the AppData folder for this application (logs, screenshots)">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
+                    <StackPanel Orientation="Horizontal" Spacing="7" ToolTip.Tip="AppData button contents">
                         <Path
                             Width="16"
                             Height="16"
                             Fill="White"
                             VerticalAlignment="Center"
+                            ToolTip.Tip="Folder icon"
                             Data="M1,4 C1,2.9 1.9,2 3,2 L6.2,2 L8,4.2 L13,4.2 C14.1,4.2 15,5.1 15,6.2 L15,12 C15,13.1 14.1,14 13,14 L3,14 C1.9,14 1,13.1 1,12 Z" />
-                        <TextBlock Text="AppData" VerticalAlignment="Center" />
+                        <TextBlock Text="AppData" VerticalAlignment="Center" ToolTip.Tip="Open the application data folder" />
                     </StackPanel>
                 </Button>
                 <Button
                     Classes="secondary"
                     Click="ExitMenuItem_Click"
                     ToolTip.Tip="Close the application">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
+                    <StackPanel Orientation="Horizontal" Spacing="7" ToolTip.Tip="Exit button contents">
                         <Path
                             Width="12"
                             Height="12"
                             Stroke="White"
                             StrokeThickness="1.6"
                             VerticalAlignment="Center"
+                            ToolTip.Tip="Close icon"
                             Data="M1,1 L11,11 M11,1 L1,11" />
-                        <TextBlock Text="Exit" VerticalAlignment="Center" />
+                        <TextBlock Text="Exit" VerticalAlignment="Center" ToolTip.Tip="Close the application" />
                     </StackPanel>
                 </Button>
             </StackPanel>
 
-            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Top">
+            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Top" ToolTip.Tip="Window caption buttons">
                 <Button
                     x:Name="MinimizeButton"
                     Classes="caption"
                     Click="MinimizeButton_Click"
                     ToolTip.Tip="Minimize">
-                    <Path Data="M0,5 L10,5" Stroke="White" StrokeThickness="1" />
+                    <Path Data="M0,5 L10,5" Stroke="White" StrokeThickness="1" ToolTip.Tip="Minimize icon" />
                 </Button>
                 <Button
                     x:Name="MaximizeButton"
@@ -107,22 +114,23 @@
                         Data="M0.5,0.5 L9.5,0.5 L9.5,9.5 L0.5,9.5 Z"
                         Stroke="White"
                         StrokeThickness="1"
-                        Fill="Transparent" />
+                        Fill="Transparent"
+                        ToolTip.Tip="Maximize icon" />
                 </Button>
                 <Button
                     x:Name="CloseButton"
                     Classes="caption captionClose"
                     Click="CloseButton_Click"
                     ToolTip.Tip="Close">
-                    <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="White" StrokeThickness="1.2" />
+                    <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="White" StrokeThickness="1.2" ToolTip.Tip="Close icon" />
                 </Button>
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="1" Margin="15,15,15,10" RowDefinitions="*,Auto">
+        <Grid Grid.Row="1" Margin="15,15,15,10" RowDefinitions="*,Auto" ToolTip.Tip="Main application content">
             <!--  Main Content Area  -->
-            <Grid Grid.Row="0" RowDefinitions="*,Auto,Auto">
-                <Grid Grid.Row="0" x:Name="ContentColumnsGrid" ColumnDefinitions="*,10,*">
+            <Grid Grid.Row="0" RowDefinitions="*,Auto,Auto" ToolTip.Tip="Tabs, statistics and progress area">
+                <Grid Grid.Row="0" x:Name="ContentColumnsGrid" ColumnDefinitions="*,10,*" ToolTip.Tip="Tab content beside the activity log">
                     <TabControl
                         Grid.Column="0"
                         x:Name="MainTabControl"
@@ -139,10 +147,12 @@
                                 BorderBrush="#3A3A3A"
                                 BorderThickness="1"
                                 CornerRadius="0,0,6,6"
-                                Padding="15">
+                                Padding="15"
+                                ToolTip.Tip="Convert tab content">
                                 <Grid
-                                    RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto">
-                                    <Grid Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto">
+                                    RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto"
+                                    ToolTip.Tip="Batch conversion controls">
+                                    <Grid Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto" ToolTip.Tip="Source folder selection">
                                         <TextBlock
                                             Text="Source Files:"
                                             FontWeight="Bold"
@@ -163,11 +173,11 @@
                                             Grid.Column="2"
                                             Classes="primary"
                                             Content="_Browse"
-                                            Click="BrowseConversionInputButton_Click"
+                                            Click="BrowseConversionInputButton_ClickAsync"
                                             ToolTip.Tip="Open a folder browser to select the source directory containing files to convert" />
                                     </Grid>
 
-                                    <Grid Grid.Row="1" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto">
+                                    <Grid Grid.Row="1" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto" ToolTip.Tip="Output folder selection">
                                         <TextBlock
                                             Text="Output CHD:"
                                             FontWeight="Bold"
@@ -186,7 +196,7 @@
                                             Grid.Column="2"
                                             Classes="primary"
                                             Content="_Browse"
-                                            Click="BrowseConversionOutputButton_Click"
+                                            Click="BrowseConversionOutputButton_ClickAsync"
                                             ToolTip.Tip="Open a folder browser to select where the converted CHD files will be saved" />
                                     </Grid>
 
@@ -282,7 +292,8 @@
                                                         <CheckBox
                                                             IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                             HorizontalAlignment="Center"
-                                                            VerticalAlignment="Center" />
+                                                            VerticalAlignment="Center"
+                                                            ToolTip.Tip="Include this file in the batch conversion" />
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
@@ -339,9 +350,10 @@
                                 BorderBrush="#3A3A3A"
                                 BorderThickness="1"
                                 CornerRadius="0,0,6,6"
-                                Padding="15">
-                                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto">
-                                    <Grid Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto">
+                                Padding="15"
+                                ToolTip.Tip="Verify tab content">
+                                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" ToolTip.Tip="Batch verification controls">
+                                    <Grid Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto" ToolTip.Tip="CHD folder selection">
                                         <TextBlock
                                             Text="CHD Files:"
                                             FontWeight="Bold"
@@ -360,7 +372,7 @@
                                             Grid.Column="2"
                                             Classes="primary"
                                             Content="_Browse"
-                                            Click="BrowseVerificationInputButton_Click"
+                                            Click="BrowseVerificationInputButton_ClickAsync"
                                             ToolTip.Tip="Open a folder browser to select the directory containing CHD files to verify" />
                                     </Grid>
 
@@ -418,7 +430,8 @@
                                                         <CheckBox
                                                             IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                             HorizontalAlignment="Center"
-                                                            VerticalAlignment="Center" />
+                                                            VerticalAlignment="Center"
+                                                            ToolTip.Tip="Include this file in the batch operation" />
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
@@ -467,9 +480,10 @@
                                 BorderBrush="#3A3A3A"
                                 BorderThickness="1"
                                 CornerRadius="0,0,6,6"
-                                Padding="15">
-                                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto">
-                                    <Grid Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto">
+                                Padding="15"
+                                ToolTip.Tip="Extract tab content">
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto" ToolTip.Tip="Batch extraction controls">
+                                    <Grid Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto" ToolTip.Tip="CHD folder selection">
                                         <TextBlock
                                             Text="CHD Files:"
                                             FontWeight="Bold"
@@ -488,11 +502,11 @@
                                             Grid.Column="2"
                                             Classes="primary"
                                             Content="_Browse"
-                                            Click="BrowseExtractionInputButton_Click"
+                                            Click="BrowseExtractionInputButton_ClickAsync"
                                             ToolTip.Tip="Open a folder browser to select the directory containing CHD files to extract" />
                                     </Grid>
 
-                                    <Grid Grid.Row="1" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto">
+                                    <Grid Grid.Row="1" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto" ToolTip.Tip="Extraction output folder selection">
                                         <TextBlock
                                             Text="Output Folder:"
                                             FontWeight="Bold"
@@ -511,7 +525,7 @@
                                             Grid.Column="2"
                                             Classes="primary"
                                             Content="_Browse"
-                                            Click="BrowseExtractionOutputButton_Click"
+                                            Click="BrowseExtractionOutputButton_ClickAsync"
                                             ToolTip.Tip="Open a folder browser to select where the extracted files will be saved" />
                                     </Grid>
 
@@ -521,14 +535,14 @@
                                         Margin="0,5,0,5"
                                         IsExpanded="False"
                                         ToolTip.Tip="Configure extraction settings">
-                                        <Grid Margin="0,5,0,0" RowDefinitions="Auto" ColumnDefinitions="*,*">
+                                        <Grid Margin="0,5,0,0" RowDefinitions="Auto" ColumnDefinitions="*,*" ToolTip.Tip="Extraction format and option groups">
                                             <Border
                                                 Grid.Column="0"
                                                 Classes="groupBox"
                                                 Margin="0,0,5,0"
                                                 ToolTip.Tip="Select the output format for extracted files">
                                                 <StackPanel Spacing="4" ToolTip.Tip="Extraction output format options">
-                                                    <TextBlock Text="Format" Classes="groupBoxHeader" Margin="0,0,0,4" />
+                                                    <TextBlock Text="Format" Classes="groupBoxHeader" Margin="0,0,0,4" ToolTip.Tip="Output format for extracted files" />
                                                     <RadioButton
                                                         x:Name="ExtractAutoRadioButton"
                                                         Content="Auto"
@@ -564,7 +578,7 @@
                                                 Margin="5,0,0,0"
                                                 ToolTip.Tip="Configure extraction settings">
                                                 <StackPanel Spacing="5" ToolTip.Tip="Extraction option toggles">
-                                                    <TextBlock Text="Options" Classes="groupBoxHeader" Margin="0,0,0,4" />
+                                                    <TextBlock Text="Options" Classes="groupBoxHeader" Margin="0,0,0,4" ToolTip.Tip="Extraction option toggles" />
                                                     <CheckBox
                                                         x:Name="SearchSubfoldersExtractionCheckBox"
                                                         Content="Search subfolders (recursive search)"
@@ -604,7 +618,8 @@
                                                         <CheckBox
                                                             IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                             HorizontalAlignment="Center"
-                                                            VerticalAlignment="Center" />
+                                                            VerticalAlignment="Center"
+                                                            ToolTip.Tip="Include this file in the batch operation" />
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
@@ -653,9 +668,10 @@
                                 BorderBrush="#3A3A3A"
                                 BorderThickness="1"
                                 CornerRadius="0,0,6,6"
-                                Padding="15">
-                                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
-                                    <Grid Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto">
+                                Padding="15"
+                                ToolTip.Tip="Explorer tab content">
+                                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" ToolTip.Tip="CHD file system explorer controls">
+                                    <Grid Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto" ToolTip.Tip="CHD image selection">
                                         <TextBlock
                                             Text="CHD File:"
                                             FontWeight="Bold"
@@ -678,7 +694,7 @@
                                             ToolTip.Tip="Open a file browser to select a CHD image" />
                                     </Grid>
 
-                                    <Grid Grid.Row="1" Margin="0,0,0,10" ColumnDefinitions="120,*">
+                                    <Grid Grid.Row="1" Margin="0,0,0,10" ColumnDefinitions="120,*" ToolTip.Tip="File system parser selection">
                                         <TextBlock
                                             Text="File System:"
                                             FontWeight="Bold"
@@ -691,22 +707,22 @@
                                             Margin="5,0"
                                             MinWidth="260"
                                             HorizontalAlignment="Left"
-                                            SelectionChanged="ExplorerParserComboBox_SelectionChanged"
+                                            SelectionChanged="ExplorerParserComboBox_SelectionChangedAsync"
                                             ToolTip.Tip="Select the file system parser for this image (e.g. Xbox, PS2, Dreamcast, ISO 9660)">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate>
-                                                    <TextBlock Text="{Binding DisplayName}" />
+                                                    <TextBlock Text="{Binding DisplayName}" ToolTip.Tip="File system parser name" />
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
                                     </Grid>
 
-                                    <Grid Grid.Row="2" Margin="0,0,0,5" ColumnDefinitions="Auto,*,Auto">
+                                    <Grid Grid.Row="2" Margin="0,0,0,5" ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="Explorer navigation bar">
                                         <Button
                                             x:Name="ExplorerUpButton"
                                             Classes="secondary"
                                             Content="⬆ Up"
-                                            Click="ExplorerUpButton_Click"
+                                            Click="ExplorerUpButton_ClickAsync"
                                             IsEnabled="False"
                                             ToolTip.Tip="Go up one directory level" />
                                         <TextBlock
@@ -734,35 +750,52 @@
                                         CanUserSortColumns="False"
                                         IsReadOnly="True"
                                         SelectionChanged="ExplorerEntriesDataGrid_SelectionChanged"
-                                        DoubleTapped="ExplorerEntriesDataGrid_DoubleTapped"
+                                        DoubleTapped="ExplorerEntriesDataGrid_DoubleTappedAsync"
                                         ToolTip.Tip="Contents of the current folder. Double-click a folder to open it, or a file to extract and open it.">
                                         <DataGrid.Columns>
-                                            <DataGridTemplateColumn Header="Name" Width="*">
+                                            <DataGridTemplateColumn Width="*">
+                                                <DataGridTemplateColumn.Header>
+                                                    <TextBlock Text="Name" ToolTip.Tip="Entry name inside the image" />
+                                                </DataGridTemplateColumn.Header>
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
-                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6" ToolTip.Tip="Entry icon and name">
                                                             <TextBlock
                                                                 Text="{Binding Icon}"
                                                                 FontFamily="Segoe UI Emoji, Noto Color Emoji, Apple Color Emoji"
-                                                                VerticalAlignment="Center" />
-                                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                                                VerticalAlignment="Center"
+                                                                ToolTip.Tip="File or folder icon" />
+                                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" ToolTip.Tip="Entry name" />
                                                         </StackPanel>
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
-                                            <DataGridTextColumn Header="Size" Binding="{Binding SizeFormatted}" Width="110" IsReadOnly="True" />
-                                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="80" IsReadOnly="True" />
-                                            <DataGridTextColumn Header="Modified" Binding="{Binding ModifiedFormatted}" Width="140" IsReadOnly="True" />
+                                            <DataGridTextColumn Binding="{Binding SizeFormatted}" Width="110" IsReadOnly="True">
+                                                <DataGridTextColumn.Header>
+                                                    <TextBlock Text="Size" ToolTip.Tip="Entry size" />
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Binding="{Binding Type}" Width="80" IsReadOnly="True">
+                                                <DataGridTextColumn.Header>
+                                                    <TextBlock Text="Type" ToolTip.Tip="File or folder" />
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Binding="{Binding ModifiedFormatted}" Width="140" IsReadOnly="True">
+                                                <DataGridTextColumn.Header>
+                                                    <TextBlock Text="Modified" ToolTip.Tip="Last modified time" />
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
                                         </DataGrid.Columns>
                                     </DataGrid>
 
-                                    <Grid Grid.Row="4" Margin="0,5,0,0" ColumnDefinitions="*,Auto">
+                                    <Grid Grid.Row="4" Margin="0,5,0,0" ColumnDefinitions="*,Auto" ToolTip.Tip="Explorer status and progress">
                                         <TextBlock
                                             x:Name="ExplorerStatusTextBlock"
                                             Classes="secondary"
                                             VerticalAlignment="Center"
                                             TextWrapping="Wrap"
-                                            Text="Select a CHD image to browse its contents." />
+                                            Text="Select a CHD image to browse its contents."
+                                            ToolTip.Tip="Current explorer status" />
                                         <ProgressBar
                                             x:Name="ExplorerProgressBar"
                                             Grid.Column="1"
@@ -771,7 +804,8 @@
                                             Minimum="0"
                                             Maximum="100"
                                             IsVisible="False"
-                                            VerticalAlignment="Center" />
+                                            VerticalAlignment="Center"
+                                            ToolTip.Tip="Explorer operation progress" />
                                     </Grid>
                                 </Grid>
                             </Border>
@@ -814,9 +848,9 @@
                 </Grid>
 
                 <!--  Stats Panel  -->
-                <Grid Grid.Row="1" Margin="0,15,0,0" ColumnDefinitions="*,*,*,*,*">
+                <Grid Grid.Row="1" Margin="0,15,0,0" ColumnDefinitions="*,*,*,*,*" ToolTip.Tip="Batch statistics">
                     <Border Grid.Column="0" Classes="statCard" ToolTip.Tip="Total number of files to process">
-                        <StackPanel HorizontalAlignment="Center">
+                        <StackPanel HorizontalAlignment="Center" ToolTip.Tip="Total files statistic">
                             <TextBlock
                                 Text="TOTAL FILES"
                                 Classes="statLabel"
@@ -831,7 +865,7 @@
                         </StackPanel>
                     </Border>
                     <Border Grid.Column="1" Classes="statCard" ToolTip.Tip="Number of successfully processed files">
-                        <StackPanel HorizontalAlignment="Center">
+                        <StackPanel HorizontalAlignment="Center" ToolTip.Tip="Success statistic">
                             <TextBlock
                                 Text="SUCCESS"
                                 Classes="statLabel"
@@ -846,7 +880,7 @@
                         </StackPanel>
                     </Border>
                     <Border Grid.Column="2" Classes="statCard" ToolTip.Tip="Number of files that failed processing">
-                        <StackPanel HorizontalAlignment="Center">
+                        <StackPanel HorizontalAlignment="Center" ToolTip.Tip="Failure statistic">
                             <TextBlock
                                 Text="FAILED"
                                 Classes="statLabel"
@@ -861,7 +895,7 @@
                         </StackPanel>
                     </Border>
                     <Border Grid.Column="3" Classes="statCard" ToolTip.Tip="Total processing time">
-                        <StackPanel HorizontalAlignment="Center">
+                        <StackPanel HorizontalAlignment="Center" ToolTip.Tip="Elapsed time statistic">
                             <TextBlock
                                 Text="ELAPSED"
                                 Classes="statLabel"
@@ -881,7 +915,7 @@
                         Classes="statCard"
                         IsVisible="False"
                         ToolTip.Tip="Average processing speed">
-                        <StackPanel HorizontalAlignment="Center">
+                        <StackPanel HorizontalAlignment="Center" ToolTip.Tip="Speed statistic">
                             <TextBlock
                                 Text="SPEED"
                                 Classes="statLabel"
@@ -912,7 +946,7 @@
                         Padding="1"
                         Background="#2B2B2B"
                         ToolTip.Tip="Processing progress indicator">
-                        <Grid>
+                        <Grid ToolTip.Tip="Progress bar and current file label">
                             <ProgressBar
                                 x:Name="ProgressBar"
                                 Height="28"
@@ -950,7 +984,7 @@
                 BorderThickness="0,1,0,0"
                 CornerRadius="4"
                 ToolTip.Tip="Status bar showing application state and external tool availability">
-                <Grid ColumnDefinitions="*,Auto">
+                <Grid ColumnDefinitions="*,Auto" ToolTip.Tip="Status message and dependency indicators">
                     <TextBlock
                         Grid.Column="0"
                         x:Name="StatusBarMessage"

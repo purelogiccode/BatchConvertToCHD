@@ -32,6 +32,10 @@ namespace MDSSharp;
 ///     0x00  u32       offset of the data file name
 ///     0x04  u32       non-zero when the name is stored as UTF-16
 /// </summary>
+/// <remarks>
+///     Missing files throw <see cref="FileNotFoundException" />; malformed descriptors throw
+///     <see cref="InvalidDataException" />. This matches <c>CCDSharp.CcdParser</c>.
+/// </remarks>
 public static partial class MdsParser
 {
     private const string Signature = "MEDIA DESCRIPTOR";
@@ -98,6 +102,7 @@ public static partial class MdsParser
     ///     Parses <paramref name="mdsPath" /> and locates its data file(s).
     /// </summary>
     /// <param name="mdsPath">Path of the .mds descriptor.</param>
+    /// <exception cref="FileNotFoundException">The descriptor does not exist.</exception>
     /// <exception cref="InvalidDataException">The file is not a usable descriptor.</exception>
     public static MdsDisc Parse(string mdsPath)
     {
@@ -149,7 +154,7 @@ public static partial class MdsParser
 
         for (var session = 0; session < sessionCount; session++)
         {
-            var sessionBase = sessionBlockOffset + ((long)session * SessionBlockSize);
+            var sessionBase = sessionBlockOffset + (long)session * SessionBlockSize;
             if (sessionBase < 0 || sessionBase + SessionBlockSize > bytes.Length) break;
 
             var trackCount = bytes[sessionBase + SessionTrackCountOffset];
@@ -160,7 +165,7 @@ public static partial class MdsParser
 
             for (var track = 0; track < trackCount; track++)
             {
-                var trackBase = trackBlockOffset + ((long)track * TrackBlockSize);
+                var trackBase = trackBlockOffset + (long)track * TrackBlockSize;
                 if (trackBase < 0 || trackBase + TrackBlockSize > bytes.Length) break;
 
                 var point = bytes[trackBase + TrackPointOffset];
@@ -276,7 +281,7 @@ public static partial class MdsParser
         var count = (int)Math.Min(fileCount, MaxFooterFiles);
         for (var index = 0; index < count; index++)
         {
-            var footerBase = (long)footerOffset + ((long)index * FooterBlockSize);
+            var footerBase = (long)footerOffset + (long)index * FooterBlockSize;
             var name = ReadFooterFileName(bytes, footerBase);
             if (!string.IsNullOrWhiteSpace(name)) names.Add(name);
         }

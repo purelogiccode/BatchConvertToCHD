@@ -1,3 +1,5 @@
+using BatchConvertToCHD.Models;
+
 namespace BatchConvertToCHD.Utilities;
 
 /// <summary>

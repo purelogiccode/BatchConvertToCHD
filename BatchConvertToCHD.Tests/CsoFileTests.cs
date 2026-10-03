@@ -223,7 +223,7 @@ public class CsoFileTests : IDisposable
         ms.Write(new byte[2]); // padding
 
         // Index table: all blocks uncompressed, pointing to data right after index
-        const uint dataOffset = 24 + (indexEntries * 4);
+        const uint dataOffset = 24 + indexEntries * 4;
         for (var i = 0; i < indexEntries; i++)
         {
             // Set high bit to indicate uncompressed

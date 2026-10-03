@@ -56,6 +56,7 @@ Environment Details includes: date/time, app name + version, OS version, archite
 
 - Only **one** bug report is in flight at a time (`BugReportApiSink` interlocked flag); bursts of warnings are coalesced. A 12-second safety timer clears the flag even if the HTTP call hangs, preventing indefinite throttling.
 - **Duplicate suppression**: an identical message already forwarded within the last 10 minutes (`DuplicateWindow`) is dropped — a failing batch that retries the same input, or a loop logging the same warning per file, sends one report instead of one per occurrence.
+- **Unhandled exceptions are sent once**: the `Log.Fatal`/`Log.Error` events for `AppDomain.UnhandledException`, `Dispatcher.UnhandledException` and `TaskScheduler.UnobservedTaskException` are skipped by the sink (`IsDirectlyReportedByApp`) because `App` already reports them through `ReportException`; without the skip every crash landed in the tracker twice, once from the sink and once from the direct send.
 - Sending is fire-and-forget from the sink; failures are logged at `Debug` and never surface to the user.
 - Cancellation tokens are respected; `OperationCanceledException` is rethrown only when the caller's token is cancelled.
 

@@ -30,22 +30,22 @@ internal sealed class ChdExplorerService : IDisposable
     /// <summary>
     ///     Gets the path of the CHD image that is open.
     /// </summary>
-    public string ChdPath { get; }
+    internal string ChdPath { get; }
 
     /// <summary>
     ///     Gets the volume label reported by the parsed file system.
     /// </summary>
-    public string VolumeName => _container.VolumeName;
+    internal string VolumeName => _container.VolumeName;
 
     /// <summary>
     ///     Gets the size of the parsed volume in bytes.
     /// </summary>
-    public ulong VolumeSize => _container.VolumeSize;
+    internal ulong VolumeSize => _container.VolumeSize;
 
     /// <summary>
     ///     Gets the console type the image was parsed as.
     /// </summary>
-    public ConsoleType ConsoleType => _container.ConsoleType;
+    internal ConsoleType ConsoleType => _container.ConsoleType;
 
     /// <summary>
     ///     Opens a CHD image and parses it with the given console parser.
@@ -54,7 +54,7 @@ internal sealed class ChdExplorerService : IDisposable
     /// <param name="consoleType">The file system parser to use.</param>
     /// <param name="error">Receives the failure reason when the image cannot be parsed.</param>
     /// <returns>The opened explorer, or <see langword="null" /> when parsing fails.</returns>
-    public static ChdExplorerService? TryOpen(string chdPath, ConsoleType consoleType, out string? error)
+    internal static ChdExplorerService? TryOpen(string chdPath, ConsoleType consoleType, out string? error)
     {
         ChdContainer? container = null;
         try
@@ -83,7 +83,7 @@ internal sealed class ChdExplorerService : IDisposable
     /// </summary>
     /// <param name="internalPath">Directory path inside the image (<c>"\"</c> or <c>"/"</c> for the root).</param>
     /// <returns>The entries directly inside the directory.</returns>
-    public IReadOnlyList<FileEntry> ListDirectory(string internalPath)
+    internal IReadOnlyList<FileEntry> ListDirectory(string internalPath)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         return _container.ListDirectory(internalPath).ToList();
@@ -97,7 +97,7 @@ internal sealed class ChdExplorerService : IDisposable
     /// <param name="progress">Receives the extraction progress as a 0-1 fraction, when supplied.</param>
     /// <param name="token">Cancellation token checked between read operations.</param>
     /// <returns>The local path the entry was extracted to.</returns>
-    public string ExtractEntry(
+    internal string ExtractEntry(
         FileEntry entry,
         string destinationDirectory,
         IProgress<double>? progress,
@@ -106,17 +106,29 @@ internal sealed class ChdExplorerService : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         var destinationPath = Path.Combine(destinationDirectory, SanitizeName(entry.Name));
+        var stagingPath = destinationPath + "." + Guid.NewGuid().ToString("N") + ".part";
 
-        if (entry.IsDirectory)
+        try
         {
-            var total = GetDirectorySize(entry, token);
-            var copied = 0UL;
-            ExtractDirectory(entry, destinationPath, total, ref copied, progress, token);
+            if (entry.IsDirectory)
+            {
+                var total = GetDirectorySize(entry, token);
+                var copied = 0UL;
+                ExtractDirectory(entry, stagingPath, total, ref copied, progress, token);
+                MoveDirectoryContents(stagingPath, destinationPath);
+                Directory.Delete(stagingPath, true);
+            }
+            else
+            {
+                var copied = 0UL;
+                ExtractFile(entry, stagingPath, entry.Size, ref copied, progress, token);
+                File.Move(stagingPath, destinationPath, true);
+            }
         }
-        else
+        catch
         {
-            var copied = 0UL;
-            ExtractFile(entry, destinationPath, entry.Size, ref copied, progress, token);
+            TryDeletePath(stagingPath);
+            throw;
         }
 
         return destinationPath;
@@ -244,6 +256,61 @@ internal sealed class ChdExplorerService : IDisposable
             {
                 progress.Report(Math.Min(1.0, (double)copied / total));
             }
+        }
+
+        if (offset < entry.Size)
+        {
+            throw new InvalidDataException(
+                $"Unexpected end of data while extracting '{entry.Name}': expected {entry.Size} bytes, got {offset}."
+            );
+        }
+    }
+
+    /// <summary>
+    ///     Moves every file from a staged directory into the destination, replacing same-named files
+    ///     and merging subdirectories.
+    /// </summary>
+    /// <param name="sourceDirectory">The staged directory to move from.</param>
+    /// <param name="destinationDirectory">The destination directory to move into.</param>
+    private static void MoveDirectoryContents(string sourceDirectory, string destinationDirectory)
+    {
+        Directory.CreateDirectory(destinationDirectory);
+
+        foreach (var file in Directory.GetFiles(sourceDirectory))
+        {
+            var targetPath = Path.Combine(destinationDirectory, Path.GetFileName(file));
+            File.Move(file, targetPath, true);
+        }
+
+        foreach (var directory in Directory.GetDirectories(sourceDirectory))
+        {
+            MoveDirectoryContents(
+                directory,
+                Path.Combine(destinationDirectory, Path.GetFileName(directory))
+            );
+        }
+    }
+
+    /// <summary>
+    ///     Deletes a staged file or directory, ignoring any failure.
+    /// </summary>
+    /// <param name="path">Path to delete.</param>
+    private static void TryDeletePath(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+            else if (Directory.Exists(path))
+            {
+                Directory.Delete(path, true);
+            }
+        }
+        catch
+        {
+            // Best-effort cleanup.
         }
     }
 }

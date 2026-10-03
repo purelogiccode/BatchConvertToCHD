@@ -7,8 +7,17 @@ namespace CCDSharp.Parsers;
 /// <summary>
 ///     Parses CloneCD .ccd descriptor files into a DiscImage model.
 /// </summary>
+/// <remarks>
+///     Missing files throw <see cref="FileNotFoundException" />; malformed descriptors throw
+///     <see cref="InvalidDataException" />. This matches <c>MDSSharp.MdsParser</c>.
+/// </remarks>
 public static partial class CcdParser
 {
+    /// <summary>
+    ///     The maximum track number accepted when the disc does not declare its TOC entry count.
+    /// </summary>
+    private const int MaxTrackNumber = 99;
+
     /// <summary>
     ///     Matches the [CloneCD] section header.
     /// </summary>
@@ -200,7 +209,19 @@ public static partial class CcdParser
             {
                 inCcd = false;
                 inDisc = false;
-                currentTrack = int.Parse(trackMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+                var trackNumber = int.Parse(
+                    trackMatch.Groups[1].Value,
+                    CultureInfo.InvariantCulture
+                );
+
+                var maxTrack = disc.TocEntries > 0 ? disc.TocEntries : MaxTrackNumber;
+                if (trackNumber < 1 || trackNumber > maxTrack)
+                {
+                    currentTrack = -1;
+                    continue;
+                }
+
+                currentTrack = trackNumber;
 
                 // Ensure track exists in the list
                 while (disc.Tracks.Count < currentTrack)

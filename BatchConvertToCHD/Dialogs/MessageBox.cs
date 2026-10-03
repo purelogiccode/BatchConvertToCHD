@@ -1,62 +1,9 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using BatchConvertToCHD.Models;
 
 namespace BatchConvertToCHD.Dialogs;
-
-/// <summary>Buttons shown by <see cref="MessageBox" />.</summary>
-internal enum MessageBoxButton
-{
-    /// <summary>Only an OK button.</summary>
-    Ok,
-
-    /// <summary>OK and Cancel buttons.</summary>
-    OkCancel,
-
-    /// <summary>Yes and No buttons.</summary>
-    YesNo,
-
-    /// <summary>Yes, No and Cancel buttons.</summary>
-    YesNoCancel
-}
-
-/// <summary>Icon shown by <see cref="MessageBox" />.</summary>
-internal enum MessageBoxImage
-{
-    /// <summary>No icon.</summary>
-    None,
-
-    /// <summary>Error icon.</summary>
-    Error,
-
-    /// <summary>Question icon.</summary>
-    Question,
-
-    /// <summary>Warning icon.</summary>
-    Warning,
-
-    /// <summary>Information icon.</summary>
-    Information
-}
-
-/// <summary>Result returned by <see cref="MessageBox" />.</summary>
-internal enum MessageBoxResult
-{
-    /// <summary>No result (dialog closed without a choice).</summary>
-    None,
-
-    /// <summary>The OK button was chosen.</summary>
-    Ok,
-
-    /// <summary>The Cancel button was chosen.</summary>
-    Cancel,
-
-    /// <summary>The Yes button was chosen.</summary>
-    Yes,
-
-    /// <summary>The No button was chosen.</summary>
-    No
-}
 
 /// <summary>
 ///     Themed modal message box rendering a <see cref="MessageDialog" />. Keeps the call
@@ -88,13 +35,21 @@ internal static class MessageBox
         var dialogOwner = owner ?? GetMainWindow();
         if (dialogOwner is null)
         {
+            var completion = new TaskCompletionSource<MessageBoxResult>(
+                TaskCreationOptions.RunContinuationsAsynchronously
+            );
+            dialog.Closed += (_, _) => completion.TrySetResult(dialog.Result);
             dialog.Show();
-            return MessageBoxResult.None;
+            return await completion.Task.ConfigureAwait(true);
         }
 
         return await dialog.ShowDialog<MessageBoxResult>(dialogOwner).ConfigureAwait(true);
     }
 
+    /// <summary>
+    ///     Gets the application's main window, or null when no desktop lifetime is active.
+    /// </summary>
+    /// <returns>The main window used as the default dialog owner.</returns>
     private static Window? GetMainWindow()
     {
         return (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)

@@ -77,7 +77,7 @@ public class IszDecoderTests : IDisposable
     /// </summary>
     private static byte[] BuildImage(int chunks, int extraSectors = 0, int sectorSize = SectorSize)
     {
-        var length = (chunks * ChunkSize) + (extraSectors * sectorSize);
+        var length = chunks * ChunkSize + extraSectors * sectorSize;
         length -= length % sectorSize;
 
         var image = new byte[length];
@@ -89,7 +89,7 @@ public class IszDecoderTests : IDisposable
 
             // A repeating run keyed to the sector number: compressible, and unique per sector.
             for (var offset = start; offset < end; offset++)
-                image[offset] = (byte)((sector * 7) + ((offset - start) % 19));
+                image[offset] = (byte)(sector * 7 + (offset - start) % 19);
 
             var marker = Encoding.ASCII.GetBytes($"SECTOR{sector:D6}");
             marker.CopyTo(image, start);
@@ -418,7 +418,7 @@ public class IszDecoderTests : IDisposable
             ChunkSize,
             3,
             static _ => IszImageBuilder.AdiData,
-            (ChunkSize * 4) + 111
+            ChunkSize * 4 + 111
         );
 
         Assert.True(File.Exists(IszImageBuilder.GetSecondSegmentPath(iszPath)));
@@ -659,7 +659,7 @@ public class IszDecoderTests : IDisposable
 
         await using (var file = new FileStream(iszPath, FileMode.Open, FileAccess.Write))
         {
-            file.SetLength(file.Length - (ChunkSize * 3));
+            file.SetLength(file.Length - ChunkSize * 3);
         }
 
         var result = await IszDecoder.DecodeAsync(
@@ -729,7 +729,7 @@ public class IszDecoderTests : IDisposable
         var bytes = await File.ReadAllBytesAsync(iszPath);
         for (
             var offset = bytes.Length / 2;
-            offset < Math.Min(bytes.Length, (bytes.Length / 2) + 64);
+            offset < Math.Min(bytes.Length, bytes.Length / 2 + 64);
             offset++
         )
         {

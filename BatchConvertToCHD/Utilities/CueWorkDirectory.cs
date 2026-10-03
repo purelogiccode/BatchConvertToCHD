@@ -1,3 +1,6 @@
+using BatchConvertToCHD.Interfaces;
+using BatchConvertToCHD.Models;
+
 namespace BatchConvertToCHD.Utilities;
 
 /// <summary>
@@ -242,6 +245,13 @@ internal static class CueWorkDirectory
         }
     }
 
+    /// <summary>
+    ///     Copies a file into the work directory, retrying a few times while the source is
+    ///     temporarily locked by another process.
+    /// </summary>
+    /// <param name="source">Path of the file to copy.</param>
+    /// <param name="dest">Destination path in the work directory.</param>
+    /// <param name="token">Cancellation token.</param>
     private static async Task CopyWithRetryAsync(
         string source,
         string dest,

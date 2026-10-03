@@ -6,7 +6,6 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using BatchConvertToCHD.Models;
 using BatchConvertToCHD.Services;
-using Serilog;
 using VideoGameFileSystemParser.Models;
 
 namespace BatchConvertToCHD;
@@ -25,6 +24,13 @@ internal partial class MainWindow
     // Serializes explorer use with explorer retirement: the container is only disposed once any
     // in-flight background read or extraction using it has finished.
     private readonly SemaphoreSlim _explorerUseLock = new(1, 1);
+
+    // Serializes whole open/replace operations so two overlapping opens cannot leak the
+    // ChdExplorerService that loses the race.
+    private readonly SemaphoreSlim _explorerOpenLock = new(1, 1);
+
+    /// <summary>Set when the window has closed and no new explorer may be assigned.</summary>
+    private bool _explorerDisposed;
 
     /// <summary>Directory currently shown in the Explorer grid (root is <c>"/"</c>).</summary>
     private string _explorerCurrentPath = "/";
@@ -115,6 +121,7 @@ internal partial class MainWindow
     /// <summary>
     ///     Opens a CHD file picker and loads the selected image into the Explorer tab.
     /// </summary>
+    // ReSharper disable once UnusedMember.Local
     private async void BrowseExplorerChdButton_ClickAsync(object? sender, RoutedEventArgs e)
     {
         try
@@ -157,7 +164,8 @@ internal partial class MainWindow
     /// <summary>
     ///     Re-parses the open image when the user picks a different file system parser.
     /// </summary>
-    private async void ExplorerParserComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    // ReSharper disable once UnusedMember.Local
+    private async void ExplorerParserComboBox_SelectionChangedAsync(object? sender, SelectionChangedEventArgs e)
     {
         try
         {
@@ -170,14 +178,16 @@ internal partial class MainWindow
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error in method ExplorerParserComboBox_SelectionChanged");
+            LogError($"Explorer: failed to re-parse the open image: {ex.Message}", ex);
+            ExplorerStatusTextBlock.Text = $"Failed to re-parse the open image: {ex.Message}";
         }
     }
 
     /// <summary>
     ///     Navigates one directory level up in the open image.
     /// </summary>
-    private async void ExplorerUpButton_Click(object? sender, RoutedEventArgs e)
+    // ReSharper disable once UnusedMember.Local
+    private async void ExplorerUpButton_ClickAsync(object? sender, RoutedEventArgs e)
     {
         try
         {
@@ -194,7 +204,8 @@ internal partial class MainWindow
     /// <summary>
     ///     Enters a directory or extracts and opens a file on double-click.
     /// </summary>
-    private async void ExplorerEntriesDataGrid_DoubleTapped(object? sender, TappedEventArgs e)
+    // ReSharper disable once UnusedMember.Local
+    private async void ExplorerEntriesDataGrid_DoubleTappedAsync(object? sender, TappedEventArgs e)
     {
         try
         {
@@ -218,6 +229,7 @@ internal partial class MainWindow
     /// <summary>
     ///     Keeps the Extract button state in sync with the grid selection.
     /// </summary>
+    // ReSharper disable once UnusedMember.Local
     private void ExplorerEntriesDataGrid_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         ExplorerExtractButton.IsEnabled =
@@ -227,6 +239,7 @@ internal partial class MainWindow
     /// <summary>
     ///     Extracts the selected entry (file or directory) to a folder chosen by the user.
     /// </summary>
+    // ReSharper disable once UnusedMember.Local
     private async void ExplorerExtractButton_ClickAsync(object? sender, RoutedEventArgs e)
     {
         try
@@ -263,9 +276,28 @@ internal partial class MainWindow
 
     /// <summary>
     ///     Opens (or re-opens) a CHD image with the parser currently selected in the drop-down.
+    ///     Open operations are serialized so overlapping calls cannot leak the service that loses
+    ///     the race.
     /// </summary>
     /// <param name="chdPath">Path of the CHD image to open.</param>
     private async Task OpenExplorerChdAsync(string chdPath)
+    {
+        await _explorerOpenLock.WaitAsync();
+        try
+        {
+            await OpenExplorerChdCoreAsync(chdPath);
+        }
+        finally
+        {
+            _explorerOpenLock.Release();
+        }
+    }
+
+    /// <summary>
+    ///     Opens a CHD image and installs the resulting explorer, retiring any previous one.
+    /// </summary>
+    /// <param name="chdPath">Path of the CHD image to open.</param>
+    private async Task OpenExplorerChdCoreAsync(string chdPath)
     {
         var parser = ExplorerParserComboBox.SelectedItem as ConsoleTypeInfo;
         var consoleType = parser?.Type ?? ConsoleType.GenericIso9660;
@@ -322,9 +354,23 @@ internal partial class MainWindow
             return;
         }
 
+        var disposeNewService = false;
         lock (_explorerLock)
         {
-            _explorerService = service;
+            if (_explorerDisposed)
+            {
+                disposeNewService = true;
+            }
+            else
+            {
+                _explorerService = service;
+            }
+        }
+
+        if (disposeNewService)
+        {
+            service.Dispose();
+            return;
         }
 
         _explorerParserName = parserName;
@@ -406,7 +452,12 @@ internal partial class MainWindow
             extracted = true;
             var pathToOpen = extractedPath;
             await Dispatcher.UIThread.InvokeAsync(
-                () => Process.Start(new ProcessStartInfo(pathToOpen) { UseShellExecute = true })
+                () =>
+                {
+                    using var process = Process.Start(
+                        new ProcessStartInfo(pathToOpen) { UseShellExecute = true }
+                    );
+                }
             );
 
             LogMessage($"Explorer: extracted '{item.Name}' and opened it with the default application.");
@@ -511,43 +562,51 @@ internal partial class MainWindow
     }
 
     /// <summary>
-    ///     Cancels pending explorer work and disposes the open image when the window closes.
+    ///     Disposes the explorer open when the window closes, waiting for any in-flight operation to
+    ///     finish, then releases the explorer synchronization objects.
     /// </summary>
     private void DisposeExplorer()
     {
-        try
-        {
-            _explorerCts.Cancel();
-        }
-        catch (ObjectDisposedException)
-        {
-            // Already disposed.
-        }
-
         ChdExplorerService? service;
         lock (_explorerLock)
         {
+            _explorerDisposed = true;
             service = _explorerService;
             _explorerService = null;
         }
 
-        if (service is null) return;
+        _explorerCts.Cancel();
 
         _ = Task.Run(
             async () =>
             {
-                await _explorerUseLock.WaitAsync();
                 try
                 {
-                    service.Dispose();
+                    if (service is not null)
+                    {
+                        await _explorerUseLock.WaitAsync();
+                        try
+                        {
+                            service.Dispose();
+                        }
+                        catch
+                        {
+                            /* process is shutting down */
+                        }
+                        finally
+                        {
+                            _explorerUseLock.Release();
+                        }
+                    }
                 }
-                catch
+                catch (ObjectDisposedException)
                 {
-                    /* process is shutting down */
+                    // Already disposed.
                 }
                 finally
                 {
-                    _explorerUseLock.Release();
+                    _explorerCts.Dispose();
+                    _explorerUseLock.Dispose();
                 }
             }
         );

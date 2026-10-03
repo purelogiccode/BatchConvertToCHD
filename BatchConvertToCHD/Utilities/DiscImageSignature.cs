@@ -1,4 +1,5 @@
 using System.Text;
+using BatchConvertToCHD.Models;
 
 namespace BatchConvertToCHD.Utilities;
 
@@ -156,6 +157,12 @@ internal static class DiscImageSignature
         };
     }
 
+    /// <summary>
+    ///     Returns whether the header starts with the given ASCII signature.
+    /// </summary>
+    /// <param name="header">Leading bytes of the file.</param>
+    /// <param name="signature">ASCII signature to test for.</param>
+    /// <returns><see langword="true" /> when the signature matches.</returns>
     private static bool StartsWithAscii(ReadOnlySpan<byte> header, string signature)
     {
         if (header.Length < signature.Length) return false;

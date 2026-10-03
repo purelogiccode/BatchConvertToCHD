@@ -31,7 +31,7 @@ public sealed class PbpDiscInfo
     ///     framing), so the cap allows that slack instead of rejecting a perfectly good block.
     ///     This matches the reference implementation, which imposes no cap at all.
     /// </summary>
-    private const int MaxBlockEntrySize = (16 * IsoBlockSize) + 4096;
+    private const int MaxBlockEntrySize = 16 * IsoBlockSize + 4096;
 
     private readonly List<IsoIndexEntry> _isoIndex;
     private readonly int _psarOffset;
@@ -193,8 +193,7 @@ public sealed class PbpDiscInfo
 
         while (thisOffset < psarIsoEnd)
         {
-            if (_stream.Read(indexBytes, 0, 32) != 32)
-                break;
+            _stream.ReadExactly(indexBytes, 0, indexBytes.Length);
 
             var offset = BinaryPrimitives.ReadUInt32LittleEndian(indexBytes.AsSpan(0, 4));
 
@@ -401,6 +400,7 @@ public sealed class PbpDiscInfo
     {
         cuePath ??= Path.ChangeExtension(binPath, ".cue");
 
+        PbpError extractError = PbpError.None;
         try
         {
             using var binStream = File.Create(binPath);
@@ -409,35 +409,46 @@ public sealed class PbpDiscInfo
         catch (EndOfStreamException)
         {
             // The index points past the end of the file: the download is truncated or incomplete.
-            return PbpError.TruncatedPsar;
+            extractError = PbpError.TruncatedPsar;
         }
         catch (IOException)
         {
-            return PbpError.IoError;
+            extractError = PbpError.IoError;
         }
         catch (InvalidDataException)
         {
-            return PbpError.DecompressionError;
+            extractError = PbpError.DecompressionError;
         }
         catch (SharpZipBaseException)
         {
             // A block failed to inflate in the reference-compatible SharpZipLib inflater.
-            return PbpError.DecompressionError;
+            extractError = PbpError.DecompressionError;
         }
         catch (IndexOutOfRangeException)
         {
             // Corrupt deflate stream surfaced as a raw array error by the Inflater.
-            return PbpError.DecompressionError;
+            extractError = PbpError.DecompressionError;
         }
         catch (NotSupportedException)
         {
             // A corrupt block inflated beyond the fixed output buffer capacity.
-            return PbpError.CorruptFile;
+            extractError = PbpError.CorruptFile;
         }
         catch (ArgumentOutOfRangeException)
         {
             // Corrupt index entry (block or length out of range).
-            return PbpError.CorruptFile;
+            extractError = PbpError.CorruptFile;
+        }
+        catch (OperationCanceledException)
+        {
+            TryDeletePartial(binPath);
+            throw;
+        }
+
+        if (extractError != PbpError.None)
+        {
+            TryDeletePartial(binPath);
+            return extractError;
         }
 
         var cueContent = CueSheetWriter.GenerateCueSheet(Path.GetFileName(binPath), Toc);
@@ -451,6 +462,22 @@ public sealed class PbpDiscInfo
         }
 
         return PbpError.None;
+    }
+
+    /// <summary>
+    ///     Deletes a partially extracted BIN file, ignoring any failure.
+    /// </summary>
+    /// <param name="binPath">Path of the partial BIN file.</param>
+    private static void TryDeletePartial(string binPath)
+    {
+        try
+        {
+            if (File.Exists(binPath)) File.Delete(binPath);
+        }
+        catch
+        {
+            // Best-effort cleanup.
+        }
     }
 
     /// <summary>
@@ -553,7 +580,7 @@ public sealed class PbpDiscInfo
     {
         var ones = value % 16;
         var tens = value / 16;
-        return (tens * 10) + ones;
+        return tens * 10 + ones;
     }
 
     /// <summary>

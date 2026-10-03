@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using BatchConvertToCHD.Models;
 
 namespace BatchConvertToCHD.Services;
 
@@ -25,6 +26,23 @@ internal sealed class FileWatcherService : IDisposable
 
     internal string? WatchedFolder { get; private set; }
 
+    /// <summary>
+    ///     Gets the number of files with a recorded event. Exposed for diagnostics and tests.
+    /// </summary>
+    internal int RecordedEventCount => _lastEventByFile.Count;
+
+    /// <summary>
+    ///     Gets the recorded event for a file path, when one exists. Exposed for diagnostics and tests.
+    /// </summary>
+    /// <param name="filePath">Full path of the file.</param>
+    /// <param name="record">When this method returns, contains the recorded event.</param>
+    /// <returns><see langword="true" /> when an event was recorded for the path.</returns>
+    internal bool TryGetRecordedEvent(string filePath, out FileEventRecord? record)
+    {
+        return _lastEventByFile.TryGetValue(filePath, out record);
+    }
+
+    /// <inheritdoc />
     public void Dispose()
     {
         StopWatching();
@@ -160,23 +178,38 @@ internal sealed class FileWatcherService : IDisposable
         };
     }
 
+    /// <summary>Records a deletion event for the affected file.</summary>
+    /// <param name="sender">The file-system watcher.</param>
+    /// <param name="e">Event data carrying the file path.</param>
     private void OnDeleted(object sender, FileSystemEventArgs e)
     {
         RecordEvent(e.FullPath, FileWatchEventType.Deleted, null);
     }
 
+    /// <summary>Records both sides of a rename event.</summary>
+    /// <param name="sender">The file-system watcher.</param>
+    /// <param name="e">Event data carrying the old and new paths.</param>
     private void OnRenamed(object sender, RenamedEventArgs e)
     {
         RecordEvent(e.OldFullPath, FileWatchEventType.RenamedFrom, e.Name);
         RecordEvent(e.FullPath, FileWatchEventType.RenamedTo, e.OldName);
     }
 
+    /// <summary>Records a creation event for the affected file.</summary>
+    /// <param name="sender">The file-system watcher.</param>
+    /// <param name="e">Event data carrying the file path.</param>
     private void OnCreated(object sender, FileSystemEventArgs e)
     {
         RecordEvent(e.FullPath, FileWatchEventType.Created, null);
     }
 
-    private void OnError(object sender, ErrorEventArgs e)
+    /// <summary>
+    ///     Handles watcher errors; an internal buffer overflow clears the history so stale events
+    ///     are not presented as accurate.
+    /// </summary>
+    /// <param name="sender">The file-system watcher.</param>
+    /// <param name="e">Event data carrying the exception.</param>
+    internal void OnError(object sender, ErrorEventArgs e)
     {
         var ex = e.GetException();
         // Internal buffer overflow - some events were lost. This is expected
@@ -191,6 +224,12 @@ internal sealed class FileWatcherService : IDisposable
         }
     }
 
+    /// <summary>
+    ///     Returns whether <paramref name="filePath" /> lies inside <paramref name="folderPath" />.
+    /// </summary>
+    /// <param name="filePath">The file path to test.</param>
+    /// <param name="folderPath">The watched folder.</param>
+    /// <returns><see langword="true" /> when the file is under the folder.</returns>
     private static bool IsPathUnderFolder(string filePath, string folderPath)
     {
         var folderWithSep = folderPath.EndsWith(Path.DirectorySeparatorChar)
@@ -201,12 +240,25 @@ internal sealed class FileWatcherService : IDisposable
                || string.Equals(filePath, folderPath, StringComparison.OrdinalIgnoreCase);
     }
 
-    private void RecordEvent(string fullPath, FileWatchEventType eventType, string? relatedName)
+    /// <summary>
+    ///     Stores the latest event for a file, trimming the oldest entries once the history cap is
+    ///     reached.
+    /// </summary>
+    /// <param name="fullPath">Full path of the affected file.</param>
+    /// <param name="eventType">Kind of event.</param>
+    /// <param name="relatedName">Previous or new name for rename events; null otherwise.</param>
+    internal void RecordEvent(string fullPath, FileWatchEventType eventType, string? relatedName)
     {
         var record = new FileEventRecord(DateTime.Now, eventType, relatedName);
 
-        _lastEventByFile[fullPath] = record;
-        _trackedKeys.Enqueue(fullPath);
+        if (_lastEventByFile.TryAdd(fullPath, record))
+        {
+            _trackedKeys.Enqueue(fullPath);
+        }
+        else
+        {
+            _lastEventByFile[fullPath] = record;
+        }
 
         while (_trackedKeys.Count > MaxFileHistory)
         {

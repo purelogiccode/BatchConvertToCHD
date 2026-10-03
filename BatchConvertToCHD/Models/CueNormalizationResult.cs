@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace BatchConvertToCHD.Utilities;
+namespace BatchConvertToCHD.Models;
 
 /// <summary>
 ///     The result of normalizing a CUE sheet.

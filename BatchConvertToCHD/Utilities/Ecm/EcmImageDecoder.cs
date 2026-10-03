@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Globalization;
+using BatchConvertToCHD.Models;
 
 namespace BatchConvertToCHD.Utilities.Ecm;
 
@@ -70,6 +71,15 @@ internal static class EcmImageDecoder
         return Task.Run(() => Decode(ecmPath, destinationPath, onLog, token), token);
     }
 
+    /// <summary>
+    ///     Decodes the ECM stream synchronously (invoked on a worker thread by
+    ///     <see cref="DecodeAsync" />).
+    /// </summary>
+    /// <param name="ecmPath">Path of the ECM file to decode.</param>
+    /// <param name="destinationPath">Destination path for the restored image.</param>
+    /// <param name="onLog">Log callback.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>The decode outcome.</returns>
     private static EcmDecodeResult Decode(
         string ecmPath,
         string destinationPath,
@@ -167,7 +177,7 @@ internal static class EcmImageDecoder
                             $" Decoded {percent.ToString(CultureInfo.InvariantCulture)}% of the ECM file."
                         );
                         nextProgressPercent =
-                            percent - (percent % ProgressStepPercent) + ProgressStepPercent;
+                            percent - percent % ProgressStepPercent + ProgressStepPercent;
                     }
                 }
             }
@@ -238,6 +248,17 @@ internal static class EcmImageDecoder
         return true;
     }
 
+    /// <summary>
+    ///     Copies a literal run of <paramref name="count" /> bytes from the input to the output,
+    ///     updating the running EDC and byte count.
+    /// </summary>
+    /// <param name="input">The ECM stream.</param>
+    /// <param name="output">The image being written.</param>
+    /// <param name="buffer">Scratch buffer.</param>
+    /// <param name="count">Number of literal bytes to copy.</param>
+    /// <param name="runningEdc">Running EDC over the restored image.</param>
+    /// <param name="written">Running count of restored bytes.</param>
+    /// <returns><see langword="true" /> when the run was copied; false when the stream is truncated.</returns>
     private static bool TryCopyLiteral(
         Stream input,
         Stream output,
@@ -266,6 +287,17 @@ internal static class EcmImageDecoder
         return true;
     }
 
+    /// <summary>
+    ///     Expands <paramref name="count" /> stored Mode 1 sectors into full 2352-byte sectors with
+    ///     regenerated sync, header, EDC and ECC.
+    /// </summary>
+    /// <param name="input">The ECM stream.</param>
+    /// <param name="output">The image being written.</param>
+    /// <param name="sector">Scratch buffer for one sector.</param>
+    /// <param name="count">Number of sectors to expand.</param>
+    /// <param name="runningEdc">Running EDC over the restored image.</param>
+    /// <param name="written">Running count of restored bytes.</param>
+    /// <returns><see langword="true" /> when the sectors were expanded; false when the stream is truncated.</returns>
     private static bool TryExpandMode1(
         Stream input,
         Stream output,
@@ -340,12 +372,22 @@ internal static class EcmImageDecoder
         return true;
     }
 
+    /// <summary>
+    ///     Reads exactly <paramref name="destination" />.Length bytes, returning false at EOF.
+    /// </summary>
+    /// <param name="input">The stream to read.</param>
+    /// <param name="destination">The buffer to fill.</param>
+    /// <returns><see langword="true" /> when the buffer was filled.</returns>
     private static bool TryReadExactly(Stream input, Span<byte> destination)
     {
         return input.ReadAtLeast(destination, destination.Length, false)
                >= destination.Length;
     }
 
+    /// <summary>
+    ///     Creates the user-facing result for a truncated ECM stream.
+    /// </summary>
+    /// <returns>The failed decode result.</returns>
     private static EcmDecodeResult TruncatedFailure()
     {
         return EcmDecodeResult.Failed(
@@ -353,6 +395,10 @@ internal static class EcmImageDecoder
         );
     }
 
+    /// <summary>
+    ///     Creates the user-facing result for a structurally damaged ECM stream.
+    /// </summary>
+    /// <returns>The failed decode result.</returns>
     private static EcmDecodeResult CorruptFailure()
     {
         return EcmDecodeResult.Failed(

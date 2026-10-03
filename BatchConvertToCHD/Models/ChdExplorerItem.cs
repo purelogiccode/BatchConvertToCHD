@@ -49,7 +49,7 @@ internal sealed class ChdExplorerItem
     /// </summary>
     /// <param name="entry">The entry to wrap.</param>
     /// <returns>The display row.</returns>
-    public static ChdExplorerItem FromEntry(FileEntry entry)
+    internal static ChdExplorerItem FromEntry(FileEntry entry)
     {
         return new ChdExplorerItem
         {
@@ -69,7 +69,7 @@ internal sealed class ChdExplorerItem
     /// </summary>
     /// <param name="bytes">The size in bytes.</param>
     /// <returns>The formatted size.</returns>
-    public static string FormatSize(ulong bytes)
+    internal static string FormatSize(ulong bytes)
     {
         string[] suffix = ["B", "KB", "MB", "GB", "TB"];
         var index = 0;

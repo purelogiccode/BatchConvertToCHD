@@ -154,7 +154,7 @@ internal static partial class RarVolumeSet
     }
 
     /// <summary>
-    ///     Total size in bytes of every volume of the set <paramref name="path" /> belongs to, or 0
+    ///     Total size in bytes of every volume of the set <paramref name="path" /> belongs to, or -1
     ///     when a volume cannot be measured.
     /// </summary>
     /// <param name="path">Path of any volume of the set (or a single archive).</param>
@@ -169,7 +169,7 @@ internal static partial class RarVolumeSet
             }
             catch (Exception)
             {
-                return 0;
+                return -1;
             }
         }
 

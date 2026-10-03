@@ -1,5 +1,4 @@
 using System.Net;
-using System.Reflection;
 using System.Text.Json;
 using BatchConvertToCHD.Services;
 
@@ -16,36 +15,29 @@ public class StatsServiceTests
     {
         var service = new StatsService(TestApiUrl, TestApiKey, TestAppId);
 
-        var apiUrlField = typeof(StatsService).GetField(
-            "_apiUrl",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        var apiKeyField = typeof(StatsService).GetField(
-            "_apiKey",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        var appIdField = typeof(StatsService).GetField(
-            "_applicationId",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-
-        Assert.NotNull(apiUrlField);
-        Assert.NotNull(apiKeyField);
-        Assert.NotNull(appIdField);
-        Assert.Equal(TestApiUrl, apiUrlField.GetValue(service));
-        Assert.Equal(TestApiKey, apiKeyField.GetValue(service));
-        Assert.Equal(TestAppId, appIdField.GetValue(service));
+        Assert.Equal(TestApiUrl, service.ApiUrl);
+        Assert.Equal(TestApiKey, service.ApiKey);
+        Assert.Equal(TestAppId, service.ApplicationId);
     }
 
     [Fact]
-    public void InternalConstructorAcceptsHttpClient()
+    public async Task InternalConstructorUsesInjectedHttpClient()
     {
-        using var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, "{\"message\":\"ok\"}");
+        var requestCount = 0;
+        var handler = new FakeHttpMessageHandler(_ =>
+        {
+            requestCount++;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"message\":\"ok\"}")
+            };
+        });
         using var httpClient = new HttpClient(handler);
 
         var service = new StatsService(TestApiUrl, TestApiKey, TestAppId, httpClient);
+        await service.RecordUsageAsync();
 
-        Assert.NotNull(service);
+        Assert.Equal(1, requestCount);
     }
 
     [Fact]
@@ -233,5 +225,90 @@ public class StatsServiceTests
 
         var exception = await Record.ExceptionAsync(service.RecordUsageAsync);
         Assert.Null(exception);
+    }
+
+    [Fact]
+    public async Task RecordUsageAsyncOnSuccessSendsExactlyOneRequest()
+    {
+        var requestCount = 0;
+        var handler = new FakeHttpMessageHandler(_ =>
+        {
+            requestCount++;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"message\":\"ok\"}")
+            };
+        });
+        using var httpClient = new HttpClient(handler);
+        var service = new StatsService(TestApiUrl, TestApiKey, TestAppId, httpClient);
+
+        await service.RecordUsageAsync();
+
+        Assert.Equal(1, requestCount);
+    }
+
+    [Fact]
+    public async Task RecordUsageAsyncOnRateLimitSendsExactlyOneRequest()
+    {
+        var requestCount = 0;
+        var handler = new FakeHttpMessageHandler(_ =>
+        {
+            requestCount++;
+            return new HttpResponseMessage(HttpStatusCode.TooManyRequests)
+            {
+                Content = new StringContent("{\"error\":\"Rate limit exceeded\"}")
+            };
+        });
+        using var httpClient = new HttpClient(handler);
+        var service = new StatsService(TestApiUrl, TestApiKey, TestAppId, httpClient);
+
+        await service.RecordUsageAsync();
+
+        Assert.Equal(1, requestCount);
+    }
+
+    [Fact]
+    public async Task RecordUsageAsyncPayloadHasExactlyTwoProperties()
+    {
+        string? capturedBody = null;
+        var handler = FakeHttpMessageHandler.WithAsyncHandler(async req =>
+        {
+            capturedBody = await req.Content!.ReadAsStringAsync().ConfigureAwait(false);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"message\":\"ok\"}")
+            };
+        });
+        using var httpClient = new HttpClient(handler);
+        var service = new StatsService(TestApiUrl, TestApiKey, TestAppId, httpClient);
+
+        await service.RecordUsageAsync();
+
+        Assert.NotNull(capturedBody);
+        using var doc = JsonDocument.Parse(capturedBody!);
+        Assert.Equal(2, doc.RootElement.EnumerateObject().Count());
+    }
+
+    [Fact]
+    public async Task RecordUsageAsyncVersionMatchesApplicationAssemblyVersion()
+    {
+        string? capturedBody = null;
+        var handler = FakeHttpMessageHandler.WithAsyncHandler(async req =>
+        {
+            capturedBody = await req.Content!.ReadAsStringAsync().ConfigureAwait(false);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"message\":\"ok\"}")
+            };
+        });
+        using var httpClient = new HttpClient(handler);
+        var service = new StatsService(TestApiUrl, TestApiKey, TestAppId, httpClient);
+
+        await service.RecordUsageAsync();
+
+        var expected = typeof(StatsService).Assembly.GetName().Version?.ToString() ?? "1.0.0";
+        Assert.NotNull(capturedBody);
+        using var doc = JsonDocument.Parse(capturedBody!);
+        Assert.Equal(expected, doc.RootElement.GetProperty("version").GetString());
     }
 }

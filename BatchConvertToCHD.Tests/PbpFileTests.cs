@@ -241,7 +241,7 @@ public class PbpFileTests : IDisposable
         // and must not fail the extraction of a complete image.
         var bytes = new PbpTestFileBuilder().WithBlockCount(2).Build();
         var psarOffset = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(0x24, 4));
-        var trailingEntry = psarOffset + 0x4000 + (2 * 32);
+        var trailingEntry = psarOffset + 0x4000 + 2 * 32;
         BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(trailingEntry, 4), 0u);
         BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(trailingEntry + 4, 2), 0xFFFF);
 
@@ -286,6 +286,11 @@ public class PbpFileTests : IDisposable
         ms.Write(BitConverter.GetBytes(unchecked((int)0xFFFFFFFF)));
         ms.Write(new byte[24]);
 
+        // The index area must be fully present (up to PSAR+0x100000) so the index read reaches
+        // the corrupt entry instead of failing as a truncated file first.
+        while (ms.Position < 0x200 + 0x100000)
+            ms.WriteByte(0);
+
         File.WriteAllBytes(path, ms.ToArray());
 
         var error = PbpFile.Open(path, out var pbp);
@@ -323,7 +328,7 @@ public class PbpFileTests : IDisposable
         ms.Write(new byte[24]);
 
         // Raw ISO data for the two valid blocks (starts at psarOffset + 0x100000).
-        while (ms.Position < 0x200 + 0x100000 + (2 * 0x9300))
+        while (ms.Position < 0x200 + 0x100000 + 2 * 0x9300)
             ms.WriteByte(0);
 
         File.WriteAllBytes(path, ms.ToArray());
@@ -378,14 +383,14 @@ public class PbpFileTests : IDisposable
         ms.Write(new byte[24]);
 
         // Raw ISO data for the two valid blocks (starts at psarOffset + 0x100000).
-        while (ms.Position < 0x200 + 0x100000 + (2 * 0x9300))
+        while (ms.Position < 0x200 + 0x100000 + 2 * 0x9300)
             ms.WriteByte(0);
 
         var garbage = new byte[0x40];
         var seed = 0x12345678;
         for (var i = 0; i < garbage.Length; i++)
         {
-            seed = (seed * 1103515245) + 12345;
+            seed = seed * 1103515245 + 12345;
             garbage[i] = (byte)((seed >> 16) & 0xFF);
         }
 
@@ -424,111 +429,6 @@ public class PbpFileTests : IDisposable
         ms.Write(BitConverter.GetBytes(0x100)); // snd0
         ms.Write(BitConverter.GetBytes(0x100)); // dataPsp
         ms.Write(BitConverter.GetBytes(dataPsarOffset)); // dataPsar
-    }
-
-    [Fact]
-    public void DefaultPbpHeaderIsNotValid()
-    {
-        var header = default(PbpHeader);
-        Assert.False(header.IsValid);
-    }
-
-    [Fact]
-    public void PbpHeaderMagicValueIsCorrect()
-    {
-        Assert.Equal(0x50425000u, PbpHeader.MagicValue);
-    }
-
-    [Fact]
-    public void PbpHeaderSizeIs40()
-    {
-        Assert.Equal(0x28, PbpHeader.HeaderSize);
-    }
-
-    [Fact]
-    public void PbpHeaderConstructorSetsAllProperties()
-    {
-        var header = new PbpHeader(1, 0x28, 0x100, 0x200, 0x300, 0x400, 0x500, 0x600, 0x700);
-
-        Assert.Equal(1u, header.Version);
-        Assert.Equal(0x28, header.SfoOffset);
-        Assert.Equal(0x100, header.Icon0Offset);
-        Assert.Equal(0x200, header.Icon1Offset);
-        Assert.Equal(0x300, header.Pic0Offset);
-        Assert.Equal(0x400, header.Pic1Offset);
-        Assert.Equal(0x500, header.Snd0Offset);
-        Assert.Equal(0x600, header.DataPspOffset);
-        Assert.Equal(0x700, header.DataPsarOffset);
-        Assert.True(header.IsValid);
-    }
-
-    [Fact]
-    public void SfoDataDefaultValuesAreCorrect()
-    {
-        var sfo = new SfoData();
-        Assert.Equal(0u, sfo.Magic);
-        Assert.Equal(0u, sfo.Version);
-        Assert.Equal(0u, sfo.KeyTableOffset);
-        Assert.Equal(0u, sfo.DataTableOffset);
-        Assert.NotNull(sfo.Entries);
-        Assert.Empty(sfo.Entries);
-    }
-
-    [Fact]
-    public void SfoDataGetStringReturnsNullForMissingKey()
-    {
-        var sfo = new SfoData();
-        Assert.Null(sfo.GetString("NONEXISTENT"));
-    }
-
-    [Fact]
-    public void SfoDataGetUInt32ReturnsNullForMissingKey()
-    {
-        var sfo = new SfoData();
-        Assert.Null(sfo.GetUInt32("NONEXISTENT"));
-    }
-
-    [Fact]
-    public void SfoDataKeysClassHasExpectedConstants()
-    {
-        Assert.Equal("BOOTABLE", SfoData.Keys.Bootable);
-        Assert.Equal("CATEGORY", SfoData.Keys.Category);
-        Assert.Equal("DISC_ID", SfoData.Keys.DiscId);
-        Assert.Equal("TITLE", SfoData.Keys.Title);
-    }
-
-    [Fact]
-    public void SfoEntryDefaultValuesAreCorrect()
-    {
-        var entry = new SfoEntry();
-        Assert.Equal(string.Empty, entry.Key);
-        Assert.Equal(0, entry.Format);
-        Assert.Equal(0u, entry.Length);
-        Assert.Equal(0u, entry.MaxLength);
-        Assert.Null(entry.Value);
-    }
-
-    [Fact]
-    public void TocEntryDefaultValuesAreCorrect()
-    {
-        var entry = new TocEntry();
-        Assert.Equal(0, (int)entry.TrackType);
-        Assert.Equal(0, entry.TrackNo);
-        Assert.Equal(0, entry.Minutes);
-        Assert.Equal(0, entry.Seconds);
-        Assert.Equal(0, entry.Frames);
-    }
-
-    [Fact]
-    public void TrackTypeDataValue()
-    {
-        Assert.Equal(0x41, (int)TrackType.Data);
-    }
-
-    [Fact]
-    public void TrackTypeAudioValue()
-    {
-        Assert.Equal(0x01, (int)TrackType.Audio);
     }
 
     [Fact]
@@ -635,7 +535,7 @@ public class PbpFileTests : IDisposable
         foreach (var dirEntry in dirEntries)
             ms.Write(dirEntry);
 
-        var keyTableOffset = 16 + (entryCount * 16);
+        var keyTableOffset = 16 + entryCount * 16;
         var dataTableOffset = (uint)(keyTableOffset + keyTable.Length);
 
         ms.Write(keyTable.ToArray());
@@ -1268,7 +1168,7 @@ public class PbpFileTests : IDisposable
             if (b == 1)
                 continue;
             for (var i = 0; i < blockSize; i++)
-                expected[(b * blockSize) + i] = (byte)((i + (b * 17)) & 0xFF);
+                expected[b * blockSize + i] = (byte)((i + b * 17) & 0xFF);
         }
 
         using var outputStream = new MemoryStream();

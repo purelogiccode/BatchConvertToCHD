@@ -65,7 +65,7 @@ internal static class Ripemd160
         var h3 = 0x10325476u;
         var h4 = 0xC3D2E1F0u;
 
-        var paddedLength = (((message.Length + 8) / 64) + 1) * 64;
+        var paddedLength = ((message.Length + 8) / 64 + 1) * 64;
         var padded = new byte[paddedLength];
         message.CopyTo(padded, 0);
         padded[message.Length] = 0x80;
@@ -79,7 +79,7 @@ internal static class Ripemd160
         {
             for (var i = 0; i < 16; i++)
             {
-                words[i] = BinaryPrimitives.ReadUInt32LittleEndian(padded.AsSpan(offset + (i * 4)));
+                words[i] = BinaryPrimitives.ReadUInt32LittleEndian(padded.AsSpan(offset + i * 4));
             }
 
             var a = h0;

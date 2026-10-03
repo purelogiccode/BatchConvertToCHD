@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Security;
 using System.Text;
+using BatchConvertToCHD.Models;
 using BatchConvertToCHD.Utilities;
 using CSOSharp;
 using CSOSharp.Models;
@@ -382,8 +383,17 @@ internal class ArchiveService
                 Path.GetPathRoot(Path.GetFullPath(tempDirectoryRoot))
                     ?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 ?? "temp drive";
-            var archiveSizeGb =
-                new FileInfo(originalArchivePath).Length / (1024.0 * 1024.0 * 1024.0);
+            long archiveSize;
+            try
+            {
+                archiveSize = EstimateArchiveUncompressedSize(originalArchivePath);
+            }
+            catch
+            {
+                archiveSize = new FileInfo(originalArchivePath).Length;
+            }
+
+            var archiveSizeGb = archiveSize / (1024.0 * 1024.0 * 1024.0);
             return (
                 false,
                 [],
@@ -470,10 +480,22 @@ internal class ArchiveService
             if (binFiles.Count > 0)
             {
                 // A "(Track N)" set describes a whole disc across several files. Building a
-                // multi-track cue keeps the CDDA audio, which converting one bin cannot.
-                var trackSet = TrackBinCueBuilder.TryGetTrackSet(binFiles);
-                if (trackSet is not null)
+                // multi-track cue keeps the CDDA audio, which converting one bin cannot. Sets are
+                // grouped by directory first: same-stem bins from different folders must not be
+                // merged into one cue whose FILE lines resolve in the wrong directory.
+                var generatedCues = new List<string>();
+                var binGroups = binFiles
+                    .GroupBy(
+                        static f => Path.GetDirectoryName(f) ?? string.Empty,
+                        StringComparer.OrdinalIgnoreCase
+                    )
+                    .ToList();
+
+                foreach (var group in binGroups)
                 {
+                    var trackSet = TrackBinCueBuilder.TryGetTrackSet([.. group]);
+                    if (trackSet is null) continue;
+
                     var trackCuePath = await TrackBinCueBuilder
                         .WriteCueAsync(trackSet, BinCueGenerator.Mode2, token)
                         .ConfigureAwait(false);
@@ -483,7 +505,12 @@ internal class ArchiveService
                     onLog(
                         "         Track pregaps are not recorded in the file names, so each track is taken to start at the beginning of its own file; audio track starts may be up to two seconds out."
                     );
-                    foundFiles = [trackCuePath];
+                    generatedCues.Add(trackCuePath);
+                }
+
+                if (generatedCues.Count > 0)
+                {
+                    foundFiles = generatedCues;
                 }
                 else
                 {
@@ -589,6 +616,14 @@ internal class ArchiveService
         }
     }
 
+    /// <summary>
+    ///     Extracts a zip with the built-in extractor, falling back to the bundled 7za when that
+    ///     fails and 7za is available.
+    /// </summary>
+    /// <param name="archivePath">Path of the zip file.</param>
+    /// <param name="outputDirectory">Directory that receives the extracted files.</param>
+    /// <param name="onLog">Log callback.</param>
+    /// <param name="token">Cancellation token.</param>
     private async Task ExtractZipWith7ZaFallbackAsync(
         string archivePath,
         string outputDirectory,
@@ -612,6 +647,13 @@ internal class ArchiveService
         }
     }
 
+    /// <summary>
+    ///     Extracts a zip directly, retrying through a temp copy when direct extraction fails
+    ///     (e.g. an SMB hiccup on a network share).
+    /// </summary>
+    /// <param name="archivePath">Path of the zip file.</param>
+    /// <param name="outputDirectory">Directory that receives the extracted files.</param>
+    /// <param name="token">Cancellation token.</param>
     private static void ExtractZipArchive(
         string archivePath,
         string outputDirectory,
@@ -654,6 +696,14 @@ internal class ArchiveService
         }
     }
 
+    /// <summary>
+    ///     Extracts every entry of a zip with <see cref="ZipFile.OpenRead" />, retrying transient
+    ///     I/O errors and rejecting entries that would escape the output directory.
+    /// </summary>
+    /// <param name="archivePath">Path of the zip file.</param>
+    /// <param name="outputDirectory">Directory that receives the extracted files.</param>
+    /// <param name="fullOutputDirectory">Normalized output directory with a trailing separator.</param>
+    /// <param name="token">Cancellation token.</param>
     private static void ExtractZipWithOpenRead(
         string archivePath,
         string outputDirectory,
@@ -674,18 +724,21 @@ internal class ArchiveService
                         continue;
 
                     var destinationPath = Path.Combine(outputDirectory, entry.FullName);
-                    var directory = Path.GetDirectoryName(destinationPath);
-                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-                        Directory.CreateDirectory(directory);
                     if (
-                        !Path.GetFullPath(destinationPath)
-                            .StartsWith(fullOutputDirectory, StringComparison.OrdinalIgnoreCase)
+                        !IsPathWithinDirectory(
+                            Path.GetFullPath(destinationPath),
+                            fullOutputDirectory
+                        )
                     )
                     {
                         throw new SecurityException(
                             "Attempted to extract file outside of the target directory."
                         );
                     }
+
+                    var directory = Path.GetDirectoryName(destinationPath);
+                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                        Directory.CreateDirectory(directory);
 
                     entry.ExtractToFile(destinationPath, true);
                 }
@@ -700,6 +753,14 @@ internal class ArchiveService
         }
     }
 
+    /// <summary>
+    ///     Extracts a 7z with SharpCompress, falling back to 7za when that fails and 7za is
+    ///     available.
+    /// </summary>
+    /// <param name="archivePath">Path of the 7z file.</param>
+    /// <param name="outputDirectory">Directory that receives the extracted files.</param>
+    /// <param name="onLog">Log callback.</param>
+    /// <param name="token">Cancellation token.</param>
     private async Task ExtractSevenZipArchiveAsync(
         string archivePath,
         string outputDirectory,
@@ -735,6 +796,13 @@ internal class ArchiveService
         }
     }
 
+    /// <summary>
+    ///     Extracts an archive with the bundled 7za executable.
+    /// </summary>
+    /// <param name="archivePath">Path of the archive file.</param>
+    /// <param name="outputDirectory">Directory that receives the extracted files.</param>
+    /// <param name="onLog">Log callback.</param>
+    /// <param name="token">Cancellation token.</param>
     private async Task ExtractWith7ZaAsync(
         string archivePath,
         string outputDirectory,
@@ -998,14 +1066,14 @@ internal class ArchiveService
         }
         catch (Exception ex)
         {
-            onLog(
-                $"Direct extraction failed ({ex.Message}). Attempting fallback with local copy..."
-            );
+            onLog($"Direct extraction failed ({ex.Message}).");
 
             if (IsArchiveDamageException(ex))
             {
                 throw;
             }
+
+            onLog("Attempting fallback with local copy...");
 
             Logger.Debug(
                 ex,
@@ -1035,6 +1103,29 @@ internal class ArchiveService
         }
     }
 
+    /// <summary>
+    ///     Determines whether a fully qualified path stays inside the output directory, using a
+    ///     case-sensitive comparison on Unix so that differently cased prefixes cannot escape.
+    /// </summary>
+    /// <param name="fullPath">Fully qualified destination path.</param>
+    /// <param name="fullDirectory">Output directory with a trailing separator.</param>
+    /// <returns><see langword="true" /> when the path is inside the directory.</returns>
+    private static bool IsPathWithinDirectory(string fullPath, string fullDirectory)
+    {
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        return fullPath.StartsWith(fullDirectory, comparison);
+    }
+
+    /// <summary>
+    ///     Writes every file entry of an opened SharpCompress archive, rejecting entries that would
+    ///     escape the output directory.
+    /// </summary>
+    /// <param name="archive">The opened archive.</param>
+    /// <param name="outputDirectory">Directory that receives the extracted files.</param>
+    /// <param name="fullOutputDirectory">Normalized output directory with a trailing separator.</param>
+    /// <param name="token">Cancellation token.</param>
     private static void ExtractArchiveEntries(
         IArchive archive,
         string outputDirectory,
@@ -1049,12 +1140,8 @@ internal class ArchiveService
                 continue;
 
             var destinationPath = Path.Combine(outputDirectory, entry.Key);
-            var directory = Path.GetDirectoryName(destinationPath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-                Directory.CreateDirectory(directory);
             if (
-                !Path.GetFullPath(destinationPath)
-                    .StartsWith(fullOutputDirectory, StringComparison.OrdinalIgnoreCase)
+                !IsPathWithinDirectory(Path.GetFullPath(destinationPath), fullOutputDirectory)
             )
             {
                 throw new SecurityException(
@@ -1062,10 +1149,19 @@ internal class ArchiveService
                 );
             }
 
+            var directory = Path.GetDirectoryName(destinationPath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+
             WriteEntryWithRetry(entry, destinationPath);
         }
     }
 
+    /// <summary>
+    ///     Writes one archive entry to disk, retrying transient I/O failures.
+    /// </summary>
+    /// <param name="entry">The entry to write.</param>
+    /// <param name="destinationPath">Destination path for the entry.</param>
     private static void WriteEntryWithRetry(IArchiveEntry entry, string destinationPath)
     {
         const int maxRetries = 3;
@@ -1083,6 +1179,10 @@ internal class ArchiveService
         }
     }
 
+    /// <summary>
+    ///     Deletes a file, ignoring any failure.
+    /// </summary>
+    /// <param name="filePath">Path of the file to delete.</param>
     private static void TryDeleteFile(string filePath)
     {
         try
@@ -1095,6 +1195,10 @@ internal class ArchiveService
         }
     }
 
+    /// <summary>
+    ///     Recursively deletes a directory, ignoring any failure.
+    /// </summary>
+    /// <param name="directoryPath">Path of the directory to delete.</param>
     private static void TryDeleteDirectory(string directoryPath)
     {
         try
@@ -1149,6 +1253,11 @@ internal class ArchiveService
         }
     }
 
+    /// <summary>
+    ///     Returns whether the exception is the Windows "disk full" I/O error.
+    /// </summary>
+    /// <param name="ex">The exception to inspect.</param>
+    /// <returns><see langword="true" /> for disk-full errors.</returns>
     private static bool IsDiskFullException(Exception ex)
     {
         return ex is IOException { HResult: -2147024784 or -2147024783 };
@@ -1225,6 +1334,15 @@ internal class ArchiveService
         return false;
     }
 
+    /// <summary>
+    ///     Checks the temp drive for enough free space to extract the archive, returning a
+    ///     user-facing message when it is too small.
+    /// </summary>
+    /// <param name="originalArchivePath">Path of the archive being extracted.</param>
+    /// <param name="tempDirectoryRoot">Directory whose drive is checked.</param>
+    /// <param name="archiveFileName">Archive name used in the message.</param>
+    /// <param name="totalSetSize">Pre-measured set size, or -1 to estimate per file.</param>
+    /// <returns>The warning message, or null when there is enough space.</returns>
     private static string? CheckTempDiskSpace(
         string originalArchivePath,
         string tempDirectoryRoot,
@@ -1282,6 +1400,12 @@ internal class ArchiveService
         return null;
     }
 
+    /// <summary>
+    ///     Estimates the uncompressed size of an archive (exact for zips, compressed size
+    ///     otherwise).
+    /// </summary>
+    /// <param name="archivePath">Path of the archive.</param>
+    /// <returns>The estimated size in bytes.</returns>
     private static long EstimateArchiveUncompressedSize(string archivePath)
     {
         var extension = Path.GetExtension(archivePath);

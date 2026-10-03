@@ -147,9 +147,9 @@ Records anonymous usage statistics once per launch.
 
 Checks GitHub for new releases at startup.
 
-- `CheckForNewVersionAsync(onLog, onStatusUpdate, onBugReport)` — wrapper; core overload takes `(HttpClient, Version? currentVersion, ...)` for testing.
+- `CheckForNewVersionAsync(onLog, onStatusUpdate, onBugReport)` — wrapper; core overload takes `(HttpClient, string releaseUrl, Version? currentVersion, ...)` for testing.
 - Flow:
-  1. GET the configured release URL (`AppConfig.GitHubApiLatestReleaseUrls`: `https://api.github.com/repos/purelogiccode/BatchConvertToCHD/releases/latest`) with a User-Agent. Rate limits (403/429) skip the check entirely because they are per-IP; other failures fall through to error handling.
+  1. GET `AppConfig.PrimaryGitHubApiLatestReleaseUrl` (`https://api.github.com/repos/purelogiccode/BatchConvertToCHD/releases/latest`) with a User-Agent. Rate limits (403/429) skip the check entirely because they are per-IP; other failures fall through to error handling.
   2. **403/429** → "GitHub API rate limit exceeded. Skipping update check." — no bug report.
   3. **5xx** → "Update check skipped: GitHub server error." — no bug report.
   4. Deserialize `GitHubRelease` (`tag_name`, `html_url`, `name`, `body`, `prerelease`, `draft`).

@@ -1,5 +1,4 @@
-using System.Collections.Concurrent;
-using System.Reflection;
+using BatchConvertToCHD.Models;
 using BatchConvertToCHD.Services;
 
 namespace BatchConvertToCHD.Tests;
@@ -60,48 +59,28 @@ public class FileWatcherServiceTests : IDisposable
     [Fact]
     public void RecordEvent_StoresCorrectEventTypes()
     {
-        var recordEventMethod = typeof(FileWatcherService).GetMethod(
-            "RecordEvent",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(recordEventMethod);
-
-        var dictField = typeof(FileWatcherService).GetField(
-            "_lastEventByFile",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(dictField);
-        var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
-        Assert.NotNull(dict);
-
         var createdPath = Path.Combine(_tempDir, "c.bin");
         var deletedPath = Path.Combine(_tempDir, "d.bin");
         var renamedFromPath = Path.Combine(_tempDir, "rf.bin");
         var renamedToPath = Path.Combine(_tempDir, "rt.bin");
 
-        recordEventMethod.Invoke(_service, [createdPath, FileWatchEventType.Created, null]);
-        recordEventMethod.Invoke(_service, [deletedPath, FileWatchEventType.Deleted, null]);
-        recordEventMethod.Invoke(
-            _service,
-            [renamedFromPath, FileWatchEventType.RenamedFrom, "newname.bin"]
-        );
-        recordEventMethod.Invoke(
-            _service,
-            [renamedToPath, FileWatchEventType.RenamedTo, "oldname.bin"]
-        );
+        _service.RecordEvent(createdPath, FileWatchEventType.Created, null);
+        _service.RecordEvent(deletedPath, FileWatchEventType.Deleted, null);
+        _service.RecordEvent(renamedFromPath, FileWatchEventType.RenamedFrom, "newname.bin");
+        _service.RecordEvent(renamedToPath, FileWatchEventType.RenamedTo, "oldname.bin");
 
-        Assert.True(dict.TryGetValue(createdPath, out var cr));
-        Assert.Equal(FileWatchEventType.Created, cr.EventType);
+        Assert.True(_service.TryGetRecordedEvent(createdPath, out var cr));
+        Assert.Equal(FileWatchEventType.Created, cr!.EventType);
 
-        Assert.True(dict.TryGetValue(deletedPath, out var dr));
-        Assert.Equal(FileWatchEventType.Deleted, dr.EventType);
+        Assert.True(_service.TryGetRecordedEvent(deletedPath, out var dr));
+        Assert.Equal(FileWatchEventType.Deleted, dr!.EventType);
 
-        Assert.True(dict.TryGetValue(renamedFromPath, out var rfr));
-        Assert.Equal(FileWatchEventType.RenamedFrom, rfr.EventType);
+        Assert.True(_service.TryGetRecordedEvent(renamedFromPath, out var rfr));
+        Assert.Equal(FileWatchEventType.RenamedFrom, rfr!.EventType);
         Assert.Equal("newname.bin", rfr.RelatedName);
 
-        Assert.True(dict.TryGetValue(renamedToPath, out var rtr));
-        Assert.Equal(FileWatchEventType.RenamedTo, rtr.EventType);
+        Assert.True(_service.TryGetRecordedEvent(renamedToPath, out var rtr));
+        Assert.Equal(FileWatchEventType.RenamedTo, rtr!.EventType);
         Assert.Equal("oldname.bin", rtr.RelatedName);
     }
 
@@ -335,164 +314,84 @@ public class FileWatcherServiceTests : IDisposable
 
     #endregion
 
-    #region RecordEvent - eviction (via reflection)
+    #region RecordEvent - eviction
 
     [Fact]
     public void RecordEvent_EvictsOldestEntriesWhenOverLimit()
     {
-        var recordEventMethod = typeof(FileWatcherService).GetMethod(
-            "RecordEvent",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(recordEventMethod);
-
-        var dictField = typeof(FileWatcherService).GetField(
-            "_lastEventByFile",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(dictField);
-        var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
-        Assert.NotNull(dict);
-
         const int maxHistory = 1000;
 
         for (var i = 0; i < maxHistory + 1; i++)
         {
             var filePath = Path.Combine(_tempDir, $"file{i:D4}.bin");
-            recordEventMethod.Invoke(_service, [filePath, FileWatchEventType.Created, null]);
+            _service.RecordEvent(filePath, FileWatchEventType.Created, null);
         }
 
-        Assert.False(dict.ContainsKey(Path.Combine(_tempDir, "file0000.bin")));
-        Assert.True(dict.ContainsKey(Path.Combine(_tempDir, "file1000.bin")));
+        Assert.False(_service.TryGetRecordedEvent(Path.Combine(_tempDir, "file0000.bin"), out _));
+        Assert.True(_service.TryGetRecordedEvent(Path.Combine(_tempDir, "file1000.bin"), out _));
     }
 
     [Fact]
     public void RecordEvent_UnderLimit_KeepsAllEntries()
     {
-        var recordEventMethod = typeof(FileWatcherService).GetMethod(
-            "RecordEvent",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(recordEventMethod);
-
-        var dictField = typeof(FileWatcherService).GetField(
-            "_lastEventByFile",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(dictField);
-        var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
-        Assert.NotNull(dict);
-
         for (var i = 0; i < 10; i++)
         {
             var filePath = Path.Combine(_tempDir, $"keep{i}.bin");
-            recordEventMethod.Invoke(_service, [filePath, FileWatchEventType.Deleted, null]);
+            _service.RecordEvent(filePath, FileWatchEventType.Deleted, null);
         }
 
-        Assert.Equal(10, dict.Count);
-        for (var i = 0; i < 10; i++) Assert.True(dict.ContainsKey(Path.Combine(_tempDir, $"keep{i}.bin")));
+        Assert.Equal(10, _service.RecordedEventCount);
+        for (var i = 0; i < 10; i++)
+            Assert.True(_service.TryGetRecordedEvent(Path.Combine(_tempDir, $"keep{i}.bin"), out _));
     }
 
     [Fact]
     public void RecordEvent_UpdateExistingKey_ReusesQueueSlot()
     {
-        var recordEventMethod = typeof(FileWatcherService).GetMethod(
-            "RecordEvent",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(recordEventMethod);
-
-        var dictField = typeof(FileWatcherService).GetField(
-            "_lastEventByFile",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(dictField);
-        var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
-        Assert.NotNull(dict);
-
         var filePath = Path.Combine(_tempDir, "reused.bin");
 
-        recordEventMethod.Invoke(_service, [filePath, FileWatchEventType.Created, null]);
-        recordEventMethod.Invoke(_service, [filePath, FileWatchEventType.Deleted, null]);
+        _service.RecordEvent(filePath, FileWatchEventType.Created, null);
+        _service.RecordEvent(filePath, FileWatchEventType.Deleted, null);
 
-        Assert.Single(dict);
-        Assert.True(dict.TryGetValue(filePath, out var record));
-        Assert.Equal(FileWatchEventType.Deleted, record.EventType);
+        Assert.Equal(1, _service.RecordedEventCount);
+        Assert.True(_service.TryGetRecordedEvent(filePath, out var record));
+        Assert.Equal(FileWatchEventType.Deleted, record!.EventType);
     }
 
     #endregion
 
-    #region OnError - buffer overflow (via reflection)
+    #region OnError - buffer overflow
 
     [Fact]
     public void OnError_BufferOverflow_ClearsHistory()
     {
-        var recordEventMethod = typeof(FileWatcherService).GetMethod(
-            "RecordEvent",
-            BindingFlags.NonPublic | BindingFlags.Instance
+        _service.RecordEvent(
+            Path.Combine(_tempDir, "test.bin"),
+            FileWatchEventType.Created,
+            null
         );
-        Assert.NotNull(recordEventMethod);
-
-        var dictField = typeof(FileWatcherService).GetField(
-            "_lastEventByFile",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(dictField);
-        var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
-        Assert.NotNull(dict);
-
-        recordEventMethod.Invoke(
-            _service,
-            [Path.Combine(_tempDir, "test.bin"), FileWatchEventType.Created, null]
-        );
-        Assert.NotEmpty(dict);
-
-        var onErrorMethod = typeof(FileWatcherService).GetMethod(
-            "OnError",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(onErrorMethod);
+        Assert.Equal(1, _service.RecordedEventCount);
 
         var overflowEx = new InternalBufferOverflowException("Buffer overflow");
         var errorEventArgs = new ErrorEventArgs(overflowEx);
-        onErrorMethod.Invoke(_service, [null!, errorEventArgs]);
+        _service.OnError(null!, errorEventArgs);
 
-        Assert.Empty(dict);
+        Assert.Equal(0, _service.RecordedEventCount);
     }
 
     [Fact]
     public void OnError_NonBufferOverflow_DoesNotClearHistory()
     {
-        var recordEventMethod = typeof(FileWatcherService).GetMethod(
-            "RecordEvent",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(recordEventMethod);
-
-        var dictField = typeof(FileWatcherService).GetField(
-            "_lastEventByFile",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(dictField);
-        var dict = dictField.GetValue(_service) as ConcurrentDictionary<string, FileEventRecord>;
-        Assert.NotNull(dict);
-
         var filePath = Path.Combine(_tempDir, "keep_me.bin");
-        recordEventMethod.Invoke(_service, [filePath, FileWatchEventType.Created, null]);
-        Assert.NotEmpty(dict);
-
-        var onErrorMethod = typeof(FileWatcherService).GetMethod(
-            "OnError",
-            BindingFlags.NonPublic | BindingFlags.Instance
-        );
-        Assert.NotNull(onErrorMethod);
+        _service.RecordEvent(filePath, FileWatchEventType.Created, null);
+        Assert.Equal(1, _service.RecordedEventCount);
 
         var fileNotFoundEx = new FileNotFoundException("File not found");
         var errorEventArgs = new ErrorEventArgs(fileNotFoundEx);
-        onErrorMethod.Invoke(_service, [null!, errorEventArgs]);
+        _service.OnError(null!, errorEventArgs);
 
-        Assert.NotEmpty(dict);
-        Assert.True(dict.ContainsKey(filePath));
+        Assert.Equal(1, _service.RecordedEventCount);
+        Assert.True(_service.TryGetRecordedEvent(filePath, out _));
     }
 
     #endregion

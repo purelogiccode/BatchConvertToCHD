@@ -9,12 +9,12 @@ namespace BatchConvertToCHD;
 internal static class AppConfig
 {
     private static readonly byte[] KeySalt = "BatchConvertToCHD_v1"u8.ToArray();
-    private static string? _decryptedApiKey;
+    private static readonly Lazy<string> DecryptedApiKey = new(DecryptApiKey);
 
     /// <summary>
     ///     Gets a value indicating whether the current process architecture is ARM64.
     /// </summary>
-    public static bool IsArm64 => RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
+    internal static bool IsArm64 => RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
 
     /// <summary>
     ///     Gets a value indicating whether the operating system itself is ARM64. An x64 process runs
@@ -22,39 +22,39 @@ internal static class AppConfig
     ///     x64 and the ARM64 builds of the bundled tools execute (natively or under emulation), while
     ///     a pure x64 system cannot run the ARM64 binaries at all.
     /// </summary>
-    public static bool IsArm64Os => RuntimeInformation.OSArchitecture == Architecture.Arm64;
+    internal static bool IsArm64Os => RuntimeInformation.OSArchitecture == Architecture.Arm64;
 
     /// <summary>
     ///     Gets the appropriate chdman executable name based on the current architecture.
     ///     Returns "chdman_arm64.exe" for ARM64 or "chdman.exe" for other architectures.
     /// </summary>
-    public static string ChdmanExeName => IsArm64 ? "chdman_arm64.exe" : "chdman.exe";
+    internal static string ChdmanExeName => IsArm64 ? "chdman_arm64.exe" : "chdman.exe";
 
     /// <summary>
     ///     Gets the appropriate 7-Zip executable name based on the current architecture.
     ///     Returns "7za_arm64.exe" for ARM64 or "7za.exe" for other architectures.
     /// </summary>
-    public static string SevenZipExeName => IsArm64 ? "7za_arm64.exe" : "7za.exe";
+    internal static string SevenZipExeName => IsArm64 ? "7za_arm64.exe" : "7za.exe";
 
     /// <summary>
     ///     Gets the chdman executable names to probe, best first. On an ARM64 operating system both
     ///     builds run, so the native ARM64 binary comes first even when this app itself runs emulated
     ///     as x64; on a pure x64 system only the x64 build can execute, so it is the sole candidate.
     /// </summary>
-    public static IReadOnlyList<string> ChdmanExeCandidates =>
+    internal static IReadOnlyList<string> ChdmanExeCandidates =>
         IsArm64Os ? ["chdman_arm64.exe", "chdman.exe"] : ["chdman.exe"];
 
     /// <summary>
     ///     Gets the 7-Zip executable names to probe, best first, following the same rules as
     ///     <see cref="ChdmanExeCandidates" />.
     /// </summary>
-    public static IReadOnlyList<string> SevenZipExeCandidates =>
+    internal static IReadOnlyList<string> SevenZipExeCandidates =>
         IsArm64Os ? ["7za_arm64.exe", "7za.exe"] : ["7za.exe"];
 
     /// <summary>
     ///     The API endpoint URL for submitting bug reports.
     /// </summary>
-    public const string BugReportApiUrl =
+    internal const string BugReportApiUrl =
         "https://www.purelogiccode.com/bugreport/api/send-bug-report";
 
     /// <summary>
@@ -66,64 +66,61 @@ internal static class AppConfig
     /// <summary>
     ///     Gets the API key used to authenticate bug report submissions.
     /// </summary>
-    public static string BugReportApiKey => GetApiKey();
+    internal static string BugReportApiKey => GetApiKey();
 
     /// <summary>
     ///     The API endpoint URL for recording application usage statistics.
     /// </summary>
-    public const string ApplicationStatsApiUrl =
+    internal const string ApplicationStatsApiUrl =
         "https://www.purelogiccode.com/ApplicationStats/stats";
 
     /// <summary>
     ///     Gets the API key used to authenticate application stats submissions.
     /// </summary>
-    public static string ApplicationStatsApiKey => GetApiKey();
+    internal static string ApplicationStatsApiKey => GetApiKey();
 
     /// <summary>
     ///     The GitHub API URL for checking the latest application release. The repository was
     ///     transferred to the purelogiccode organization; the previous owner's URL now redirects
     ///     here as well.
     /// </summary>
-    public const string PrimaryGitHubApiLatestReleaseUrl =
+    internal const string PrimaryGitHubApiLatestReleaseUrl =
         "https://api.github.com/repos/purelogiccode/BatchConvertToCHD/releases/latest";
-
-    public static IReadOnlyList<string> GitHubApiLatestReleaseUrls =>
-        [PrimaryGitHubApiLatestReleaseUrl];
 
     /// <summary>
     ///     The canonical name of this application, used for API calls, window titles, and mutex naming.
     /// </summary>
-    public const string ApplicationName = "BatchConvertToCHD";
+    internal const string ApplicationName = "BatchConvertToCHD";
 
     /// <summary>
     ///     The environment identifier sent with bug reports ("Production" or "Development").
     /// </summary>
 #if DEBUG
-    public const string BugReportEnvironment = "Development";
+    internal const string BugReportEnvironment = "Development";
 #else
-    public const string BugReportEnvironment = "Production";
+    internal const string BugReportEnvironment = "Production";
 #endif
 
     /// <summary>
     ///     The interval in milliseconds between write speed performance counter updates.
     /// </summary>
-    public const int WriteSpeedUpdateIntervalMs = 1000;
+    internal const int WriteSpeedUpdateIntervalMs = 1000;
 
     /// <summary>
     ///     The maximum allowed conversion timeout in hours to prevent unreasonably long timeouts.
     /// </summary>
-    public const int MaxConversionTimeoutHours = 4;
+    internal const int MaxConversionTimeoutHours = 4;
 
     private static string GetApiKey()
     {
-        if (_decryptedApiKey == null)
-        {
-            var data = Convert.FromBase64String(EncryptedApiKey);
-            for (var i = 0; i < data.Length; i++) data[i] ^= KeySalt[i % KeySalt.Length];
+        return DecryptedApiKey.Value;
+    }
 
-            _decryptedApiKey = Encoding.UTF8.GetString(data);
-        }
+    private static string DecryptApiKey()
+    {
+        var data = Convert.FromBase64String(EncryptedApiKey);
+        for (var i = 0; i < data.Length; i++) data[i] ^= KeySalt[i % KeySalt.Length];
 
-        return _decryptedApiKey;
+        return Encoding.UTF8.GetString(data);
     }
 }
