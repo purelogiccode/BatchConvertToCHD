@@ -229,29 +229,27 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
                 "ffmpeg was not found on PATH; install it to decode MP3 tracks on this platform."
             );
 
-        using var process = new Process
+        using var process = new Process();
+        process.StartInfo = new ProcessStartInfo(ffmpegPath)
         {
-            StartInfo = new ProcessStartInfo(ffmpegPath)
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            ArgumentList =
             {
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                ArgumentList =
-                {
-                    "-y",
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-i",
-                    mp3Path,
-                    "-ar",
-                    "44100",
-                    "-ac",
-                    "2",
-                    "-sample_fmt",
-                    "s16",
-                    wavPath
-                }
+                "-y",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-i",
+                mp3Path,
+                "-ar",
+                "44100",
+                "-ac",
+                "2",
+                "-sample_fmt",
+                "s16",
+                wavPath
             }
         };
 
