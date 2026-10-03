@@ -6,8 +6,8 @@
         <LangVersion>latest</LangVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <Company>PureLogicCode.com</Company>
-        <AssemblyVersion>1.0.0</AssemblyVersion>
-        <FileVersion>1.0.0</FileVersion>
+        <AssemblyVersion>1.0.1</AssemblyVersion>
+        <FileVersion>1.0.1</FileVersion>
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -19,7 +19,7 @@
         <!-- NuGet Package Metadata -->
         <IsPackable>true</IsPackable>
         <PackageId>CCDSharp</PackageId>
-        <Version>1.0.0</Version>
+        <Version>1.0.1</Version>
         <Authors>PureLogicCode.com</Authors>
         <Title>CCDSharp</Title>
         <Description>A managed C# library for parsing and converting CloneCD disc images (.ccd/.img/.sub) to standard formats. Supports conversion to .iso (2048-byte cooked data) and .cue/.bin (raw 2352-byte sectors). Ideal for disc image preservation and emulation workflows.</Description>

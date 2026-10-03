@@ -6,8 +6,8 @@
         <LangVersion>latest</LangVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <Company>PureLogicCode.com</Company>
-        <AssemblyVersion>1.0.0</AssemblyVersion>
-        <FileVersion>1.0.0</FileVersion>
+        <AssemblyVersion>1.0.1</AssemblyVersion>
+        <FileVersion>1.0.1</FileVersion>
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -16,7 +16,7 @@
         <!-- NuGet Package Metadata -->
         <IsPackable>true</IsPackable>
         <PackageId>CSOSharp</PackageId>
-        <Version>1.0.0</Version>
+        <Version>1.0.1</Version>
         <Authors>PureLogicCode.com</Authors>
         <Title>CSOSharp</Title>
         <Description>A managed C# library for reading and extracting CSO/CISO (Compressed ISO) files. Supports CSO v1 (deflate/zlib) and CSO v2/ZSO (LZ4) formats. Ideal for extracting ISO disc images from compressed CSO/CISO containers.</Description>

@@ -50,10 +50,12 @@ The library is the PBP extraction engine used by [Batch Convert to CHD](https://
   - [PbpFile](#pbpfile)
   - [PbpDiscInfo](#pbpdiscinfo)
   - [CueSheetWriter](#cuesheetwriter)
+  - [PbpDiagnostics](#pbpdiagnostics)
   - [Models](#models)
 - [Supported PBP variants](#supported-pbp-variants)
 - [How it works](#how-it-works)
 - [Building from source](#building-from-source)
+- [Version history](#version-history)
 - [License](#license)
 
 ## Features
@@ -432,7 +434,8 @@ Notes:
 
 - `ReadBlock` throws `ArgumentOutOfRangeException` for an out-of-range `blockIndex` and `InvalidDataException` when the index entry is corrupt.
 - `ExtractTo` propagates `OperationCanceledException` and `InvalidDataException`.
-- `ExtractToBinCue` writes the BIN first. If extraction fails, a partial BIN file may remain; delete it if the returned error is not `PbpError.None`.
+- `ExtractToBinCue` writes the BIN first and deletes the partial file when extraction fails or is cancelled, so a returned error never leaves a short BIN behind.
+- A disc whose volume descriptor declares zero sectors (size unknown) has every index entry written in full instead of producing an empty BIN; a declared size stops extraction once it has been reached, so index-area data appended by an authoring tool is not read as image data.
 - `NoIsoIndexException` is what the PSAR parser throws internally when a valid disc container carries no ISO index. `PbpFile.Open` catches it and reports `PbpError.TruncatedPsar`.
 - When a block fails to decompress, `PbpDiagnostics.TakeDetail()` returns a one-line description of the failing block - its index and count, absolute file offset, index-entry length, stored flag, ISO size, disc id and a hex preview of the first bytes, plus the raw-deflate and zlib error messages. The detail is per-thread and cleared when read, so it is never reported twice. Attach it to logs or bug reports; the `PbpError` code alone cannot identify the block.
 
@@ -536,6 +539,24 @@ The test suite for the library lives in `BatchConvertToCHD.Tests/`:
 ```powershell
 dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release --filter "FullyQualifiedName~Pbp"
 ```
+
+## Version history
+
+### 1.1.2
+
+- A disc whose volume descriptor declares zero sectors no longer extracts an empty BIN and reports success; every index entry is written when the size is unknown.
+- Extraction stops once the declared ISO size is reached, so trailing index-area data is not read as image data.
+- `ExtractToBinCue` deletes the partial BIN when extraction fails or is cancelled, and `EndOfStreamException` is reported as `PbpError.TruncatedPsar`.
+- SFO string values are bounded by the bytes left in the file, so a corrupt entry length cannot drive a huge allocation.
+- `PbpFile`/`PbpDiscInfo`/`PbpDiagnostics`/`CueSheetWriter` documented, and `PbpHeader`'s header size comment corrected to 40 bytes.
+
+### 1.1.1
+
+- Packaging/documentation release: XML docs, README and icon shipped with the package.
+
+### 1.1.0
+
+- API refactor into `PBPSharp` and `PBPSharp.Models`, with the SFO models (`SfoData`, `SfoEntry`), `PbpHeader` and the per-disc TOC exposed publicly.
 
 ## License
 

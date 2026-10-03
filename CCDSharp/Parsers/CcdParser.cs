@@ -8,8 +8,8 @@ namespace CCDSharp.Parsers;
 ///     Parses CloneCD .ccd descriptor files into a DiscImage model.
 /// </summary>
 /// <remarks>
-///     Missing files throw <see cref="FileNotFoundException" />; malformed descriptors throw
-///     <see cref="InvalidDataException" />. This matches <c>MDSSharp.MdsParser</c>.
+///     Missing files throw <see cref="FileNotFoundException" />; malformed lines are otherwise
+///     ignored, so a partially corrupt descriptor still yields the tracks it did declare.
 /// </remarks>
 public static partial class CcdParser
 {

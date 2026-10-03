@@ -56,6 +56,7 @@ plain image before converting it to CHD with `chdman` or [CHDSharp](https://www.
 - [How it works](#how-it-works)
 - [Building from source](#building-from-source)
 - [References](#references)
+- [Version history](#version-history)
 - [License](#license)
 
 ## Features
@@ -239,6 +240,8 @@ is written for the end user (it says what to do about the problem, not just what
 | Truncated file or short segment | the ISZ decompressed to N bytes but its header declares M |
 | Checksum mismatch | the restored image does not match the checksum the ISZ header declares |
 | Damaged compressed data | the compressed data inside the ISZ is damaged |
+| Corrupt chunk table | the chunk table size does not fit the file, so it is corrupt or truncated |
+| Short non-final chunk | chunk N decompressed to fewer bytes than the chunk size the header declares |
 | Unknown version | the ISZ header declares format version N, and only version 1 is understood |
 
 A decode that fails after writing has started deletes the partial image before returning, so a failed
@@ -254,7 +257,7 @@ The entry point. A static class, because an ISZ is decoded in one pass to a file
 
 | Member | Description |
 |---|---|
-| `static Task<IszHeader?> TryReadHeaderAsync(string path, CancellationToken token)` | Reads and parses the header, or returns `null` when the file is not an ISZ image. I/O errors are thrown. |
+| `static Task<IszHeader?> TryReadHeaderAsync(string path, CancellationToken token)` | Reads and parses the header, or returns `null` when the file exists but is not an ISZ image. `IOException` and `UnauthorizedAccessException` propagate for missing or unreadable files. |
 | `static Task<IszDecodeResult> DecodeAsync(string iszPath, string destinationPath, Action<string> onLog, CancellationToken token)` | Decompresses the image (whole or split) to `destinationPath`, reporting progress through `onLog`. |
 | `static string GetDecodedFileName(string iszPath)` | The name the restored image should be given: the stem plus `.iso`. |
 | `static string GetSegmentPath(string firstSegmentPath, int segmentIndex)` | Path of the given segment, following the first file's naming scheme. |
@@ -393,6 +396,22 @@ dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release --
   [isz-tool](https://github.com/oserres/isz-tool) (GPL-3) — the independent readers the real-file
   behaviours (obfuscated tables, stripped bzip2 header, no chunk table, checksum calculation) were checked
   against.
+
+## Version history
+
+### 1.0.2
+
+- A chunk table whose declared size does not fit the file is rejected before it is allocated, so a corrupt header cannot exhaust memory.
+- A chunk that decompresses short is only accepted when it is the final contributing chunk; a short chunk in the middle is reported as damaged data instead of leaving a gap in the image.
+- `TryReadHeaderAsync` returns `null` only when the file exists but is not an ISZ image; `IOException` and `UnauthorizedAccessException` for missing or unreadable files now propagate instead of being swallowed.
+
+### 1.0.1
+
+- A split image whose cut lands inside a chunk decodes: the later segment's `left_size` tail is skipped so the straddling chunk is read from its real data offset.
+
+### 1.0.0
+
+- First published release: whole and split ISZ decoding with zlib, bzip2, stored and zero-elided chunks, the obfuscated tables real UltraISO files carry, checksum validation and AES-encrypted-file rejection, targeting `net8.0`, `net9.0` and `net10.0`.
 
 ## License
 

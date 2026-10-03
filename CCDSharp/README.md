@@ -54,6 +54,7 @@ The library is the CloneCD conversion engine used by [Batch Convert to CHD](http
 - [Supported images](#supported-images)
 - [How it works](#how-it-works)
 - [Building from source](#building-from-source)
+- [Version history](#version-history)
 - [License](#license)
 
 ## Features
@@ -288,7 +289,7 @@ CCDSharp reports failures with the standard exceptions instead of an error enum,
 | `IOException` | An I/O operation fails, or the CUE/BIN copy still fails after four retries. |
 | `ArgumentNullException` | `SubcodeParser(Stream)` is constructed with a `null` stream. |
 
-Parsing itself is lenient: unrecognized lines and missing fields are ignored, and the corresponding model properties keep their defaults. If you need strict validation, check the returned `DiscImage` (for example `Tracks.Count` or `ImgFilePath`) after parsing.
+Parsing itself is lenient: unrecognized lines and missing fields are ignored, and the corresponding model properties keep their defaults. A value that does not fit an `int`, and a track number outside 1–99 (or above the declared TOC entry count), are ignored as well, so a corrupt descriptor can neither throw `OverflowException` nor make the parser allocate tracks without bound. If you need strict validation, check the returned `DiscImage` (for example `Tracks.Count` or `ImgFilePath`) after parsing.
 
 ## API reference
 
@@ -339,7 +340,7 @@ Lower-level ISO conversion for callers that already have streams or a parsed dis
 | Member | Description |
 |---|---|
 | `static string Write(string imgFilePath, string isoFilePath, Action<long, long>? progress = null)` | Converts a raw `.img` file to ISO. |
-| `static string Write(DiscImage disc, string isoFilePath, Action<long, long>? progress = null)` | Converts the first data track of a parsed disc to ISO. |
+| `static string Write(DiscImage disc, string isoFilePath, Action<long, long>? progress = null)` | Converts the first data track of a parsed disc to ISO, extracting only that track's sectors (from its `INDEX 01` up to the next track). |
 | `static void WriteToStream(Stream input, Stream output, long totalSectors = -1, Action<long, long>? progress = null)` | Converts raw sectors from a stream to user data in another stream. |
 
 ### Models
@@ -400,6 +401,19 @@ The repository's xUnit suite lives in `BatchConvertToCHD.Tests/`:
 ```powershell
 dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release
 ```
+
+## Version history
+
+### 1.0.1
+
+- Parsing is overflow-safe: a descriptor value that does not fit an `int` is ignored instead of throwing `OverflowException`.
+- Track numbers are validated against the declared TOC entry count (capped at 99), so a corrupt descriptor cannot make the parser allocate tracks without bound.
+- `IsoWriter.Write(DiscImage, ...)` extracts only the data track's sector range (`INDEX 01` to the next track) and `WriteToStream` honors its `totalSectors` argument.
+- An `.img` whose length is not a whole number of 2352-byte sectors is rejected with `InvalidOperationException` instead of silently dropping the trailing bytes.
+
+### 1.0.0
+
+- First published release: CloneCD descriptor parsing, ISO and CUE/BIN conversion, CUE sheet generation and raw subchannel access, targeting `net8.0`, `net9.0` and `net10.0`.
 
 ## License
 

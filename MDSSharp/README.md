@@ -52,6 +52,7 @@ The library is the Alcohol 120% conversion engine used by [Batch Convert to CHD]
 - [Supported images](#supported-images)
 - [How it works](#how-it-works)
 - [Building from source](#building-from-source)
+- [Version history](#version-history)
 - [License](#license)
 
 ## Features
@@ -319,7 +320,7 @@ The medium type and the stored sector layout determine what has to happen before
 | CD (2368) | 2352 data + 16 subchannel | Strip to 2352 bytes, then write a cue for the stripped file. |
 | CD (2336) | Cooked Mode 2 data | Write a `MODE2/2336` cue referencing the data file. |
 
-When the descriptor records pregaps and the track lengths add up to the file size, the data file does not contain the pregap sectors. Those descriptors are rebuilt into a `.pregap.bin` with zero-filled pregaps (stripping subchannel data in the same pass when present) so the cue's `INDEX 00` points at real sectors. If the pregaps are already in the data file, `INDEX 00` points at them directly and nothing is copied.
+When the descriptor records pregaps and the track lengths add up to the file size, the data file does not contain the pregap sectors. Those descriptors are rebuilt into a `.pregap.bin` with zero-filled pregaps (stripping subchannel data in the same pass when present) so the cue's `INDEX 00` points at real sectors. If the pregaps are already in the data file, `INDEX 00` points at them directly and nothing is copied. For MDS v2 the decision is made per track from the footer's `StoredDataSectors`, so an image that keeps one track's pregap and omits another's is rebuilt selectively; a pregap before LBA 0 (the first track's) is never materialized.
 
 CUE index values are derived from the descriptor's start LBA with `FormatMsf` (75 frames per second, 60 seconds per minute) and written as UTF-8 without a BOM.
 
@@ -339,6 +340,21 @@ The repository's xUnit suite lives in `BatchConvertToCHD.Tests/`:
 ```powershell
 dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release
 ```
+
+## Version history
+
+### 1.2.0
+
+- MDS v2 and single-file `.mdx` support: the descriptor is decrypted and decompressed, compressed tracks are decoded from their compression tables and encrypted tracks use AES-256 LRW (password-less/TAGES or a supplied password).
+- Per-track pregaps: `StoredDataSectors` exposes each footer's stored length, and preparation materializes only the missing, representable pregaps so mixed v2 layouts keep every `INDEX 00`/`INDEX 01` at the right LBA.
+- A footer count of zero still reads footer 0 like mdsx, and a later fragment of a split track that names no data file is reported instead of re-reading the first file.
+- `MdsDisc` gained `HasEncryptedTrackData`, `HasCompressedTrackData` and `IsMdxContainer`.
+
+### 1.1.0
+
+- Renamed from `Alcohol120Sharp`; package metadata, README and icon added.
+- Pregaps are described (`INDEX 00`, rebuilt when absent) and multi-file descriptors are joined in track order.
+- Medium type, per-track extra blocks and footer file names are parsed, with the mode taken from the low nibble of the mode byte.
 
 ## License
 

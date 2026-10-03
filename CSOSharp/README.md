@@ -51,6 +51,7 @@ The library is the CSO extraction engine used by [Batch Convert to CHD](https://
 - [Supported CSO variants](#supported-cso-variants)
 - [How it works](#how-it-works)
 - [Building from source](#building-from-source)
+- [Version history](#version-history)
 - [License](#license)
 
 ## Features
@@ -367,7 +368,8 @@ Notes:
 - `ReadBlock` returns `BlockOutOfRange` for an index past the end and `DecompressionError` when the destination buffer is too small (the buffer must hold `BlockSize` bytes starting at `offset`).
 - `ReadBlock` and `OpenStream` on a disposed instance return `CsoError.IoError` and throw `ObjectDisposedException` respectively.
 - `CsoStream.Read` throws `ObjectDisposedException` after disposal, `IOException` when a block fails to decompress, and `ArgumentOutOfRangeException` for an invalid buffer offset/count.
-- `ExtractToIso` propagates `OperationCanceledException` when the token is cancelled.
+- `ExtractToIso` propagates `OperationCanceledException` when the token is cancelled, returns `InvalidHeader` for a header that declares zero uncompressed bytes (instead of leaving an empty ISO behind) and never writes past the declared uncompressed size.
+- `Open` returns `CorruptIndex` for an index table larger than the file itself before allocating it, so a header claiming a huge block count cannot exhaust memory.
 
 ## API reference
 
@@ -464,6 +466,20 @@ The test suite for the library lives in `BatchConvertToCHD.Tests/`:
 ```powershell
 dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release --filter "FullyQualifiedName~Cso"
 ```
+
+## Version history
+
+### 1.0.1
+
+- CSO v2/ZSO blocks are classified the way the format defines them: compressed only when smaller than a full block, with bit 31 selecting LZ4 over deflate. Previously v1 semantics were applied to v2, so LZ4 blocks were returned as raw compressed bytes and stored or deflate blocks were pushed through the LZ4 decoder.
+- A short final stored block is zero-padded instead of failing, and a stored block is read exactly up to the block size.
+- A header or index table that does not fit in the file is rejected (`InvalidHeader` / `CorruptIndex`) before any allocation.
+- The zlib wrapper of a v1 deflate block is detected from the real `CMF`/`FLG` header (compression method, window size, checksum) instead of the first byte alone.
+- `ExtractToIso` reports a header with zero uncompressed bytes as `InvalidHeader` and truncates output at the declared size.
+
+### 1.0.0
+
+- First published release: CSO v1 (deflate/zlib) and CSO v2/ZSO (LZ4) reading, block-level access, a seekable decompressing stream and one-call ISO extraction, targeting `net8.0`, `net9.0` and `net10.0`.
 
 ## License
 
