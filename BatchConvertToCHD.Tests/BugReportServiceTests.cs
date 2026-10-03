@@ -170,8 +170,7 @@ public class BugReportServiceTests
     public void AppendExceptionDetailsHandlesExceptionWithoutSource()
     {
         var sb = new StringBuilder();
-        var ex = Record.Exception(
-            () => BugReportService.AppendExceptionDetails(sb, new InvalidOperationException(), 0)
+        var ex = Record.Exception(() => BugReportService.AppendExceptionDetails(sb, new InvalidOperationException(), 0)
         );
 
         Assert.Null(ex);

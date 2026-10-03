@@ -360,7 +360,11 @@ public class UpdateServiceTests
         await service.CheckForNewVersionAsync(
             httpClient,
             currentVersion,
-            logMessages.Add, statusMessages.Add, (msg, _) => { reportedError = msg; return Task.CompletedTask; }
+            logMessages.Add, statusMessages.Add, (msg, _) =>
+            {
+                reportedError = msg;
+                return Task.CompletedTask;
+            }
         );
 
         Assert.Contains(
@@ -390,7 +394,11 @@ public class UpdateServiceTests
         await service.CheckForNewVersionAsync(
             httpClient,
             currentVersion,
-            logMessages.Add, statusMessages.Add, (_, _) => { bugReportCalled = true; return Task.CompletedTask; }
+            logMessages.Add, statusMessages.Add, (_, _) =>
+            {
+                bugReportCalled = true;
+                return Task.CompletedTask;
+            }
         );
 
         Assert.Contains(
@@ -481,7 +489,11 @@ public class UpdateServiceTests
         await service.CheckForNewVersionAsync(
             httpClient,
             currentVersion,
-            logMessages.Add, statusMessages.Add, (_, _) => { bugReportCalled = true; return Task.CompletedTask; }
+            logMessages.Add, statusMessages.Add, (_, _) =>
+            {
+                bugReportCalled = true;
+                return Task.CompletedTask;
+            }
         );
 
         Assert.Contains(
@@ -512,7 +524,11 @@ public class UpdateServiceTests
         await service.CheckForNewVersionAsync(
             httpClient,
             currentVersion,
-            logMessages.Add, statusMessages.Add, (msg, _) => { reportedError = msg; return Task.CompletedTask; }
+            logMessages.Add, statusMessages.Add, (msg, _) =>
+            {
+                reportedError = msg;
+                return Task.CompletedTask;
+            }
         );
 
         Assert.Contains(
@@ -736,7 +752,11 @@ public class UpdateServiceTests
         await service.CheckForNewVersionAsync(
             httpClient,
             new Version(2, 7, 0),
-            static _ => { }, statusMessages.Add, (_, _) => { bugReportCount++; return Task.CompletedTask; }
+            static _ => { }, statusMessages.Add, (_, _) =>
+            {
+                bugReportCount++;
+                return Task.CompletedTask;
+            }
         );
 
         Assert.Contains(
@@ -763,7 +783,11 @@ public class UpdateServiceTests
         await service.CheckForNewVersionAsync(
             httpClient,
             new Version(2, 7, 0),
-            static _ => { }, statusMessages.Add, (_, _) => { bugReportCount++; return Task.CompletedTask; }
+            static _ => { }, statusMessages.Add, (_, _) =>
+            {
+                bugReportCount++;
+                return Task.CompletedTask;
+            }
         );
 
         Assert.Contains(
@@ -787,7 +811,11 @@ public class UpdateServiceTests
         await service.CheckForNewVersionAsync(
             httpClient,
             new Version(2, 7, 0),
-            static _ => { }, statusMessages.Add, (_, _) => { bugReportCount++; return Task.CompletedTask; }
+            static _ => { }, statusMessages.Add, (_, _) =>
+            {
+                bugReportCount++;
+                return Task.CompletedTask;
+            }
         );
 
         Assert.Contains(

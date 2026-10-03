@@ -68,9 +68,9 @@ internal partial class MainWindow
 
         // PlayStation (Auto) is the best default: it parses ISO 9660 on both CD and DVD CHDs,
         // where the plain ISO 9660 parser needs a CD track table that DVD images do not have.
-        ExplorerParserComboBox.SelectedItem = ConsoleTypeRegistry.All.FirstOrDefault(
-            static entry => entry.Type == ConsoleType.PlayStation
-        );
+        ExplorerParserComboBox.SelectedItem =
+            ConsoleTypeRegistry.All.FirstOrDefault(static entry => entry.Type == ConsoleType.PlayStation
+            );
 
         Closed += (_, _) => DisposeExplorer();
         _explorerInitialized = true;
@@ -451,8 +451,7 @@ internal partial class MainWindow
 
             extracted = true;
             var pathToOpen = extractedPath;
-            await Dispatcher.UIThread.InvokeAsync(
-                () =>
+            await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     using var process = Process.Start(
                         new ProcessStartInfo(pathToOpen) { UseShellExecute = true }
@@ -577,8 +576,7 @@ internal partial class MainWindow
 
         _explorerCts.Cancel();
 
-        _ = Task.Run(
-            async () =>
+        _ = Task.Run(async () =>
             {
                 try
                 {
@@ -674,8 +672,7 @@ internal partial class MainWindow
     /// <param name="delay">How long to wait before deleting it.</param>
     private static void ScheduleExplorerTempCleanup(string directory, TimeSpan delay)
     {
-        _ = Task.Run(
-            async () =>
+        _ = Task.Run(async () =>
             {
                 try
                 {

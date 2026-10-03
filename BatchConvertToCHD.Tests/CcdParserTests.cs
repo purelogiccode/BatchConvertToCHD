@@ -6,28 +6,28 @@ namespace BatchConvertToCHD.Tests;
 public class CcdParserTests : IDisposable
 {
     private const string FullCcd = """
-        [CloneCD]
-        Version=3
+                                   [CloneCD]
+                                   Version=3
 
-        [Disc]
-        TocEntries=3
-        Sessions=1
-        DataTracksScrambled=0
-        CDTextLength=0
-        CATALOG=1234567890123
+                                   [Disc]
+                                   TocEntries=3
+                                   Sessions=1
+                                   DataTracksScrambled=0
+                                   CDTextLength=0
+                                   CATALOG=1234567890123
 
-        [Session 1]
-        [TRACK 1]
-        MODE=1
-        INDEX 1=0
+                                   [Session 1]
+                                   [TRACK 1]
+                                   MODE=1
+                                   INDEX 1=0
 
-        [TRACK 2]
-        MODE=0
-        INDEX 0=100
-        INDEX 1=150
-        FLAGS=DCP
-        ISRC=ABC123456789
-        """;
+                                   [TRACK 2]
+                                   MODE=0
+                                   INDEX 0=100
+                                   INDEX 1=150
+                                   FLAGS=DCP
+                                   ISRC=ABC123456789
+                                   """;
 
     private readonly string _tempDir = Path.Combine(
         Path.GetTempPath(),

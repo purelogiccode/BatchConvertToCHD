@@ -137,6 +137,7 @@ internal class BugReportService
         "Dispatcher.UnhandledException",
         "TaskScheduler.UnobservedTaskException"
     ];
+
     private readonly HttpClient _httpClient;
 
     /// <summary>Gets the API endpoint URL. Exposed for diagnostics and tests.</summary>

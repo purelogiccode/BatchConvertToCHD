@@ -1,4 +1,5 @@
 // ReSharper disable once RedundantUsingDirective
+
 using System.Net.Http;
 using System.Net.Security;
 using System.Security.Authentication;

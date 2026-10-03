@@ -84,8 +84,7 @@ public class IoThroughputCounterTests
     [Fact]
     public void NextValueReturnsZeroWhenSourceThrows()
     {
-        using var counter = new IoThroughputCounter(
-            static () => throw new InvalidOperationException("boom")
+        using var counter = new IoThroughputCounter(static () => throw new InvalidOperationException("boom")
         );
 
         Assert.Equal(0, counter.NextValue());
