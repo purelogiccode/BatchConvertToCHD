@@ -173,7 +173,7 @@ In-process CHD encoder backed by the [CHDSharp](https://www.nuget.org/packages/C
 
 | Member | Purpose |
 |--------|---------|
-| `Encode(command, inputPath, outputPath, rawUnits2352, taskCount, token)` (static) | Encodes `inputPath` to `outputPath` using chdman's commands and defaults. Writes to the caller's staging path; throws `ArgumentException` for an unsupported command, `OperationCanceledException` on cancellation, and encoding exceptions on failure. Output is byte-identical to `chdman` 0.289. |
+| `Encode(command, inputPath, outputPath, rawUnits2352, taskCount, token, onHunkCompleted = null)` (static) | Encodes `inputPath` to `outputPath` using chdman's commands and defaults. Writes to the caller's staging path; throws `ArgumentException` for an unsupported command, `OperationCanceledException` on cancellation, and encoding exceptions on failure. Output is byte-identical to `chdman` 0.289. `onHunkCompleted` is forwarded to `ChdEncodeOptions.HunkCompleted` for progress logging. |
 
 `taskCount` (chdman's `-np`) is clamped to `1–64` before it reaches `ChdEncodeOptions.TaskCount`.
 
@@ -185,10 +185,11 @@ In-process CHD encoder backed by the [CHDSharp](https://www.nuget.org/packages/C
 | `createdvd` | `ChdEncoder.EncodeRaw` | 4096 | 2048 | `lzma,zlib,huff,flac` | `MetadataWriter.BuildDvdMetadata()` — the `DVD ` tag that makes it a DVD. |
 | `createhd` | `ChdEncoder.EncodeRaw` | 4096 | 512 | `lzma,zlib,huff,flac` | CHS geometry guessed from the image size (`MetadataWriter.GuessChs`), `GDDD` metadata, logical length = geometry product (sub-geometry inputs round up past the file length). |
 | `createraw` | `ChdEncoder.EncodeRaw` | largest multiple of the unit ≤ 4096 | 2352 when `rawUnits2352`, else 512 | `lzma,zlib,huff,flac` | `-us 2352` equivalent for raw CD tracks. |
+| `createld` | `ChdEncoder.EncodeLaserDisc` | one raw A/V frame (auto) | A/V frame | `avhu` | AVI (YUY2/VYUY/UYVY) input; one frame per hunk, matching chdman's `createld` default. |
 
 ### Integration
 
-- Called from `ConvertToChdAsync`'s local `TryChdSharpInProcessAsync` (`MainWindow.axaml.cs:5995`) on a background thread (`Task.Run`), after the input has been prepared (ASCII copy or cue work directory). The staged output is moved into place only after `Encode` returns.
-- The log line is `CHDSHARP: <command> <file>` and mirrors the chdman invocation it replaces.
+- Called from `ConvertToChdAsync`'s local `TryChdSharpInProcessAsync` on a background thread (`Task.Run`), after the input has been prepared (ASCII copy or cue work directory). The staged output is moved into place only after `Encode` returns.
+- The log line is `CHDSHARP: <command> <file>` and mirrors the chdman invocation it replaces; progress is logged through `ChdSharpProgressLogger` (`CHDSHARP: Compressing, N% complete... (ratio=...)`).
 - Because the encoder is always present, `CheckDependenciesAndNotifyUser` never refuses conversion; a missing `chdman` on Windows is only a notice.
-- Tests: `ChdSharpEncoderServiceTests` round-trips `createcd`/`createdvd`/`createhd`/`createraw` and verifies each output with `Chd.CheckFile` — see [Testing §11.6](11-testing.md#116-chdbattletest-battleground-historical).
+- Tests: `ChdSharpEncoderServiceTests` round-trips `createcd`/`createdvd`/`createhd`/`createraw`/`createld` and verifies each output with `Chd.CheckFile` — see [Testing §11.6](11-testing.md#116-chdbattletest-battleground-historical).

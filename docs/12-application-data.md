@@ -10,7 +10,7 @@ Everything the application persists lives under the per-user AppData folder:
 ```
 %LocalAppData%\BatchConvertToCHD\
 ├── logs\                          # Serilog rolling log files
-│   └── BatchConvertToCHD-YYYYMMDD.log   (daily roll, 7 files retained)
+│   └── BatchConvertToCHD-YYYYMMDD.log   (daily roll, 10 MB size roll, 7 files retained)
 └── screenshots\                   # F8 captures
     └── screenshot_yyyy-MM-dd_HH-mm-ss-fff.png
 ```
@@ -20,9 +20,9 @@ Everything the application persists lives under the per-user AppData folder:
 ## 12.1 Logs
 
 - Configured in `App.axaml.cs` `ConfigureSerilog`.
-- **File sink**: `%LocalAppData%\BatchConvertToCHD\logs\BatchConvertToCHD-.log`, daily rolling (`RollingInterval.Day`), **7 files retained**, minimum level **Debug**, invariant-culture timestamps `{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}`.
+- **File sink**: `%LocalAppData%\BatchConvertToCHD\logs\BatchConvertToCHD-.log`, daily rolling (`RollingInterval.Day`) with a 10 MB size roll (`rollOnFileSizeLimit`), **7 files retained**, minimum level **Debug**, invariant-culture timestamps `{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}`.
 - **Debug sink** (visible in the Visual Studio debugger output) and the **BugReportApiSink** (warning+, see [Bug Reporting System](09-bug-reporting.md)).
-- The in-app **LogViewer** shows the same messages. Lines are queued and flushed in batches (100 ms), and the text is capped at 50,000 characters (`MaxLogLength`), so a large log cannot freeze the window; the **AppData** title-bar button opens `%LocalAppData%\BatchConvertToCHD` in Explorer.
+- The in-app **LogViewer** shows the same messages. Lines are queued (oldest dropped past 2,000) and flushed in batches of at most 200 lines every 100 ms, a single line is capped at 2,000 characters, and the text is capped at 50,000 characters (`MaxLogLength`), so a large log cannot freeze the window; the **AppData** title-bar button opens `%LocalAppData%\BatchConvertToCHD` in Explorer.
 
 ## 12.2 Screenshots
 

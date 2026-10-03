@@ -21,13 +21,14 @@ This page covers the internals of the two CHD-consuming workflows. References ar
 
 | UI choice | chdman command |
 |-----------|----------------|
-| Auto | `DetectChdExtractCommandAsync` (`:2370`) — metadata scan |
+| Auto | `DetectChdExtractCommandAsync` — CHD flag detection |
 | CD (.cue) | `extractcd` |
 | DVD (.iso) | `extractdvd` |
 | GDI (.gdi) | `extractcd` |
 | HDD (.img) | `extracthd` |
+| Laserdisc (.avi) | `extractld` |
 
-Metadata detection scans the CHD's metadata entries (CHDSharp): `dvd` → `extractdvd`; `gd-rom` → `extractcd`; `hard disk`/`hdd` → `extracthd`; default `extractcd`. Output extension: explicit per radio button, or for Auto derived from the detected command — and when Auto yields `extractcd` plus the metadata contains `gd-rom` (`IsGdiChdAsync`, `:2338`), the extension becomes `.gdi` instead of `.cue`.
+Detection opens the CHD with CHDSharp and reads its flags: `IsDvd` → `extractdvd`; `IsHdd` → `extracthd`; `IsCd`/`IsGdRom` → `extractcd`; **no CD/DVD/HDD metadata** → `extractld` (A/V laserdisc). Output extension: explicit per radio button, or for Auto derived from the detected command — and when Auto yields `extractcd` plus the metadata contains `gd-rom` (`IsGdiChdAsync`), the extension becomes `.gdi` instead of `.cue`.
 
 ### Output path
 
@@ -48,7 +49,11 @@ Two properties make it safe to do without asking:
 
 ### Single-file extraction (DVD/HDD)
 
-`ExtractChdToSingleFile` (`:2233`): a `FileStream` is created with `FileMode.Create`, and the CHD is streamed out in 4 MB buffers with a per-chunk `token.ThrowIfCancellationRequested()`. Cancellation deletes the partially extracted file.
+`ExtractChdToSingleFile`: a `FileStream` is created with `FileMode.Create`, and the CHD is streamed out in 4 MB buffers with a per-chunk `token.ThrowIfCancellationRequested()` and `CHDSHARP: Extracting, N% complete...` progress. Cancellation deletes the partially extracted file.
+
+### Laserdisc extraction (A/V)
+
+When the detected command is `extractld` (or the user forced **Laserdisc (.avi)**), the built-in encoder calls `ChdEncoder.ExtractLaserDisc(chdFile, outputFile, 0, null, token)` — CHDSharp's MAME-parity AVI writer — so A/V CHDs extract in-process even where no chdman is installed. The reader is configured with read-ahead first (see below), and a failure falls through to the same chdman fallback as any other decode failure.
 
 ### Multi-track extraction (CD/GDI)
 
@@ -60,6 +65,10 @@ Two properties make it safe to do without asking:
 4. On success the temp dir is deleted; on failure the temp dir is **kept** and a warning logs the number of remaining files ("Partial extraction: N file(s) remain in temp directory: ...") so the user can inspect/clean up.
 5. Moves go through `RetryingFileOperations.TryMoveAsync` (retry with backoff, ~45 s) so transient locks (antivirus/indexer) don't abort the whole disc extraction; a move that still fails after retries throws and the partial-extraction path handles the rest. The `TryDeleteAsync` on the destination remains only as a guard against a file appearing between the clash test and the move — after step 3 the destination is expected to be free.
 
+### Read performance
+
+Before extracting, the app calls `chd.ConfigureReadAhead(16)` (`ExtractionReadAheadHunks`): CHDSharp pre-decompresses the next 16 hunks in the background on its own workers, so sequential reads are not gated on one hunk at a time. This applies to the single-file (DVD/HDD) and multi-track (CD/GDI) paths; the laserdisc writer opens its own reader inside CHDSharp.
+
 ### CHD open failures
 
 `ChdFile.Open` errors are logged with the CHDSharp message and the file is marked failed; the batch continues. Typical messages: "Not a valid CHD file" (bad magic), "Invalid or corrupt data" (structure broken), "Cannot open file" (locked/unreadable). These are user-data conditions — the app never crashes on them and they are excluded from bug reports (see [Bug Reporting System](09-bug-reporting.md)).
@@ -68,8 +77,8 @@ Two properties make it safe to do without asking:
 
 When CHDSharp fails to decode a hunk during extraction ("Failed to read hunk N: Chderrdecompressionerror"), the error is mapped through `GetChdExtractionErrorMessage` (`:6188`) into a user-friendly message, logged at informational level, **and the extraction is retried with chdman** (`TryExtractWithChdmanAsync`, `:6260`) when a chdman binary is available — the bundled one on Windows, or a system `chdman` on `PATH` elsewhere (verification stays library-only):
 
-1. chdman runs the user's selected command (`extractcd`/`extractdvd`/`extracthd`, `-f` to force overwrite; `extractcd` also pins the bin name with `-ob`).
-2. If the CHD carries **no CD/DVD/HDD metadata** (`IsAvChdAsync`, `:3042`) it is an A/V (laserdisc) CHD: `extractcd` cannot handle it, so chdman is retried with `extractld` (writes an `.avi`, MAME 0.285+) and then `extractraw` (raw dump) for older chdman builds.
+1. chdman runs the user's selected command (`extractcd`/`extractdvd`/`extracthd`/`extractld`, `-f` to force overwrite; `extractcd` also pins the bin name with `-ob`).
+2. If the CHD carries **no CD/DVD/HDD metadata** (`IsAvChdAsync`) it is an A/V (laserdisc) CHD: `extractld` (writes an `.avi`, MAME 0.285+) and then `extractraw` (raw dump) are appended to the attempts, skipping any command already selected.
 3. On failure, truncated outputs are deleted; on success the file is marked extracted and the batch continues normally (including the "delete original" option).
 
 The CHDSharp failure is reported to the bug API **only when the chdman fallback also fails** — if chdman extracts the file, the extraction succeeded and nothing went wrong that needs the maintainer's attention. The reader's failure reason still reaches the user's log file at informational level.
@@ -84,7 +93,11 @@ The CHDSharp failure is reported to the bug API **only when the chdman fallback 
 
 ### VerifyChdAsync
 
-`VerifyChdAsync` (`:3020`) opens the file read-only and calls `Chd.CheckFile(stream, fileName, true)` (CHDSharp, in-process — **no** chdman process). On success it logs `V{version} — SHA1: {hex}`; failures log `result.Error.GetMessage()` or the exception message. The per-file read speed is sampled via the read performance counter.
+`VerifyChdAsync` opens the file read-only and calls `Chd.CheckFile(stream, fileName, true, progress)` (CHDSharp, in-process — **no** chdman process), logging `CHDSHARP: Verifying, N% complete...` every 10%. On success it logs `V{version} — SHA1: {hex}` and returns the `ChdResult`; failures log `result.Error.GetMessage()` or the exception message. The per-file read speed is sampled via the read performance counter.
+
+### Checksum report
+
+When **Write a checksum report** is enabled, `ChdChecksumReport.Write` (`Utilities/ChdChecksumReport.cs`) runs one `Chd.ComputeHashes` pass with `ChdHashType.Sha1 | Crc32 | Xxh3` and `perTrack: true`, writing `<name>.checksums.txt` next to the verified CHD (after the move, so it follows the file). CD/GD-ROM images get a line per track; other types get the whole-image hashes. The whole-image SHA-1 from the verification result is reused, so no second pass is needed for CD images; only a CHD whose header has no SHA-1 (V1/V2 or uncompressed V5) triggers an extra whole-image pass. A report failure is logged as a warning and never fails the verification.
 
 ### Moving verified files
 

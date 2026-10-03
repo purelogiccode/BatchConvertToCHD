@@ -34,6 +34,9 @@ internal static class ChdSharpEncoderService
     /// <summary>Default raw/DVD/HDD codecs (chdman's defaults for those commands).</summary>
     private static readonly uint[] RawCodecs = ChdCodecs.ParseCodecTags("lzma,zlib,huff,flac");
 
+    /// <summary>Laserdisc codec (chdman's <c>createld</c> default).</summary>
+    private static readonly uint[] AvhuCodecs = ChdCodecs.ParseCodecTags("avhu");
+
     /// <summary>
     ///     Encodes <paramref name="inputPath" /> into <paramref name="outputPath" /> using the same
     ///     commands and defaults as chdman: <c>createcd</c>, <c>createdvd</c>, <c>createhd</c> and
@@ -48,6 +51,10 @@ internal static class ChdSharpEncoderService
     /// </param>
     /// <param name="taskCount">Parallel compression workers (chdman's <c>-np</c>).</param>
     /// <param name="token">Cancels the encode; throws <see cref="OperationCanceledException" />.</param>
+    /// <param name="onHunkCompleted">
+    ///     Optional per-hunk progress callback (invoked in hunk order while compressing), or
+    ///     <c>null</c> for no reporting.
+    /// </param>
     /// <exception cref="ArgumentException">The command is not a supported creation command.</exception>
     internal static void Encode(
         string command,
@@ -55,10 +62,15 @@ internal static class ChdSharpEncoderService
         string outputPath,
         bool rawUnits2352,
         int taskCount,
-        CancellationToken token
+        CancellationToken token,
+        Action<HunkProgress>? onHunkCompleted = null
     )
     {
-        var options = new ChdEncodeOptions { TaskCount = Math.Clamp(taskCount, 1, 64) };
+        var options = new ChdEncodeOptions
+        {
+            TaskCount = Math.Clamp(taskCount, 1, 64),
+            HunkCompleted = onHunkCompleted
+        };
 
         // chdman refuses inputs whose size is not a whole number of units for the raw commands.
         // The built-in encoder has to reject them too: encoding a partial trailing unit would drop
@@ -159,6 +171,21 @@ internal static class ChdSharpEncoderService
                 );
                 break;
             }
+
+            case "createld":
+                // AVI laserdisc input; a hunk size of 0 selects one raw frame per hunk, matching
+                // chdman's createld default.
+                ChdEncoder.EncodeLaserDisc(
+                    inputPath,
+                    outputPath,
+                    0,
+                    AvhuCodecs,
+                    options,
+                    0,
+                    null,
+                    token
+                );
+                break;
 
             default:
                 throw new ArgumentException(

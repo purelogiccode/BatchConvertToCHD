@@ -1,3 +1,4 @@
+using BatchConvertToCHD.Utilities;
 using VideoGameFileSystemParser.Models;
 using VideoGameFileSystemParser.Parsers;
 
@@ -21,16 +22,23 @@ internal sealed class ChdExplorerService : IDisposable
     /// </summary>
     /// <param name="chdPath">Path of the CHD image that was opened.</param>
     /// <param name="container">The parsed container backing this explorer.</param>
-    private ChdExplorerService(string chdPath, ChdContainer container)
+    /// <param name="infoReport">The pre-built Image Info report for the CHD.</param>
+    private ChdExplorerService(string chdPath, ChdContainer container, string infoReport)
     {
         ChdPath = chdPath;
         _container = container;
+        InfoReport = infoReport;
     }
 
     /// <summary>
     ///     Gets the path of the CHD image that is open.
     /// </summary>
     internal string ChdPath { get; }
+
+    /// <summary>
+    ///     Gets the Image Info report (header, metadata, tracks, hunk codecs) for the open image.
+    /// </summary>
+    internal string InfoReport { get; }
 
     /// <summary>
     ///     Gets the volume label reported by the parsed file system.
@@ -68,7 +76,19 @@ internal sealed class ChdExplorerService : IDisposable
             }
 
             error = null;
-            return new ChdExplorerService(chdPath, container);
+
+            // The info report is best-effort: an unreadable header must not stop the explorer.
+            string infoReport;
+            try
+            {
+                infoReport = ChdInfoReport.Build(chdPath);
+            }
+            catch (Exception ex)
+            {
+                infoReport = $"Image info unavailable: {ex.Message}";
+            }
+
+            return new ChdExplorerService(chdPath, container, infoReport);
         }
         catch (Exception ex)
         {

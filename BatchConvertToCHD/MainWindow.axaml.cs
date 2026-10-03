@@ -47,10 +47,21 @@ internal partial class MainWindow : Window, IDisposable
     // the verification and extraction tabs.
     private const string StagingExtension = ".chdtmp";
 
-    // Maximum characters kept in the on-screen log before the oldest half is dropped, and the
-    // most lines buffered while the UI thread is busy (a longer burst drops the oldest lines).
+    // On-screen log limits, so a chatty tool (chdman streams progress lines) can never freeze the
+    // window: at most MaxLogLength characters are kept (the oldest half is dropped when exceeded),
+    // at most MaxPendingLogLines are buffered while the UI thread is busy (a longer burst drops the
+    // oldest lines), and each flush appends at most MaxLogLinesPerFlush lines. MaxLogLineLength
+    // caps a single pathological line.
     private const int MaxLogLength = 50000;
     private const int MaxPendingLogLines = 2000;
+    private const int MaxLogLinesPerFlush = 200;
+    private const int MaxLogLineLength = 2000;
+
+    /// <summary>
+    ///     Hunks the built-in reader pre-decompresses in the background during extraction, so
+    ///     sequential reads do not wait for one hunk at a time.
+    /// </summary>
+    private const int ExtractionReadAheadHunks = 16;
 
     /// <summary>
     ///     Free space below this on the output drive means no conversion can succeed.
@@ -1004,6 +1015,9 @@ internal partial class MainWindow : Window, IDisposable
     /// <param name="message">The message to append.</param>
     private void AppendToUiLog(string message)
     {
+        if (message.Length > MaxLogLineLength)
+            message = string.Concat(message.AsSpan(0, MaxLogLineLength), "...");
+
         var timestampedMessage = $"[{DateTime.Now:HH:mm:ss.fff}] {message}";
 
         lock (_logQueueLock)
@@ -1016,7 +1030,9 @@ internal partial class MainWindow : Window, IDisposable
 
     /// <summary>
     ///     Writes the queued log lines to the control, dropping the oldest half of the on-screen
-    ///     text when it exceeds the cap. Runs on the UI thread from the flush timer.
+    ///     text when it exceeds the cap. At most <see cref="MaxLogLinesPerFlush" /> lines are
+    ///     appended per tick, so a burst of output cannot stall the UI thread. Runs on the UI
+    ///     thread from the flush timer.
     /// </summary>
     private void FlushPendingLogLines()
     {
@@ -1025,8 +1041,9 @@ internal partial class MainWindow : Window, IDisposable
         {
             if (_pendingLogLines.Count == 0) return;
 
-            lines = [.. _pendingLogLines];
-            _pendingLogLines.Clear();
+            var count = Math.Min(_pendingLogLines.Count, MaxLogLinesPerFlush);
+            lines = new string[count];
+            for (var i = 0; i < count; i++) lines[i] = _pendingLogLines.Dequeue();
         }
 
         try
@@ -5104,24 +5121,32 @@ internal partial class MainWindow : Window, IDisposable
                 "Verifying"
             );
 
-            var success = await VerifyChdAsync(file, token);
+            var result = await VerifyChdAsync(file, token);
+            var success = result is { IsSuccess: true };
 
             if (success)
             {
                 LogMessage($"✓ Verified: {Path.GetFileName(file)}");
                 Interlocked.Increment(ref _processedOkCount);
 
-                // Move to success folder if option is enabled
+                // Move to success folder if option is enabled; the checksum report follows the
+                // CHD so it lands next to the file wherever it ends up.
+                var finalPath = file;
                 if (moveSuccess && !string.IsNullOrEmpty(successFolder))
                 {
-                    await MoveVerifiedFileAsync(
-                        file,
-                        successFolder,
-                        inputFolder,
-                        includeSub,
-                        token
-                    );
+                    finalPath =
+                        await MoveVerifiedFileAsync(
+                            file,
+                            successFolder,
+                            inputFolder,
+                            includeSub,
+                            token
+                        )
+                        ?? file;
                 }
+
+                if (ExportChecksumsCheckBox.IsChecked == true)
+                    await WriteChecksumReportAsync(finalPath, result!, token);
             }
             else
             {
@@ -5152,8 +5177,8 @@ internal partial class MainWindow : Window, IDisposable
     /// <param name="inputFolder">Root of the verification input folder.</param>
     /// <param name="includeSub">Whether to preserve the subfolder structure.</param>
     /// <param name="token">Cancellation token.</param>
-    /// <returns>A task that completes when the file has been moved.</returns>
-    private async Task MoveVerifiedFileAsync(
+    /// <returns>The destination path on success, or <see langword="null" /> when the move failed.</returns>
+    private async Task<string?> MoveVerifiedFileAsync(
         string sourceFile,
         string targetFolder,
         string inputFolder,
@@ -5203,6 +5228,8 @@ internal partial class MainWindow : Window, IDisposable
                     $"Could not move '{sourceFile}' to '{destFile}' after retries."
                 );
             }
+
+            return destFile;
         }
         catch (Exception ex)
         {
@@ -5210,6 +5237,7 @@ internal partial class MainWindow : Window, IDisposable
             LogError($"Failed to move file {sourceFile}", ex);
             UpdateStatusBarMessage("Failed to move a verified file");
             SafeFireAndForget(ReportBugAsync($"Failed to move file {sourceFile}", ex));
+            return null;
         }
     }
 
@@ -5263,12 +5291,17 @@ internal partial class MainWindow : Window, IDisposable
         {
             outputExt = FileExtensions.Img;
         }
+        else if (ExtractAviRadioButton.IsChecked == true)
+        {
+            outputExt = FileExtensions.Avi;
+        }
         else if (ExtractAutoRadioButton.IsChecked == true)
         {
             outputExt = extractCommand switch
             {
                 "extractdvd" => FileExtensions.Iso,
                 "extracthd" => FileExtensions.Img,
+                "extractld" => FileExtensions.Avi,
                 _ => FileExtensions.Cue
             };
 
@@ -5301,6 +5334,7 @@ internal partial class MainWindow : Window, IDisposable
         }
 
         var success = false;
+        var progress = new ChdSharpProgressLogger(LogMessage, "Extracting");
         try
         {
             success = await Task.Run(
@@ -5319,9 +5353,25 @@ internal partial class MainWindow : Window, IDisposable
                     {
                         try
                         {
-                            if (extractCommand is "extractdvd" or "extracthd")
+                            // Extraction reads hunks sequentially; pre-decompress the next hunks
+                            // in the background so the disk write is not gated on one hunk at a time.
+                            chd.ConfigureReadAhead(ExtractionReadAheadHunks);
+
+                            if (extractCommand is "extractld")
                             {
-                                ExtractChdToSingleFile(chd, outputFile, token);
+                                // A/V (laserdisc) CHDs have no CD/DVD/HDD metadata; the built-in
+                                // encoder extracts them straight to AVI.
+                                CHDSharp.Encoder.ChdEncoder.ExtractLaserDisc(
+                                    chdFile,
+                                    outputFile,
+                                    0,
+                                    null,
+                                    token
+                                );
+                            }
+                            else if (extractCommand is "extractdvd" or "extracthd")
+                            {
+                                ExtractChdToSingleFile(chd, outputFile, progress, token);
                             }
                             else
                             {
@@ -5330,6 +5380,7 @@ internal partial class MainWindow : Window, IDisposable
                                     chdFile,
                                     targetDir,
                                     fileName,
+                                    progress,
                                     token
                                 );
                             }
@@ -5357,7 +5408,7 @@ internal partial class MainWindow : Window, IDisposable
         }
         catch (OperationCanceledException)
         {
-            if (extractCommand is "extractdvd" or "extracthd")
+            if (extractCommand is "extractdvd" or "extracthd" or "extractld")
             {
                 await TryDeleteFileAsync(
                     outputFile,
@@ -5423,13 +5474,14 @@ internal partial class MainWindow : Window, IDisposable
                 {
                     // Cancelled mid-fallback: still clean up partial direct-write output
                     // before propagating the cancellation.
-                    if (extractCommand is "extractdvd" or "extracthd") TryBestEffortDelete(outputFile);
+                    if (extractCommand is "extractdvd" or "extracthd" or "extractld")
+                        TryBestEffortDelete(outputFile);
 
                     throw;
                 }
             }
 
-            if (!success && extractCommand is "extractdvd" or "extracthd")
+            if (!success && extractCommand is "extractdvd" or "extracthd" or "extractld")
             {
                 await TryDeleteFileAsync(
                     outputFile,
@@ -5463,10 +5515,12 @@ internal partial class MainWindow : Window, IDisposable
     /// <summary>Writes the whole CHD content to a single output file in chunks.</summary>
     /// <param name="chd">The opened CHD.</param>
     /// <param name="outputFile">Destination file path.</param>
+    /// <param name="progress">Receives byte-level extraction progress.</param>
     /// <param name="token">Cancellation token.</param>
     private static void ExtractChdToSingleFile(
         ChdFile chd,
         string outputFile,
+        ChdSharpProgressLogger progress,
         CancellationToken token
     )
     {
@@ -5490,6 +5544,7 @@ internal partial class MainWindow : Window, IDisposable
             fs.Write(buffer, 0, toRead);
             offset += (ulong)toRead;
             remaining -= (ulong)toRead;
+            progress.ReportBytes((long)offset, (long)chd.TotalBytes);
         }
     }
 
@@ -5501,6 +5556,7 @@ internal partial class MainWindow : Window, IDisposable
     /// <param name="chdFile">Full path of the CHD file.</param>
     /// <param name="targetDir">Directory that receives the extracted tracks.</param>
     /// <param name="baseFileName">Base name for the extracted files.</param>
+    /// <param name="progress">Receives per-hunk extraction progress.</param>
     /// <param name="token">Cancellation token.</param>
     /// <returns>A task that completes when the tracks have been extracted.</returns>
     private async Task ExtractChdTracksToDirectoryAsync(
@@ -5508,6 +5564,7 @@ internal partial class MainWindow : Window, IDisposable
         string chdFile,
         string targetDir,
         string baseFileName,
+        ChdSharpProgressLogger progress,
         CancellationToken token
     )
     {
@@ -5526,7 +5583,7 @@ internal partial class MainWindow : Window, IDisposable
             var result = chd.ExtractToDirectoryWithReporting(
                 tempExtractDir,
                 baseFileName,
-                null,
+                progress,
                 token
             );
             if (!result.IsCompleteSuccess)
@@ -5699,6 +5756,8 @@ internal partial class MainWindow : Window, IDisposable
             return "extractdvd";
         if (ExtractHdRadioButton.IsChecked == true)
             return "extracthd";
+        if (ExtractAviRadioButton.IsChecked == true)
+            return "extractld";
 
         // Both CD and GDI use the 'extractcd' command in chdman
         return "extractcd";
@@ -5748,11 +5807,14 @@ internal partial class MainWindow : Window, IDisposable
         );
     }
 
-    /// <summary>Detects the chdman extraction command from the CHD's metadata (DVD, hard disk or CD).</summary>
+    /// <summary>
+    ///     Detects the chdman extraction command from the CHD's own flags (DVD, hard disk, CD/GD-ROM,
+    ///     or A/V laserdisc when none of those metadata types are present).
+    /// </summary>
     /// <param name="chdFile">Full path of the CHD file.</param>
     /// <param name="token">Cancellation token.</param>
     /// <returns>The detected extraction command, defaulting to extractcd.</returns>
-    private static Task<string> DetectChdExtractCommandAsync(
+    internal static Task<string> DetectChdExtractCommandAsync(
         string chdFile,
         CancellationToken token
     )
@@ -5768,25 +5830,13 @@ internal partial class MainWindow : Window, IDisposable
 
                     using (chd)
                     {
-                        foreach (var meta in chd.Metadata)
-                        {
-                            var text = meta.ToString();
+                        if (chd.IsDvd) return "extractdvd";
+                        if (chd.IsHdd) return "extracthd";
+                        if (chd.IsCd || chd.IsGdRom) return "extractcd";
 
-                            if (text.Contains("dvd", StringComparison.OrdinalIgnoreCase))
-                                return "extractdvd";
-                            if (text.Contains("gd-rom", StringComparison.OrdinalIgnoreCase))
-                                return "extractcd";
-                            if (
-                                text.Contains("hard disk", StringComparison.OrdinalIgnoreCase)
-                                || text.Contains("hdd", StringComparison.OrdinalIgnoreCase)
-                            )
-                            {
-                                return "extracthd";
-                            }
-                        }
+                        // No CD/DVD/HDD metadata: an A/V (laserdisc) CHD.
+                        return "extractld";
                     }
-
-                    return "extractcd";
                 }
                 catch (OperationCanceledException)
                 {
@@ -5917,9 +5967,11 @@ internal partial class MainWindow : Window, IDisposable
         var isImg = inputFile.EndsWith(FileExtensions.Img, StringComparison.OrdinalIgnoreCase);
         var isRaw = inputFile.EndsWith(FileExtensions.Raw, StringComparison.OrdinalIgnoreCase);
         var isIso = inputFile.EndsWith(FileExtensions.Iso, StringComparison.OrdinalIgnoreCase);
+        var isAvi = inputFile.EndsWith(FileExtensions.Avi, StringComparison.OrdinalIgnoreCase);
 
         var command =
-            forceCd || (!forceDvd && !isIso && !isImg && !isRaw) ? "createcd"
+            isAvi ? "createld"
+            : forceCd || (!forceDvd && !isIso && !isImg && !isRaw) ? "createcd"
             : forceDvd || isIso ? "createdvd"
             : isImg ? "createhd"
             : "createraw";
@@ -6060,7 +6112,6 @@ internal partial class MainWindow : Window, IDisposable
         var useChdman = OperatingSystem.IsWindows() && File.Exists(chdmanPath);
         if (!useChdman)
         {
-            LogMessage($"CHDSHARP: {command} {Path.GetFileName(originalInputFile)}");
             if (await TryChdSharpInProcessAsync())
             {
                 TryCleanupAsciiTemp();
@@ -6098,25 +6149,7 @@ internal partial class MainWindow : Window, IDisposable
         var errorBuffer = new StringBuilder();
         process.OutputDataReceived += (_, a) =>
         {
-            if (string.IsNullOrEmpty(a.Data))
-                return;
-
-            if (
-                a.Data.Contains("Compression complete", StringComparison.Ordinal)
-                || a.Data.Contains("final ratio", StringComparison.Ordinal)
-            )
-            {
-                LogMessage($"[CHDMAN ✓] {a.Data}");
-            }
-            else if (
-                !a.Data.Contains("% complete", StringComparison.Ordinal)
-                && !a.Data.Contains("Compressing", StringComparison.Ordinal)
-                && !a.Data.Contains("Output bytes", StringComparison.Ordinal)
-                && !a.Data.Contains("Compression ratio", StringComparison.Ordinal)
-            )
-            {
-                LogMessage($"[CHDMAN] {a.Data}");
-            }
+            if (!string.IsNullOrEmpty(a.Data)) LogChdmanLine(a.Data);
         };
 
         process.ErrorDataReceived += (_, a) =>
@@ -6125,23 +6158,7 @@ internal partial class MainWindow : Window, IDisposable
                 return;
 
             errorBuffer.AppendLine(a.Data);
-
-            if (
-                a.Data.Contains("Compression complete", StringComparison.Ordinal)
-                || a.Data.Contains("final ratio", StringComparison.Ordinal)
-            )
-            {
-                LogMessage($"[CHDMAN ✓] {a.Data}");
-            }
-            else if (
-                !a.Data.Contains("% complete", StringComparison.Ordinal)
-                && !a.Data.Contains("Compressing", StringComparison.Ordinal)
-                && !a.Data.Contains("Output bytes", StringComparison.Ordinal)
-                && !a.Data.Contains("Compression ratio", StringComparison.Ordinal)
-            )
-            {
-                LogMessage($"[CHDMAN] {a.Data}");
-            }
+            LogChdmanLine(a.Data);
         };
 
         using var ctsSpeed = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -6647,6 +6664,8 @@ internal partial class MainWindow : Window, IDisposable
             if (timeoutMinutes is > 0)
                 fallbackTimeoutCts.CancelAfter(TimeSpan.FromMinutes(timeoutMinutes.Value));
 
+            var progress = new ChdSharpProgressLogger(LogMessage, "Compressing");
+
             try
             {
                 await Task.Run(
@@ -6657,7 +6676,8 @@ internal partial class MainWindow : Window, IDisposable
                             outputFile,
                             isRaw,
                             cores,
-                            fallbackTimeoutCts.Token
+                            fallbackTimeoutCts.Token,
+                            progress.ReportHunk
                         ),
                     fallbackTimeoutCts.Token
                 );
@@ -6731,6 +6751,30 @@ internal partial class MainWindow : Window, IDisposable
             }
 
             return true;
+        }
+    }
+
+    /// <summary>
+    ///     Writes one line of chdman output to the activity log, progress lines included. Completion
+    ///     lines ("Compression complete"/"Extraction complete"/"final ratio") are marked with a
+    ///     check so the end of a run stands out among the progress lines.
+    /// </summary>
+    /// <param name="data">The output line to log.</param>
+    private void LogChdmanLine(string data)
+    {
+        var line = data.TrimEnd();
+
+        if (
+            line.Contains("Compression complete", StringComparison.Ordinal)
+            || line.Contains("Extraction complete", StringComparison.Ordinal)
+            || line.Contains("final ratio", StringComparison.Ordinal)
+        )
+        {
+            LogMessage($"[CHDMAN ✓] {line}");
+        }
+        else
+        {
+            LogMessage($"[CHDMAN] {line}");
         }
     }
 
@@ -6914,8 +6958,20 @@ internal partial class MainWindow : Window, IDisposable
         if (isAvChd)
         {
             LogMessage(" CHD has no CD/DVD/HDD metadata; treating it as an A/V (laserdisc) CHD.");
-            attempts.Add(("extractld", Path.Combine(targetDir, fileName + FileExtensions.Avi)));
-            attempts.Add(("extractraw", Path.Combine(targetDir, fileName + FileExtensions.Raw)));
+
+            // The selected command may already be extractld (the auto-detected A/V route).
+            if (
+                attempts.All(static a =>
+                    !string.Equals(a.Command, "extractld", StringComparison.Ordinal)
+                )
+            )
+                attempts.Add(("extractld", Path.Combine(targetDir, fileName + FileExtensions.Avi)));
+            if (
+                attempts.All(static a =>
+                    !string.Equals(a.Command, "extractraw", StringComparison.Ordinal)
+                )
+            )
+                attempts.Add(("extractraw", Path.Combine(targetDir, fileName + FileExtensions.Raw)));
         }
 
         foreach (var (command, outputPath) in attempts)
@@ -7043,9 +7099,10 @@ internal partial class MainWindow : Window, IDisposable
     }
 
     /// <summary>
-    ///     Runs a chdman extraction command and returns whether it exited successfully.
+    ///     Runs a chdman extraction command, logging its output, and returns whether it exited
+    ///     successfully.
     /// </summary>
-    private static async Task<bool> RunChdmanExtractAsync(
+    private async Task<bool> RunChdmanExtractAsync(
         string chdmanPath,
         string args,
         CancellationToken token
@@ -7068,8 +7125,22 @@ internal partial class MainWindow : Window, IDisposable
             var errorBuffer = new StringBuilder();
             var errorBufferLock = new Lock();
 
-            process.OutputDataReceived += (_, a) => CaptureOutput(a.Data);
-            process.ErrorDataReceived += (_, a) => CaptureOutput(a.Data);
+            process.OutputDataReceived += (_, a) =>
+            {
+                if (string.IsNullOrEmpty(a.Data))
+                    return;
+
+                LogChdmanLine(a.Data);
+                CaptureOutput(a.Data);
+            };
+            process.ErrorDataReceived += (_, a) =>
+            {
+                if (string.IsNullOrEmpty(a.Data))
+                    return;
+
+                LogChdmanLine(a.Data);
+                CaptureOutput(a.Data);
+            };
 
             process.Start();
             process.BeginOutputReadLine();
@@ -7367,25 +7438,26 @@ internal partial class MainWindow : Window, IDisposable
     /// <summary>Verifies a CHD file and logs its version and SHA1.</summary>
     /// <param name="chdFile">Full path of the CHD file.</param>
     /// <param name="token">Cancellation token.</param>
-    /// <returns>True when verification passed.</returns>
-    private Task<bool> VerifyChdAsync(string chdFile, CancellationToken token)
+    /// <returns>The verification result, or <see langword="null" /> when verification threw.</returns>
+    private Task<ChdResult?> VerifyChdAsync(string chdFile, CancellationToken token)
     {
-        return Task.Run(
+        return Task.Run<ChdResult?>(
             () =>
             {
                 try
                 {
                     using var stream = File.OpenRead(chdFile);
-                    var result = Chd.CheckFile(stream, Path.GetFileName(chdFile), true);
+                    var progress = new ChdSharpProgressLogger(LogMessage, "Verifying");
+                    var result = Chd.CheckFile(stream, Path.GetFileName(chdFile), true, progress);
 
                     if (result.IsSuccess)
                     {
                         LogMessage($"  V{result.Version} — SHA1: {result.Sha1Hex}");
-                        return true;
+                        return result;
                     }
 
                     LogMessage($"  Error: {result.Error.GetMessage()}");
-                    return false;
+                    return result;
                 }
                 catch (OperationCanceledException)
                 {
@@ -7394,11 +7466,45 @@ internal partial class MainWindow : Window, IDisposable
                 catch (Exception ex)
                 {
                     LogMessage($"  Verification error: {ex.Message}");
-                    return false;
+                    return null;
                 }
             },
             token
         );
+    }
+
+    /// <summary>
+    ///     Writes the checksum report for a verified CHD next to it. A report failure is reported
+    ///     as a warning and never fails the verification.
+    /// </summary>
+    /// <param name="chdFile">Full path of the verified CHD.</param>
+    /// <param name="result">The successful verification result.</param>
+    /// <param name="token">Cancellation token.</param>
+    private async Task WriteChecksumReportAsync(
+        string chdFile,
+        ChdResult result,
+        CancellationToken token
+    )
+    {
+        try
+        {
+            var progress = new ChdSharpProgressLogger(LogMessage, "Hashing");
+            var reportPath = await Task.Run(
+                () => ChdChecksumReport.Write(chdFile, result.Sha1Hex, progress, token),
+                token
+            );
+            LogMessage($"  Checksums written: {Path.GetFileName(reportPath)}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            LogWarning(
+                $" Could not write the checksum report for '{Path.GetFileName(chdFile)}': {ex.Message}"
+            );
+        }
     }
 
     /// <summary>Resets the operation statistics, timer and progress display.</summary>

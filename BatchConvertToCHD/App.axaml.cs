@@ -155,6 +155,7 @@ public class App : Application
                 "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
                 CultureInfo.InvariantCulture,
                 rollingInterval: RollingInterval.Day,
+                rollOnFileSizeLimit: true,
                 retainedFileCountLimit: 7
             )
             .WriteTo.Sink(new BugReportApiSink(_bugReportService!))

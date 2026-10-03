@@ -418,6 +418,11 @@
                                                     Content="Move failed to 'Failed' folder"
                                                     HorizontalAlignment="Left"
                                                     ToolTip.Tip="Move CHD files that fail verification into a 'Failed' subfolder" />
+                                                <CheckBox
+                                                    x:Name="ExportChecksumsCheckBox"
+                                                    Content="Write a checksum report (.checksums.txt) next to each verified CHD"
+                                                    HorizontalAlignment="Left"
+                                                    ToolTip.Tip="After a successful verification, compute per-track SHA-1, CRC-32 and XXH3 hashes (whole-image hashes for non-CD images) and write them next to the CHD" />
                                             </StackPanel>
                                         </Border>
                                     </Expander>
@@ -584,6 +589,11 @@
                                                         Content="HDD (.img)"
                                                         GroupName="ExtractFormat"
                                                         ToolTip.Tip="Force Hard Disk extraction" />
+                                                    <RadioButton
+                                                        x:Name="ExtractAviRadioButton"
+                                                        Content="Laserdisc (.avi)"
+                                                        GroupName="ExtractFormat"
+                                                        ToolTip.Tip="Force laserdisc A/V extraction to AVI" />
                                                 </StackPanel>
                                             </Border>
 
@@ -685,7 +695,7 @@
                                 CornerRadius="0,0,6,6"
                                 Padding="15"
                                 ToolTip.Tip="Explorer tab content">
-                                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" ToolTip.Tip="CHD file system explorer controls">
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" ToolTip.Tip="CHD file system explorer controls">
                                     <Grid Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="120,*,Auto" ToolTip.Tip="CHD image selection">
                                         <TextBlock
                                             Text="CHD File:"
@@ -732,7 +742,26 @@
                                         </ComboBox>
                                     </Grid>
 
-                                    <Grid Grid.Row="2" Margin="0,0,0,5" ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="Explorer navigation bar">
+                                    <Expander
+                                        Grid.Row="2"
+                                        Header="Image Info"
+                                        Margin="0,0,0,5"
+                                        IsExpanded="False"
+                                        ToolTip.Tip="CHD header, codecs, metadata, track and hunk details for the open image">
+                                        <TextBox
+                                            x:Name="ExplorerInfoTextBox"
+                                            Margin="0,5,0,0"
+                                            IsReadOnly="True"
+                                            AcceptsReturn="True"
+                                            TextWrapping="NoWrap"
+                                            FontFamily="Consolas, Menlo, DejaVu Sans Mono, monospace"
+                                            MaxHeight="220"
+                                            ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                            ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                            ToolTip.Tip="Read-only report generated from the CHD header and map" />
+                                    </Expander>
+
+                                    <Grid Grid.Row="3" Margin="0,0,0,5" ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="Explorer navigation bar">
                                         <Button
                                             x:Name="ExplorerUpButton"
                                             Classes="secondary"
@@ -758,7 +787,7 @@
                                     </Grid>
 
                                     <DataGrid
-                                        Grid.Row="3"
+                                        Grid.Row="4"
                                         x:Name="ExplorerEntriesDataGrid"
                                         Margin="0,5"
                                         AutoGenerateColumns="False"
@@ -803,7 +832,7 @@
                                         </DataGrid.Columns>
                                     </DataGrid>
 
-                                    <Grid Grid.Row="4" Margin="0,5,0,0" ColumnDefinitions="*,Auto" ToolTip.Tip="Explorer status and progress">
+                                    <Grid Grid.Row="5" Margin="0,5,0,0" ColumnDefinitions="*,Auto" ToolTip.Tip="Explorer status and progress">
                                         <TextBlock
                                             x:Name="ExplorerStatusTextBlock"
                                             Classes="secondary"

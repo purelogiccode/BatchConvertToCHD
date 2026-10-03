@@ -106,11 +106,14 @@ The conversion writes to `<name>.<8hex>.chdtmp` next to the destination and move
 ### Command & argument selection
 
 ```csharp
-command = forceCd || hasCue || (!forceDvd && !isIso && !isImg && !isRaw) ? "createcd"
+command = isAvi                                                      ? "createld"
+        : forceCd || (!forceDvd && !isIso && !isImg && !isRaw)       ? "createcd"
         : forceDvd || isIso                                          ? "createdvd"
         : isImg                                                      ? "createhd"
         :                                                              "createraw";
 ```
+
+- `isAvi` — a laserdisc `.avi` always converts with `createld` (A/V `avhu` codec, one frame per hunk), regardless of the Force CD/DVD checkboxes; `-us` is not added.
 
 - `hasCue = isImg && File.Exists(Path.ChangeExtension(input, ".cue"))` — an `.img` with a sibling `.cue` is treated as a CD image.
 - **Verb choice is still extension-driven here**, but this code is now only reached for images that content inspection (§5.2) did not claim. So `Data size ... is not divisible by sector size` should now mean a genuinely broken file rather than a mislabelled one.
@@ -128,7 +131,7 @@ command = forceCd || hasCue || (!forceDvd && !isIso && !isImg && !isRaw) ? "crea
 ### Process execution (chdman on Windows)
 
 - `ProcessStartInfo` with redirected stdout/stderr, `UseShellExecute=false`, `CreateNoWindow=true`.
-- Output handlers classify lines: "Compression complete"/"final ratio" → success lines; `% complete`/`Compressing`/`Output bytes`/`Compression ratio` → filtered as progress; everything else → `[CHDMAN]` log lines.
+- Output handlers log **every** line: "Compression complete"/"Extraction complete"/"final ratio" → `[CHDMAN ✓]` success lines; everything else (including `% complete` progress) → `[CHDMAN]` log lines. chdman throttles progress to at most one line per half second, and the on-screen log caps its own size (see [Application Data](12-application-data.md)), so the live progress cannot flood or freeze the window.
 - The stderr buffer accumulates **all** stderr lines (including progress, which chdman streams to stderr).
 - **Timeout**: when enabled, a linked CTS with `CancelAfter(timeoutMinutes)` aborts the wait; the process is killed and the file marked failed with a `TIMEOUT:` log.
 - On cancellation/timeout the process is killed (`process.Kill(true)`), waited up to 5 s, and temp cleanup is deferred 300 ms so file handles are released.

@@ -322,6 +322,8 @@ internal partial class MainWindow
 
         await RetireExplorerAsync();
 
+        ExplorerInfoTextBox.Text = string.Empty;
+
         SetExplorerBusy(true, $"Opening '{Path.GetFileName(chdPath)}' as {parserName}...");
         LogMessage($"Explorer: opening '{chdPath}' with the {parserName} parser...");
 
@@ -361,6 +363,7 @@ internal partial class MainWindow
 
             ExplorerEntriesDataGrid.ItemsSource = null;
             _explorerCurrentPath = "/";
+            ExplorerInfoTextBox.Text = string.Empty;
             UpdateExplorerUiState();
 
             var message =
@@ -391,6 +394,7 @@ internal partial class MainWindow
         }
 
         _explorerParserName = parserName;
+        ExplorerInfoTextBox.Text = service.InfoReport;
         LogMessage(
             $"Explorer: parsed as {parserName} - volume '{service.VolumeName}' ({ChdExplorerItem.FormatSize(service.VolumeSize)})."
         );

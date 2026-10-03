@@ -92,7 +92,8 @@ public class FileExtensionsTests
             ".ccd",
             ".mds",
             ".mdx",
-            ".isz"
+            ".isz",
+            ".avi"
         };
         Assert.Equal(expected, FileExtensions.PrimaryTargetExtensions);
     }
@@ -123,6 +124,9 @@ public class FileExtensionsTests
     // An archived ISZ is decompressed by the conversion loop, so it counts as a primary target.
     [InlineData(".isz", true)]
     [InlineData(".ISZ", true)]
+    // A laserdisc AVI is converted with createld; an archived AVI is extracted and converted.
+    [InlineData(".avi", true)]
+    [InlineData(".AVI", true)]
     [InlineData(".zip", false)]
     [InlineData(".chd", false)]
     [InlineData(".cso", false)]
@@ -152,6 +156,7 @@ public class FileExtensionsTests
             ".mdx",
             ".ecm",
             ".isz",
+            ".avi",
             ".001",
             ".i00",
             ".zip",
@@ -205,6 +210,9 @@ public class FileExtensionsTests
     // simply renamed, so it has to be scanned for either case to be reached at all.
     [InlineData(".isz", true)]
     [InlineData(".ISZ", true)]
+    // Laserdisc AVI input converts with createld.
+    [InlineData(".avi", true)]
+    [InlineData(".AVI", true)]
     // Only the first volume of a split set is an input; later parts are found from it.
     [InlineData(".001", true)]
     [InlineData(".i00", true)]

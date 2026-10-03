@@ -1,5 +1,6 @@
 using BatchConvertToCHD.Services;
 using CHDSharp;
+using CHDSharp.Encoder.Models;
 using CHDSharp.Models;
 
 namespace BatchConvertToCHD.Tests;
@@ -130,6 +131,142 @@ public class ChdSharpEncoderServiceTests : IDisposable
 
         AssertVerifies(chdPath);
         Assert.Equal(2352u, ReadHeader(chdPath).UnitBytes);
+    }
+
+    [Fact]
+    public void CreateDvd_ReportsHunkProgress()
+    {
+        File.WriteAllBytes(PathFor("disc.iso"), new byte[2048 * 20]);
+        var chdPath = PathFor("disc.chd");
+        var reported = new List<HunkProgress>();
+
+        ChdSharpEncoderService.Encode(
+            "createdvd",
+            PathFor("disc.iso"),
+            chdPath,
+            false,
+            2,
+            CancellationToken.None,
+            reported.Add
+        );
+
+        Assert.Equal(10, reported.Count);
+        Assert.All(reported, p => Assert.Equal(10u, p.HunkCount));
+        Assert.Equal(0u, reported[0].HunkIndex);
+        Assert.Equal(9u, reported[^1].HunkIndex);
+    }
+
+    [Fact]
+    public void CreateLd_EncodesVerifiableLaserdiscChd()
+    {
+        var aviPath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "laserdisc-small.avi");
+        Assert.True(File.Exists(aviPath), $"AVI fixture missing: {aviPath}");
+        var chdPath = PathFor("laserdisc.chd");
+        var reported = new List<HunkProgress>();
+
+        ChdSharpEncoderService.Encode(
+            "createld",
+            aviPath,
+            chdPath,
+            false,
+            2,
+            CancellationToken.None,
+            reported.Add
+        );
+
+        AssertVerifies(chdPath);
+        Assert.Equal(4u, ReadHeader(chdPath).TotalHunks);
+        Assert.Equal(4, reported.Count);
+    }
+
+    [Fact]
+    public void CreateLd_NonAviInput_Throws()
+    {
+        var input = PathFor("not-an-avi.bin");
+        File.WriteAllBytes(input, new byte[4096]);
+
+        Assert.Throws<InvalidDataException>(() =>
+            ChdSharpEncoderService.Encode(
+                "createld",
+                input,
+                PathFor("not-an-avi.chd"),
+                false,
+                1,
+                CancellationToken.None
+            )
+        );
+    }
+
+    [Fact]
+    public async Task DetectExtractCommand_CdChdIsExtractCd()
+    {
+        File.WriteAllBytes(PathFor("game.bin"), new byte[2352 * 5]);
+        var cuePath = PathFor("game.cue");
+        File.WriteAllText(
+            cuePath,
+            "FILE \"game.bin\" BINARY\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\n"
+        );
+        var chdPath = PathFor("game.chd");
+        ChdSharpEncoderService.Encode(
+            "createcd",
+            cuePath,
+            chdPath,
+            false,
+            2,
+            CancellationToken.None
+        );
+
+        var command = await MainWindow.DetectChdExtractCommandAsync(
+            chdPath,
+            CancellationToken.None
+        );
+
+        Assert.Equal("extractcd", command);
+    }
+
+    [Fact]
+    public async Task DetectExtractCommand_DvdChdIsExtractDvd()
+    {
+        File.WriteAllBytes(PathFor("disc.iso"), new byte[2048 * 20]);
+        var chdPath = PathFor("disc.chd");
+        ChdSharpEncoderService.Encode(
+            "createdvd",
+            PathFor("disc.iso"),
+            chdPath,
+            false,
+            2,
+            CancellationToken.None
+        );
+
+        var command = await MainWindow.DetectChdExtractCommandAsync(
+            chdPath,
+            CancellationToken.None
+        );
+
+        Assert.Equal("extractdvd", command);
+    }
+
+    [Fact]
+    public async Task DetectExtractCommand_LaserdiscChdIsExtractLd()
+    {
+        var aviPath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "laserdisc-small.avi");
+        Assert.True(File.Exists(aviPath), $"AVI fixture missing: {aviPath}");
+        var chdPath = PathFor("laserdisc.chd");
+        ChdSharpEncoderService.Encode(
+            "createld",
+            aviPath,
+            chdPath,
+            false,
+            2,
+            CancellationToken.None
+        );
+
+        var command = await MainWindow.DetectChdExtractCommandAsync(
+            chdPath,
+            CancellationToken.None
+        );
+
+        Assert.Equal("extractld", command);
     }
 
     [Theory]

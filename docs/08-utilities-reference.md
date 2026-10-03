@@ -309,7 +309,30 @@ Version 2 widens the blocks (32-byte session blocks, 80-byte track blocks whose 
 
 ---
 
-## 8.13 Models
+## 8.13 CHD Helpers
+
+Three UI-free helpers wrap the CHDSharp APIs the app uses outside the encoder service.
+
+### ChdSharpProgressLogger (`Utilities/ChdSharpProgressLogger.cs`)
+
+Throttles long-running built-in CHDSharp operations to one log line per 10%:
+
+- `ReportHunk(HunkProgress)` — used as `ChdEncodeOptions.HunkCompleted`; keeps a running stored/raw byte total so each line shows the cumulative compression ratio (`CHDSHARP: Compressing, 40% complete... (ratio=45.2%)`).
+- `ReportBytes(processed, total)` and `IProgress<ChdProgress>.Report` — used by verification, extraction and checksum hashing (`CHDSHARP: Verifying, 40% complete... (12,345,678 / 30,000,000 bytes)`).
+
+The 10%-step rule matches `EcmImageDecoder`, so a CD-sized image produces about ten lines instead of tens of thousands.
+
+### ChdChecksumReport (`Utilities/ChdChecksumReport.cs`)
+
+`Write(chdPath, verifiedSha1, progress, token)` computes `SHA-1 | CRC-32 | XXH3-64` over the decompressed content in one `Chd.ComputeHashes` pass and writes `<name>.checksums.txt` next to the CHD. CD/GD-ROM images get one block per track; other images get the whole-image hashes. The whole-image SHA-1 from verification is reused so CD images do not need a second whole-image pass; only a header without a SHA-1 (V1/V2, uncompressed V5) triggers one.
+
+### ChdInfoReport (`Utilities/ChdInfoReport.cs`)
+
+`Build(chdPath)` produces the Explorer's Image Info text: header fields (`Chd.ReadHeader`), image type, codec list, metadata tags with short text previews, the track table, and the per-codec hunk distribution from `ChdFile.GetHunkCodecName` (capped at the first 1,000,000 hunks). It never throws — an unreadable header or failed open is described in the text.
+
+---
+
+## 8.14 Models
 
 ### FileItem (`Models/FileItem.cs`)
 

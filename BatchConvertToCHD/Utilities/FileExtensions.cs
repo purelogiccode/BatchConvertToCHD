@@ -37,7 +37,7 @@ internal static class FileExtensions
     // Output format
     internal const string Chd = ".chd";
 
-    // Extraction outputs (chdman fallback)
+    // Laserdisc AVI: a conversion input (createld) and the extraction output for A/V CHDs.
     internal const string Avi = ".avi";
 
     /// <summary>
@@ -68,6 +68,7 @@ internal static class FileExtensions
         Mdx,
         Ecm,
         Isz,
+        Avi,
         SplitFirstNumbered,
         SplitFirstAlcohol,
         Zip,
@@ -116,7 +117,8 @@ internal static class FileExtensions
         Ccd,
         Mds,
         Mdx,
-        Isz
+        Isz,
+        Avi
     ];
 
     /// <summary>

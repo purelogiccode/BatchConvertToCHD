@@ -27,6 +27,7 @@ CSharp_BatchConvertToCHD.sln
 │   │   ├── ArchiveService.cs              → zip/7z/rar extraction, CSO, 7za fallback
 │   │   ├── BugReportApiSink.cs            → Serilog sink → bug API
 │   │   ├── BugReportService.cs            → bug report client + exclusion list
+│   │   ├── ChdExplorerService.cs          → CHD file-system explorer + Image Info report
 │   │   ├── ChdSharpEncoderService.cs      → in-process CHD encoder (CHDSharp library)
 │   │   ├── FileEventRecord.cs / FileWatchEventType.cs
 │   │   ├── FileWatcherService.cs          → missing-file diagnostics
@@ -36,6 +37,9 @@ CSharp_BatchConvertToCHD.sln
 │   │   └── UpdateService.cs               → GitHub update checks
 │   └── Utilities/
 │       ├── BinCueGenerator.cs             → auto-cue generation for bin-only archives
+│       ├── ChdChecksumReport.cs           → per-track SHA-1/CRC-32/XXH3 report writer
+│       ├── ChdInfoReport.cs               → Explorer Image Info report builder
+│       ├── ChdSharpProgressLogger.cs      → 10%-step CHDSharp progress logging
 │       ├── CueFileLineTransform.cs / CueFileReference.cs / CueNormalizationResult.cs
 │       ├── CueNormalizer.cs               → encoding detection + canonicalization
 │       ├── CueWorkDirectory.cs(.Result)   → self-contained ASCII cue work dirs
@@ -54,7 +58,7 @@ CSharp_BatchConvertToCHD.sln
 │           ├── CdSectorEccEdc.cs          → regenerates sector EDC + Reed-Solomon parity
 │           ├── EcmImageDecoder.cs         → ECM block-stream decoder
 │           └── EcmDecodeResult.cs
-├── BatchConvertToCHD.Tests/               (xUnit, 1085 tests; Fixtures/ holds ecm-sample.ecm, rar-multipart/ and MdsV2/)
+├── BatchConvertToCHD.Tests/               (xUnit; Fixtures/ holds ecm-sample.ecm, rar-multipart/, MdsV2/ and laserdisc-small.avi)
 ├── MDSSharp/                                (Alcohol 120% .mds/.mdf parsing; net8.0;net9.0;net10.0)
 ├── CCDSharp/                                (CloneCD .ccd/.img/.sub parsing; net10.0;net8.0)
 ├── CSOSharp/                                (CSO/CISO decompression; net10.0;net8.0)
