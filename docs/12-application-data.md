@@ -11,10 +11,11 @@ Everything the application persists lives under the per-user AppData folder:
 %LocalAppData%\BatchConvertToCHD\
 ├── logs\                          # Serilog rolling log files
 │   └── BatchConvertToCHD-YYYYMMDD.log   (daily roll, 7 files retained)
-└── screenshot_yyyy-MM-dd_HH-mm-ss-fff.png   # only when the app folder is read-only
+└── screenshots\                   # F8 captures
+    └── screenshot_yyyy-MM-dd_HH-mm-ss-fff.png
 ```
 
-`%LocalAppData%` resolves to `C:\Users\<user>\AppData\Local` on a standard install. F8 screenshots normally live in a `Screenshot` folder next to the executable; the AppData location above is the fallback used when that folder cannot be written.
+`%LocalAppData%` resolves to `C:\Users\<user>\AppData\Local` on a standard install. F8 screenshots are saved into the `screenshots` folder beside `logs`; a `screenshots` folder next to the executable is used only when AppData cannot be written.
 
 ## 12.1 Logs
 
@@ -25,17 +26,18 @@ Everything the application persists lives under the per-user AppData folder:
 
 ## 12.2 Screenshots
 
-- While the application window is focused, **F8** captures that window with Avalonia's `RenderTargetBitmap` and saves it as `screenshot_yyyy-MM-dd_HH-mm-ss-fff.png` in the `Screenshot` folder next to the executable (folder created on demand).
-- When that folder cannot be written, the capture falls back to `%LocalAppData%\BatchConvertToCHD` instead.
+- While the application window is focused, **F8** captures that window with Avalonia's `RenderTargetBitmap` and saves it as `screenshot_yyyy-MM-dd_HH-mm-ss-fff.png` in `%LocalAppData%\BatchConvertToCHD\screenshots` (folder created on demand).
+- When that folder cannot be written, the capture falls back to a `screenshots` folder next to the executable.
 - The saved path is logged in the app ("Screenshot saved: ...").
 
 ## 12.3 Temporary Directories
 
-Temp directories are **not** under AppData — they live on the drive with the most free space:
+Temp directories use the **system temp folder** by default; a folder at a drive root is only created when the system temp path is unsafe to hand to chdman (non-ASCII or near MAX_PATH) or its volume cannot hold the operation:
 
-- Pattern: `BatchConvertToCHD_Temp_<guid>` on `{drive}\BatchConvertToCHD_Temp\`, or directly under the system temp when the preferred root isn't usable (`PathUtils.GetBestTempDirectory`, see [Utilities Reference](08-utilities-reference.md#81-pathutils)).
+- Pattern: `BatchConvertToCHD_Temp_<guid>` under the system temp folder, or `{drive}\BatchConvertToCHD_Temp\` as the fallback (`PathUtils.GetBestTempDirectory`, see [Utilities Reference](08-utilities-reference.md#81-pathutils)).
+- Raw CD images that need a generated cue are staged in `{drive}\BatchConvertToCHD_Temp\` on the image's own volume, because chdman resolves a cue's `FILE` entry relative to the cue's directory.
 - Used for: archive extraction, CSO decompression, PBP/CCD cue generation, retry-via-temp-copy fallback, and cue work directories.
-- **Cleanup**: temp dirs are deleted after each file is processed; at startup, leftover `BatchConvertToCHD_Temp_*` folders from crashed sessions are removed (`CleanupLeftoverTempDirectories`, `MainWindow.axaml.cs:304`).
+- **Cleanup**: temp dirs are deleted after each file is processed; an emptied `BatchConvertToCHD_Temp` folder is removed with them, and at startup leftover `BatchConvertToCHD_Temp_*` folders (plus stale Explorer extractions older than a day) are removed (`CleanupLeftoverTempDirectories`, `MainWindow.axaml.cs`).
 
 ## 12.4 What Lives Next to the Executable
 
@@ -48,7 +50,7 @@ Temp directories are **not** under AppData — they live on the drive with the m
 | `CHDSharp.dll`, `Avalonia` assemblies, etc. | Managed dependencies (copy-local); CHDSharp powers the built-in in-process encoder |
 | `CCDSharp.dll`, `CSOSharp.dll`, `PBPSharp.dll`, `MDSSharp.dll`, `ISZSharp.dll` | In-house libraries |
 
-Legacy leftovers (`logs` and `Resources` folders; `maxcso.exe`, `psxpackager.exe`) are deleted automatically at startup by `LegacyCleanupService` (see [Services Reference](07-services-reference.md#76-legacycleanupservice)). The `Screenshot` folder is left alone because F8 screenshots are saved there.
+Legacy leftovers (`logs` and `Resources` folders; `maxcso.exe`, `psxpackager.exe`) are deleted automatically at startup by `LegacyCleanupService` (see [Services Reference](07-services-reference.md#76-legacycleanupservice)). A `Screenshot` folder next to the executable is left alone because it is the fallback location for F8 captures.
 
 ## 12.5 Network Endpoints
 

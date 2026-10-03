@@ -132,6 +132,30 @@ public class ChdSharpEncoderServiceTests : IDisposable
         Assert.Equal(2352u, ReadHeader(chdPath).UnitBytes);
     }
 
+    [Theory]
+    [InlineData("createdvd", 2048, false)]
+    [InlineData("createhd", 512, false)]
+    [InlineData("createraw", 2352, true)]
+    public void PartialTrailingUnit_IsRejected(string command, int unitBytes, bool rawUnits)
+    {
+        // chdman refuses a size that is not a whole number of units; the built-in encoder must
+        // too, otherwise the tail is silently dropped and the source could be deleted as success.
+        var input = PathFor("partial.img");
+        File.WriteAllBytes(input, new byte[unitBytes * 3 + 10]);
+
+        Assert.Throws<InvalidDataException>(() =>
+            ChdSharpEncoderService.Encode(
+                command,
+                input,
+                PathFor("partial.chd"),
+                rawUnits,
+                1,
+                CancellationToken.None
+            )
+        );
+        Assert.False(File.Exists(PathFor("partial.chd")));
+    }
+
     [Fact]
     public void UnsupportedCommand_Throws()
     {

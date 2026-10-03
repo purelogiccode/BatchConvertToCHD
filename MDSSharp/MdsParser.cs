@@ -109,18 +109,22 @@ public static partial class MdsParser
         var info = new FileInfo(mdsPath);
         if (!info.Exists) throw new FileNotFoundException("MDS descriptor not found.", mdsPath);
 
-        if (info.Length > MaxDescriptorBytes)
+        // Read just the header first: a v2 descriptor may live in a multi-gigabyte MDX container
+        // that must not be loaded whole, and its encrypted header is all that decides the version.
+        var header = new byte[SessionBlockOffsetOffset + sizeof(uint)];
+        using (var stream = new FileStream(mdsPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
         {
-            throw new InvalidDataException(
-                $"{info.Length:N0} bytes is too large to be an MDS descriptor."
-            );
+            if (stream.Length < header.Length || stream.ReadAtLeast(header, header.Length, false) < header.Length)
+            {
+                throw new InvalidDataException(
+                    "Not an Alcohol MDS descriptor (missing \"MEDIA DESCRIPTOR\" signature)."
+                );
+            }
         }
 
-        var bytes = File.ReadAllBytes(mdsPath);
         if (
-            bytes.Length < SessionBlockOffsetOffset + sizeof(uint)
-            || !Encoding
-                .ASCII.GetString(bytes, 0, SignatureLength)
+            !Encoding
+                .ASCII.GetString(header, 0, SignatureLength)
                 .Equals(Signature, StringComparison.Ordinal)
         )
         {
@@ -131,7 +135,16 @@ public static partial class MdsParser
 
         // A version 2 descriptor is a Daemon Tools MDS v2/MDX container: its descriptor is
         // encrypted and compressed, so none of the v1 fields can be read before decryption.
-        if (bytes[0x10] >= 2) return ParseV2(mdsPath, bytes);
+        if (header[0x10] >= 2) return ParseV2(mdsPath);
+
+        if (info.Length > MaxDescriptorBytes)
+        {
+            throw new InvalidDataException(
+                $"{info.Length:N0} bytes is too large to be an MDS descriptor."
+            );
+        }
+
+        var bytes = File.ReadAllBytes(mdsPath);
 
         var medium = ReadMediumType(bytes);
         var sessionCount = BinaryPrimitives.ReadUInt16LittleEndian(

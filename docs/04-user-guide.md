@@ -109,12 +109,12 @@ Auto-detection scans the CHD metadata (via CHDSharp): `dvd` â†’ DVD, `gd-rom` â†
 
 ## 4.4 Screenshot Hotkey (F8)
 
-While the application window is focused, pressing **F8** captures that window and saves it as `screenshot_yyyy-MM-dd_HH-mm-ss-fff.png` in the `Screenshot` folder next to the executable. When that folder is read-only, the capture falls back to `%LocalAppData%\BatchConvertToCHD`.
+While the application window is focused, pressing **F8** captures that window and saves it as `screenshot_yyyy-MM-dd_HH-mm-ss-fff.png` in `%LocalAppData%\BatchConvertToCHD\screenshots`. When AppData is not writable, the capture falls back to a `screenshots` folder next to the executable.
 
 The path is shown in the log ("Screenshot saved: ..."). Capture uses Avalonia's `RenderTargetBitmap`; if the capture fails, a message is logged instead.
 
 ## 4.5 Status Bar & Stats
 
 - **Status bar**: current operation message + the CHDSharp and CHDMAN encoder indicators. CHDSharp is always green (built-in, always available). CHDMAN is green when found, red when missing on Windows (conversions then use the built-in encoder) and gray on Linux/macOS, where it is optional and never used for encoding.
-- **Stat cards**: TOTAL FILES, SUCCESS, FAILED, ELAPSED, SPEED (disk write/read MB/s, sampled via performance counters while an operation runs).
+- **Stat cards**: TOTAL FILES, SUCCESS, FAILED, ELAPSED, SPEED (disk write/read MB/s, sampled while an operation runs; for a chdman conversion the speed is read from the `chdman` child process, and for the in-process CHDSharp encoder from the app itself).
 - **Progress bar**: per-batch progress with a **Cancel** button that stops the current operation (cancelling chdman kills the process and cleans up temp files).

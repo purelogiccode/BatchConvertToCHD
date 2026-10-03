@@ -72,20 +72,30 @@ public static partial class MdsParser
     /// <summary>Low three bits of the v2 mode byte select the sector type.</summary>
     private const byte V2SectorTypeMask = 0x07;
 
+    /// <summary>Size of the v2 descriptor header; offsets up to 0x58 are read from it.</summary>
+    private const int V2DescriptorHeaderSize = 0x60;
+
     /// <summary>Footer flag bit 0 marks the track data as compressed.</summary>
     private const byte V2FooterCompressedFlag = 0x01;
 
     /// <summary>
-    ///     Parses a decrypted v2 descriptor. <paramref name="fileBytes" /> is the raw file; the
-    ///     descriptor is decrypted and decompressed internally.
+    ///     Parses a decrypted v2 descriptor. The file is read as a stream so an MDX container is
+    ///     never loaded whole; the descriptor is decrypted and decompressed internally.
     /// </summary>
-    /// <param name="mdsPath">Path of the .mds descriptor.</param>
-    /// <param name="fileBytes">Whole file contents.</param>
+    /// <param name="mdsPath">Path of the .mds/.mdx file.</param>
     /// <returns>The parsed image.</returns>
     /// <exception cref="InvalidDataException">The descriptor is not a readable MDS v2 image.</exception>
-    private static MdsDisc ParseV2(string mdsPath, byte[] fileBytes)
+    private static MdsDisc ParseV2(string mdsPath)
     {
-        var (bytes, isMdx) = MdxCrypto.DecryptDescriptor(fileBytes);
+        using var stream = new FileStream(mdsPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        var (bytes, isMdx) = MdxCrypto.DecryptDescriptor(stream);
+
+        if (bytes.Length < V2DescriptorHeaderSize)
+        {
+            throw new InvalidDataException(
+                "the MDS v2 descriptor is too short to hold its header; the file is corrupt."
+            );
+        }
 
         var medium = ReadV2MediumType(bytes);
         var sessionCount = BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(SessionCountOffset));

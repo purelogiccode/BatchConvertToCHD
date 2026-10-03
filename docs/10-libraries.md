@@ -5,7 +5,7 @@ nav_order: 11
 
 # 10. Embedded Libraries
 
-The solution ships five in-house libraries that replace external tools (maxcso, psxpackager), add CloneCD support, and cover Alcohol 120% and UltraISO images. The app references them as project references. All five are published as NuGet packages for outside consumers — **PBPSharp** (<https://www.nuget.org/packages/PBPSharp>, 1.1.1), **CSOSharp** (<https://www.nuget.org/packages/CSOSharp>, 1.0.0), **CCDSharp** (<https://www.nuget.org/packages/CCDSharp>, 1.0.0), **MDSSharp** (<https://www.nuget.org/packages/MDSSharp>, 1.1.0) and **ISZSharp** (<https://www.nuget.org/packages/ISZSharp>, 1.0.1) — and they all multi-target `net8.0;net9.0;net10.0`, each shipping its XML docs, README and icon; releases are manual (see the repository's AGENTS.md). All five expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`. A sixth in-house library, **CHDSharp**, is consumed as a NuGet package and is covered in [§10.4](#104-chdsharp-nuget).
+The solution ships five in-house libraries that replace external tools (maxcso, psxpackager), add CloneCD support, and cover Alcohol 120% and UltraISO images. The app references them as project references. All five are published as NuGet packages for outside consumers — **PBPSharp** (<https://www.nuget.org/packages/PBPSharp>, 1.1.2), **CSOSharp** (<https://www.nuget.org/packages/CSOSharp>, 1.0.0), **CCDSharp** (<https://www.nuget.org/packages/CCDSharp>, 1.0.0), **MDSSharp** (<https://www.nuget.org/packages/MDSSharp>, 1.2.0) and **ISZSharp** (<https://www.nuget.org/packages/ISZSharp>, 1.0.1) — and they all multi-target `net8.0;net9.0;net10.0`, each shipping its XML docs, README and icon; releases are manual (see the repository's AGENTS.md). All five expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`. A sixth in-house library, **CHDSharp**, is consumed as a NuGet package and is covered in [§10.4](#104-chdsharp-nuget).
 
 | Library | Purpose | Replaces |
 |---------|---------|----------|
@@ -68,15 +68,17 @@ The solution ships five in-house libraries that replace external tools (maxcso, 
 
 ## 10.5 MDSSharp
 
-**Purpose**: turn an Alcohol 120% image (`.mds` descriptor + `.mdf` data, including split `.i00`/`.i01` volumes) into something the encoder can read.
+**Purpose**: turn an Alcohol 120% or Daemon Tools image (`.mds` descriptor + `.mdf` data, split `.i00`/`.i01` volumes, or a single-file `.mdx` container) into something the encoder can read.
 
-- Main types: `MdsParser` (`IsMdsFile`, `Parse`), `MdsMedium`, `MdsDisc`/`MdsTrack` (parsed model with medium type, sector-size classification and pregap/length fields), `MdsInputPreparer` (`PrepareAsync` → cue / DVD image / failure; `StripSubchannelAsync`, `WriteCueAsync`, `FormatMsf`), and `SplitImageJoiner` (`TryGetVolumeSet`, `JoinAsync`, `GetTotalBytes` for `.001`/`.i00` volume sets).
+- Main types: `MdsParser` (`IsMdsFile`, `Parse`), `MdsMedium`, `MdsDisc`/`MdsTrack` (parsed model with medium type, sector-size classification and pregap/length fields), `MdsInputPreparer` (`PrepareAsync` → cue / DVD image / failure; `StripSubchannelAsync`, `WriteCueAsync`, `FormatMsf`), `MdsV2DataDecoder` (v2/MDX track-data decode), `MdxCrypto` (descriptor/data-header decryption), and `SplitImageJoiner` (`TryGetVolumeSet`, `JoinAsync`, `GetTotalBytes` for `.001`/`.i00` volume sets).
 - Reads the medium type, the track extra blocks (pregap/length) and the footer blocks that name the data files (single-byte or UTF-16), so renamed and multi-file descriptors resolve without guessing; several declared files are joined in order.
 - Track modes follow libmirage's reverse engineering (low nibble, folded by 8): audio, Mode 1 and the Mode 2 forms; CD media with 2048-byte sectors becomes a `MODE1/2048` cue, DVD media stays a direct image.
 - Pregaps the data file does not contain are rebuilt as zeros into a `.pregap.bin` so `INDEX 00` can be written; pregaps already in the file are referenced in place.
-- The three preparation shapes (plain 2352, subchannel strip, ISO-as-DVD) plus the cooked-CD and pregap paths are documented in [Utilities Reference §8.12](08-utilities-reference.md#812-alcohol-120-support-mdsssharp).
+- **MDS v2 / MDX** (Daemon Tools): the descriptor is AES-256-CBC decrypted (password-less key derived from the file salt) and zlib-inflated; track data marked compressed is inflated through a per-footer compression table (stored / RLE / deflate) and track data marked encrypted is decrypted with AES-256-LRW using the key data from the descriptor (TAGES images decode without a password, password-protected images need one). A `.mdx` is a single-file container holding the whole image; the parser and decoder read only the regions they need, so multi-gigabyte containers never load into memory.
+- Each footer's `track_data_length` (the sectors actually stored) is authoritative rather than the extra block's logical length, so a pregap stored in the data file is decoded rather than truncated; a track split across several data files decodes every footer in order, with only the first fragment starting at the track's start offset.
+- The three preparation shapes (plain 2352, subchannel strip, ISO-as-DVD) plus the cooked-CD, pregap and v2/MDX paths are documented in [Utilities Reference §8.12](08-utilities-reference.md#812-alcohol-120-support-mdsssharp).
 - Integration: `ProcessMdsFileForConversionAsync` prepares the work set, then the conversion funnel takes the cue (or DVD image).
-- Tests: `MdsTests.cs`, `SplitImageJoinerTests.cs`.
+- Tests: `MdsTests.cs`, `MdsV2Tests.cs` (real mdsx v2/MDX/encrypted fixtures decoded byte-for-byte), `SplitImageJoinerTests.cs`.
 
 ## 10.6 ISZSharp
 

@@ -132,9 +132,12 @@ public class CueWorkDirectoryTests : IDisposable
     public async Task PrepareAsyncZeroPaddingMismatchCreatesWorkDirWithResolvedName()
     {
         CreateFile("Game (Track 2).bin", "dummy");
+        // No BOM: the BOM-only in-place fast path is not applicable, so this exercises the
+        // copy-based path that assigns trackNN names.
         var cuePath = CreateFile(
             "game.cue",
-            "FILE \"Game (Track 02).bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00"
+            "FILE \"Game (Track 02).bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00",
+            new UTF8Encoding(false)
         );
 
         var (result, workDir) = await PrepareAsync(cuePath);
@@ -566,11 +569,13 @@ public class CueWorkDirectoryTests : IDisposable
         CreateFile("Game (Track 2).bin", "dummy");
         CreateFile("track2.wav", "wav-data");
         CreateFile("track3.aiff", "aiff-data");
+        // No BOM: forces the copy-based path so the work names are visible to the assertions.
         var cuePath = CreateFile(
             "game.cue",
             "FILE \"Game (Track 02).bin\" BINARY\r\n  TRACK 01 MODE2/2352\r\n    INDEX 01 00:00:00\r\n"
             + "FILE \"track2.wav\" WAVE\r\n  TRACK 02 AUDIO\r\n    INDEX 01 00:00:00\r\n"
-            + "FILE \"track3.aiff\" AIFF\r\n  TRACK 03 AUDIO\r\n    INDEX 01 00:00:00"
+            + "FILE \"track3.aiff\" AIFF\r\n  TRACK 03 AUDIO\r\n    INDEX 01 00:00:00",
+            new UTF8Encoding(false)
         );
 
         var (result, workDir) = await PrepareAsync(cuePath, new FakeMp3Decoder());

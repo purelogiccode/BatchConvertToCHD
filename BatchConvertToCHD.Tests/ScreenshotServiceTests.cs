@@ -28,44 +28,50 @@ public class ScreenshotServiceTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private string PreferredDirectory => Path.Combine(_tempRoot, "app", ScreenshotService.FolderName);
+    private string PreferredDirectory => Path.Combine(
+        _tempRoot,
+        "appdata",
+        AppConfig.ApplicationName,
+        ScreenshotService.FolderName
+    );
 
-    private string FallbackDirectory => Path.Combine(_tempRoot, "appdata", AppConfig.ApplicationName);
+    private string FallbackDirectory => Path.Combine(_tempRoot, "app", ScreenshotService.FolderName);
 
     [Fact]
-    public void FolderNameIsScreenshot()
+    public void FolderNameIsScreenshots()
     {
-        Assert.Equal("Screenshot", ScreenshotService.FolderName);
+        Assert.Equal("screenshots", ScreenshotService.FolderName);
     }
 
     [Fact]
-    public void GetPreferredDirectoryCombinesBaseDirectoryAndFolderName()
+    public void GetPreferredDirectoryUsesApplicationDataRootAndApplicationName()
     {
-        var result = ScreenshotService.GetPreferredDirectory(@"C:\Apps\BatchConvertToCHD");
+        var result = ScreenshotService.GetPreferredDirectory(_tempRoot);
 
         Assert.Equal(
-            Path.Combine(@"C:\Apps\BatchConvertToCHD", "Screenshot"),
+            Path.Combine(_tempRoot, AppConfig.ApplicationName, "screenshots"),
             result
         );
     }
 
     [Fact]
-    public void GetFallbackDirectoryUsesApplicationDataRootAndApplicationName()
-    {
-        var result = ScreenshotService.GetFallbackDirectory(_tempRoot);
-
-        Assert.Equal(Path.Combine(_tempRoot, AppConfig.ApplicationName), result);
-    }
-
-    [Fact]
-    public void GetFallbackDirectoryUsesLocalApplicationData()
+    public void GetPreferredDirectoryUsesLocalApplicationData()
     {
         var expected = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            AppConfig.ApplicationName
+            AppConfig.ApplicationName,
+            "screenshots"
         );
 
-        Assert.Equal(expected, ScreenshotService.GetFallbackDirectory());
+        Assert.Equal(expected, ScreenshotService.GetPreferredDirectory());
+    }
+
+    [Fact]
+    public void GetFallbackDirectoryCombinesBaseDirectoryAndFolderName()
+    {
+        var result = ScreenshotService.GetFallbackDirectory(@"C:\Apps\BatchConvertToCHD");
+
+        Assert.Equal(Path.Combine(@"C:\Apps\BatchConvertToCHD", "screenshots"), result);
     }
 
     [Fact]

@@ -247,7 +247,7 @@ foreach (var track in disc.Tracks)
 | Exception | Thrown when |
 |---|---|
 | `FileNotFoundException` | The `.mds` passed to `Parse` does not exist. |
-| `InvalidDataException` | The file is not an MDS descriptor, reports implausible session counts, exceeds 1 MB, contains no readable tracks, or is an MDS v2/MDX file whose encrypted descriptor cannot be decrypted or decompressed. |
+| `InvalidDataException` | The file is not an MDS descriptor, reports implausible session counts, contains no readable tracks, or is an MDS v2/MDX file whose encrypted descriptor cannot be decrypted or decompressed. A version-1 descriptor larger than 1 MB is also rejected; a version-2 `.mdx` container of any size is read through a stream and is not subject to that cap. |
 | `OperationCanceledException` | The cancellation token is signaled during prepare, strip or join. |
 
 `PrepareAsync` and `StripSubchannelAsync` otherwise report failures through their result (`Result.FailureReason`, `null`/message) rather than exceptions, so batch processing can continue past a bad image. MDS v2/MDX images with compressed or password-less encrypted track data are decoded automatically; images whose track data needs a user password fail preparation unless the password is supplied as the optional `PrepareAsync(..., password:)` argument.

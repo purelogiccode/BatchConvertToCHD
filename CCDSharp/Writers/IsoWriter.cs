@@ -25,6 +25,13 @@ public static class IsoWriter
             throw new FileNotFoundException("IMG data file not found.", imgFilePath);
 
         var totalBytes = new FileInfo(imgFilePath).Length;
+        if (totalBytes % SectorConstants.RawSectorSize != 0)
+        {
+            throw new InvalidOperationException(
+                $"The .img file ends with a partial raw sector: {totalBytes} bytes is not a multiple of {SectorConstants.RawSectorSize}."
+            );
+        }
+
         var totalSectors = totalBytes / SectorConstants.RawSectorSize;
 
         using var input = new FileStream(
@@ -83,6 +90,13 @@ public static class IsoWriter
         }
 
         var imgLength = new FileInfo(disc.ImgFilePath).Length;
+        if (imgLength % SectorConstants.RawSectorSize != 0)
+        {
+            throw new InvalidOperationException(
+                $"The .img file ends with a partial raw sector: {imgLength} bytes is not a multiple of {SectorConstants.RawSectorSize}."
+            );
+        }
+
         var fileSectors = imgLength / SectorConstants.RawSectorSize;
 
         var startSector = dataTrack.Index01Lba > 0 ? dataTrack.Index01Lba : 0;

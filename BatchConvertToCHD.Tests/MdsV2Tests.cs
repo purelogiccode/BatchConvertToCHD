@@ -227,4 +227,22 @@ public class MdsV2Tests : IDisposable
         Assert.Single(disc.DataFilePaths);
         Assert.Equal(mdxPath, disc.DataFilePaths[0]);
     }
+
+    [Fact]
+    public void MdxContainerLargerThanTheDescriptorCapParses()
+    {
+        // A real MDX embeds the whole disc image, so it is hundreds of MB or more. The 1 MB cap
+        // that guards v1 descriptors must not reject it before the version is even read.
+        var mdxPath = Path.Combine(_tempDir, "large.mdx");
+        File.Copy(FixturePath("test_compress.mdx"), mdxPath, true);
+        using (var stream = new FileStream(mdxPath, FileMode.Append, FileAccess.Write))
+        {
+            stream.SetLength(2 * 1024 * 1024);
+        }
+
+        var disc = MdsParser.Parse(mdxPath);
+
+        Assert.True(disc.IsMdxContainer);
+        Assert.Single(disc.Tracks);
+    }
 }

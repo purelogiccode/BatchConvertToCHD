@@ -34,7 +34,7 @@
                 Margin="15,0,0,0"
                 VerticalAlignment="Center"
                 ToolTip.Tip="Application identity">
-                <Image Source="/Assets/logo.png" Width="20" Height="20" ToolTip.Tip="Batch Convert to CHD logo" />
+                <Image Source="/Assets/chd.png" Width="20" Height="20" ToolTip.Tip="Batch Convert to CHD logo" />
                 <TextBlock Text="Batch Convert to CHD" Classes="headerTitle" ToolTip.Tip="Application name" />
             </StackPanel>
 

@@ -49,6 +49,28 @@ internal sealed class IoThroughputCounter : IDisposable
     }
 
     /// <summary>
+    ///     Creates a counter that reports the write throughput of another process, or null when the
+    ///     current platform has no implementation. Used to sample the bundled <c>chdman</c> process,
+    ///     whose I/O does not show up in this app's own counters.
+    /// </summary>
+    /// <param name="process">The process to sample; must still be running when values are read.</param>
+    /// <param name="writes">True for write throughput, false for read throughput.</param>
+    internal static IoThroughputCounter? CreateForProcess(Process process, bool writes)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return new IoThroughputCounter(() => GetWindowsProcessTotalBytes(process, writes));
+        }
+
+        if (OperatingSystem.IsLinux())
+        {
+            return new IoThroughputCounter(() => GetLinuxProcessTotalBytes(process.Id, writes));
+        }
+
+        return null;
+    }
+
+    /// <summary>
     ///     Returns the average throughput in bytes per second since the previous call.
     /// </summary>
     internal double NextValue()
@@ -97,20 +119,47 @@ internal sealed class IoThroughputCounter : IDisposable
             : 0;
     }
 
-    private static long GetLinuxProcessTotalBytes(bool writes)
+    private static long GetWindowsProcessTotalBytes(Process process, bool writes)
     {
-        const string ioPath = "/proc/self/io";
+        try
+        {
+            return GetProcessIoCounters(process.Handle, out var counters)
+                ? (long)(writes ? counters.WriteTransferCount : counters.ReadTransferCount)
+                : 0;
+        }
+        catch
+        {
+            // The process exited between samples, so its counters are gone.
+            return 0;
+        }
+    }
+
+    private static long GetLinuxProcessTotalBytes(int processId, bool writes)
+    {
+        var ioPath = $"/proc/{processId}/io";
         if (!File.Exists(ioPath)) return 0;
 
         var wanted = writes ? "write_bytes:" : "read_bytes:";
-        foreach (var line in File.ReadLines(ioPath))
+        try
         {
-            if (!line.StartsWith(wanted, StringComparison.Ordinal)) continue;
+            foreach (var line in File.ReadLines(ioPath))
+            {
+                if (!line.StartsWith(wanted, StringComparison.Ordinal)) continue;
 
-            var value = line[wanted.Length..].Trim();
-            return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
-                ? parsed
-                : 0;
+                var value = line[wanted.Length..].Trim();
+                return long.TryParse(
+                    value,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var parsed
+                )
+                    ? parsed
+                    : 0;
+            }
+        }
+        catch (IOException)
+        {
+            // The process exited while its counters were being read.
         }
 
         return 0;
@@ -125,7 +174,7 @@ internal sealed class IoThroughputCounter : IDisposable
 
         if (OperatingSystem.IsLinux())
         {
-            return () => GetLinuxProcessTotalBytes(writes);
+            return () => GetLinuxProcessTotalBytes(Environment.ProcessId, writes);
         }
 
         return null;

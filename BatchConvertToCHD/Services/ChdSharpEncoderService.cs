@@ -60,6 +60,27 @@ internal static class ChdSharpEncoderService
     {
         var options = new ChdEncodeOptions { TaskCount = Math.Clamp(taskCount, 1, 64) };
 
+        // chdman refuses inputs whose size is not a whole number of units for the raw commands.
+        // The built-in encoder has to reject them too: encoding a partial trailing unit would drop
+        // the tail and still report success, after which the source could be deleted.
+        if (command is "createdvd" or "createhd" or "createraw")
+        {
+            var unitBytes = command switch
+            {
+                "createdvd" => DvdUnitBytes,
+                "createhd" => HardDiskUnitBytes,
+                _ => rawUnits2352 ? RawCdUnitBytes : HardDiskUnitBytes,
+            };
+
+            var fileSize = (ulong)new FileInfo(inputPath).Length;
+            if (fileSize % unitBytes != 0)
+            {
+                throw new InvalidDataException(
+                    $"Data size {fileSize:N0} is not divisible by sector size {unitBytes}."
+                );
+            }
+        }
+
         switch (command)
         {
             case "createcd":

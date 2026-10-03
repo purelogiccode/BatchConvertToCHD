@@ -108,7 +108,7 @@ Content is inspected first; the extension only decides the outcome for files who
 4. **Descriptors** — `.cue`/`.gdi`/`.toc` → `createcd` after cue normalization. `.ccd` becomes a cue via CCDSharp, `.mds` via the Alcohol parser, `.pbp` is extracted to CUE/BIN via PBPSharp.
 5. **`.iso` (DVD images)** → `createdvd`, once content inspection has ruled out a mislabelled raw CD dump
 6. **`.img` (hard disk images)** → `createhd`, unless an accompanying `.cue` exists → `createcd`
-7. **`.raw` (raw data)** → `createraw` (with an explicit unit size `-us 2352`). Cue descriptors referencing `.raw` audio tracks also receive `-us 2352` automatically.
+7. **`.raw` (raw data)** → `createraw` (with an explicit unit size `-us 2352`). Cue descriptors referencing `.raw` audio tracks convert through the cue, whose track types already carry the 2352-byte unit size (`createcd` rejects `-us`).
 
 The user can override 5–7 via **Force CD** / **Force DVD** checkboxes. PBP always extracts first.
 
@@ -125,6 +125,6 @@ Generated cue sheets reference the disc image where it already lies rather than 
 - Added content-based format detection, so inputs are routed by their leading bytes rather than their extension.
 - Added Alcohol 120% (`.mds`/`.mdf`), split volume sets, in-process ISZ decompression and in-process ECM decoding, removing the last external-tool dependency.
 - Made conversion output non-destructive by staging to `.chdtmp` and moving into place only on success.
-- Added raw-audio-track detection in cue files, auto-applying `-us 2352` to chdman arguments.
+- Added raw-audio-track detection in cue files; `-us 2352` is applied to `createraw` and cue descriptors are converted through their cue (which carries the unit size in its track types).
 - Added retry logic to CloneCD bin-file copies and overflow-safe arithmetic in PBP TOC parsing.
 - Normalised endianness across CSO/PBP parsers (replaced endianness-dependent `BitConverter` with explicit `BinaryPrimitives.ReadUInt32LittleEndian`).

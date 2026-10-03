@@ -285,6 +285,46 @@ public class PathUtilsTests
         Assert.Equal(paths.Count, paths.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
+    [Fact]
+    public void GetBestTempDirectoryPrefersTheSafeSystemTempFolder()
+    {
+        // The drive-root fallback must not be used while %TEMP% is safe to hand to chdman,
+        // otherwise a BatchConvertToCHD_Temp folder is created on a drive root for no reason.
+        if (!PathUtils.IsChdmanSafePath(Path.GetTempPath())) return;
+
+        var result = PathUtils.GetBestTempDirectory(null, null, "SystemTemp_");
+
+        Assert.StartsWith(Path.GetTempPath(), result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TryDeleteEmptyTempFolderRemovesOnlyEmptyNamedFolder()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"PathUtilsTests_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            var tempFolder = Path.Combine(root, "BatchConvertToCHD_Temp");
+            Directory.CreateDirectory(tempFolder);
+            PathUtils.TryDeleteEmptyTempFolder(tempFolder);
+            Assert.False(Directory.Exists(tempFolder));
+
+            var otherFolder = Path.Combine(root, "SomeOtherFolder");
+            Directory.CreateDirectory(otherFolder);
+            PathUtils.TryDeleteEmptyTempFolder(otherFolder);
+            Assert.True(Directory.Exists(otherFolder));
+
+            Directory.CreateDirectory(tempFolder);
+            File.WriteAllText(Path.Combine(tempFolder, "staged.tmp"), "x");
+            PathUtils.TryDeleteEmptyTempFolder(tempFolder);
+            Assert.True(Directory.Exists(tempFolder));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
     #endregion
 
     #region CreateTempDirectoryOnSameVolume

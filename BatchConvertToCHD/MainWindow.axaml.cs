@@ -99,9 +99,12 @@ internal partial class MainWindow : Window, IDisposable
     private int _operationRunningState;
 
     // CHD paths already produced by the running batch, so a second input resolving to the same
-    // output cannot silently replace the first product.
+    // output cannot silently replace the first product. Paths are case-insensitive on Windows and
+    // case-sensitive elsewhere, matching the file system.
     private readonly Lock _batchOutputPathsLock = new();
-    private readonly HashSet<string> _batchOutputPaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _batchOutputPaths = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal
+    );
 
     // Tracks whether a close was requested while an operation was running
     private bool _pendingClose;
@@ -254,8 +257,9 @@ internal partial class MainWindow : Window, IDisposable
             // Show speed display if counters are available
             if (_writeBytesCounter != null || _readBytesCounter != null) SpeedStatCard.IsVisible = true;
 
-            // Check for missing dependencies and notify user
-            CheckDependenciesAndNotifyUser();
+            // Check for missing dependencies and notify user; awaited so the notice is dismissed
+            // before the update check can show a second dialog on top of it.
+            await CheckDependenciesAndNotifyUserAsync();
 
             // Defer update check until window is responsive
             await Task.Delay(100, _cts.Token); // Allow UI to render first
@@ -434,7 +438,7 @@ internal partial class MainWindow : Window, IDisposable
     ///     Warns the user on Windows when chdman was not found, since conversions then use the
     ///     built-in CHDSharp encoder.
     /// </summary>
-    private void CheckDependenciesAndNotifyUser()
+    private async Task CheckDependenciesAndNotifyUserAsync()
     {
         // The built-in CHDSharp encoder always exists, so conversion can never hard-fail on a
         // missing encoder. chdman is the primary encoder on Windows and is bundled with the app;
@@ -446,7 +450,12 @@ internal partial class MainWindow : Window, IDisposable
                 "chdman.exe was not found, so conversions will run on the built-in CHDSharp encoder.";
 
             LogWarning(" " + msg);
-            _ = ShowMessageBoxAsync(msg, "Encoder Notice", MessageBoxButton.Ok, MessageBoxImage.Warning);
+            await ShowMessageBoxAsync(
+                msg,
+                "Encoder Notice",
+                MessageBoxButton.Ok,
+                MessageBoxImage.Warning
+            );
         }
     }
 
@@ -543,24 +552,66 @@ internal partial class MainWindow : Window, IDisposable
                             try
                             {
                                 Directory.Delete(dir, true);
+                                PathUtils.TryDeleteEmptyTempParent(dir);
                             }
                             catch
                             {
                                 /* ignore */
                             }
                         }
+
+                        // An empty fallback folder (its staged directories already gone) is
+                        // removed too, so previous runs do not leave it on drive roots.
+                        PathUtils.TryDeleteEmptyTempFolder(basePath);
                     }
                     catch
                     {
                         /* ignore */
                     }
                 }
+
+                CleanupStaleExplorerExtractions();
             }
             catch
             {
                 /* ignore */
             }
         });
+    }
+
+    /// <summary>
+    ///     Removes Explorer temp extractions older than a day. A viewer launched from a previous
+    ///     run may still hold a recent one open, so only clearly stale folders are removed.
+    /// </summary>
+    private static void CleanupStaleExplorerExtractions()
+    {
+        try
+        {
+            var explorerRoot = Path.Combine(
+                Path.GetTempPath(),
+                AppConfig.ApplicationName,
+                "Explorer"
+            );
+            if (!Directory.Exists(explorerRoot)) return;
+
+            var cutoff = DateTime.UtcNow.AddDays(-1);
+            foreach (var directory in Directory.GetDirectories(explorerRoot))
+            {
+                try
+                {
+                    if (Directory.GetCreationTimeUtc(directory) < cutoff)
+                        Directory.Delete(directory, true);
+                }
+                catch
+                {
+                    /* ignore */
+                }
+            }
+        }
+        catch
+        {
+            /* ignore */
+        }
     }
 
     /// <summary>Updates the status bar message on the UI thread.</summary>
@@ -852,7 +903,9 @@ internal partial class MainWindow : Window, IDisposable
 
         if (!StartConversionButton.IsEnabled && !StartVerificationButton.IsEnabled) return;
 
-        _ = Dispatcher.UIThread.InvokeAsync((Action)ClearUiLog);
+        // The selection-changed handler already runs on the UI thread, so clear synchronously;
+        // posting the clear would let it run after the mode instructions were queued and wipe them.
+        ClearUiLog();
         if (control.SelectedItem is TabItem selectedTab)
         {
             switch (selectedTab.Name)
@@ -1187,7 +1240,7 @@ internal partial class MainWindow : Window, IDisposable
             }
             finally
             {
-                FinishOperation("Extraction");
+                await FinishOperationAsync("Extraction");
             }
         }
         catch (Exception ex)
@@ -1636,7 +1689,7 @@ internal partial class MainWindow : Window, IDisposable
             }
             finally
             {
-                FinishOperation("Conversion");
+                await FinishOperationAsync("Conversion");
             }
         }
         catch (Exception ex)
@@ -1719,7 +1772,7 @@ internal partial class MainWindow : Window, IDisposable
             }
             finally
             {
-                FinishOperation("Verification");
+                await FinishOperationAsync("Verification");
             }
         }
         catch (Exception ex)
@@ -1730,10 +1783,11 @@ internal partial class MainWindow : Window, IDisposable
 
     /// <summary>
     ///     Stops the operation timers, restores the controls, logs the summary and closes the window
-    ///     when a close was pending.
+    ///     when a close was pending. The completion dialog is awaited before a pending close, so the
+    ///     user always sees the summary.
     /// </summary>
     /// <param name="opName">Name of the finished operation.</param>
-    private void FinishOperation(string opName)
+    private async Task FinishOperationAsync(string opName)
     {
         _activeOperation = string.Empty;
         _operationTimer.Stop();
@@ -1742,7 +1796,8 @@ internal partial class MainWindow : Window, IDisposable
         UpdateWriteSpeedDisplay(0);
         UpdateReadSpeedDisplay(0);
         SetControlsState(true);
-        LogOperationSummary(opName);
+
+        await LogOperationSummaryAsync(opName);
 
         // Clear progress display
         ClearProgressDisplay();
@@ -5872,21 +5927,9 @@ internal partial class MainWindow : Window, IDisposable
         var args = $"{command} -i \"{inputFile}\" -o \"{outputFile}\" -f -np {cores}";
         if (isRaw)
         {
+            // Only createraw takes a unit size; createcd derives 2352 from the cue's track types
+            // and rejects "-us" ("Option '-us' not valid for this command").
             args += " -us 2352";
-        }
-        else if (string.Equals(command, "createcd", StringComparison.Ordinal) && isCueDescriptor)
-        {
-            var refs = await GameFileParser
-                .GetReferencedFilesFromCueAsync(inputFile, static _ => { }, token)
-                .ConfigureAwait(false);
-            if (
-                refs.Any(static r =>
-                    r.EndsWith(FileExtensions.Raw, StringComparison.OrdinalIgnoreCase)
-                )
-            )
-            {
-                args += " -us 2352";
-            }
         }
 
         string? asciiTempDir = null;
@@ -6117,6 +6160,12 @@ internal partial class MainWindow : Window, IDisposable
         }
 
         var speedToken = ctsSpeed.Token;
+
+        // chdman runs out of process, so its disk writes do not show up in this app's own
+        // counters; sample the child process instead, or the speed card would sit at 0 MB/s
+        // for every chdman conversion.
+        using var chdmanSpeedCounter = IoThroughputCounter.CreateForProcess(process, writes: true);
+
         var speedMonitoringTask = Task.Run(
             async () =>
             {
@@ -6124,7 +6173,7 @@ internal partial class MainWindow : Window, IDisposable
                 {
                     while (!speedToken.IsCancellationRequested)
                     {
-                        UpdateWriteSpeedFromPerformanceCounter();
+                        UpdateWriteSpeedFromPerformanceCounter(chdmanSpeedCounter);
                         await Task.Delay(AppConfig.WriteSpeedUpdateIntervalMs, speedToken);
                     }
                 }
@@ -6277,16 +6326,13 @@ internal partial class MainWindow : Window, IDisposable
                 // Two inputs in one batch can still resolve to the same CHD (an archive's contents
                 // are not known when the collision preflight runs). Keep the first product and
                 // report the duplicate instead of silently replacing it.
-                lock (_batchOutputPathsLock)
+                if (!TryReserveBatchOutputPath(originalOutputFile))
                 {
-                    if (!_batchOutputPaths.Add(Path.GetFullPath(originalOutputFile)))
-                    {
-                        LogWarning(
-                            $" {Path.GetFileName(originalOutputFile)} was already produced earlier in this batch; keeping the first one."
-                        );
-                        TryBestEffortDelete(outputFile);
-                        return false;
-                    }
+                    LogWarning(
+                        $" {Path.GetFileName(originalOutputFile)} was already produced earlier in this batch; keeping the first one."
+                    );
+                    TryBestEffortDelete(outputFile);
+                    return false;
                 }
 
                 if (asciiOutputFile != null)
@@ -6322,6 +6368,7 @@ internal partial class MainWindow : Window, IDisposable
                     catch (Exception ex)
                     {
                         LogError($" Failed to move temp output to destination: {ex.Message}");
+                        ReleaseBatchOutputPath(originalOutputFile);
                         return false;
                     }
                 }
@@ -6637,7 +6684,17 @@ internal partial class MainWindow : Window, IDisposable
                 await Task.WhenAny(fallbackSpeedTask, Task.Delay(500, CancellationToken.None));
             }
 
-            // CHDSharp internally validates its output; trust the exit code.
+            // CHDSharp internally validates its output; trust the exit code. The same duplicate
+            // guard as the chdman path applies: keep the first product produced in this batch.
+            if (!TryReserveBatchOutputPath(originalOutputFile))
+            {
+                LogWarning(
+                    $" {Path.GetFileName(originalOutputFile)} was already produced earlier in this batch; keeping the first one."
+                );
+                TryBestEffortDelete(outputFile);
+                return false;
+            }
+
             try
             {
                 var targetDir = Path.GetDirectoryName(originalOutputFile);
@@ -6669,6 +6726,7 @@ internal partial class MainWindow : Window, IDisposable
             catch (Exception ex)
             {
                 LogError($" Failed to move CHDSharp output to destination: {ex.Message}");
+                ReleaseBatchOutputPath(originalOutputFile);
                 return false;
             }
 
@@ -6910,6 +6968,33 @@ internal partial class MainWindow : Window, IDisposable
         }
 
         return false;
+    }
+
+    /// <summary>
+    ///     Reserves a batch output path, returning <see langword="false" /> when an earlier input
+    ///     already produced it so the first product is kept.
+    /// </summary>
+    /// <param name="outputPath">The destination CHD path.</param>
+    /// <returns><see langword="true" /> when the path was newly reserved.</returns>
+    private bool TryReserveBatchOutputPath(string outputPath)
+    {
+        lock (_batchOutputPathsLock)
+        {
+            return _batchOutputPaths.Add(Path.GetFullPath(outputPath));
+        }
+    }
+
+    /// <summary>
+    ///     Releases a batch output reservation after a failed move, so a later input resolving to
+    ///     the same CHD is not blocked by a product that was never written.
+    /// </summary>
+    /// <param name="outputPath">The destination CHD path.</param>
+    private void ReleaseBatchOutputPath(string outputPath)
+    {
+        lock (_batchOutputPathsLock)
+        {
+            _batchOutputPaths.Remove(Path.GetFullPath(outputPath));
+        }
     }
 
     /// <summary>
@@ -7235,15 +7320,21 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
-    /// <summary>Samples the write-throughput counter and updates the write speed display.</summary>
-    private void UpdateWriteSpeedFromPerformanceCounter()
+    /// <summary>
+    ///     Samples a write-throughput counter and updates the write speed display.
+    /// </summary>
+    /// <param name="counter">
+    ///     Counter to sample, or null to use the app's own process counter. The chdman path passes
+    ///     a counter for the child process, whose writes the app's counter cannot see.
+    /// </param>
+    private void UpdateWriteSpeedFromPerformanceCounter(IoThroughputCounter? counter = null)
     {
         try
         {
             double writeBytesPerSec;
             lock (_performanceCounterLock)
             {
-                writeBytesPerSec = _writeBytesCounter?.NextValue() ?? 0;
+                writeBytesPerSec = (counter ?? _writeBytesCounter)?.NextValue() ?? 0;
             }
 
             if (writeBytesPerSec > 0) UpdateWriteSpeedDisplay(writeBytesPerSec / 1048576.0); // Convert to MB/s
@@ -7948,6 +8039,7 @@ internal partial class MainWindow : Window, IDisposable
                     },
                     token
                 );
+                PathUtils.TryDeleteEmptyTempParent(path);
                 return;
             }
             catch (DirectoryNotFoundException)
@@ -8101,16 +8193,16 @@ internal partial class MainWindow : Window, IDisposable
         }
     }
 
-    /// <summary>Logs the operation result summary and shows the completion message box.</summary>
+    /// <summary>Logs the operation result summary and awaits the completion message box.</summary>
     /// <param name="op">Name of the operation.</param>
-    private void LogOperationSummary(string op)
+    private async Task LogOperationSummaryAsync(string op)
     {
         var verb = _wasCancelled ? "canceled" : "completed";
         LogMessage(
             $"--- {op} {verb}. Total: {_totalFilesProcessed}, OK: {_processedOkCount}, Failed: {_failedCount}"
         );
         UpdateStatusBarMessage($"{op} {verb}" + (_failedCount > 0 ? " with errors" : ""));
-        _ = ShowMessageBoxAsync(
+        await ShowMessageBoxAsync(
             $"{op} {verb}.\nTotal: {_totalFilesProcessed}\nOK: {_processedOkCount}\nFailed: {_failedCount}",
             "Complete",
             MessageBoxButton.Ok,

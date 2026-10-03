@@ -54,24 +54,37 @@ internal static class MdxCrypto
     /// <summary>Maximum accepted password length; longer passwords are truncated like the reference.</summary>
     private const int MaxPasswordLength = 64;
 
+    /// <summary>
+    ///     Upper bound for a decompressed descriptor. Descriptors hold track/session tables and
+    ///     metadata (a few hundred KB at most), so this is generous while still rejecting a corrupt
+    ///     size before allocating. It cannot be compared against the file size: the descriptor is
+    ///     compressed, so it legitimately expands beyond the file that stores it.
+    /// </summary>
+    private const uint MaxDescriptorSize = 16 * 1024 * 1024;
+
     /// <summary>Offset of the track-data encryption header pointer in the decrypted descriptor.</summary>
     private const int DataEncryptionHeaderOffset = 0x58;
 
     /// <summary>
-    ///     Decrypts the descriptor of <paramref name="fileBytes" /> and returns the reconstructed
+    ///     Decrypts the descriptor of <paramref name="stream" /> and returns the reconstructed
     ///     descriptor buffer plus whether the file is a single-file MDX container. Offsets inside
     ///     the returned buffer are relative to its start, which includes the 18-byte signature and
-    ///     version prefix copied from the file header.
+    ///     version prefix copied from the file header. Only the header, encryption header and
+    ///     compressed descriptor regions are read, so a multi-gigabyte MDX container is not loaded
+    ///     into memory.
     /// </summary>
-    /// <param name="fileBytes">Whole contents of the .mds/.mdx file.</param>
+    /// <param name="stream">Seekable stream over the .mds/.mdx file.</param>
     /// <returns>The decrypted descriptor and whether the source was an MDX container.</returns>
     /// <exception cref="InvalidDataException">The file is not a readable MDS v2/MDX image.</exception>
-    internal static (byte[] Descriptor, bool IsMdx) DecryptDescriptor(byte[] fileBytes)
+    internal static (byte[] Descriptor, bool IsMdx) DecryptDescriptor(Stream stream)
     {
-        if (fileBytes.Length < FileHeaderSize + 16)
+        if (stream.Length < FileHeaderSize + 16)
             throw new InvalidDataException("the MDS v2 file is truncated.");
 
-        var marker = BinaryPrimitives.ReadUInt32LittleEndian(fileBytes.AsSpan(0x2C));
+        var fileHeader = new byte[FileHeaderSize + 16];
+        ReadExactlyAt(stream, 0, fileHeader);
+
+        var marker = BinaryPrimitives.ReadUInt32LittleEndian(fileHeader.AsSpan(0x2C));
         var isMdx = marker == MdxMarker;
 
         long encryptionHeaderOffset;
@@ -79,8 +92,8 @@ internal static class MdxCrypto
         long declaredDescriptorSize;
         if (isMdx)
         {
-            var footerOffset = (long)BinaryPrimitives.ReadUInt64LittleEndian(fileBytes.AsSpan(0x30));
-            var footerLength = (long)BinaryPrimitives.ReadUInt64LittleEndian(fileBytes.AsSpan(0x38));
+            var footerOffset = (long)BinaryPrimitives.ReadUInt64LittleEndian(fileHeader.AsSpan(0x30));
+            var footerLength = (long)BinaryPrimitives.ReadUInt64LittleEndian(fileHeader.AsSpan(0x38));
             descriptorOffset = footerOffset;
             declaredDescriptorSize = footerLength - 64;
             encryptionHeaderOffset = footerOffset + declaredDescriptorSize;
@@ -88,7 +101,7 @@ internal static class MdxCrypto
             if (
                 descriptorOffset < FileHeaderSize + 16
                 || declaredDescriptorSize < 16
-                || encryptionHeaderOffset + EncryptionHeaderSize > fileBytes.Length
+                || encryptionHeaderOffset + EncryptionHeaderSize > stream.Length
             )
             {
                 throw new InvalidDataException(
@@ -104,7 +117,7 @@ internal static class MdxCrypto
 
             if (
                 encryptionHeaderOffset < FileHeaderSize + 16
-                || encryptionHeaderOffset + EncryptionHeaderSize > fileBytes.Length
+                || encryptionHeaderOffset + EncryptionHeaderSize > stream.Length
             )
             {
                 throw new InvalidDataException(
@@ -114,7 +127,7 @@ internal static class MdxCrypto
         }
 
         var header = new byte[EncryptionHeaderSize];
-        Array.Copy(fileBytes, encryptionHeaderOffset, header, 0, EncryptionHeaderSize);
+        ReadExactlyAt(stream, encryptionHeaderOffset, header);
 
         DecipherEncryptionHeader(header, mainHeader: true);
 
@@ -149,9 +162,9 @@ internal static class MdxCrypto
             );
         }
 
-        // The declared decompressed size drives an allocation; a descriptor cannot be larger than
-        // the file that stores it, so an impossible value is rejected before allocating.
-        if (decompressedSize > (uint)fileBytes.Length)
+        // The declared decompressed size drives an allocation; reject an absurd value before
+        // allocating. The descriptor is compressed, so it may be larger than the file itself.
+        if (decompressedSize is 0 || decompressedSize > MaxDescriptorSize)
         {
             throw new InvalidDataException(
                 "the MDS v2 descriptor declares an impossible decompressed size; the file is corrupt."
@@ -181,7 +194,7 @@ internal static class MdxCrypto
         }
 
         var descriptor = new byte[descriptorLength];
-        Array.Copy(fileBytes, descriptorOffset, descriptor, 0, descriptorLength);
+        ReadExactlyAt(stream, descriptorOffset, descriptor);
 
         var aesKey = keyData.Slice(32, 32).ToArray();
         var iv = keyData.Slice(0, 16).ToArray();
@@ -220,8 +233,37 @@ internal static class MdxCrypto
             );
         }
 
-        Array.Copy(fileBytes, 0, output, 0, 18);
+        Array.Copy(fileHeader, 0, output, 0, 18);
         return (output, isMdx);
+    }
+
+    /// <summary>Reads exactly <paramref name="buffer" />.Length bytes at an absolute stream offset.</summary>
+    /// <param name="stream">Stream to read from.</param>
+    /// <param name="offset">Absolute offset.</param>
+    /// <param name="buffer">Destination buffer.</param>
+    private static void ReadExactlyAt(Stream stream, long offset, byte[] buffer)
+    {
+        if (offset < 0 || offset + buffer.Length > stream.Length)
+        {
+            throw new InvalidDataException(
+                "the MDS v2 file is shorter than its own header says; the file is corrupt or truncated."
+            );
+        }
+
+        stream.Position = offset;
+        var read = 0;
+        while (read < buffer.Length)
+        {
+            var count = stream.Read(buffer, read, buffer.Length - read);
+            if (count == 0)
+            {
+                throw new InvalidDataException(
+                    "the MDS v2 file ended while reading the descriptor."
+                );
+            }
+
+            read += count;
+        }
     }
 
     /// <summary>

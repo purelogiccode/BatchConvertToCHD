@@ -8,49 +8,50 @@ namespace BatchConvertToCHD.Services;
 
 /// <summary>
 ///     Captures a screenshot of the application window and saves it as a PNG file. The
-///     <c>Screenshot</c> folder next to the application executable is tried first; when that
-///     folder cannot be written (for example a read-only install location), the service falls
-///     back to <c>%LocalAppData%\BatchConvertToCHD</c> (or the platform equivalent).
+///     <c>screenshots</c> folder inside <c>%LocalAppData%\BatchConvertToCHD</c> (or the platform
+///     equivalent) is tried first, beside the application's <c>logs</c> folder; when that folder
+///     cannot be written, the service falls back to a <c>screenshots</c> folder next to the
+///     application executable.
 /// </summary>
 internal static class ScreenshotService
 {
     /// <summary>The name of the folder screenshots are saved into.</summary>
-    internal const string FolderName = "Screenshot";
+    internal const string FolderName = "screenshots";
 
     private static readonly ILogger Logger = Log.ForContext(typeof(ScreenshotService));
 
     /// <summary>
-    ///     Returns the preferred screenshot directory: the <c>Screenshot</c> folder inside the
-    ///     application folder.
+    ///     Returns the preferred screenshot directory: <c>%LocalAppData%\BatchConvertToCHD\screenshots</c>
+    ///     (or the platform equivalent).
     /// </summary>
-    /// <param name="applicationBaseDirectory">The application's base directory.</param>
     /// <returns>The preferred directory path.</returns>
-    internal static string GetPreferredDirectory(string applicationBaseDirectory)
+    internal static string GetPreferredDirectory()
     {
-        return Path.Combine(applicationBaseDirectory, FolderName);
-    }
-
-    /// <summary>
-    ///     Returns the fallback screenshot directory used when the preferred folder cannot be
-    ///     written: <c>%LocalAppData%\BatchConvertToCHD</c> (or the platform equivalent).
-    /// </summary>
-    /// <returns>The fallback directory path.</returns>
-    internal static string GetFallbackDirectory()
-    {
-        return GetFallbackDirectory(
+        return GetPreferredDirectory(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
         );
     }
 
     /// <summary>
-    ///     Returns the fallback screenshot directory for a given application-data root. Exposed so
+    ///     Returns the preferred screenshot directory for a given application-data root. Exposed so
     ///     tests can supply a temporary directory.
     /// </summary>
     /// <param name="applicationDataRoot">The application-data root folder.</param>
-    /// <returns>The fallback directory path.</returns>
-    internal static string GetFallbackDirectory(string applicationDataRoot)
+    /// <returns>The preferred directory path.</returns>
+    internal static string GetPreferredDirectory(string applicationDataRoot)
     {
-        return Path.Combine(applicationDataRoot, AppConfig.ApplicationName);
+        return Path.Combine(applicationDataRoot, AppConfig.ApplicationName, FolderName);
+    }
+
+    /// <summary>
+    ///     Returns the fallback screenshot directory used when the preferred folder cannot be
+    ///     written: a <c>screenshots</c> folder next to the application executable.
+    /// </summary>
+    /// <param name="applicationBaseDirectory">The application's base directory.</param>
+    /// <returns>The fallback directory path.</returns>
+    internal static string GetFallbackDirectory(string applicationBaseDirectory)
+    {
+        return Path.Combine(applicationBaseDirectory, FolderName);
     }
 
     /// <summary>
@@ -123,8 +124,8 @@ internal static class ScreenshotService
 
             return SaveScreenshot(
                 filePath => bitmap.Save(filePath, PngBitmapEncoderOptions.Default),
-                GetPreferredDirectory(AppDomain.CurrentDomain.BaseDirectory),
-                GetFallbackDirectory()
+                GetPreferredDirectory(),
+                GetFallbackDirectory(AppDomain.CurrentDomain.BaseDirectory)
             );
         }
         catch (Exception ex)

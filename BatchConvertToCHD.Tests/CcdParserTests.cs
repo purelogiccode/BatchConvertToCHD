@@ -1,5 +1,6 @@
 using CCDSharp.Models;
 using CCDSharp.Parsers;
+using CCDSharp.Writers;
 
 namespace BatchConvertToCHD.Tests;
 
@@ -437,5 +438,38 @@ public class CcdParserTests : IDisposable
     public void FormatMsfPadsAllComponents(int minutes, int seconds, int frames, string expected)
     {
         Assert.Equal(expected, CcdParser.FormatMsf(minutes, seconds, frames));
+    }
+
+    [Fact]
+    public void IsoWriterRejectsPartialTrailingSector()
+    {
+        // A .img whose length is not a whole number of 2352-byte sectors is truncated; silently
+        // dropping the tail would convert a damaged image as if it were complete.
+        var imgPath = Path.Combine(_tempDir, "partial.img");
+        File.WriteAllBytes(imgPath, new byte[SectorConstants.RawSectorSize + 10]);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            IsoWriter.Write(imgPath, Path.Combine(_tempDir, "partial.iso"))
+        );
+    }
+
+    [Fact]
+    public void IsoWriterWritesWholeSectors()
+    {
+        var imgPath = Path.Combine(_tempDir, "whole.img");
+        var img = new byte[SectorConstants.RawSectorSize * 2];
+        for (var i = 0; i < SectorConstants.SyncMark.Length; i++)
+        {
+            img[i] = SectorConstants.SyncMark[i];
+            img[SectorConstants.RawSectorSize + i] = SectorConstants.SyncMark[i];
+        }
+
+        img[SectorConstants.ModeOffset] = 1;
+        img[SectorConstants.RawSectorSize + SectorConstants.ModeOffset] = 1;
+
+        File.WriteAllBytes(imgPath, img);
+        var isoPath = IsoWriter.Write(imgPath, Path.Combine(_tempDir, "whole.iso"));
+
+        Assert.Equal(SectorConstants.UserDataSize * 2, new FileInfo(isoPath).Length);
     }
 }

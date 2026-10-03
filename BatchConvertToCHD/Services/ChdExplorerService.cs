@@ -115,8 +115,20 @@ internal sealed class ChdExplorerService : IDisposable
                 var total = GetDirectorySize(entry, token);
                 var copied = 0UL;
                 ExtractDirectory(entry, stagingPath, total, ref copied, progress, token);
-                MoveDirectoryContents(stagingPath, destinationPath);
-                Directory.Delete(stagingPath, true);
+
+                // When nothing occupies the destination, the whole staged directory is renamed
+                // into place in one step. Merging file by file into an existing directory can
+                // leave it half-modified when a later file fails, which the staging was meant to
+                // prevent.
+                if (Directory.Exists(destinationPath))
+                {
+                    MoveDirectoryContents(stagingPath, destinationPath);
+                    TryDeletePath(stagingPath);
+                }
+                else
+                {
+                    Directory.Move(stagingPath, destinationPath);
+                }
             }
             else
             {

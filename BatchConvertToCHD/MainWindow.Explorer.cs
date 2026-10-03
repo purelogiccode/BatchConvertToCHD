@@ -6,6 +6,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using BatchConvertToCHD.Models;
 using BatchConvertToCHD.Services;
+using BatchConvertToCHD.Utilities;
 using VideoGameFileSystemParser.Models;
 
 namespace BatchConvertToCHD;
@@ -252,6 +253,19 @@ internal partial class MainWindow
             var destination = await SelectFolderAsync($"Select the folder to extract '{item.Name}' to");
             if (string.IsNullOrEmpty(destination)) return;
 
+            // Never replace an existing file or folder of the same name: extract into a numbered
+            // subfolder instead, the same isolation the Extraction tab applies. Otherwise a disc's
+            // GAME.BIN could silently overwrite the original image it was converted from.
+            var targetPath = Path.Combine(destination, item.Name);
+            if (File.Exists(targetPath) || Directory.Exists(targetPath))
+            {
+                destination = PathUtils.ReserveFreeSubdirectory(destination, item.Name);
+                Directory.CreateDirectory(destination);
+                LogMessage(
+                    $"Explorer: '{item.Name}' already exists in the chosen folder; extracting into '{Path.GetFileName(destination)}' instead."
+                );
+            }
+
             SetExplorerBusy(true, $"Extracting {item.Name}...");
             try
             {
@@ -446,6 +460,7 @@ internal partial class MainWindow
         );
 
         var extracted = false;
+        Process? openedProcess = null;
         try
         {
             SetExplorerBusy(true, $"Extracting {item.Name}...");
@@ -456,7 +471,7 @@ internal partial class MainWindow
             var pathToOpen = extractedPath;
             await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    using var process = Process.Start(
+                    openedProcess = Process.Start(
                         new ProcessStartInfo(pathToOpen) { UseShellExecute = true }
                     );
                 }
@@ -477,10 +492,7 @@ internal partial class MainWindow
         finally
         {
             SetExplorerBusy(false, null);
-            ScheduleExplorerTempCleanup(
-                tempDirectory,
-                extracted ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(5)
-            );
+            ScheduleExplorerTempCleanup(tempDirectory, openedProcess, extracted);
         }
     }
 
@@ -607,7 +619,10 @@ internal partial class MainWindow
                 finally
                 {
                     _explorerCts.Dispose();
-                    _explorerUseLock.Dispose();
+
+                    // _explorerUseLock is deliberately not disposed: RetireExplorerAsync may be
+                    // waiting on it, and disposing it there would throw and leak the previous
+                    // service. One semaphore at shutdown is harmless.
                 }
             }
         );
@@ -669,17 +684,39 @@ internal partial class MainWindow
     }
 
     /// <summary>
-    ///     Deletes a temporary extraction folder after a delay (best effort).
+    ///     Deletes a temporary extraction folder once the application that opened it has exited, or
+    ///     after a short delay when no process was started. Best effort.
     /// </summary>
     /// <param name="directory">The folder to delete.</param>
-    /// <param name="delay">How long to wait before deleting it.</param>
-    private static void ScheduleExplorerTempCleanup(string directory, TimeSpan delay)
+    /// <param name="openedProcess">The process the extracted file was opened with, or null.</param>
+    /// <param name="extracted">Whether an extraction succeeded, so the fallback delay is longer.</param>
+    private static void ScheduleExplorerTempCleanup(
+        string directory,
+        Process? openedProcess,
+        bool extracted
+    )
     {
         _ = Task.Run(async () =>
             {
                 try
                 {
-                    await Task.Delay(delay);
+                    if (openedProcess is not null)
+                    {
+                        // The external application may read the file lazily. Deleting it while it
+                        // is still open fails on Windows and removes it under the app on Unix, so
+                        // wait for the viewer to exit instead of using a fixed delay.
+                        using (openedProcess)
+                        {
+                            await openedProcess.WaitForExitAsync();
+                        }
+                    }
+                    else
+                    {
+                        await Task.Delay(
+                            extracted ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(5)
+                        );
+                    }
+
                     if (Directory.Exists(directory))
                     {
                         Directory.Delete(directory, true);

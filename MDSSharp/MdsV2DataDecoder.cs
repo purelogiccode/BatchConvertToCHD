@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Globalization;
 using System.IO.Compression;
 
 namespace MDSSharp;
@@ -9,7 +10,8 @@ namespace MDSSharp;
 ///     (deflate with a per-track compression table) and/or encrypted (AES-256 in LRW mode), and
 ///     MDX images keep the data inside the container; all three are decoded here.
 ///     The block layout and algorithms follow the MIT-licensed mdsx project
-///     (https://github.com/Marisa-Chan/mdsx) and are validated byte-for-byte against its test images.
+///     (https://github.com/Marisa-Chan/mdsx) and libMirage's image-mdx parser, and are validated
+///     byte-for-byte against the mdsx test images.
 /// </summary>
 internal static class MdsV2DataDecoder
 {
@@ -24,6 +26,18 @@ internal static class MdsV2DataDecoder
 
     /// <summary>Extra bytes read past the compression table so zlib can finish its stream.</summary>
     private const int CompressionTableSlack = 0x800;
+
+    /// <summary>Footers considered per track; a track is never split into more files than this.</summary>
+    private const int MaxFooterFiles = 64;
+
+    /// <summary>Bytes read per chunk when copying an uncompressed fragment.</summary>
+    private const int DecodeBufferBytes = 1024 * 1024;
+
+    /// <summary>Largest compression group that is decoded at once, to bound a corrupt group size.</summary>
+    private const long MaxCompressionGroupBytes = 256L * 1024 * 1024;
+
+    /// <summary>Largest compression table that is inflated, to bound a corrupt entry count.</summary>
+    private const long MaxCompressionTableBytes = 64L * 1024 * 1024;
 
     /// <summary>
     ///     Decodes every track of <paramref name="disc" /> into one plain image in
@@ -79,8 +93,22 @@ internal static class MdsV2DataDecoder
         CancellationToken token
     )
     {
-        var fileBytes = File.ReadAllBytes(disc.MdsPath);
-        var (descriptor, isMdx) = MdxCrypto.DecryptDescriptor(fileBytes);
+        byte[] descriptor;
+        bool isMdx;
+        using (
+            var descriptorStream = new FileStream(
+                disc.MdsPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite,
+                4096,
+                false
+            )
+        )
+        {
+            (descriptor, isMdx) = MdxCrypto.DecryptDescriptor(descriptorStream);
+        }
+
         var keyData = MdxCrypto.DecipherDataHeader(descriptor, password);
 
         var outputPath = Path.Combine(
@@ -112,31 +140,45 @@ internal static class MdsV2DataDecoder
                     {
                         token.ThrowIfCancellationRequested();
 
-                        var dataPath = ResolveTrackDataFile(track, disc, isMdx);
-                        if (dataPath is null)
-                        {
-                            throw new InvalidDataException(
-                                $"the data file named by track {track.Point} was not found next to the descriptor."
-                            );
-                        }
-
-                        if (!streams.TryGetValue(dataPath, out var stream))
-                        {
-                            stream = new FileStream(
-                                dataPath,
-                                FileMode.Open,
-                                FileAccess.Read,
-                                FileShare.ReadWrite,
-                                1024 * 1024
-                            );
-                            streams[dataPath] = stream;
-                        }
-
+                        var totalSectors = track.Fragments.Sum(static f => f.DataLengthSectors);
                         onLog?.Invoke(
-                            $" Decoding track {track.Point} ({track.LengthSectors:N0} sectors at {track.SectorSize} bytes)"
+                            $" Decoding track {track.Point} ({totalSectors.ToString("N0", CultureInfo.InvariantCulture)} sectors at {track.SectorSize} bytes)"
                         );
 
-                        DecodeTrack(stream, output, track, keyData);
+                        foreach (var fragment in track.Fragments)
+                        {
+                            token.ThrowIfCancellationRequested();
+
+                            var dataPath = ResolveTrackDataFile(fragment, disc, isMdx);
+                            if (dataPath is null)
+                            {
+                                throw new InvalidDataException(
+                                    $"the data file named by track {track.Point} was not found next to the descriptor."
+                                );
+                            }
+
+                            if (!streams.TryGetValue(dataPath, out var stream))
+                            {
+                                stream = new FileStream(
+                                    dataPath,
+                                    FileMode.Open,
+                                    FileAccess.Read,
+                                    FileShare.ReadWrite,
+                                    1024 * 1024
+                                );
+                                streams[dataPath] = stream;
+                            }
+
+                            DecodeFragment(
+                                stream,
+                                output,
+                                track.Point,
+                                fragment,
+                                track.SectorSize,
+                                keyData,
+                                token
+                            );
+                        }
                     }
                 }
                 finally
@@ -176,145 +218,219 @@ internal static class MdsV2DataDecoder
     }
 
     /// <summary>
-    ///     Decodes one track's data to <paramref name="output" />, decrypting and/or decompressing
+    ///     Decodes one track fragment to <paramref name="output" />, decrypting and/or decompressing
     ///     the stored blocks as the footer dictates.
     /// </summary>
-    /// <param name="data">The track's data file.</param>
+    /// <param name="data">The fragment's data file.</param>
     /// <param name="output">The decoded image being written.</param>
-    /// <param name="track">Track metadata.</param>
+    /// <param name="trackPoint">Track number, for messages.</param>
+    /// <param name="fragment">Fragment metadata from the footer.</param>
+    /// <param name="sectorSize">Stored bytes per sector.</param>
     /// <param name="keyData">Decrypted data-encryption key data, or null.</param>
-    private static void DecodeTrack(
+    /// <param name="token">Cancellation token.</param>
+    private static void DecodeFragment(
         FileStream data,
         FileStream output,
-        TrackData track,
-        byte[]? keyData
+        int trackPoint,
+        TrackFragment fragment,
+        int sectorSize,
+        byte[]? keyData,
+        CancellationToken token
     )
     {
-        var totalBytes = track.LengthSectors * track.SectorSize;
-        if (totalBytes <= 0) return;
+        if (fragment.DataLengthSectors <= 0) return;
 
-        if ((track.FooterFlags & 0x01) == 0)
-        {
-            var buffer = new byte[totalBytes];
-            ReadExactlyAt(data, (long)track.StartOffset, buffer);
-            if (keyData is not null) DecipherSectors(buffer, track, keyData);
-            output.Write(buffer, 0, buffer.Length);
-            return;
-        }
-
-        DecodeCompressedTrack(data, output, track, keyData);
-    }
-
-    /// <summary>
-    ///     Decodes a compressed track: reads the zlib-compressed compression table, then walks the
-    ///     sector groups, applying the entry's stored/RLE/deflate mode and LRW decryption.
-    /// </summary>
-    /// <param name="data">The track's data file.</param>
-    /// <param name="output">The decoded image being written.</param>
-    /// <param name="track">Track metadata.</param>
-    /// <param name="keyData">Decrypted data-encryption key data, or null.</param>
-    private static void DecodeCompressedTrack(
-        FileStream data,
-        FileStream output,
-        TrackData track,
-        byte[]? keyData
-    )
-    {
-        var group = track.BlocksInCompressionGroup;
-        if (group == 0)
+        if (sectorSize <= 0)
         {
             throw new InvalidDataException(
-                $"track {track.Point} declares a compression group of zero sectors."
+                $"track {trackPoint} declares a sector size of zero bytes."
             );
         }
 
-        var entries = (int)((track.LengthSectors + group - 1) / group);
-        var tableValues = ReadCompressionTable(data, track, entries);
+        if ((fragment.FooterFlags & 0x01) == 0)
+        {
+            DecodePlainFragment(data, output, fragment, sectorSize, keyData, token);
+            return;
+        }
 
-        var outputBuffer = new byte[track.LengthSectors * track.SectorSize];
-        long outputPosition = 0;
+        DecodeCompressedFragment(data, output, trackPoint, fragment, sectorSize, keyData, token);
+    }
+
+    /// <summary>
+    ///     Copies an uncompressed fragment, decrypting every sector with LRW when the image is
+    ///     encrypted. The fragment is streamed in bounded chunks so a large track never has to be
+    ///     held in memory whole.
+    /// </summary>
+    /// <param name="data">The fragment's data file.</param>
+    /// <param name="output">The decoded image being written.</param>
+    /// <param name="fragment">Fragment metadata from the footer.</param>
+    /// <param name="sectorSize">Stored bytes per sector.</param>
+    /// <param name="keyData">Decrypted data-encryption key data, or null.</param>
+    /// <param name="token">Cancellation token.</param>
+    private static void DecodePlainFragment(
+        FileStream data,
+        FileStream output,
+        TrackFragment fragment,
+        int sectorSize,
+        byte[]? keyData,
+        CancellationToken token
+    )
+    {
+        var sectorsPerBuffer = Math.Max(1, DecodeBufferBytes / sectorSize);
+        var buffer = new byte[sectorsPerBuffer * sectorSize];
+
+        long remaining = fragment.DataLengthSectors;
+        long position = (long)fragment.StartOffset;
+        long sectorIndex = 0;
+
+        while (remaining > 0)
+        {
+            token.ThrowIfCancellationRequested();
+
+            var sectors = (int)Math.Min(remaining, sectorsPerBuffer);
+            var bytes = sectors * sectorSize;
+            ReadExactlyAt(data, position, buffer, bytes);
+
+            if (keyData is not null)
+                DecipherSectors(buffer, bytes, sectorSize, sectorIndex, keyData);
+
+            output.Write(buffer, 0, bytes);
+
+            position += bytes;
+            sectorIndex += sectors;
+            remaining -= sectors;
+        }
+    }
+
+    /// <summary>
+    ///     Decodes a compressed fragment: reads the zlib-compressed compression table, then walks
+    ///     the sector groups, applying the entry's stored/RLE/deflate mode and LRW decryption. Each
+    ///     group is written as it is decoded, so the whole fragment is never held in memory.
+    /// </summary>
+    /// <param name="data">The fragment's data file.</param>
+    /// <param name="output">The decoded image being written.</param>
+    /// <param name="trackPoint">Track number, for messages.</param>
+    /// <param name="fragment">Fragment metadata from the footer.</param>
+    /// <param name="sectorSize">Stored bytes per sector.</param>
+    /// <param name="keyData">Decrypted data-encryption key data, or null.</param>
+    /// <param name="token">Cancellation token.</param>
+    private static void DecodeCompressedFragment(
+        FileStream data,
+        FileStream output,
+        int trackPoint,
+        TrackFragment fragment,
+        int sectorSize,
+        byte[]? keyData,
+        CancellationToken token
+    )
+    {
+        var group = fragment.BlocksInCompressionGroup;
+        if (group == 0)
+        {
+            throw new InvalidDataException(
+                $"track {trackPoint} declares a compression group of zero sectors."
+            );
+        }
+
+        var maxGroupBytes = (long)group * sectorSize;
+        if (maxGroupBytes > MaxCompressionGroupBytes)
+        {
+            throw new InvalidDataException(
+                $"track {trackPoint} declares a compression group of {group.ToString("N0", CultureInfo.InvariantCulture)} sectors, which is too large to decode."
+            );
+        }
+
+        var entryCount = (fragment.DataLengthSectors + group - 1) / group;
+        if (entryCount > int.MaxValue || entryCount * 2 > MaxCompressionTableBytes)
+        {
+            throw new InvalidDataException(
+                $"track {trackPoint} declares too many compression groups to decode."
+            );
+        }
+
+        var entries = (int)entryCount;
+        var tableValues = ReadCompressionTable(data, fragment, entries);
+
+        var buffer = new byte[maxGroupBytes];
+        var position = (long)fragment.StartOffset;
         long cumulative = 0;
 
         for (var index = 0; index < entries; index++)
         {
-            var value = BinaryPrimitives.ReadUInt16LittleEndian(tableValues.AsSpan(index * 2));
+            token.ThrowIfCancellationRequested();
 
             var sectors = (long)group;
-            if (index + 1 == entries && track.LengthSectors % group != 0)
-                sectors = track.LengthSectors % group;
+            if (index + 1 == entries && fragment.DataLengthSectors % group != 0)
+                sectors = fragment.DataLengthSectors % group;
 
-            var groupBytes = sectors * track.SectorSize;
+            var bytes = (int)(sectors * sectorSize);
+            var value = BinaryPrimitives.ReadUInt16LittleEndian(tableValues.AsSpan(index * 2));
 
             if (value == 0)
             {
-                var buffer = new byte[groupBytes];
-                ReadExactlyAt(data, (long)track.StartOffset + cumulative, buffer);
-                if (keyData is not null) DecipherGroup(buffer, track, index, keyData);
-                Array.Copy(buffer, 0, outputBuffer, outputPosition, buffer.Length);
-                cumulative += groupBytes;
+                ReadExactlyAt(data, position + cumulative, buffer, bytes);
+                if (keyData is not null)
+                    DecipherGroup(buffer, bytes, sectorSize, index, group, keyData);
+
+                output.Write(buffer, 0, bytes);
+                cumulative += bytes;
             }
             else if ((value & 0x8000) != 0)
             {
-                Array.Fill(
-                    outputBuffer,
-                    (byte)(value & 0xFF),
-                    (int)outputPosition,
-                    (int)groupBytes
-                );
+                Array.Fill(buffer, (byte)(value & 0xFF), 0, bytes);
+                output.Write(buffer, 0, bytes);
             }
             else
             {
                 var compressed = new byte[value];
-                ReadExactlyAt(data, (long)track.StartOffset + cumulative, compressed);
-                if (keyData is not null) DecipherGroup(compressed, track, index, keyData);
+                ReadExactlyAt(data, position + cumulative, compressed, compressed.Length);
+                if (keyData is not null)
+                    DecipherGroup(compressed, compressed.Length, sectorSize, index, group, keyData);
 
                 using var input = new MemoryStream(compressed);
                 using var deflate = new DeflateStream(input, CompressionMode.Decompress);
                 var read = 0;
-                while (read < groupBytes)
+                while (read < bytes)
                 {
-                    var count = deflate.Read(
-                        outputBuffer,
-                        (int)(outputPosition + read),
-                        (int)(groupBytes - read)
-                    );
+                    var count = deflate.Read(buffer, read, bytes - read);
                     if (count == 0) break;
 
                     read += count;
                 }
 
-                if (read != groupBytes)
+                if (read != bytes)
                 {
                     throw new InvalidDataException(
-                        $"track {track.Point}, compression group {index}: expected {groupBytes} bytes, got {read}."
+                        $"track {trackPoint}, compression group {index}: expected {bytes} bytes, got {read}."
                     );
                 }
 
+                output.Write(buffer, 0, bytes);
                 cumulative += value;
             }
-
-            outputPosition += groupBytes;
         }
-
-        output.Write(outputBuffer, 0, outputBuffer.Length);
     }
 
     /// <summary>
-    ///     Reads and inflates the per-track compression table. The table's compressed size is not
-    ///     stored, so a generous amount is read and zlib is allowed to finish early.
+    ///     Reads and inflates the per-fragment compression table. The table's compressed size is
+    ///     not stored, so a generous amount is read and zlib is allowed to finish early.
     /// </summary>
-    /// <param name="data">The track's data file.</param>
-    /// <param name="track">Track metadata.</param>
+    /// <param name="data">The fragment's data file.</param>
+    /// <param name="fragment">Fragment metadata from the footer.</param>
     /// <param name="entries">Number of table entries.</param>
-    private static byte[] ReadCompressionTable(FileStream data, TrackData track, int entries)
+    private static byte[] ReadCompressionTable(
+        FileStream data,
+        TrackFragment fragment,
+        int entries
+    )
     {
         var expected = entries * 2;
-        var toRead = expected + CompressionTableSlack * 2;
-        var position = (long)track.StartOffset + (long)track.CompressionTableOffset;
+        var toRead = (long)expected + CompressionTableSlack * 2L;
+        var position = (long)fragment.StartOffset + (long)fragment.CompressionTableOffset;
 
         var available = (int)Math.Min(toRead, Math.Max(0, data.Length - position));
         var compressed = new byte[available];
-        ReadExactlyAt(data, position, compressed);
+        ReadExactlyAt(data, position, compressed, available);
 
         var table = new byte[expected];
         using var input = new MemoryStream(compressed);
@@ -331,32 +447,42 @@ internal static class MdsV2DataDecoder
         if (read != expected)
         {
             throw new InvalidDataException(
-                $"track {track.Point}: the compression table is truncated ({read} of {expected} bytes)."
+                $"the compression table is truncated ({read} of {expected} bytes)."
             );
         }
 
         return table;
     }
 
-    /// <summary>Decrypts every sector of an uncompressed track with LRW.</summary>
-    /// <param name="buffer">Track data, decrypted in place.</param>
-    /// <param name="track">Track metadata.</param>
+    /// <summary>Decrypts every sector of an uncompressed fragment with LRW.</summary>
+    /// <param name="buffer">Fragment data, decrypted in place.</param>
+    /// <param name="count">Number of valid bytes in the buffer.</param>
+    /// <param name="sectorSize">Stored bytes per sector.</param>
+    /// <param name="startSectorIndex">Fragment-relative index of the first sector in the buffer.</param>
     /// <param name="keyData">Decrypted data-encryption key data.</param>
-    private static void DecipherSectors(byte[] buffer, TrackData track, byte[] keyData)
+    private static void DecipherSectors(
+        byte[] buffer,
+        int count,
+        int sectorSize,
+        long startSectorIndex,
+        byte[] keyData
+    )
     {
-        var alignedSector = track.SectorSize & ~15;
+        var alignedSector = sectorSize & ~15;
         if (alignedSector == 0) return;
 
         var aesKey = keyData.AsSpan(32, 32).ToArray();
         var tweakKey = keyData.AsSpan(0, 16).ToArray();
 
-        for (long sector = 0; sector < track.LengthSectors; sector++)
+        var sectors = count / sectorSize;
+        for (var sector = 0; sector < sectors; sector++)
         {
-            var offset = (int)(sector * track.SectorSize);
-            var length = Math.Min(alignedSector, buffer.Length - offset);
+            var offset = (int)((long)sector * sectorSize);
+            var length = Math.Min(alignedSector, count - offset);
             if (length <= 0) break;
 
-            var tweakCounter = 1UL + (ulong)sector * (ulong)(alignedSector / 16);
+            var tweakCounter =
+                1UL + (ulong)(startSectorIndex + sector) * (ulong)(alignedSector / 16);
             var slice = new byte[length];
             Array.Copy(buffer, offset, slice, 0, length);
             MdxCrypto.DecipherLrw(aesKey, tweakKey, slice, tweakCounter);
@@ -366,21 +492,25 @@ internal static class MdsV2DataDecoder
 
     /// <summary>Decrypts one compression group with LRW, using its first sector for the counter.</summary>
     /// <param name="buffer">Group data, decrypted in place.</param>
-    /// <param name="track">Track metadata.</param>
-    /// <param name="groupIndex">Zero-based compression-group index.</param>
+    /// <param name="count">Number of valid bytes in the buffer.</param>
+    /// <param name="sectorSize">Stored bytes per sector.</param>
+    /// <param name="groupIndex">Zero-based compression-group index within the fragment.</param>
+    /// <param name="group">Sectors per compression group.</param>
     /// <param name="keyData">Decrypted data-encryption key data.</param>
     private static void DecipherGroup(
         byte[] buffer,
-        TrackData track,
+        int count,
+        int sectorSize,
         int groupIndex,
+        uint group,
         byte[] keyData
     )
     {
-        var aligned = buffer.Length & ~15;
+        var aligned = count & ~15;
         if (aligned == 0) return;
 
-        var alignedSector = track.SectorSize & ~15;
-        var startSector = (ulong)groupIndex * track.BlocksInCompressionGroup;
+        var alignedSector = sectorSize & ~15;
+        var startSector = (ulong)groupIndex * group;
         var tweakCounter = 1UL + startSector * (ulong)(alignedSector / 16);
 
         var aesKey = keyData.AsSpan(32, 32).ToArray();
@@ -391,29 +521,36 @@ internal static class MdsV2DataDecoder
         Array.Copy(slice, 0, buffer, 0, aligned);
     }
 
-    /// <summary>Resolves the data file a track's footer names, or null when it cannot be found.</summary>
-    /// <param name="track">Track metadata.</param>
+    /// <summary>Resolves the data file a fragment's footer names, or null when it cannot be found.</summary>
+    /// <param name="fragment">Fragment metadata from the footer.</param>
     /// <param name="disc">The parsed image.</param>
     /// <param name="isMdx">Whether the image is a single-file MDX container.</param>
-    private static string? ResolveTrackDataFile(TrackData track, MdsDisc disc, bool isMdx)
+    private static string? ResolveTrackDataFile(TrackFragment fragment, MdsDisc disc, bool isMdx)
     {
         if (isMdx) return disc.MdsPath;
 
-        if (!string.IsNullOrWhiteSpace(track.DataFileName))
+        if (!string.IsNullOrWhiteSpace(fragment.DataFileName))
         {
-            var resolved = MdsParser.ResolveDeclaredFile(disc.MdsPath, track.DataFileName);
+            var resolved = MdsParser.ResolveDeclaredFile(disc.MdsPath, fragment.DataFileName);
             if (resolved is not null) return resolved;
         }
 
         return disc.DataFilePaths.Count > 0 ? disc.DataFilePaths[0] : disc.MdfPath;
     }
 
-    /// <summary>Reads every track's data layout out of the decrypted descriptor.</summary>
+    /// <summary>
+    ///     Reads every track's data layout out of the decrypted descriptor. A track may be split
+    ///     across several data files, one footer block each, and the footer's
+    ///     <c>track_data_length</c> is the number of sectors actually stored (the extra block's
+    ///     length is only the logical length and may exclude a pregap kept in the file).
+    /// </summary>
     /// <param name="descriptor">Decrypted descriptor buffer.</param>
     /// <param name="disc">The parsed image, for the medium type.</param>
     private static List<TrackData> ReadTracks(byte[] descriptor, MdsDisc disc)
     {
         var tracks = new List<TrackData>();
+        if (descriptor.Length < 0x54) return tracks;
+
         var sessionCount = BinaryPrimitives.ReadUInt16LittleEndian(descriptor.AsSpan(0x14));
         var sessionOffset = (long)
             BinaryPrimitives.ReadUInt32LittleEndian(descriptor.AsSpan(0x50));
@@ -450,109 +587,142 @@ internal static class MdsV2DataDecoder
                 var footerOffset = BinaryPrimitives.ReadUInt32LittleEndian(
                     descriptor.AsSpan((int)trackBase + 0x34)
                 );
+                var footerCount = BinaryPrimitives.ReadUInt32LittleEndian(
+                    descriptor.AsSpan((int)trackBase + 0x30)
+                );
                 var trackLength64 = BinaryPrimitives.ReadUInt64LittleEndian(
                     descriptor.AsSpan((int)trackBase + 0x40)
                 );
 
-                long length;
+                long logicalLength;
                 if (disc.IsCdMedia || disc.MediumType == MdsMedium.Unknown)
                 {
-                    length = 0;
+                    logicalLength = 0;
                     if (extraOffset != 0 && extraOffset + 8 <= descriptor.Length)
                     {
-                        length = BinaryPrimitives.ReadUInt32LittleEndian(
+                        logicalLength = BinaryPrimitives.ReadUInt32LittleEndian(
                             descriptor.AsSpan((int)extraOffset + 4)
                         );
                     }
                 }
                 else
                 {
-                    length = (long)trackLength64;
+                    logicalLength = (long)trackLength64;
                 }
 
-                var footerFlags = 0u;
-                var group = 0u;
-                ulong compressionTable = 0;
-                string? dataName = null;
-
-                if (footerOffset != 0 && footerOffset + FooterBlockSize <= descriptor.Length)
+                var fragments = new List<TrackFragment>();
+                if (footerOffset != 0)
                 {
-                    footerFlags = descriptor[footerOffset + 4];
-                    group = BinaryPrimitives.ReadUInt32LittleEndian(
-                        descriptor.AsSpan((int)footerOffset + 0x0C)
-                    );
-                    compressionTable = BinaryPrimitives.ReadUInt64LittleEndian(
-                        descriptor.AsSpan((int)footerOffset + 0x18)
-                    );
+                    var count = (int)Math.Min(footerCount, MaxFooterFiles);
+                    for (var footerIndex = 0; footerIndex < count; footerIndex++)
+                    {
+                        var footerBase = (long)footerOffset + (long)footerIndex * FooterBlockSize;
+                        if (footerBase < 0 || footerBase + FooterBlockSize > descriptor.Length) break;
 
-                    var nameOffset = BinaryPrimitives.ReadUInt32LittleEndian(
-                        descriptor.AsSpan((int)footerOffset)
-                    );
-                    if (nameOffset != 0 && nameOffset < descriptor.Length)
-                        dataName = MdsParser.ReadWideName(descriptor, nameOffset);
+                        var flags = descriptor[footerBase + 4];
+                        var group = BinaryPrimitives.ReadUInt32LittleEndian(
+                            descriptor.AsSpan((int)footerBase + 0x0C)
+                        );
+                        var dataLength = (long)BinaryPrimitives.ReadUInt64LittleEndian(
+                            descriptor.AsSpan((int)footerBase + 0x10)
+                        );
+                        var compressionTable = BinaryPrimitives.ReadUInt64LittleEndian(
+                            descriptor.AsSpan((int)footerBase + 0x18)
+                        );
+
+                        var nameOffset = BinaryPrimitives.ReadUInt32LittleEndian(
+                            descriptor.AsSpan((int)footerBase)
+                        );
+                        var dataName =
+                            nameOffset != 0 && nameOffset < descriptor.Length
+                                ? MdsParser.ReadWideName(descriptor, nameOffset)
+                                : null;
+
+                        // The footer is authoritative; fall back to the logical length when a
+                        // producer left it at zero.
+                        if (dataLength <= 0)
+                            dataLength = footerIndex == 0 ? logicalLength : 0;
+
+                        if (dataLength <= 0) continue;
+
+                        fragments.Add(
+                            new TrackFragment(
+                                footerIndex == 0 ? startOffset : 0,
+                                dataLength,
+                                flags,
+                                group,
+                                compressionTable,
+                                dataName
+                            )
+                        );
+                    }
                 }
 
-                tracks.Add(
-                    new TrackData(
-                        point,
-                        sectorSize,
-                        startOffset,
-                        length,
-                        footerFlags,
-                        group,
-                        compressionTable,
-                        dataName
-                    )
-                );
+                if (fragments.Count == 0 && logicalLength > 0)
+                {
+                    fragments.Add(
+                        new TrackFragment(startOffset, logicalLength, 0, 0, 0, null)
+                    );
+                }
+
+                if (fragments.Count == 0) continue;
+
+                tracks.Add(new TrackData(point, sectorSize, fragments));
             }
         }
 
         return tracks;
     }
 
-    /// <summary>Reads exactly <paramref name="buffer" />.Length bytes at an absolute file offset.</summary>
+    /// <summary>Reads exactly <paramref name="count" /> bytes at an absolute file offset.</summary>
     /// <param name="data">File to read from.</param>
     /// <param name="offset">Absolute offset.</param>
     /// <param name="buffer">Destination buffer.</param>
-    private static void ReadExactlyAt(FileStream data, long offset, byte[] buffer)
+    /// <param name="count">Number of bytes to read.</param>
+    private static void ReadExactlyAt(FileStream data, long offset, byte[] buffer, int count)
     {
-        if (offset < 0 || offset + buffer.Length > data.Length)
+        if (offset < 0 || count < 0 || offset + count > data.Length)
         {
             throw new InvalidDataException(
-                $"the data file is shorter than the descriptor's track layout says (needed {buffer.Length} bytes at offset {offset}, file is {data.Length} bytes)."
+                $"the data file is shorter than the descriptor's track layout says (needed {count} bytes at offset {offset}, file is {data.Length} bytes)."
             );
         }
 
         data.Seek(offset, SeekOrigin.Begin);
         var read = 0;
-        while (read < buffer.Length)
+        while (read < count)
         {
-            var count = data.Read(buffer, read, buffer.Length - read);
-            if (count == 0)
+            var bytes = data.Read(buffer, read, count - read);
+            if (bytes == 0)
             {
                 throw new InvalidDataException(
                     "the data file ended while reading the track data."
                 );
             }
 
-            read += count;
+            read += bytes;
         }
     }
 
     /// <summary>One track's data layout, as read from the descriptor.</summary>
     /// <param name="Point">Track number.</param>
     /// <param name="SectorSize">Stored bytes per sector.</param>
-    /// <param name="StartOffset">Track data offset in its data file.</param>
-    /// <param name="LengthSectors">Track length in sectors.</param>
+    /// <param name="Fragments">Data fragments, in file order.</param>
+    private sealed record TrackData(int Point, int SectorSize, List<TrackFragment> Fragments);
+
+    /// <summary>
+    ///     One data fragment of a track: one footer block, or a synthetic fragment when the track
+    ///     has no footer.
+    /// </summary>
+    /// <param name="StartOffset">Offset of the fragment data in its file (0 for later fragments).</param>
+    /// <param name="DataLengthSectors">Sectors stored by this fragment, from the footer.</param>
     /// <param name="FooterFlags">Footer flags (bit 0 = compressed).</param>
     /// <param name="BlocksInCompressionGroup">Sectors per compression group.</param>
-    /// <param name="CompressionTableOffset">Compression table offset, relative to the track data.</param>
+    /// <param name="CompressionTableOffset">Compression table offset, relative to the fragment data.</param>
     /// <param name="DataFileName">Data file name recorded in the footer, or null.</param>
-    private sealed record TrackData(
-        int Point,
-        int SectorSize,
+    private sealed record TrackFragment(
         ulong StartOffset,
-        long LengthSectors,
+        long DataLengthSectors,
         uint FooterFlags,
         uint BlocksInCompressionGroup,
         ulong CompressionTableOffset,

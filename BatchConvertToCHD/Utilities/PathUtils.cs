@@ -262,6 +262,19 @@ internal static class PathUtils
         var selectedFree =
             bestRootMeetingRequirement != null ? bestFreeMeetingRequirement : bestFree;
 
+        var guid = Guid.NewGuid().ToString("N");
+        var requiredFree = requiredBytes > 0 ? requiredBytes : minFreeBytes;
+
+        // The system temp folder is the default: it needs no folder at a drive root and the OS
+        // reclaims it. It is only bypassed when its own path is unsafe to hand to chdman (non-ASCII
+        // or near MAX_PATH) or its volume cannot hold the operation, because a fallback folder on a
+        // drive root otherwise litters every drive the app happens to see.
+        var systemTemp = Path.GetTempPath();
+        if (IsChdmanSafePath(systemTemp) && GetAvailableFreeSpace(systemTempRoot) >= requiredFree)
+        {
+            return Path.Combine(systemTemp, $"{tempDirPrefix}{guid}");
+        }
+
         if (selectedRoot != null && !IsRootDirectoryWritable(selectedRoot))
         {
             // Informational: the fallback is expected behavior, not an error condition.
@@ -273,31 +286,10 @@ internal static class PathUtils
             selectedFree = 0;
         }
 
-        var guid = Guid.NewGuid().ToString("N");
-        string basePath;
-
-        if (
-            selectedRoot != null
-            && (requiredBytes > 0
-                ? selectedFree >= requiredBytes
-                : selectedFree >= minFreeBytes)
-        )
-        {
-            // Prefer the system temp folder when it sits on the selected volume AND its own path
-            // is safe to hand to chdman. %TEMP% lives under the user profile and can contain
-            // non-ASCII characters (e.g. "C:\Users\Kauê Chacon\...") or approach MAX_PATH, which
-            // old chdman builds cannot open ("No such file or directory"); in that case use the
-            // ASCII-safe drive-root folder instead.
-            basePath =
-                string.Equals(selectedRoot, systemTempRoot, StringComparison.OrdinalIgnoreCase)
-                && IsChdmanSafePath(Path.GetTempPath())
-                    ? Path.GetTempPath()
-                    : Path.Combine(TrimRootSeparator(selectedRoot), "BatchConvertToCHD_Temp");
-        }
-        else
-        {
-            basePath = Path.GetTempPath();
-        }
+        var basePath =
+            selectedRoot != null && selectedFree >= requiredFree
+                ? Path.Combine(TrimRootSeparator(selectedRoot), "BatchConvertToCHD_Temp")
+                : systemTemp;
 
         return Path.Combine(basePath, $"{tempDirPrefix}{guid}");
 
@@ -505,15 +497,69 @@ internal static class PathUtils
 
     /// <summary>
     ///     Removes a trailing directory separator from a root path while keeping the Unix root
-    ///     <c>"/"</c> intact, so <see cref="Path.Combine(string, string)" /> never turns it into a
-    ///     relative path.
+    ///     <c>"/"</c> and Windows drive roots such as <c>"C:\"</c> intact, so
+    ///     <see cref="Path.Combine(string, string)" /> never turns them into relative or
+    ///     drive-relative paths.
     /// </summary>
     /// <param name="root">The root path to trim.</param>
     /// <returns>The trimmed root path.</returns>
     private static string TrimRootSeparator(string root)
     {
         var trimmed = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        return trimmed.Length == 0 ? root : trimmed;
+        return trimmed.Length == 0 || trimmed.EndsWith(Path.VolumeSeparatorChar) ? root : trimmed;
+    }
+
+    /// <summary>
+    ///     Returns the free bytes on the volume containing <paramref name="root" />, or 0 when it
+    ///     cannot be queried.
+    /// </summary>
+    /// <param name="root">A path on the volume.</param>
+    private static long GetAvailableFreeSpace(string? root)
+    {
+        if (string.IsNullOrEmpty(root)) return 0;
+
+        try
+        {
+            var drive = new DriveInfo(root);
+            return drive.IsReady ? drive.AvailableFreeSpace : 0;
+        }
+        catch (Exception ex)
+        {
+            Logger.Verbose(ex, "Failed to query free space for {Root}", root);
+            return 0;
+        }
+    }
+
+    /// <summary>
+    ///     Removes the <c>BatchConvertToCHD_Temp</c> folder a just-deleted temp directory lived in
+    ///     when it has become empty, so the fallback staging folder does not linger on drive roots.
+    /// </summary>
+    /// <param name="tempDirectory">A temp directory that was just deleted.</param>
+    internal static void TryDeleteEmptyTempParent(string tempDirectory)
+    {
+        TryDeleteEmptyTempFolder(Path.GetDirectoryName(tempDirectory));
+    }
+
+    /// <summary>
+    ///     Removes a <c>BatchConvertToCHD_Temp</c> folder when it is empty. Any other folder name is
+    ///     ignored, so this can never delete a directory the app did not create.
+    /// </summary>
+    /// <param name="folder">Folder to remove when empty.</param>
+    internal static void TryDeleteEmptyTempFolder(string? folder)
+    {
+        if (string.IsNullOrEmpty(folder)) return;
+        if (!Path.GetFileName(folder).Equals("BatchConvertToCHD_Temp", StringComparison.Ordinal))
+            return;
+
+        try
+        {
+            if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any())
+                Directory.Delete(folder);
+        }
+        catch (Exception ex)
+        {
+            Logger.Verbose(ex, "Could not remove the empty temp folder {Folder}", folder);
+        }
     }
 
     /// <summary>

@@ -5,9 +5,9 @@ nav_order: 12
 
 # 11. Testing
 
-The solution contains a single test project, `BatchConvertToCHD.Tests` (xUnit, `net10.0-windows`), with **1076 tests across 53 test classes**: 1048 unit tests plus 28 integration tests that need a local sample folder (see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
+The solution contains a single test project, `BatchConvertToCHD.Tests` (xUnit, `net10.0-windows`), with **1085 tests across 53 test classes**: 1057 unit tests plus 28 integration tests that need a local sample folder (see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
 
-> **Expected result on a machine without the local sample folders:** the 1048 unit tests pass, while the 28 integration tests fail on the missing sample data. CI excludes them with `--filter "Category!=Integration"`; a change that leaves exactly those 28 failing has broken nothing.
+> **Expected result on a machine without the local sample folders:** the 1057 unit tests pass, while the 28 integration tests fail on the missing sample data. CI excludes them with `--filter "Category!=Integration"`; a change that leaves exactly those 28 failing has broken nothing.
 
 ## 11.1 Running the Tests
 
@@ -26,7 +26,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 - HTTP-dependent tests inject an `HttpClient` backed by `FakeHttpMessageHandler` (the only shared helper): a `Func<HttpRequestMessage, HttpResponseMessage>` or a convenience `(HttpStatusCode, string content, string contentType)` constructor, plus a static `WithAsyncHandler` helper.
 - Internals are tested because the Avalonia project (`BatchConvertToCHD.csproj`) grants `InternalsVisibleTo("BatchConvertToCHD.Tests")`.
 - **Integration tests** are tagged `[Trait("Category", "Integration")]` and read real sample files from fixed absolute directories (`D:\Emulators\...`). Most **early-return when the samples are absent**, so on machines without the sample folders they are effectively skipped (reported as passed). `PbpFileIntegrationTests` is the exception — see [§11.5](#115-the-15-expected-failures).
-- **Committed fixtures** live in `BatchConvertToCHD.Tests/Fixtures/` and are copied to the output directory by the csproj. There are two: `ecm-sample.ecm`, so the ECM decoder can be verified against the reference implementation's own output without that tool being installed; and `rar-multipart/set.part1.rar`…`set.part5.rar`, a real WinRAR store-mode volume set holding a known 3500-byte payload, so multi-volume RAR extraction can be tested without WinRAR at test time.
+- **Committed fixtures** live in `BatchConvertToCHD.Tests/Fixtures/` and are copied to the output directory by the csproj. There are three groups: `ecm-sample.ecm`, so the ECM decoder can be verified against the reference implementation's own output without that tool being installed; `rar-multipart/set.part1.rar`…`set.part5.rar`, a real WinRAR store-mode volume set holding a known 3500-byte payload, so multi-volume RAR extraction can be tested without WinRAR at test time; and `MdsV2/` (the MIT-licensed mdsx test images: plain, compressed, single-file `.mdx`, and password-encrypted), so the v2/MDX decryption pipeline is pinned to real files.
 - **Format fixtures are built in code** rather than committed where the format allows it: `IszImageBuilder` writes ISZ files the way real UltraISO files are laid out (spec-conformant headers, obfuscated tables, stripped bzip2 headers, optional UltraISO checksums), and `MdsTests`/`RawCdImageDetectorTests`/`SplitImageJoinerTests` synthesise their descriptors and sector data. This keeps the repository free of disc-sized binaries.
 
 ## 11.3 Coverage by File
@@ -42,6 +42,8 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 | `BugReportApiSinkTests.cs` | Sink forwards Warning/Error/Fatal, ignores Debug/Info |
 | `BugReportServiceTests.cs` | Report formatting (inner exceptions, depth), HTTP method/header/body, success/failure mapping, the full exclusion-pattern list (incl. case-insensitivity), no-HTTP-call for excluded messages |
 | `CancellationHandlingTests.cs` | `IsCancellationException`, `IsDiskSpaceException`, `IsCorruptionException`, `IsCrcErrorException` and their mutual exclusivity |
+| `CcdParserTests.cs` / `CcdModelTests.cs` | CloneCD `.ccd` parsing (disc/session/track fields, MSF formatting), track-count bounds and overflow-safe parsing, and `IsoWriter` output: whole-sector extraction and rejection of a partial trailing sector |
+| `ChdSharpEncoderServiceTests.cs` | In-process `createcd`/`createdvd`/`createhd`/`createraw` round-trips verified with `Chd.CheckFile`, header unit sizes, unsupported-command rejection, and rejection of inputs whose size is not a whole number of units |
 | `CueNormalizerTests.cs` | Encoding detection (CP949/CP1251/CP932/UTF-8/UTF-32LE BOM), canonicalization, zero-padding resolution, unresolved names, MP3 transform hook, canonical write format |
 | `CueWorkDirectoryTests.cs` | Work-dir creation rules, in-place BOM fast path, MP3→WAV decoding (fake + real NAudio decoders), **end-to-end tests running real `chdman.exe`** (BOM regression, cue/bin/mp3, cue/iso/mp3; skipped when chdman is absent) |
 | `FileExtensionsTests.cs` | All extension constants and sets via reflection, cross-consistency, no duplicates |
@@ -65,10 +67,14 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 | `RawCdImageDetectorTests.cs` | Sync-mark and mode-byte sniffing (MODE1/MODE2), rejection of cooked 2048-byte images and non-sector-aligned files, candidate extensions, generated cue content, and the cross-volume refusal that returns `null` |
 | `RecoveredImageClassifierTests.cs` | Recovery layout routing: raw 2352 sniffing, 2048 DVD classification, 2336/2324 Mode 2 cues, 2448/2368 subchannel stripping down to a cued 2352 image, and the skip reason for sizes that fit no layout |
 | `InputFileFilterTests.cs` | A raw image is dropped when a sibling descriptor covers it (by base name and by cue text), kept when nothing covers it, matching is directory-scoped and case-insensitive; `RemoveRarVolumeParts` keeps only the first `partNN` volume per set (the lowest when the first is missing) and leaves lone parts and plain archives alone — and `ResolveOutputCollisions` keeps the first non-archive input of each colliding output group, order-independently, including three-way collisions and all-archive groups |
+| `IoThroughputCounterTests.cs` | Throughput sampling math (bytes/delta, zero/negative deltas), counter reset, the platform availability probe, and child-process sampling (the chdman speed fix) |
+| `LegacyCleanupServiceTests.cs` | Removal of the legacy `logs`/`Resources` folders and `maxcso.exe`/`psxpackager.exe`, missing paths, in-use files, and never throwing |
+| `ScreenshotServiceTests.cs` | Preferred/fallback directory layout (`%LocalAppData%\BatchConvertToCHD\screenshots` first), timestamped file names, directory creation, fallback on unwritable folders, and null when both fail |
 | `SplitImageJoinerTests.cs` | `.001`/`.002` and `.i00`/`.i01` set discovery and ordering, gaps, single-file non-sets, byte totals, and join output equality |
 | `RarVolumeSetTests.cs` | `partNN.rar` name parsing (padding, case, rejects), first-volume resolution from a later part, sets kept apart within a folder, ordered `.partNN` / `.001` / old-style `.rNN` volume enumeration, total sizes, and first-volume name reconstruction |
 | `TrackBinCueBuilderTests.cs` | `(Track N)` set recognition and ordering, multi-FILE cue content, data track mode vs. AUDIO tracks, non-track-set rejection |
 | `MdsTests.cs` | `.mds` header/session/track parsing, medium type, low-nibble mode-to-cue mapping, sector-size classification (2352 / 2448 / 2368 / 2336 / 2048), implausible session counts, `.mdf` lookup (declared footer names incl. UTF-16 and `*.mdf` wildcards, exact, decorated, ambiguous, subdirectory, split `.i00`, Unicode composition, multi-file join), subchannel stripping, pregap rebuild (`INDEX 00` with and without `.pregap.bin`), MSF formatting, and the prepared shapes |
+| `MdsV2Tests.cs` | MDS v2 / MDX: RIPEMD-160 known vectors, descriptor decryption and parsing, encrypted/compressed detection, an MDX container larger than the v1 descriptor cap, byte-for-byte decoding of the mdsx plain / compressed / password-encrypted fixtures, and the wrong-password failure |
 | `IszHeaderTests.cs` | **Every header field read at its documented offset** (the test that catches an offset mistake), the 64-byte UltraISO checksum fields, 64-bit image-size arithmetic for dual-layer sizes, signature and short-input rejection, legal no-chunk-table headers, and each refusal in `GetUnusableReason`: all four encryption modes, version ≠ 1, a later segment opened directly, zero-sector headers, zero/implausible chunk sizes and unreadable pointer widths |
 | `IszDecoderTests.cs` | Chunk-entry bit-packing for 2/3/4-byte pointers, the table obfuscation itself, segment naming for the `.i01` and both `.partNN` schemes, round trips for zlib / bzip2 (stripped `BZh`) / stored / all-zero (with and without recorded lengths) and mixed chunk types, trailing partial chunks, checksummed images (whole, split and no-table), images with no chunk table, two-segment images with a chunk straddling the boundary, and the refusals: not-an-ISZ, encrypted, truncated file, truncated chunk table, corrupt compressed data, checksum mismatch, missing segment, and a segment from a different image |
 | `CdSectorEccEdcTests.cs` | Sync/mode layout, EDC accumulation equivalence whole vs. in pieces, and the parity distinction that matters: **Mode 1 parity covers the address, Mode 2 Form 1 parity does not** and restores it afterwards; Form 2 gets an EDC and no parity |
@@ -86,12 +92,13 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 | `CsoHeaderTests.cs` | Header constants, v1/v2 validity, total blocks, index offset shift |
 | `CsoFileIntegrationTests.cs` | Real `.cso` files: **byte-for-byte block comparison vs. paired `.iso`**, full extraction equality, stream parity |
 | `PbpFileTests.cs` | Open errors, header/SFO/disc parsing, **PbpError enum ordinal assertions**, synthetic PBP+SFO builders |
+| `PbpDiagnosticsTests.cs` | Diagnostics classification of PBP failure codes into user-data vs. app-bug conditions |
 | `PbpHeaderTests.cs` | Magic, size (0x28), defaults, validity |
 | `SfoDataTests.cs` / `SfoEntryTests.cs` / `TocEntryTests.cs` | SFO lookups (incl. type mismatch), entry formats, TOC/track types |
 | `CueSheetWriterTests.cs` | Generated CUE content: data/audio tracks, INDEX 00 with 150-frame lead-in, zero-clamp, padding |
 | `PbpFileIntegrationTests.cs` | Real `.pbp` files: header/SFO/TOC, `ExtractToBinCue` byte-equality vs. original BIN, normalized CUE equality |
 
-> **Gap**: there are currently **no CCDSharp unit tests** — the test project does not reference CCDSharp (`BatchConvertToCHD.Tests.csproj:36–38`); the only touch-point is the `"CCDSharp: Conversion error"` exclusion pattern. CCDSharp behavior is exercised indirectly only if a real `.ccd` file flows through the app.
+> **CCDSharp is covered in the unit suite** (`CcdParserTests`, `CcdModelTests`, `IsoWriter` whole/partial-sector tests); the library is referenced by the test project. The older note that no CCDSharp tests existed is obsolete.
 
 ## 11.4 Writing New Tests — Quick Conventions
 
@@ -101,7 +108,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 4. For chdman-dependent tests, early-return when `chdman.exe` is absent from `AppContext.BaseDirectory`.
 5. Prefer building binary fixtures in code (see `IszImageBuilder`) over committing them. Commit one only when the format cannot be generated trustworthily in-repo, as with `ecm-sample.ecm` (the reference encoder's own output) or the WinRAR-produced RAR volume set (there is no RAR writer in the repository).
 6. When a fixture asserts agreement with an outside implementation, add a **guard test** that the fixture still covers the cases it is meant to. A fixture can be regenerated more simply and silently stop testing anything.
-7. Run the full suite before pushing. On the maintainer's machine a full run is **1076 passed / 0 failed**; CI runs the unit tests only, via `--filter "Category!=Integration"` (1048 tests). The integration classes' behaviour without samples is described in §11.5.
+7. Run the full suite before pushing. On the maintainer's machine a full run is **1085 passed / 0 failed**; CI runs the unit tests only, via `--filter "Category!=Integration"` (1057 tests). The integration classes' behaviour without samples is described in §11.5.
 
 ### Analyzer constraints worth knowing
 

@@ -484,11 +484,11 @@ internal class ArchiveService
                 // grouped by directory first: same-stem bins from different folders must not be
                 // merged into one cue whose FILE lines resolve in the wrong directory.
                 var generatedCues = new List<string>();
+                var directoryComparer = OperatingSystem.IsWindows()
+                    ? StringComparer.OrdinalIgnoreCase
+                    : StringComparer.Ordinal;
                 var binGroups = binFiles
-                    .GroupBy(
-                        static f => Path.GetDirectoryName(f) ?? string.Empty,
-                        StringComparer.OrdinalIgnoreCase
-                    )
+                    .GroupBy(static f => Path.GetDirectoryName(f) ?? string.Empty, directoryComparer)
                     .ToList();
 
                 foreach (var group in binGroups)

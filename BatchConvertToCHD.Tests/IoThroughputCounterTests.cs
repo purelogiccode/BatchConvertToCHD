@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using BatchConvertToCHD.Diagnostics;
 
@@ -128,5 +129,62 @@ public class IoThroughputCounterTests
         });
 
         Assert.Null(exception);
+    }
+
+    [Fact]
+    public async Task CreateForProcessObservesChildWrites()
+    {
+        // chdman runs out of process; the speed display samples the child's counters, so this is
+        // the property that makes the card show a non-zero speed during a chdman conversion.
+        if (!PlatformSupported) return;
+
+        var source = Path.Combine(Path.GetTempPath(), $"io_counter_src_{Guid.NewGuid():N}.bin");
+        var destination = Path.Combine(
+            Path.GetTempPath(),
+            $"io_counter_dst_{Guid.NewGuid():N}.bin"
+        );
+        File.WriteAllBytes(source, new byte[32 * 1024 * 1024]);
+
+        try
+        {
+            var startInfo = OperatingSystem.IsWindows()
+                ? new ProcessStartInfo(
+                    "cmd.exe",
+                    $"/c copy /b \"{source}\" \"{destination}\" > nul"
+                )
+                : new ProcessStartInfo("/bin/cp", $"\"{source}\" \"{destination}\"");
+            startInfo.CreateNoWindow = true;
+            startInfo.UseShellExecute = false;
+
+            using var process = Process.Start(startInfo)!;
+            using var counter = IoThroughputCounter.CreateForProcess(process, writes: true);
+            if (counter == null) return;
+
+            counter.NextValue(); // Baseline before the child writes anything.
+            await process.WaitForExitAsync();
+            await Task.Delay(100);
+
+            Assert.True(
+                counter.NextValue() > 0,
+                "the child process's writes should be visible to its counter"
+            );
+        }
+        finally
+        {
+            TryDelete(source);
+            TryDelete(destination);
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch
+        {
+            // Best-effort cleanup.
+        }
     }
 }

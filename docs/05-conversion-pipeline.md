@@ -115,8 +115,8 @@ command = forceCd || hasCue || (!forceDvd && !isIso && !isImg && !isRaw) ? "crea
 - `hasCue = isImg && File.Exists(Path.ChangeExtension(input, ".cue"))` — an `.img` with a sibling `.cue` is treated as a CD image.
 - **Verb choice is still extension-driven here**, but this code is now only reached for images that content inspection (§5.2) did not claim. So `Data size ... is not divisible by sector size` should now mean a genuinely broken file rather than a mislabelled one.
 - Base args: `{command} -i "<in>" -o "<out>" -f -np {cores}`.
-- **`.raw` inputs get `-us 2352`** (`:4846–4853`) — chdman's `createraw` requires an explicit unit size when no parent CHD is supplied ("Unit size must be specified if no output parent CHD is supplied").
-- **`.cue`/`.toc` descriptors referencing `.raw` tracks also get `-us 2352`** — when a cue file references raw audio tracks (e.g. `track02.raw`), the `createcd` command also needs an explicit unit size. `GameFileParser.GetReferencedFilesFromCueAsync` is called to check for `.raw` references, and `-us 2352` is appended to the arguments.
+- **`.raw` inputs get `-us 2352`** — chdman's `createraw` requires an explicit unit size when no parent CHD is supplied ("Unit size must be specified if no output parent CHD is supplied").
+- **`.cue`/`.toc` descriptors referencing `.raw` tracks do not get `-us`** — `createcd` does not accept the option ("Option '-us' not valid for this command"); it derives the 2352-byte unit size from the cue's own `MODE1/2352`/`MODE2/2352` track types, so the cue is handed over unchanged.
 - `-np` (processors) comes from a UI/core setting.
 
 ### Pre-flight validations
@@ -232,6 +232,6 @@ Several paths above generate a cue that references a disc image **where it alrea
 
 The catch, verified against chdman 0.285: chdman **joins** the `FILE` string to the cue's directory unconditionally. An absolute path is therefore looked for at `C:\temp\x\D:\game.iso` and reported as `ERROR: couldn't find bin file [...]`. A bare file name with the image elsewhere fails the same way.
 
-So a generated cue has to sit on the **same volume** as its image. `StageCueForImageAsync` uses `PathUtils.CreateTempDirectoryOnSameVolume` for this, *not* `GetBestTempDirectory` — the latter deliberately picks the roomiest drive, which is right for writing a whole image and wrong for a few hundred bytes of cue with a hard placement constraint. When no writable location exists on the image's volume the image is converted as-is with a warning.
+So a generated cue has to sit on the **same volume** as its image. `StageCueForImageAsync` uses `PathUtils.CreateTempDirectoryOnSameVolume` for this, *not* `GetBestTempDirectory` — the latter uses the system temp folder (falling back to the roomiest drive only when `%TEMP%` is unusable), which is right for writing a whole image and wrong for a few hundred bytes of cue with a hard placement constraint. When no writable location exists on the image's volume the image is converted as-is with a warning.
 
 The `.mds` path has the same constraint and resolves it differently: it falls back to **copying** the `.mdf` into the work directory, which is correct but slow.

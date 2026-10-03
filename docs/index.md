@@ -42,7 +42,7 @@ This documentation covers the project from both a user and a developer perspecti
 | **External tools needed** | None beyond the bundled `chdman` (Windows) and 7-Zip (`7za` on Windows, `7zz` on Linux/macOS) — every input format is handled in-process |
 | **Output format** | `.chd` (Compressed Hunks of Data) |
 | **Logs** | `%LocalAppData%\BatchConvertToCHD\logs` |
-| **Screenshots** | `<app folder>\Screenshot` (F8 hotkey; falls back to `%LocalAppData%\BatchConvertToCHD`) |
+| **Screenshots** | `%LocalAppData%\BatchConvertToCHD\screenshots` (F8 hotkey; falls back to a `screenshots` folder next to the app) |
 | **Bug reporting** | Automatic, opt-out by design — sent to the PureLogicCode BugReport API |
 
 ## 🗺️ Repository Layout
@@ -58,7 +58,7 @@ CSharp_BatchConvertToCHD/
 │   ├── Services/                   # Archive, BugReport, FileWatcher, Stats, Update, ...
 │   └── Utilities/                  # PathUtils, CueNormalizer, GameFileParser, ...
 │       └── Ecm/                    # in-process ECM decoding
-├── BatchConvertToCHD.Tests/        # xUnit test suite (1076 tests)
+├── BatchConvertToCHD.Tests/        # xUnit test suite (1085 tests)
 ├── CCDSharp/                       # CloneCD (.ccd/.img/.sub) parsing library
 ├── CSOSharp/                       # CSO/CISO decompression library (deflate + LZ4)
 ├── PBPSharp/                       # PlayStation PBP extraction + SFO parsing library

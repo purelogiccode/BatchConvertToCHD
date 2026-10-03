@@ -307,9 +307,10 @@ public sealed class PbpFile : IDisposable
                 {
                     case 0x0204:
                         // The declared length is untrusted; it cannot exceed what is left in the
-                        // file, so a corrupt entry cannot drive a multi-gigabyte allocation.
+                        // file, and must fit an int so a corrupt entry cannot drive a multi-gigabyte
+                        // allocation or overflow the cast below.
                         var remaining = stream.Length - stream.Position;
-                        if (remaining > 0 && entry.Length <= (ulong)remaining)
+                        if (remaining > 0 && entry.Length <= (ulong)remaining && entry.Length <= int.MaxValue)
                             entry.Value = ReadNullTerminatedString(stream, (int)entry.Length);
 
                         break;
