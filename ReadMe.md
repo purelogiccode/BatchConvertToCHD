@@ -8,6 +8,20 @@
 [![GitHub stars](https://img.shields.io/github/stars/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/issues)
 [![UI: Avalonia 12](https://img.shields.io/badge/UI-Avalonia%2012-8b44ac.svg)](https://avaloniaui.net)
+[![Release](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/release.yml?label=Release)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/release.yml)
+[![Docs](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/docs.yml?label=Docs)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/docs.yml)
+[![GitHub release date](https://img.shields.io/github/release-date/purelogiccode/BatchConvertToCHD)](https://github.com/purelogiccode/BatchConvertToCHD/releases)
+[![GitHub contributors](https://img.shields.io/github/contributors/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/graphs/contributors)
+[![GitHub forks](https://img.shields.io/github/forks/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/network/members)
+[![GitHub watchers](https://img.shields.io/github/watchers/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/watchers)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/pulls)
+[![GitHub repo size](https://img.shields.io/github/repo-size/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![GitHub code size](https://img.shields.io/github/languages/code-size/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![Top language](https://img.shields.io/github/languages/top/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/graphs/commit-activity)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/purelogiccode/BatchConvertToCHD/pulls)
+[![Maintained](https://img.shields.io/badge/Maintained-yes-green.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![Donate](https://img.shields.io/badge/Donate-purelogiccode.com-ff69b4.svg)](https://www.purelogiccode.com/donate)
 
 # Batch Convert to CHD
 

@@ -9,6 +9,19 @@
 [![GitHub last commit](https://img.shields.io/github/last-commit/purelogiccode/BatchConvertToCHD)](https://github.com/purelogiccode/BatchConvertToCHD/commits/master)
 [![GitHub stars](https://img.shields.io/github/stars/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/issues)
+[![Release](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/release.yml?label=Release)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/release.yml)
+[![Docs](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/docs.yml?label=Docs)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/docs.yml)
+[![Part of Batch Convert to CHD](https://img.shields.io/badge/Part%20of-Batch%20Convert%20to%20CHD-blue.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![GitHub contributors](https://img.shields.io/github/contributors/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/graphs/contributors)
+[![GitHub forks](https://img.shields.io/github/forks/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/network/members)
+[![GitHub watchers](https://img.shields.io/github/watchers/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/watchers)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/pulls)
+[![GitHub repo size](https://img.shields.io/github/repo-size/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![GitHub code size](https://img.shields.io/github/languages/code-size/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![Top language](https://img.shields.io/github/languages/top/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/graphs/commit-activity)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/purelogiccode/BatchConvertToCHD/pulls)
+[![Maintained](https://img.shields.io/badge/Maintained-yes-green.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
 
 **CCDSharp** is a managed C# library for parsing and converting **CloneCD** disc images (`.ccd` + `.img` + `.sub`). It reads the CloneCD descriptor, resolves the associated raw image and subchannel files, and converts the image to a standard **ISO** (2048-byte user data sectors) or **CUE/BIN** pair.
 
