@@ -73,7 +73,7 @@ nav_order: 15
 
 ### Housekeeping
 
-*   Version bumps: application 3.9.0, MDSSharp 1.2.0 (MDS v2/MDX), Meziantou.Analyzer 3.0.292.
+*   Version bumps: application 3.9.0, MDSSharp 1.2.0 (MDS v2/MDX), Meziantou.Analyzer 3.0.294.
 *   Release script strips native `.pdb` debug symbols from the zip and verifies the Avalonia native libraries are present.
 *   Docs, AGENTS.md and CI updated for the new base project; tests now reference the Avalonia assembly.
 *   Test suite grew to **1111 tests** (1083 unit + 28 integration), including new CSO v2 stored/LZ4/deflate, PBP zero-size, corrupt-CCD, MDX container, encoder divisibility, IoThroughputCounter, checksum-report, Image Info, CHDSharp-progress, MDS v2 per-track pregap and `createld` regression tests (with a committed laserdisc AVI fixture).
