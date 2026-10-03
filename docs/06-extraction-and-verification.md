@@ -97,16 +97,17 @@ The CHDSharp failure is reported to the bug API **only when the chdman fallback 
 
 ### Checksum report
 
-When **Write a checksum report** is enabled, `ChdChecksumReport.Write` (`Utilities/ChdChecksumReport.cs`) runs one `Chd.ComputeHashes` pass with `ChdHashType.Sha1 | Crc32 | Xxh3` and `perTrack: true`, writing `<name>.checksums.txt` next to the verified CHD (after the move, so it follows the file). CD/GD-ROM images get a line per track; other types get the whole-image hashes. The whole-image SHA-1 from the verification result is reused, so no second pass is needed for CD images; only a CHD whose header has no SHA-1 (V1/V2 or uncompressed V5) triggers an extra whole-image pass. A report failure is logged as a warning and never fails the verification.
+When **Write a checksum report** is enabled, `ChdChecksumReport.Write` (`Utilities/ChdChecksumReport.cs`) runs `Chd.ComputeHashes` with `ChdHashType.Sha1 | Crc32 | Xxh3`, writing `<name>.checksums.txt` next to the verified CHD (after the move, so it follows the file). CD/GD-ROM images get one block per track plus the whole-image hashes; other types get the whole-image hashes. `perTrack: true` returns only the per-track entries for a CD, so the whole-image hashes are computed in a second `perTrack: false` pass — the report's top SHA-1/CRC-32/XXH3-64 then describe the decompressed image itself rather than the CHD header's combined SHA-1 (which would not match a hash of the extracted data). A report failure is logged as a warning and never fails the verification.
 
 ### Moving verified files
 
-`MoveVerifiedFileAsync` (`:2076`):
+`MoveVerifiedFileAsync`:
 
 - Destination: `inputFolder\Success` or `inputFolder\Failed`; with subfolder search the relative directory is preserved under the target folder.
 - Existing destination files are deleted with `RetryingFileOperations.TryDeleteAsync` (result checked — a locked destination fails fast with a clear error instead of a misleading move failure).
 - The move uses `RetryingFileOperations.TryMoveAsync` (10 attempts, backoff 500 ms → 8 s, ~45 s total) because the freshly verified file may still be held by antivirus or the indexer.
 - On persistent failure, the exception is logged and reported via `ReportBugAsync` ("Failed to move file ..."), but the batch continues.
+- Returns the destination path on success (or `null` when the move failed). The checksum report is written against that returned path, so it follows the CHD into the `Success` folder; when the move failed, the report stays beside the original file.
 
 ### Scan exclusions
 

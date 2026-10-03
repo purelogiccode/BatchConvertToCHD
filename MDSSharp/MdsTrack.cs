@@ -31,6 +31,15 @@ public sealed record MdsTrack(int Number, byte ModeByte, int SectorSize, long St
     /// <summary>Sectors of track data recorded in the descriptor, or 0 when it records no length.</summary>
     public long LengthSectors { get; init; }
 
+    /// <summary>
+    ///     Sectors of track data actually stored in the data file when the descriptor records it
+    ///     (MDS v2 footer blocks), or 0 when unknown (MDS v1). A stored count equal to
+    ///     <see cref="LengthSectors" /> means the pregap is not in the data file; a count equal to
+    ///     <see cref="LengthSectors" /> plus <see cref="PregapSectors" /> means the pregap is
+    ///     stored at the start of the track, exactly as libMirage validates it.
+    /// </summary>
+    public long StoredDataSectors { get; init; }
+
     /// <summary>Subchannel mode byte from the descriptor (0x08 is 96-byte interleaved P-W).</summary>
     public byte SubchannelMode { get; init; }
 

@@ -184,8 +184,10 @@ the runner's Node 24 runtime is used.
   `GITHUB_TOKEN` cannot push to the wiki repository. Without the secret the sync
   step logs a message and skips.
 - Pages deployment requires Settings -> Pages -> Source: "GitHub Actions".
-- `docs/_config.yml` uses the `just-the-docs` remote theme; keep the front
-  matter (`title`, `nav_order`) on docs pages for navigation.
+- `docs/_config.yml` uses the `just-the-docs` remote theme and applies
+  `layout: default` to every page through Jekyll `defaults`, which is what
+  renders the Pages sidebar; keep the front matter (`title`, `nav_order`) on
+  docs pages for navigation. The wiki side menu is `docs/_Sidebar.md`.
 
 ## Conventions
 

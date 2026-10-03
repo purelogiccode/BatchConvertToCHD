@@ -535,6 +535,11 @@ internal static class MdsV2DataDecoder
             if (resolved is not null) return resolved;
         }
 
+        // Only the first fragment may fall back to the descriptor's data file. A later fragment
+        // stored elsewhere (its offset is file-relative and starts at 0) would otherwise read the
+        // wrong sectors from the first file; report it so the caller fails with a clear message.
+        if (!fragment.IsFirstFragment) return null;
+
         return disc.DataFilePaths.Count > 0 ? disc.DataFilePaths[0] : disc.MdfPath;
     }
 
@@ -613,7 +618,10 @@ internal static class MdsV2DataDecoder
                 var fragments = new List<TrackFragment>();
                 if (footerOffset != 0)
                 {
-                    var count = (int)Math.Min(footerCount, MaxFooterFiles);
+                    // mdsx, the format reference, ignores footer_count and always reads footer 0;
+                    // some producers leave the count at zero even though a footer exists. Never
+                    // synthesize an uncompressed fragment for a track that actually has a footer.
+                    var count = (int)Math.Min(Math.Max(footerCount, 1u), MaxFooterFiles);
                     for (var footerIndex = 0; footerIndex < count; footerIndex++)
                     {
                         var footerBase = (long)footerOffset + (long)footerIndex * FooterBlockSize;
@@ -652,7 +660,8 @@ internal static class MdsV2DataDecoder
                                 flags,
                                 group,
                                 compressionTable,
-                                dataName
+                                dataName,
+                                footerIndex == 0
                             )
                         );
                     }
@@ -661,7 +670,7 @@ internal static class MdsV2DataDecoder
                 if (fragments.Count == 0 && logicalLength > 0)
                 {
                     fragments.Add(
-                        new TrackFragment(startOffset, logicalLength, 0, 0, 0, null)
+                        new TrackFragment(startOffset, logicalLength, 0, 0, 0, null, true)
                     );
                 }
 
@@ -720,12 +729,14 @@ internal static class MdsV2DataDecoder
     /// <param name="BlocksInCompressionGroup">Sectors per compression group.</param>
     /// <param name="CompressionTableOffset">Compression table offset, relative to the fragment data.</param>
     /// <param name="DataFileName">Data file name recorded in the footer, or null.</param>
+    /// <param name="IsFirstFragment">Whether this is the track's first fragment.</param>
     private sealed record TrackFragment(
         ulong StartOffset,
         long DataLengthSectors,
         uint FooterFlags,
         uint BlocksInCompressionGroup,
         ulong CompressionTableOffset,
-        string? DataFileName
+        string? DataFileName,
+        bool IsFirstFragment
     );
 }

@@ -6,9 +6,8 @@ using CHDSharp.Models;
 namespace BatchConvertToCHD.Utilities;
 
 /// <summary>
-///     Writes the checksum report produced after a successful verification: the verified
-///     whole-image SHA-1 plus per-track SHA-1, CRC-32 and XXH3 for CD/GD-ROM images, or the
-///     whole-image hashes for other image types.
+///     Writes the checksum report produced after a successful verification: the whole-image
+///     SHA-1, CRC-32 and XXH3 plus per-track SHA-1, CRC-32 and XXH3 for CD/GD-ROM images.
 /// </summary>
 internal static class ChdChecksumReport
 {
@@ -23,16 +22,11 @@ internal static class ChdChecksumReport
     ///     Computes the report hashes and writes them next to <paramref name="chdPath" />.
     /// </summary>
     /// <param name="chdPath">Path of the verified CHD file.</param>
-    /// <param name="verifiedSha1">
-    ///     Whole-image SHA-1 from the verification, when the header carries one; used so the report
-    ///     does not need a second whole-image pass for CD images (whose hash pass is per track).
-    /// </param>
-    /// <param name="progress">Optional progress receiver for the hashing pass.</param>
+    /// <param name="progress">Optional progress receiver for the hashing passes.</param>
     /// <param name="token">Cancellation token.</param>
     /// <returns>Path of the written report.</returns>
     internal static string Write(
         string chdPath,
-        string? verifiedSha1,
         IProgress<ChdProgress>? progress,
         CancellationToken token
     )
@@ -41,8 +35,11 @@ internal static class ChdChecksumReport
         var tracks = hashes.Where(static h => h.TrackNumber is not null).ToList();
         var wholeImage = hashes.FirstOrDefault(static h => h.TrackNumber is null);
 
-        // V1/V2 and uncompressed V5 CHDs have no header SHA-1; hash the whole image to fill it in.
-        if (wholeImage is null && string.IsNullOrEmpty(verifiedSha1))
+        // CD/GD-ROM per-track hashing returns no whole-image entry, so compute it in a second
+        // pass. The report's top hashes then describe the decompressed image itself, exactly like
+        // the hashes of a non-CD image (the CHD header SHA-1 is the combined metadata hash and
+        // would not match a hash of the extracted data).
+        if (wholeImage is null)
         {
             var whole = Chd.ComputeHashes(chdPath, ReportHashTypes, null, false, progress, token);
             wholeImage = whole.FirstOrDefault();
@@ -55,13 +52,16 @@ internal static class ChdChecksumReport
             .Append(new FileInfo(chdPath).Length.ToString("N0", CultureInfo.InvariantCulture))
             .AppendLine(" bytes");
 
-        var wholeSha1 = wholeImage?.ToHex(ChdHashType.Sha1) ?? verifiedSha1;
-        builder.Append("SHA-1:      ").AppendLine(NonEmptyOrUnavailable(wholeSha1));
+        builder
+            .Append("SHA-1:      ")
+            .AppendLine(NonEmptyOrUnavailable(wholeImage?.ToHex(ChdHashType.Sha1)));
         if (wholeImage is not null)
         {
-            builder.Append("CRC-32:     ")
+            builder
+                .Append("CRC-32:     ")
                 .AppendLine(NonEmptyOrUnavailable(wholeImage.ToHex(ChdHashType.Crc32)));
-            builder.Append("XXH3-64:    ")
+            builder
+                .Append("XXH3-64:    ")
                 .AppendLine(NonEmptyOrUnavailable(wholeImage.ToHex(ChdHashType.Xxh3)));
         }
 
@@ -71,18 +71,22 @@ internal static class ChdChecksumReport
             builder.AppendLine("Tracks:");
             foreach (var track in tracks)
             {
-                builder.Append("  Track ")
+                builder
+                    .Append("  Track ")
                     .Append(track.TrackNumber!.Value.ToString("D2", CultureInfo.InvariantCulture))
                     .Append(" (offset ")
                     .Append(track.StartOffset.ToString("N0", CultureInfo.InvariantCulture))
                     .Append(", ")
                     .Append(track.Length.ToString("N0", CultureInfo.InvariantCulture))
                     .AppendLine(" bytes)");
-                builder.Append("    SHA-1:   ")
+                builder
+                    .Append("    SHA-1:   ")
                     .AppendLine(NonEmptyOrUnavailable(track.ToHex(ChdHashType.Sha1)));
-                builder.Append("    CRC-32:  ")
+                builder
+                    .Append("    CRC-32:  ")
                     .AppendLine(NonEmptyOrUnavailable(track.ToHex(ChdHashType.Crc32)));
-                builder.Append("    XXH3-64: ")
+                builder
+                    .Append("    XXH3-64: ")
                     .AppendLine(NonEmptyOrUnavailable(track.ToHex(ChdHashType.Xxh3)));
             }
         }

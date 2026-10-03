@@ -49,7 +49,8 @@
 *   **Automated Batch Processing**: Convert entire directories of disk images with real-time progress monitoring and immediate cancellation response.
 *   **chdman Primary Encoding (Windows)**: On Windows conversions run on the bundled `chdman`, the reference MAME CHD encoder. If chdman is missing or fails, the conversion automatically falls back to the built-in [CHDSharp](https://www.nuget.org/packages/CHDSharp) encoder (CHDSharpLib v1.4.3) running in-process — the project's own managed CHD encoder, whose output is byte-identical to `chdman` (verified across a 56-disc battle corpus). On Linux and macOS the built-in CHDSharp encoder is always used. An encoder always exists, so a batch never refuses to start for a missing encoder.
 *   **Recursive Structure Preservation**: Maintains your original directory hierarchy in the output folder when processing subfolders.
-*   **Robust Extraction**: Supports extracting CHD files back to **.cue (CD)**, **.iso (DVD)**, **.gdi (Dreamcast/Naomi)**, and **.img (HDD)** with intelligent metadata auto-detection using the [CHDSharp](https://www.nuget.org/packages/CHDSharp) library. If the built-in reader cannot decode a CHD (corrupt file or A/V laserdisc CHD), extraction automatically falls back to `chdman` — including `extractld` (AVI) / `extractraw` for laserdisc CHDs.
+*   **Robust Extraction**: Supports extracting CHD files back to **.cue (CD)**, **.iso (DVD)**, **.gdi (Dreamcast/Naomi)**, **.img (HDD)**, and **.avi (laserdisc A/V)** with intelligent flag-based auto-detection using the [CHDSharp](https://www.nuget.org/packages/CHDSharp) library. A/V (laserdisc) CHDs extract **in-process** with CHDSharp's MAME-parity AVI writer, so they no longer need `chdman`; if the built-in reader cannot decode a CHD (corrupt file or an unsupported variant), extraction automatically falls back to `chdman` — including `extractld` (AVI) / `extractraw` for laserdisc CHDs.
+*   **Laserdisc A/V Support**: `.avi` laserdisc captures (Daphne-style dumps) convert with `createld` — the A/V `avhu` codec (delta-RLE Huffman video + mono FLAC audio), one frame per hunk — through the built-in CHDSharp encoder on every platform, with output that is byte-identical to `chdman createld`.
 *   **Archive Integration**: Transparently handles `.zip`, `.7z`, and `.rar` archives, extracting and processing contents automatically while respecting cancellation tokens. Includes a bundled 7-Zip fallback (`7za.exe` on Windows, `7zz` on Linux/macOS) for archives the built-in extractor cannot read, including unsupported ZIP compression methods and `.7z` files. Split 7-Zip and ZIP volume sets (`.7z.001`/`.zip.001` with later parts beside them) are extracted with that bundled 7-Zip and converted like any other input; multi-part RAR sets (`.partNN.rar`, sets renamed to `.001`, and old-style `.rar` + `.rNN`) are decoded from their first volume, whichever part the batch offers, and only the first volume stays in the list so a set is converted once.
 *   **CloneCD Support**: Convert CloneCD `.ccd` disc images to CHD format via the [CCDSharp](https://www.nuget.org/packages/CCDSharp) library. Automatically generates CUE/BIN from `.ccd`/`.img` sets.
 *   **CSO Decompression**: Built-in support for `.cso` and `.ciso` (Compressed ISO) files via the [CSOSharp](https://www.nuget.org/packages/CSOSharp) library (supports deflate/zlib and LZ4).
@@ -69,7 +70,7 @@ A file's extension is the least reliable thing about it. Every input is identifi
 *   **Honest Reporting**: A truncated download, a file with the wrong extension and a genuinely unsupported format read differently in the log, each naming what was found and what to do about it.
 
 ### 💿 Awkward Format Support
-*   **Alcohol 120% / Daemon Tools**: `.mds`/`.mdf` sets convert directly. The descriptor's track table is parsed to build a matching cue, descriptors that record pregaps get `INDEX 00` (or have the missing pregap sectors rebuilt as zeros), descriptors naming several data files are joined in track order, images storing 2448 or 2368 bytes per sector have their subchannel tail stripped first (chdman cannot read those), and a `.mdf` that is really an ISO is converted as a DVD image. MDS v2 images are decrypted and decompressed in-process (AES-256 + LRW, zlib), including single-file `.mdx` containers whose whole image is embedded, with the footer's real stored track length used so pregaps kept in the data file are preserved.
+*   **Alcohol 120% / Daemon Tools**: `.mds`/`.mdf` sets convert directly. The descriptor's track table is parsed to build a matching cue, descriptors that record pregaps get `INDEX 00` (or have the missing pregap sectors rebuilt as zeros) — for MDS v2 the footer's stored length tells which pregaps are in the file, so the layout is resolved per track even when some pregaps are stored and others are not — descriptors naming several data files are joined in track order, images storing 2448 or 2368 bytes per sector have their subchannel tail stripped first (chdman cannot read those), and a `.mdf` that is really an ISO is converted as a DVD image. MDS v2 images are decrypted and decompressed in-process (AES-256 + LRW, zlib), including single-file `.mdx` containers whose whole image is embedded, with the footer's real stored track length used so pregaps kept in the data file are preserved.
 *   **ISZ Decompression**: UltraISO `.isz` images are decompressed in-process (zlib, bzip2, stored and zero chunks), including images split across `.i01`/`.i02` or `.part01.isz`/`.part001.isz` segments. The obfuscated tables and stripped bzip2 headers real UltraISO files carry are handled, and UltraISO's own checksum is validated when present. Segments are matched by volume serial number, a missing one is named, and an encrypted image says so rather than failing obscurely. Written against the EZB Systems ISZ File Format Specification 1.00 and checked against libMirage and isz-tool.
 *   **Split Volume Sets**: Images split into `.001`/`.002` or `.i00`/`.i01` pieces are rejoined before conversion, and a set with a missing part is reported as such instead of being handed to chdman half-complete. Split 7-Zip/ZIP *archive* sets (`.7z.001`) are extracted with the bundled 7-Zip (`7za.exe` on Windows, `7zz` on Linux/macOS) and converted rather than refused. Only the first volume appears in the file list, so a set is offered once rather than once per piece.
 *   **ECM Decoding**: `.ecm` files are decoded in-process, with no external tool to install. ECM works by discarding each sector's EDC checksum and Reed-Solomon parity, so decoding means regenerating them; the implementation is verified byte for byte against Neill Corlett's original encoder and decoder, and the checksum ECM stores for the whole image is validated at the end, so a damaged file is reported rather than turned into a plausible-looking one.
@@ -86,6 +87,8 @@ A file's extension is the least reliable thing about it. Every input is identifi
 *   **Crash-Aware Error Reporting**: When Windows kills chdman outright (e.g. exit code `-1073741795` = `0xC000001D`, illegal instruction — typically an older CPU missing instructions the bundled build requires), the built-in CHDSharp encoder takes over automatically and the crash is decoded into plain language with actionable guidance. A startup check warns when the bundled chdman cannot run, and startup logs record the process/OS architectures plus which tool binary was selected.
 *   **Safe Deletion**: Source files (and their dependencies like `.bin`, `.sub`, etc.) are only deleted if the conversion/extraction is confirmed successful.
 *   **Batch Verification**: Validate the checksums and structural integrity of existing CHD files using the [CHDSharp](https://www.nuget.org/packages/CHDSharp) library.
+*   **Optional Checksum Reports**: Write a `<name>.checksums.txt` next to each verified CHD with the whole-image SHA-1, CRC-32 and XXH3-64 plus per-track SHA-1, CRC-32 and XXH3-64 for CD/GD-ROM images. The whole-image hashes cover the decompressed image (not the CHD header's combined hash), the report follows the file into the `Success` folder, and a write failure is only a warning.
+*   **CHD Image Info**: The Explorer's **Image Info** expander shows a read-only report built from the CHD header and map — version, hunk/unit sizes, logical size, image type, codecs, metadata tags, the CD/GD-ROM track table and the per-codec hunk distribution (capped at the first 1,000,000 hunks).
 *   **Automated Organization**: Optionally move verified or failed files into dedicated subfolders (`Success`/`Failed`) while ignoring these special folders during subsequent scans.
 *   **Cleanup**: Automatically removes empty subdirectories left behind after files are moved or deleted.
 *   **Dependency Protection**: Performs a dependency check on startup and notifies you on Windows when `chdman.exe` is missing; every conversion then runs on the built-in CHDSharp encoder, so conversion never fails for a missing encoder.
@@ -97,7 +100,9 @@ A file's extension is the least reliable thing about it. Every input is identifi
 
 ### 📊 Performance & UI
 *   **Real-time Telemetry**: Monitor disk write/read speeds and elapsed time during operations.
-*   **Optimized Logging**: Log lines are batched and the on-screen text is capped, so a very large log never freezes the window during long-running tasks.
+*   **Live Tool Output**: Every `chdman` output line reaches the activity log, progress included, with completion lines marked with a check; the built-in CHDSharp encoder/reader logs progress every 10% for conversion, verification, extraction and hashing.
+*   **Optimized Logging**: Log lines are batched, each line is capped at 2,000 characters, at most 200 lines are appended per UI flush, and the on-screen text is capped — so a very large log never freezes the window during long-running tasks. The rolling file sink rotates at 10 MB.
+*   **Read-ahead Extraction**: CHDSharp pre-decompresses the next 16 hunks in the background while extracting, overlapping decompression with the disk writes.
 *   **AppData Storage**: Logs are stored under `%LocalAppData%\BatchConvertToCHD\logs` and F8 screenshots under `%LocalAppData%\BatchConvertToCHD\screenshots` (a `screenshots` folder next to the app is the fallback when AppData is not writable). The title-bar **AppData** button opens the folder. Temporary work folders prefer the system temp directory and only fall back to a `BatchConvertToCHD_Temp` folder on a drive root when the system temp path is unusable for chdman; empty fallback folders are cleaned up automatically.
 *   **Donate Button**: The title bar links straight to the project's donation page, left of the About button.
 *   **Avalonia Theming**: Modern dark-themed UI powered by [Avalonia](https://avaloniaui.net/) 12.1 with its Fluent theme, a static dark background, rounded corners, and a custom title bar.
@@ -116,6 +121,7 @@ A file's extension is the least reliable thing about it. Every input is identifi
 | **Console Specific** | `.gdi` (Dreamcast), `.pbp` (PlayStation)                                          |
 | **Compressed**       | `.cso` (Compressed ISO), `.isz` (UltraISO), `.ecm` (Error Code Modeler)           |
 | **Alcohol 120%**     | `.mds` (+`.mdf`), `.mdx` (Daemon Tools v2 single-file), including 2448-byte subchannel sectors |
+| **Laserdisc**        | `.avi` (A/V CHD input/output via `createld`/`extractld`)                           |
 | **Split Sets**       | `.001`/`.002`..., `.i00`/`.i01`... (add the first volume; the rest are found)       |
 | **Archives**         | `.zip`, `.7z`, `.rar`                                                             |
 | **Output**           | `.chd` (Compressed Hunks of Data)                                                 |
@@ -135,6 +141,7 @@ The application implements priority-based logic to ensure compatibility. Content
 5.  **DVD Images (`.iso`)**: Defaults to `createdvd`, once content inspection has ruled out a mislabelled raw CD dump.
 6.  **Hard Disk Images (`.img`)**: Defaults to `createhd` unless an accompanying `.cue` file is detected, in which case `createcd` is used.
 7.  **Raw Data (`.raw`)**: Defaults to `createraw` with `-us 2352`. Cue descriptors referencing `.raw` audio tracks are converted through the cue, which carries the 2352-byte unit size in its track types.
+8.  **Laserdisc (`.avi`)**: Always converts with `createld` (A/V `avhu` codec, one frame per hunk), regardless of the Force CD/DVD checkboxes.
 
 Generated cue sheets reference the disc image where it already lies rather than copying it, because chdman resolves a cue's `FILE` entry against the cue's own directory. That also means such a cue has to be written on the same volume as the image, since chdman cannot follow an absolute `FILE` path.
 
@@ -195,7 +202,7 @@ BatchConvertToCHD.exe "C:\ROMs\MyGames"
 1.  Navigate to the **Extract CHD Files** tab.
 2.  Select your **Source Folder** (containing `.chd` files).
 3.  Select your **Output Folder**.
-4.  Choose the desired output format (Auto-detect, CD `.cue`, DVD `.iso`, Dreamcast `.gdi`, HDD `.img`).
+4.  Choose the desired output format (Auto-detect, CD `.cue`, DVD `.iso`, Dreamcast `.gdi`, HDD `.img`, Laserdisc `.avi`).
 5.  *(Optional)* Enable "Include subfolders" to process nested directories.
 6.  *(Optional)* Enable "Delete original CHD files" to clean up after successful extraction.
 7.  Click **Start Extraction**.
@@ -204,7 +211,8 @@ BatchConvertToCHD.exe "C:\ROMs\MyGames"
 1.  Navigate to the **Verify CHD Files** tab.
 2.  Select the folder containing your `.chd` files.
 3.  Configure folder organization options (Success/Failed folders).
-4.  Click **Start Verification**.
+4.  *(Optional)* Enable "Write a checksum report (.checksums.txt) next to each verified CHD".
+5.  Click **Start Verification**.
 
 ---
 

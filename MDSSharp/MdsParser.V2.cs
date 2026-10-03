@@ -66,6 +66,9 @@ public static partial class MdsParser
     /// <summary>Offset of the flags byte inside a v2 footer block.</summary>
     private const int V2FooterFlagsOffset = 0x04;
 
+    /// <summary>Offset of the stored track-data length inside a v2 footer block.</summary>
+    private const int V2FooterDataLengthOffset = 0x10;
+
     /// <summary>Offset of the compression-table pointer inside a v2 footer block.</summary>
     private const int V2FooterCompressionTableOffset = 0x18;
 
@@ -161,21 +164,22 @@ public static partial class MdsParser
                     ? ReadExtraBlock(bytes, medium, extraOffset)
                     : (0, (long)trackLength64);
 
-                tracks.Add(
-                    new MdsTrack(point, modeByte, sectorSize, startSector)
-                    {
-                        PregapSectors = pregap,
-                        LengthSectors = length,
-                        SubchannelMode = bytes[trackBase + V2TrackSubchannelOffset],
-                        AdrCtl = bytes[trackBase + V2TrackAdrCtlOffset],
-                    }
-                );
-
                 var footerOffset = BinaryPrimitives.ReadUInt32LittleEndian(
                     bytes.AsSpan((int)(trackBase + V2TrackFooterOffsetOffset))
                 );
                 var footerCount = BinaryPrimitives.ReadUInt32LittleEndian(
                     bytes.AsSpan((int)(trackBase + V2TrackFooterCountOffset))
+                );
+
+                tracks.Add(
+                    new MdsTrack(point, modeByte, sectorSize, startSector)
+                    {
+                        PregapSectors = pregap,
+                        LengthSectors = length,
+                        StoredDataSectors = ReadV2FooterDataSectors(bytes, footerOffset, footerCount),
+                        SubchannelMode = bytes[trackBase + V2TrackSubchannelOffset],
+                        AdrCtl = bytes[trackBase + V2TrackAdrCtlOffset],
+                    }
                 );
 
                 foreach (var name in ReadV2FooterFileNames(bytes, footerOffset, footerCount))
@@ -245,7 +249,7 @@ public static partial class MdsParser
         var names = new List<string>();
         if (footerOffset == 0) return names;
 
-        var count = (int)Math.Min(fileCount, MaxFooterFiles);
+        var count = GetV2FooterCount(fileCount);
         for (var index = 0; index < count; index++)
         {
             var footerBase = (long)footerOffset + (long)index * V2FooterBlockSize;
@@ -274,7 +278,7 @@ public static partial class MdsParser
     {
         if (footerOffset == 0) return false;
 
-        var count = (int)Math.Min(fileCount, MaxFooterFiles);
+        var count = GetV2FooterCount(fileCount);
         for (var index = 0; index < count; index++)
         {
             var footerBase = (long)footerOffset + (long)index * V2FooterBlockSize;
@@ -294,5 +298,46 @@ public static partial class MdsParser
         }
 
         return false;
+    }
+
+    /// <summary>
+    ///     Sums the <c>track_data_length</c> values of a v2 track's footer blocks: the sectors
+    ///     actually stored for the track. libMirage validates this against the extra block, and a
+    ///     stored pregap is included in it; <see cref="MdsTrack.StoredDataSectors" /> exposes the
+    ///     result so the pregap handling can tell a stored pregap from a missing one.
+    /// </summary>
+    /// <param name="bytes">Decrypted descriptor.</param>
+    /// <param name="footerOffset">Offset of the track's first footer block, or 0.</param>
+    /// <param name="fileCount">Number of footer blocks the track declares.</param>
+    /// <returns>The stored sector count, or 0 when the track has no readable footer.</returns>
+    private static long ReadV2FooterDataSectors(byte[] bytes, uint footerOffset, uint fileCount)
+    {
+        if (footerOffset == 0) return 0;
+
+        var count = GetV2FooterCount(fileCount);
+        long total = 0;
+        for (var index = 0; index < count; index++)
+        {
+            var footerBase = (long)footerOffset + (long)index * V2FooterBlockSize;
+            if (footerBase < 0 || footerBase + V2FooterBlockSize > bytes.Length) break;
+
+            total += (long)BinaryPrimitives.ReadUInt64LittleEndian(
+                bytes.AsSpan((int)footerBase + V2FooterDataLengthOffset)
+            );
+        }
+
+        return total;
+    }
+
+    /// <summary>
+    ///     Number of footer blocks a v2 track actually has. libMirage and mdsx read footer 0
+    ///     whenever the track points at a footer, even when the declared count is zero, and a
+    ///     corrupt count must not drive a huge loop.
+    /// </summary>
+    /// <param name="fileCount">Number of footer blocks the track declares.</param>
+    /// <returns>The footer count to read, capped at <see cref="MaxFooterFiles" />.</returns>
+    private static int GetV2FooterCount(uint fileCount)
+    {
+        return (int)Math.Min(Math.Max(fileCount, 1u), MaxFooterFiles);
     }
 }

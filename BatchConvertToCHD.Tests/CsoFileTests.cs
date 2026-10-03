@@ -267,6 +267,20 @@ public class CsoFileTests : IDisposable
         cso.Dispose();
     }
 
+    [Fact]
+    public void ExtractToIsoZeroUncompressedSizeReturnsInvalidHeader()
+    {
+        // A header declaring no data must not "succeed" by writing an empty ISO.
+        var raw = new byte[2048];
+        var path = CreateSingleBlockCsoFile(1, 0, raw, compressed: false, lz4: false);
+        CsoFile.Open(path, out var cso);
+        Assert.NotNull(cso);
+
+        var outputPath = Path.Combine(_tempDir, "empty.iso");
+        Assert.Equal(CsoError.InvalidHeader, cso.ExtractToIso(outputPath));
+        cso.Dispose();
+    }
+
     /// <summary>
     ///     Builds a one-block CSO. <paramref name="compressed" /> writes the block through LZ4 or
     ///     deflate; otherwise it is stored. v2 marks LZ4 blocks with the high index bit and uses the

@@ -455,6 +455,11 @@ public sealed class CsoFile : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
+        // A header declaring no data has no blocks to write; without this guard the loop below
+        // would write nothing and still report success, leaving an empty ISO behind.
+        if (Header.UncompressedSize == 0)
+            return CsoError.InvalidHeader;
+
         var buffer = ArrayPool<byte>.Shared.Rent((int)Header.BlockSize);
         try
         {

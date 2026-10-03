@@ -21,7 +21,23 @@ nav_order: 15
 ### New CHD Explorer tab
 
 *   **Browse a CHD like a disc**: pick a `.chd`, choose the file-system parser matching its console/system (35 formats, PlayStation auto-detection by default), and navigate the folder tree in a grid. Double-click a folder to open it, a file to extract and open it, or use Extract to save a folder to disk.
+*   **Image Info**: an expander under the parser drop-down shows a read-only report built from the CHD header and map — version, hunk/unit sizes, logical size, image type (CD/GD-ROM/DVD/HDD/A-V), codecs, metadata tags, the CD/GD-ROM track table and the per-codec hunk distribution (the scan is capped at the first 1,000,000 hunks for very large images).
 *   **Backed by VideoGameFileSystemParser 1.3.0** (<https://www.nuget.org/packages/VideoGameFileSystemParser>), rebuilt against CHDSharp 1.4.3 and published for this release.
+
+### Laserdisc A/V support
+
+*   **`.avi` laserdisc captures convert with `createld`**: the built-in CHDSharp encoder assembles every video frame into MAME's raw `chav` layout and compresses it with the `avhu` codec (delta-RLE Huffman video + per-channel mono FLAC audio), one frame per hunk, exactly like `chdman createld`; the Force CD/DVD overrides are ignored for an AVI.
+*   **A/V CHDs extract back to AVI in-process**: the Extract tab gained a **Laserdisc (.avi)** format, and Auto-detection now reads the CHD's own flags — a CHD with no CD/DVD/HDD metadata is an A/V image and is extracted with CHDSharp's MAME-parity `ExtractLaserDisc` writer (YUY2 video + PCM audio). `chdman extractld`/`extractraw` remain the automatic fallback when the library cannot decode the CHD.
+
+### Verification checksum reports
+
+*   **Optional `<name>.checksums.txt` next to each verified CHD** (checkbox on the Verify tab): one whole-image SHA-1, CRC-32 and XXH3-64 plus per-track SHA-1, CRC-32 and XXH3-64 for CD/GD-ROM images. The whole-image hashes are computed over the decompressed image, so they match a hash of the extracted data rather than the CHD header's combined hash. The report follows the CHD into the Success folder, and a report that cannot be written is a warning — never a verification failure.
+
+### Live tool output, progress and read-ahead
+
+*   **Every `chdman` output line now reaches the activity log**, progress included, with completion lines ("Compression complete"/"Extraction complete"/"final ratio") marked with a check. The on-screen log caps a single line at 2,000 characters and appends at most 200 lines per flush, so a chatty tool cannot stall the UI, and the file sink rolls at 10 MB.
+*   **The built-in CHDSharp encoder and reader log progress every 10%** for conversion (`ratio=`), verification, extraction and checksum hashing, so long library operations visibly keep running without one line per hunk.
+*   **Extraction pre-decompresses 16 hunks in the background** (`ChdFile.ConfigureReadAhead`), so sequential reads overlap the disk writes on the single-file (DVD/HDD) and multi-track (CD/GDI) paths.
 
 ### Built-in CHD encoder — no CHDSharp CLI
 
@@ -40,7 +56,7 @@ nav_order: 15
 *   **CD-R/CD-RW MDS v2 descriptors** read their track lengths from the extra block like pressed CDs, and a `.ccd` claiming a huge `TocEntries` value can no longer make the parser allocate unbounded tracks.
 *   **MP3 decoding on Linux/macOS is cancellable**: `ffmpeg` is awaited with the operation token and killed on cancel instead of blocking the window in an uncancellable `WaitForExit()`.
 *   **Real `.mdx` containers are read**: the MDS v2 parser applied the 1 MB v1 descriptor cap before checking the version, so every genuine single-file MDX (which embeds the whole image) was rejected, and the whole file was loaded into memory. The header is now read first, the descriptor is decrypted/decompressed from a stream, and track data is decoded per footer: the footer's `track_data_length` (the sectors actually stored) is used instead of the extra block's logical length, so a pregap kept in the data file is no longer truncated, and a track split across several data files decodes every footer in order. The decoder also streams groups instead of buffering whole tracks, and a compressed descriptor that legitimately expands beyond the file size is no longer rejected.
-*   **`chdman createcd` no longer receives an invalid `-us 2352` switch.** A cue referencing a `.raw` track made the Windows primary encoder exit with "Option '-us' not valid for this command" and silently fall back; chdman derives the unit size from the cue's track types, so the switch is now only passed to `createraw`.
+*   **`chdman createcd` no longer receives an invalid `-us 2352` switch.** A cue referencing a `.raw` track made the Windows primary encoder exit with "Option '-us' not valid for this command" and silently fall back; chdman derives the unit size from the cue's track types, so the switch is now only passed to `createraw` — including when a `.raw` input is combined with Force CD or Force DVD, which previously still appended it to `createcd`/`createdvd`.
 *   **The built-in encoder rejects inputs chdman refuses.** A `createdvd`/`createhd`/`createraw` input whose size is not a whole number of units is now rejected up front instead of dropping the partial trailing unit and reporting success (after which the source could be deleted).
 *   **Explorer extraction never replaces existing files**: extracting an entry into a folder that already holds a file or folder of the same name now lands in a numbered subfolder, the same isolation the Extraction tab applies; a staged directory is renamed into place in one step when the destination is free, and a temp extraction opened in a viewer is deleted after the viewer exits instead of 30 seconds later.
 *   **The same-batch duplicate-output guard now covers the built-in encoder too**, and a reservation is released when the final move fails, so a failed product cannot block a later input that resolves to the same CHD.
@@ -49,13 +65,19 @@ nav_order: 15
 *   **The activity log keeps its mode instructions when the tab changes**: the clear is now synchronous, so the welcome/ready lines queued by the same selection change are no longer discarded.
 *   **Completion dialogs are awaited**: the batch summary is shown before a close requested during the run is honoured, and the encoder notice is dismissed before the update prompt appears.
 *   **Smaller fixes**: a file-system-watcher history clear is atomic with event recording; a Windows drive root is no longer trimmed to a drive-relative path when building a temp folder; the ISZ chunk table and PBP SFO string length are bounded before their `int` casts; a CCD `.img` with a partial trailing sector is rejected instead of silently dropped; archive bin sets are grouped case-sensitively on case-sensitive file systems; a bare `.bin` with a companion cue now converts through the cue; 7-Zip arguments are passed via `ArgumentList` so quotes in paths cannot inject switches; the bug-report throttle's safety-net timer can no longer clear the flag of a newer send; a corrupt CSO index, MDX descriptor or ISZ chunk table is rejected before a huge allocation.
+*   **A laserdisc AVI that fails both encoders is no longer misdiagnosed**: the post-failure sector-alignment diagnostic exempts `.avi`, so the real encoder error is shown instead of "file size is not divisible by any standard sector size".
+*   **A temp extraction opened in an external viewer is no longer deleted too early on Linux/macOS**: `xdg-open`/`open` exit as soon as they hand the file to the viewer, so a quick exit now gets the fixed grace delay instead of removing the file while the viewer is still starting.
+*   **A CSO whose header declares zero uncompressed bytes** no longer "extracts" to an empty ISO and reports success; it is reported as an invalid header. A temp directory is only accepted as writable when it really is, and a descriptor's referenced-file deletion check compares paths case-sensitively on case-sensitive file systems.
+*   **MDS v2 footers are read like the format reference**: a track whose footer count is zero but that carries a footer is decoded from that footer instead of being treated as uncompressed, and a later fragment of a split track that names no data file is reported instead of silently reading the first data file again.
+*   **MDS v2 pregaps are resolved per track**: the footer's stored length tells whether each track's pregap is in the data file (`length` = missing, `length + pregap` = stored, the layout libMirage validates). An image that keeps one track's pregap and omits another's is now rebuilt selectively — only the missing pregaps are materialized as zeros — so every `INDEX 00`/`INDEX 01` lands at the LBA the descriptor names instead of the cue drifting after the first omitted pregap. The first track's pregap before LBA 0 is never materialized, matching libMirage's NULL pregap for track 1.
 
 ### Housekeeping
 
 *   Version bumps: application 3.9.0, MDSSharp 1.2.0 (MDS v2/MDX), Meziantou.Analyzer 3.0.292.
 *   Release script strips native `.pdb` debug symbols from the zip and verifies the Avalonia native libraries are present.
 *   Docs, AGENTS.md and CI updated for the new base project; tests now reference the Avalonia assembly.
-*   Test suite grew to **1085 tests** (1057 unit + 28 integration), including new CSO v2 stored/LZ4/deflate, PBP zero-size, corrupt-CCD, MDX container, encoder divisibility and IoThroughputCounter regression tests.
+*   Test suite grew to **1111 tests** (1083 unit + 28 integration), including new CSO v2 stored/LZ4/deflate, PBP zero-size, corrupt-CCD, MDX container, encoder divisibility, IoThroughputCounter, checksum-report, Image Info, CHDSharp-progress, MDS v2 per-track pregap and `createld` regression tests (with a committed laserdisc AVI fixture).
+*   The `docs/` folder is the single source of truth for both documentation homes: GitHub Pages (Jekyll/just-the-docs navigation) and the GitHub wiki (`docs/_Sidebar.md` side menu, `index.md` → `Home.md`, `WhatsNew.md` synced from the repository root).
 
 ## 3.8.0 (2026-09-19)
 

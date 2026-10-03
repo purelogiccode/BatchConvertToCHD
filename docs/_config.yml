@@ -10,6 +10,16 @@ title: BatchConvertToCHD — Wiki
 description: Official documentation for Batch Convert to CHD — user guide, architecture, developer references, and troubleshooting.
 remote_theme: just-the-docs/just-the-docs
 
+# Apply the theme's default layout to every page. just-the-docs renders the left-hand
+# navigation sidebar (and the search box) from that layout; a page without a layout would
+# render as bare markdown with no menu. The theme's own defaults only cover its own docs
+# folder, so the site declares them here for the docs/ source tree.
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
 color_scheme: light
 
 search_enabled: true

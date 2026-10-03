@@ -129,25 +129,47 @@ public static class MdsInputPreparer
             );
         }
 
-        var pregapPlan = ClassifyPregapPlan(disc, dataFilePath);
+        // MDS v2 records how much of every track is actually stored, so the pregap layout is
+        // classified per track: a v2 image may keep the pregap of one track and omit another's.
+        // MDS v1 has no per-track stored length, so the whole-file classification is used.
+        var perTrackPregaps = ClassifyPerTrackPregaps(disc);
+        var pregapPlan = perTrackPregaps is null
+            ? ClassifyPregapPlan(disc, dataFilePath)
+            : PregapPlan.None;
 
-        if (pregapPlan == PregapPlan.Padding)
+        var missingPregaps = perTrackPregaps is null
+            ? pregapPlan == PregapPlan.Padding
+                ? disc.Tracks.Sum(static t => t.PregapSectors)
+                : 0
+            : perTrackPregaps
+                .Values.Where(static p => p.Representable && !p.PregapInFile)
+                .Sum(static p => p.Track.PregapSectors);
+
+        if (missingPregaps > 0)
         {
             var paddedPath = Path.Combine(
                 workDir,
                 Path.GetFileNameWithoutExtension(disc.MdsPath) + PregapBinExtension
             );
-            var pregapSectors = disc.Tracks.Sum(static t => t.PregapSectors);
             var strip = disc.NeedsSubchannelStrip;
             onLog?.Invoke(
-                $" {Path.GetFileName(disc.MdsPath)} records {pregapSectors:N0} pregap sectors the data file does not contain; rebuilding the image with zero-filled pregaps{(strip ? " and stripped subchannel data" : string.Empty)}."
+                $" {Path.GetFileName(disc.MdsPath)} records {missingPregaps:N0} pregap sectors the data file does not contain; rebuilding the image with zero-filled pregaps{(strip ? " and stripped subchannel data" : string.Empty)}."
             );
+
+            Func<MdsTrack, (bool Pad, bool InFile)> layout = perTrackPregaps is null
+                ? static _ => (true, false)
+                : track =>
+                {
+                    var pregap = perTrackPregaps[track.Number];
+                    return (pregap.Representable && !pregap.PregapInFile, pregap.PregapInFile);
+                };
 
             var padded = await WritePregapPaddedImageAsync(
                     dataFilePath,
                     paddedPath,
                     disc,
                     strip,
+                    layout,
                     token
                 )
                 .ConfigureAwait(false);
@@ -158,14 +180,16 @@ public static class MdsInputPreparer
                     workDir,
                     Path.GetFileName(paddedPath),
                     token,
-                    pregapsInFile: true
+                    pregapsInFile: true,
+                    GetIndex00Tracks(perTrackPregaps)
                 )
                 .ConfigureAwait(false);
             return Result.Cue(paddedCue);
         }
 
         var pregapsInFile = pregapPlan == PregapPlan.PregapsInFile;
-        if (pregapsInFile)
+        var index00Tracks = GetIndex00Tracks(perTrackPregaps);
+        if (pregapsInFile || index00Tracks is { Count: > 0 })
         {
             onLog?.Invoke(
                 $" {Path.GetFileName(disc.MdsPath)} records pregap sectors that are present in the data file; writing INDEX 00 for them."
@@ -196,7 +220,8 @@ public static class MdsInputPreparer
                     workDir,
                     Path.GetFileName(strippedPath),
                     token,
-                    pregapsInFile
+                    pregapsInFile,
+                    index00Tracks
                 )
                 .ConfigureAwait(false);
             return Result.Cue(cuePath);
@@ -204,9 +229,78 @@ public static class MdsInputPreparer
 
         var reference = await ReferenceOrCopyAsync(dataFilePath, workDir, onLog, token)
             .ConfigureAwait(false);
-        var plainCuePath = await WriteCueAsync(disc, workDir, reference, token, pregapsInFile)
+        var plainCuePath = await WriteCueAsync(
+                disc,
+                workDir,
+                reference,
+                token,
+                pregapsInFile,
+                index00Tracks
+            )
             .ConfigureAwait(false);
         return Result.Cue(plainCuePath);
+    }
+
+    /// <summary>
+    ///     Classifies the pregap layout per track from the stored sector counts an MDS v2
+    ///     descriptor records (a stored pregap is included in the footer's <c>track_data_length</c>,
+    ///     as libMirage validates). Returns null when the descriptor does not record stored lengths
+    ///     (MDS v1) or a track's stored count matches neither layout, in which case the whole-file
+    ///     classification is used instead.
+    /// </summary>
+    /// <param name="disc">The parsed Alcohol image.</param>
+    private static Dictionary<int, TrackPregapLayout>? ClassifyPerTrackPregaps(MdsDisc disc)
+    {
+        if (disc.SessionCount > 1 || disc.Tracks.Count == 0) return null;
+        if (disc.Tracks.All(static t => t.StoredDataSectors <= 0)) return null;
+
+        var layouts = new Dictionary<int, TrackPregapLayout>(disc.Tracks.Count);
+        foreach (var track in disc.Tracks)
+        {
+            if (track.LengthSectors <= 0) return null;
+
+            var stored = track.StoredDataSectors;
+            bool pregapInFile;
+            if (track.PregapSectors <= 0)
+            {
+                pregapInFile = false;
+            }
+            else if (stored == track.LengthSectors + track.PregapSectors)
+            {
+                pregapInFile = true;
+            }
+            else if (stored == track.LengthSectors)
+            {
+                pregapInFile = false;
+            }
+            else
+            {
+                return null;
+            }
+
+            layouts[track.Number] = new TrackPregapLayout(
+                track,
+                pregapInFile,
+                track.PregapSectors > 0 && track.StartLba >= track.PregapSectors
+            );
+        }
+
+        return layouts;
+    }
+
+    /// <summary>
+    ///     Track numbers whose pregap a cue can express (its start LBA leaves room for the pregap;
+    ///     the first track's pregap before LBA 0 cannot), or null for the whole-file classification.
+    /// </summary>
+    /// <param name="perTrackPregaps">Per-track layouts, or null.</param>
+    private static IReadOnlySet<int>? GetIndex00Tracks(
+        Dictionary<int, TrackPregapLayout>? perTrackPregaps
+    )
+    {
+        return perTrackPregaps
+            ?.Values.Where(static p => p.Representable)
+            .Select(static p => p.Track.Number)
+            .ToHashSet();
     }
 
     /// <summary>
@@ -303,27 +397,34 @@ public static class MdsInputPreparer
     }
 
     /// <summary>
-    ///     Rebuilds the image with the descriptor's pregap sectors inserted as zeros, keeping the
-    ///     first <see cref="MdsDisc.RawSectorSize" /> bytes of every sector when the source carries
-    ///     subchannel data. Returns null on success or a user-facing reason on failure.
+    ///     Rebuilds the image, materializing the pregap sectors the data file does not contain and
+    ///     keeping the stored ones, so every track's data sits at the LBA the cue names. The first
+    ///     <see cref="MdsDisc.RawSectorSize" /> bytes of every sector are kept when the source
+    ///     carries subchannel data. Returns null on success or a user-facing reason on failure.
     /// </summary>
-    /// <param name="sourcePath">The .mdf holding the track data.</param>
+    /// <param name="sourcePath">The .mdf (or decoded image) holding the track data.</param>
     /// <param name="destinationPath">Where the rebuilt image is written.</param>
     /// <param name="disc">The parsed Alcohol image.</param>
     /// <param name="stripSubchannel">True to drop the subchannel tail of every sector.</param>
+    /// <param name="layout">
+    ///     Per-track pregap layout: whether the track's pregap is missing and must be materialized,
+    ///     and whether the pregap is stored at the start of the track's data.
+    /// </param>
     /// <param name="token">Cancellation token.</param>
     private static async Task<string?> WritePregapPaddedImageAsync(
         string sourcePath,
         string destinationPath,
         MdsDisc disc,
         bool stripSubchannel,
+        Func<MdsTrack, (bool Pad, bool InFile)> layout,
         CancellationToken token
     )
     {
         var sourceSectorSize = disc.SectorSize;
         var outputSectorSize = stripSubchannel ? MdsDisc.RawSectorSize : sourceSectorSize;
         var expectedSourceBytes =
-            disc.Tracks.Sum(static t => t.LengthSectors) * sourceSectorSize;
+            disc.Tracks.Sum(t => layout(t).InFile ? t.LengthSectors + t.PregapSectors : t.LengthSectors)
+            * sourceSectorSize;
 
         long sourceLength;
         try
@@ -366,17 +467,23 @@ public static class MdsInputPreparer
         {
             token.ThrowIfCancellationRequested();
 
-            var pregapBytes = track.PregapSectors * outputSectorSize;
-            while (pregapBytes > 0)
+            var (padPregap, pregapInFile) = layout(track);
+            if (padPregap)
             {
-                var step = (int)Math.Min(pregapBytes, pregapBuffer.Length);
-                await output
-                    .WriteAsync(pregapBuffer.AsMemory(0, step), token)
-                    .ConfigureAwait(false);
-                pregapBytes -= step;
+                var pregapBytes = track.PregapSectors * outputSectorSize;
+                while (pregapBytes > 0)
+                {
+                    var step = (int)Math.Min(pregapBytes, pregapBuffer.Length);
+                    await output
+                        .WriteAsync(pregapBuffer.AsMemory(0, step), token)
+                        .ConfigureAwait(false);
+                    pregapBytes -= step;
+                }
             }
 
-            var remaining = track.LengthSectors;
+            var remaining = pregapInFile
+                ? track.LengthSectors + track.PregapSectors
+                : track.LengthSectors;
             while (remaining > 0)
             {
                 token.ThrowIfCancellationRequested();
@@ -500,14 +607,20 @@ public static class MdsInputPreparer
     /// <param name="token">Cancellation token.</param>
     /// <param name="pregapsInFile">
     ///     True when the referenced data file contains the descriptor's pregap sectors, so INDEX 00
-    ///     can be written for them.
+    ///     can be written for them. Ignored for a track when <paramref name="index00Tracks" /> is
+    ///     provided.
+    /// </param>
+    /// <param name="index00Tracks">
+    ///     Track numbers that get an INDEX 00 entry, or null to derive it from
+    ///     <paramref name="pregapsInFile" />. Used when the pregap layout differs per track.
     /// </param>
     public static async Task<string> WriteCueAsync(
         MdsDisc disc,
         string workDir,
         string dataFileReference,
         CancellationToken token,
-        bool pregapsInFile = false
+        bool pregapsInFile = false,
+        IReadOnlySet<int>? index00Tracks = null
     )
     {
         var builder = new StringBuilder();
@@ -522,7 +635,10 @@ public static class MdsInputPreparer
                 .Append(track.CueTrackType)
                 .Append("\r\n");
 
-            if (pregapsInFile && track.PregapSectors > 0)
+            var writeIndex00 =
+                track.PregapSectors > 0
+                && (index00Tracks is null ? pregapsInFile : index00Tracks.Contains(track.Number));
+            if (writeIndex00)
             {
                 var pregapLba = track.StartLba - track.PregapSectors;
                 if (pregapLba < 0) pregapLba = 0;
@@ -644,6 +760,19 @@ public static class MdsInputPreparer
         /// <summary>The data file lacks the pregap sectors; they have to be rebuilt as zeros.</summary>
         Padding
     }
+
+    /// <summary>One track's pregap layout, derived from the stored sector count an MDS v2 footer records.</summary>
+    /// <param name="Track">The track.</param>
+    /// <param name="PregapInFile">True when the data file already contains the pregap sectors.</param>
+    /// <param name="Representable">
+    ///     True when a cue can express the pregap: it has one and its start LBA leaves room for it
+    ///     (the first track's pregap before LBA 0 cannot be represented).
+    /// </param>
+    private sealed record TrackPregapLayout(
+        MdsTrack Track,
+        bool PregapInFile,
+        bool Representable
+    );
 
     /// <summary>What chdman should be handed for an Alcohol image.</summary>
     /// <param name="CuePath">Cue to convert as a CD, or null.</param>

@@ -22,14 +22,18 @@ internal static class ScreenshotService
 
     /// <summary>
     ///     Returns the preferred screenshot directory: <c>%LocalAppData%\BatchConvertToCHD\screenshots</c>
-    ///     (or the platform equivalent).
+    ///     (or the platform equivalent), falling back to the folder next to the application when
+    ///     the application-data root cannot be resolved.
     /// </summary>
     /// <returns>The preferred directory path.</returns>
     internal static string GetPreferredDirectory()
     {
-        return GetPreferredDirectory(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+        var applicationDataRoot = Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData
         );
+        return string.IsNullOrEmpty(applicationDataRoot)
+            ? GetFallbackDirectory(AppDomain.CurrentDomain.BaseDirectory)
+            : GetPreferredDirectory(applicationDataRoot);
     }
 
     /// <summary>

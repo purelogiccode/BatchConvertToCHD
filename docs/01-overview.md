@@ -28,7 +28,7 @@ Developed by [Pure Logic Code](https://www.purelogiccode.com), the application c
 - **Recursive structure preservation** — the output folder mirrors the input folder's directory hierarchy (`PathUtils.GetSafeRelativePath`).
 - **Robust extraction** — CHD → `.cue` (CD), `.iso` (DVD), `.gdi` (Dreamcast/Naomi), `.img` (HDD), `.avi` (laserdisc A/V), with automatic flag-based command detection via CHDSharp. Laserdisc A/V CHDs extract in-process, so they no longer need chdman.
 - **Laserdisc support** — `.avi` inputs convert with `createld` (A/V `avhu` codec), and A/V CHDs extract back to AVI, all through the built-in encoder.
-- **Checksum reports** — optional per-track SHA-1/CRC-32/XXH3 report (`.checksums.txt`) written next to each verified CHD.
+- **Checksum reports** — optional whole-image plus per-track SHA-1/CRC-32/XXH3 report (`.checksums.txt`) written next to each verified CHD.
 - **CHD Explorer** — browse the file system inside a CHD and read an Image Info report (header, codecs, metadata, tracks, per-codec hunk distribution).
 - **Archive integration** — `.zip`, `.7z`, `.rar` are extracted and processed transparently (SharpCompress, with a bundled 7-Zip fallback — `7za` on Windows, `7zz` on Linux/macOS — for archives the built-in extractor cannot read); multi-part RAR sets (`.partNN.rar`, renamed `.001` volumes) are decoded from their first volume.
 - **CloneCD support** — `.ccd` sets are parsed by CCDSharp and converted via an auto-generated CUE/BIN.
@@ -65,7 +65,7 @@ A file's extension is the least reliable thing about it. Every input's leading b
 - **Crash-aware error reporting** — when Windows kills chdman outright (e.g. exit code `0xC000001D` on a CPU lacking the build's instruction sets), the built-in CHDSharp encoder takes over automatically and the crash is decoded into plain language with guidance; a startup check warns when the bundled chdman cannot run. Startup logs record the process and OS architectures and which tool binary was selected.
 - **Safe deletion** — source files (and dependencies such as `.bin`, `.sub`) are only deleted after confirmed success, and a dependency a descriptor points at outside the selected input folder is kept and reported rather than deleted.
 - **Batch verification** — checksums and structural integrity of existing CHD files via CHDSharp.
-- **Optional checksum report** — per-track SHA-1, CRC-32 and XXH3 hashes (whole-image for non-CD images) written next to each verified CHD.
+- **Optional checksum report** — whole-image SHA-1, CRC-32 and XXH3 hashes plus per-track hashes for CD/GD-ROM images, written next to each verified CHD.
 - **Automated organization** — optionally move verified/failed files into `Success`/`Failed` subfolders; these folders are excluded from subsequent scans.
 - **Empty-folder cleanup** — empty subdirectories are removed after files are moved or deleted.
 - **Dependency check at startup** — on Windows the user is notified if `chdman.exe` is missing; conversions then run on the always-available built-in CHDSharp encoder, so a batch never refuses to start for a missing encoder.

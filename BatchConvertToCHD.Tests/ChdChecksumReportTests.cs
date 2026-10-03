@@ -1,5 +1,7 @@
 using BatchConvertToCHD.Services;
 using BatchConvertToCHD.Utilities;
+using CHDSharp;
+using CHDSharp.Models;
 
 namespace BatchConvertToCHD.Tests;
 
@@ -54,16 +56,18 @@ public class ChdChecksumReportTests : IDisposable
             CancellationToken.None
         );
 
-        var reportPath = ChdChecksumReport.Write(
-            chdPath,
-            "abcdef0123456789",
-            null,
-            CancellationToken.None
-        );
+        var reportPath = ChdChecksumReport.Write(chdPath, null, CancellationToken.None);
+
+        // The top SHA-1 must be the hash of the whole decompressed image, not the CHD header's
+        // combined hash (which differs for V4/V5).
+        var wholeImageSha1 = Chd
+            .ComputeHashes(chdPath, ChdHashType.Sha1, null, false, null, CancellationToken.None)
+            .First()
+            .ToHex(ChdHashType.Sha1);
 
         Assert.Equal(Path.ChangeExtension(chdPath, ChdChecksumReport.ReportExtension), reportPath);
         var report = File.ReadAllText(reportPath);
-        Assert.Contains("SHA-1:      abcdef0123456789", report, StringComparison.Ordinal);
+        Assert.Contains($"SHA-1:      {wholeImageSha1}", report, StringComparison.Ordinal);
         Assert.Contains("Track 01", report, StringComparison.Ordinal);
         Assert.Contains("CRC-32:", report, StringComparison.Ordinal);
         Assert.Contains("XXH3-64:", report, StringComparison.Ordinal);
@@ -83,7 +87,7 @@ public class ChdChecksumReportTests : IDisposable
             CancellationToken.None
         );
 
-        var reportPath = ChdChecksumReport.Write(chdPath, null, null, CancellationToken.None);
+        var reportPath = ChdChecksumReport.Write(chdPath, null, CancellationToken.None);
 
         var report = File.ReadAllText(reportPath);
         Assert.DoesNotContain("Track 01", report, StringComparison.Ordinal);

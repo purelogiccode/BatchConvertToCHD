@@ -704,17 +704,26 @@ internal partial class MainWindow
             {
                 try
                 {
+                    var viewerRan = false;
                     if (openedProcess is not null)
                     {
                         // The external application may read the file lazily. Deleting it while it
                         // is still open fails on Windows and removes it under the app on Unix, so
                         // wait for the viewer to exit instead of using a fixed delay.
+                        var startedAt = DateTime.UtcNow;
                         using (openedProcess)
                         {
                             await openedProcess.WaitForExitAsync();
                         }
+
+                        // A shell launcher (xdg-open, open, a DDE handler) exits as soon as it has
+                        // handed the file to the real viewer, which may still be starting. A quick
+                        // exit therefore gets the fixed grace delay below rather than deleting the
+                        // file out from under the viewer.
+                        viewerRan = DateTime.UtcNow - startedAt >= TimeSpan.FromSeconds(3);
                     }
-                    else
+
+                    if (!viewerRan)
                     {
                         await Task.Delay(
                             extracted ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(5)

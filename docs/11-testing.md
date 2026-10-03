@@ -5,9 +5,9 @@ nav_order: 12
 
 # 11. Testing
 
-The solution contains a single test project, `BatchConvertToCHD.Tests` (xUnit, `net10.0-windows`), with **1085 tests across 53 test classes**: 1057 unit tests plus 28 integration tests that need a local sample folder (see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
+The solution contains a single test project, `BatchConvertToCHD.Tests` (xUnit, `net10.0-windows`), with **1111 tests across 57 test classes**: 1083 unit tests plus 28 integration tests that need a local sample folder (see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
 
-> **Expected result on a machine without the local sample folders:** the 1057 unit tests pass, while the 28 integration tests fail on the missing sample data. CI excludes them with `--filter "Category!=Integration"`; a change that leaves exactly those 28 failing has broken nothing.
+> **Expected result on a machine without the local sample folders:** the 1083 unit tests pass, while the 28 integration tests fail on the missing sample data. CI excludes them with `--filter "Category!=Integration"`; a change that leaves exactly those 28 failing has broken nothing.
 
 ## 11.1 Running the Tests
 
@@ -45,7 +45,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 | `CcdParserTests.cs` / `CcdModelTests.cs` | CloneCD `.ccd` parsing (disc/session/track fields, MSF formatting), track-count bounds and overflow-safe parsing, and `IsoWriter` output: whole-sector extraction and rejection of a partial trailing sector |
 | `ChdSharpEncoderServiceTests.cs` | In-process `createcd`/`createdvd`/`createhd`/`createraw`/`createld` round-trips verified with `Chd.CheckFile`, header unit sizes, per-hunk progress callbacks, extraction-command detection for CD/DVD/laserdisc CHDs, unsupported-command rejection, rejection of inputs whose size is not a whole number of units, and non-AVI `createld` rejection |
 | `ChdSharpProgressLoggerTests.cs` | 10%-step throttling for reader and encoder reports, cumulative encoder ratio, repeated percents logged once, zero-total/zero-hunk edge cases, byte-count formatting |
-| `ChdChecksumReportTests.cs` | Report path/name, verified whole-image SHA-1 reuse, per-track blocks for CD, whole-image-only blocks for DVD, all three algorithms present |
+| `ChdChecksumReportTests.cs` | Report path/name, whole-image SHA-1 equals a fresh `ComputeHashes` pass, per-track blocks for CD, whole-image-only blocks for DVD, all three algorithms present |
 | `ChdInfoReportTests.cs` | CD report (version/type/metadata/tracks/hunks/SHA-1), DVD report without a track section, unreadable-header text instead of an exception |
 | `CueNormalizerTests.cs` | Encoding detection (CP949/CP1251/CP932/UTF-8/UTF-32LE BOM), canonicalization, zero-padding resolution, unresolved names, MP3 transform hook, canonical write format |
 | `CueWorkDirectoryTests.cs` | Work-dir creation rules, in-place BOM fast path, MP3→WAV decoding (fake + real NAudio decoders), **end-to-end tests running real `chdman.exe`** (BOM regression, cue/bin/mp3, cue/iso/mp3; skipped when chdman is absent) |
@@ -77,6 +77,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 | `RarVolumeSetTests.cs` | `partNN.rar` name parsing (padding, case, rejects), first-volume resolution from a later part, sets kept apart within a folder, ordered `.partNN` / `.001` / old-style `.rNN` volume enumeration, total sizes, and first-volume name reconstruction |
 | `TrackBinCueBuilderTests.cs` | `(Track N)` set recognition and ordering, multi-FILE cue content, data track mode vs. AUDIO tracks, non-track-set rejection |
 | `MdsTests.cs` | `.mds` header/session/track parsing, medium type, low-nibble mode-to-cue mapping, sector-size classification (2352 / 2448 / 2368 / 2336 / 2048), implausible session counts, `.mdf` lookup (declared footer names incl. UTF-16 and `*.mdf` wildcards, exact, decorated, ambiguous, subdirectory, split `.i00`, Unicode composition, multi-file join), subchannel stripping, pregap rebuild (`INDEX 00` with and without `.pregap.bin`), MSF formatting, and the prepared shapes |
+| `MdsPregapLayoutTests.cs` | Per-track v2 pregap layout from `StoredDataSectors`: mixed stored/missing pregaps are rebuilt selectively with every `INDEX 00` at the right LBA, all-stored images get `INDEX 00` without a rebuild, and the first track's pregap before LBA 0 is not materialized |
 | `MdsV2Tests.cs` | MDS v2 / MDX: RIPEMD-160 known vectors, descriptor decryption and parsing, encrypted/compressed detection, an MDX container larger than the v1 descriptor cap, byte-for-byte decoding of the mdsx plain / compressed / password-encrypted fixtures, and the wrong-password failure |
 | `IszHeaderTests.cs` | **Every header field read at its documented offset** (the test that catches an offset mistake), the 64-byte UltraISO checksum fields, 64-bit image-size arithmetic for dual-layer sizes, signature and short-input rejection, legal no-chunk-table headers, and each refusal in `GetUnusableReason`: all four encryption modes, version ≠ 1, a later segment opened directly, zero-sector headers, zero/implausible chunk sizes and unreadable pointer widths |
 | `IszDecoderTests.cs` | Chunk-entry bit-packing for 2/3/4-byte pointers, the table obfuscation itself, segment naming for the `.i01` and both `.partNN` schemes, round trips for zlib / bzip2 (stripped `BZh`) / stored / all-zero (with and without recorded lengths) and mixed chunk types, trailing partial chunks, checksummed images (whole, split and no-table), images with no chunk table, two-segment images with a chunk straddling the boundary, and the refusals: not-an-ISZ, encrypted, truncated file, truncated chunk table, corrupt compressed data, checksum mismatch, missing segment, and a segment from a different image |
@@ -111,7 +112,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 4. For chdman-dependent tests, early-return when `chdman.exe` is absent from `AppContext.BaseDirectory`.
 5. Prefer building binary fixtures in code (see `IszImageBuilder`) over committing them. Commit one only when the format cannot be generated trustworthily in-repo, as with `ecm-sample.ecm` (the reference encoder's own output) or the WinRAR-produced RAR volume set (there is no RAR writer in the repository).
 6. When a fixture asserts agreement with an outside implementation, add a **guard test** that the fixture still covers the cases it is meant to. A fixture can be regenerated more simply and silently stop testing anything.
-7. Run the full suite before pushing. On the maintainer's machine a full run is **1085 passed / 0 failed**; CI runs the unit tests only, via `--filter "Category!=Integration"` (1057 tests). The integration classes' behaviour without samples is described in §11.5.
+7. Run the full suite before pushing. On the maintainer's machine a full run is **1111 passed / 0 failed**; CI runs the unit tests only, via `--filter "Category!=Integration"` (1083 tests). The integration classes' behaviour without samples is described in §11.5.
 
 ### Analyzer constraints worth knowing
 

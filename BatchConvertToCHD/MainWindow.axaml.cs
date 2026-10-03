@@ -5146,7 +5146,7 @@ internal partial class MainWindow : Window, IDisposable
                 }
 
                 if (ExportChecksumsCheckBox.IsChecked == true)
-                    await WriteChecksumReportAsync(finalPath, result!, token);
+                    await WriteChecksumReportAsync(finalPath, token);
             }
             else
             {
@@ -5977,10 +5977,10 @@ internal partial class MainWindow : Window, IDisposable
             : "createraw";
 
         var args = $"{command} -i \"{inputFile}\" -o \"{outputFile}\" -f -np {cores}";
-        if (isRaw)
+        if (string.Equals(command, "createraw", StringComparison.Ordinal))
         {
             // Only createraw takes a unit size; createcd derives 2352 from the cue's track types
-            // and rejects "-us" ("Option '-us' not valid for this command").
+            // and createdvd/createhd reject "-us" ("Option '-us' not valid for this command").
             args += " -us 2352";
         }
 
@@ -6419,8 +6419,9 @@ internal partial class MainWindow : Window, IDisposable
                 // Skip sector-size check for text-based descriptor files (.cue/.gdi/.toc).
                 // These are plain text files that reference separate data files (.bin/.iso/.raw);
                 // their file size is irrelevant to sector alignment. chdman handles them
-                // correctly when the referenced data files are present.
-                if (inputExt is not (".cue" or ".gdi" or ".toc"))
+                // correctly when the referenced data files are present. An .avi is a laserdisc
+                // container whose size has nothing to do with CD/DVD sectors either.
+                if (inputExt is not (".cue" or ".gdi" or ".toc" or ".avi"))
                 {
                     var fileSize = new FileInfo(effectiveInput).Length;
                     if (fileSize > 0)
@@ -7478,19 +7479,14 @@ internal partial class MainWindow : Window, IDisposable
     ///     as a warning and never fails the verification.
     /// </summary>
     /// <param name="chdFile">Full path of the verified CHD.</param>
-    /// <param name="result">The successful verification result.</param>
     /// <param name="token">Cancellation token.</param>
-    private async Task WriteChecksumReportAsync(
-        string chdFile,
-        ChdResult result,
-        CancellationToken token
-    )
+    private async Task WriteChecksumReportAsync(string chdFile, CancellationToken token)
     {
         try
         {
             var progress = new ChdSharpProgressLogger(LogMessage, "Hashing");
             var reportPath = await Task.Run(
-                () => ChdChecksumReport.Write(chdFile, result.Sha1Hex, progress, token),
+                () => ChdChecksumReport.Write(chdFile, progress, token),
                 token
             );
             LogMessage($"  Checksums written: {Path.GetFileName(reportPath)}");

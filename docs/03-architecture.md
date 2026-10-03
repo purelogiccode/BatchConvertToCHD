@@ -37,7 +37,7 @@ CSharp_BatchConvertToCHD.sln
 │   │   └── UpdateService.cs               → GitHub update checks
 │   └── Utilities/
 │       ├── BinCueGenerator.cs             → auto-cue generation for bin-only archives
-│       ├── ChdChecksumReport.cs           → per-track SHA-1/CRC-32/XXH3 report writer
+│       ├── ChdChecksumReport.cs           → whole-image + per-track SHA-1/CRC-32/XXH3 report writer
 │       ├── ChdInfoReport.cs               → Explorer Image Info report builder
 │       ├── ChdSharpProgressLogger.cs      → 10%-step CHDSharp progress logging
 │       ├── CueFileLineTransform.cs / CueFileReference.cs / CueNormalizationResult.cs

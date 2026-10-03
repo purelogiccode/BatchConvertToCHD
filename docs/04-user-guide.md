@@ -72,7 +72,7 @@ Each file's encoder mode is chosen automatically (see [Technical Logic](01-overv
 
 - Verification is fully local: it uses the **CHDSharp** library (`Chd.CheckFile`) to check structural integrity and checksums — no `chdman` process is launched.
 - Success lines show the CHD version and SHA-1, e.g. `V5 — SHA1: 1f2e3d...`.
-- **Checksum report**: when enabled, each verified CHD gets a `<name>.checksums.txt` next to it (following the file into the Success folder) with the verified whole-image SHA-1 plus SHA-1, CRC-32 and XXH3-64 for every track of a CD/GD-ROM image (whole-image hashes for other types). The hashing pass logs `CHDSHARP: Hashing, N% complete...` and a failure to write the report is a warning, never a verification failure.
+- **Checksum report**: when enabled, each verified CHD gets a `<name>.checksums.txt` next to it (following the file into the Success folder) with the whole-image SHA-1, CRC-32 and XXH3-64 plus SHA-1, CRC-32 and XXH3-64 for every track of a CD/GD-ROM image. The whole-image hashes cover the decompressed image (the CHD header's combined SHA-1 is not a content hash, so it is not reused). The hashing pass logs `CHDSHARP: Hashing, N% complete...` and a failure to write the report is a warning, never a verification failure.
 - Moved files land in `inputFolder\Success` and `inputFolder\Failed` (created automatically). These folders are excluded from subsequent recursive scans.
 - With subfolder search, the relative directory structure is preserved under `Success`/`Failed`.
 - Moving uses retry-with-backoff so transient locks (antivirus/indexer) don't fail the move; a persistent failure is logged and reported but does **not** abort the batch.

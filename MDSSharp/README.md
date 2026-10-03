@@ -273,7 +273,7 @@ Turns a parsed image into something `chdman` can read.
 |---|---|
 | `static Task<Result> PrepareAsync(MdsDisc disc, string workDir, Action<string>? onLog, CancellationToken token, string? password = null)` | Runs the full pipeline: decode MDS v2/MDX track data when needed, join, strip and cue. Pass `password` for images whose track data is password-protected. |
 | `static Task<string?> StripSubchannelAsync(string sourcePath, string destinationPath, int sectorSize, CancellationToken token)` | Keeps the 2352 data bytes of each oversized sector. `null` on success. |
-| `static Task<string> WriteCueAsync(MdsDisc disc, string workDir, string dataFileReference, CancellationToken token, bool pregapsInFile = false)` | Writes a single-file CUE and returns its path. `pregapsInFile` adds `INDEX 00` for tracks whose pregap sectors are present in the referenced file. |
+| `static Task<string> WriteCueAsync(MdsDisc disc, string workDir, string dataFileReference, CancellationToken token, bool pregapsInFile = false, IReadOnlySet<int>? index00Tracks = null)` | Writes a single-file CUE and returns its path. `pregapsInFile` adds `INDEX 00` for tracks whose pregap sectors are present in the referenced file; `index00Tracks` overrides that per track when the pregap layout differs between tracks. |
 | `static string FormatMsf(long lba)` | Formats an absolute LBA as `MM:SS:FF`. |
 
 ### SplitImageJoiner
@@ -290,13 +290,14 @@ Turns a parsed image into something `chdman` can read.
 |---|---|
 | `MdsMedium` | Medium type: `Cd`, `CdR`, `CdRw`, `Dvd`, `DvdMinusR`, or `Unknown`. |
 | `MdsDisc` | Parsed image: `SessionCount`, `Tracks`, `MdsPath`, `MdfPath`, `MediumType`, `DataFilePaths`, `HasEncryptedTrackData`, `HasCompressedTrackData`, `IsMdxContainer`, plus constants (`RawSectorSize` 2352, `RawPlusSubchannelSize` 2448, `RawPlusShortSubchannelSize` 2368, `Mode2XaSectorSize` 2336, `CookedSectorSize` 2048) and computed `SectorSize`, `IsDvdImage`, `IsCookedCd`, `IsDvdMedia`, `IsCdMedia`, `NeedsSubchannelStrip`, `IsPlainRawCd`, `AllTracksDescribable`, `HasPregapInfo`, `Summary`. |
-| `MdsTrack` | One track: `Number`, `ModeByte`, `SectorSize`, `StartLba`, `PregapSectors`, `LengthSectors`, `SubchannelMode`, `AdrCtl`, plus computed `IsAudio`, `CueTrackType`, `Description`. |
+| `MdsTrack` | One track: `Number`, `ModeByte`, `SectorSize`, `StartLba`, `PregapSectors`, `LengthSectors`, `StoredDataSectors` (MDS v2 footer count; `LengthSectors` = pregap missing, `LengthSectors` + `PregapSectors` = pregap stored), `SubchannelMode`, `AdrCtl`, plus computed `IsAudio`, `CueTrackType`, `Description`. |
 | `MdsInputPreparer.Result` | Preparation outcome: `CuePath`, `DvdImagePath`, `FailureReason`, `Success`. |
 
 ## Supported images
 
 - **Descriptors** — `MEDIA DESCRIPTOR` signature, medium type, session table and track table, plus the per-track extra blocks (pregap and length) and footer blocks (data file names). Up to 99 sessions; lead-in and lead-out entries are skipped.
 - **MDS v2 / MDX descriptors** — the Daemon Tools variant (`MEDIA DESCRIPTOR` + version 2). The descriptor is decrypted and decompressed transparently, and its 32-byte session, 80-byte track and 32-byte footer blocks are parsed, including UTF-16 file names. Compressed tracks are decoded from their compression tables (stored, run-length and deflate groups); encrypted tracks are decrypted with AES-256 LRW (password-less/TAGES or a supplied password); single-file `.mdx` containers keep their descriptor and data in one file, which is read directly.
+- **Per-track pregaps** — each footer's `track_data_length` is the sectors actually stored, so `StoredDataSectors` tells whether a track's pregap is in the data file (`LengthSectors` = missing, `LengthSectors` + `PregapSectors` = stored, the layout libMirage validates). Preparation materializes only the missing, representable pregaps as zeros, so a v2 image that stores one track's pregap and omits another's still gets every `INDEX 00`/`INDEX 01` at the right LBA. The first track's pregap before LBA 0 is never materialized.
 - **Medium types** — CD, CD-R, CD-RW (0x00–0x02) and DVD, DVD-R (0x10, 0x12); other values fall back to inspecting the sector sizes.
 - **Track modes** — audio, Mode 1 and the Mode 2 forms, selected by the low nibble of the mode byte and mapped to `AUDIO`, `MODE1/2352`/`MODE1/2048` and `MODE2/2352`/`MODE2/2336`.
 - **Data files** — one or more files named by the descriptor (single-byte or UTF-16 names, `*.mdf` wildcards), split `.i00`/`.i01` sets, split `.001`/`.002` sets.

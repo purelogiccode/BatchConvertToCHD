@@ -270,7 +270,11 @@ internal static class PathUtils
         // or near MAX_PATH) or its volume cannot hold the operation, because a fallback folder on a
         // drive root otherwise litters every drive the app happens to see.
         var systemTemp = Path.GetTempPath();
-        if (IsChdmanSafePath(systemTemp) && GetAvailableFreeSpace(systemTempRoot) >= requiredFree)
+        if (
+            IsChdmanSafePath(systemTemp)
+            && GetAvailableFreeSpace(systemTempRoot) >= requiredFree
+            && IsRootDirectoryWritable(systemTemp)
+        )
         {
             return Path.Combine(systemTemp, $"{tempDirPrefix}{guid}");
         }
@@ -362,12 +366,16 @@ internal static class PathUtils
             var rootFull = Path.GetFullPath(root).TrimEnd(separators);
             var candidateFull = Path.GetFullPath(candidate).TrimEnd(separators);
 
-            if (string.Equals(rootFull, candidateFull, StringComparison.OrdinalIgnoreCase)) return true;
+            // Windows paths are case-insensitive; on Linux/macOS two paths differing only in case
+            // are different directories, and treating them as equal would let a descriptor delete
+            // a file outside the chosen input folder.
+            var comparison = OperatingSystem.IsWindows()
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
 
-            return candidateFull.StartsWith(
-                rootFull + Path.DirectorySeparatorChar,
-                StringComparison.OrdinalIgnoreCase
-            );
+            if (string.Equals(rootFull, candidateFull, comparison)) return true;
+
+            return candidateFull.StartsWith(rootFull + Path.DirectorySeparatorChar, comparison);
         }
         catch (Exception ex)
         {

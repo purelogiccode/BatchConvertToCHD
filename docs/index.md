@@ -16,7 +16,7 @@ This documentation covers the project from both a user and a developer perspecti
 | 1 | [Project Overview](01-overview.md) | Everyone | What the app does, key features, supported formats, content-based routing, technical logic |
 | 2 | [Getting Started](02-getting-started.md) | Users & devs | Requirements, installation, building from source, command line usage |
 | 3 | [Architecture](03-architecture.md) | Developers | Solution layout, projects, dependency graph, startup sequence, data flow |
-| 4 | [User Guide](04-user-guide.md) | Users | The three workflows: conversion, extraction, verification; options and hotkeys |
+| 4 | [User Guide](04-user-guide.md) | Users | The four tabs: conversion, verification, extraction, Explorer; options and hotkeys |
 | 5 | [Conversion Pipeline (Technical)](05-conversion-pipeline.md) | Developers | Content resolution, per-format routing, chdman wrapper, cue normalization, ISZ/ECM/Alcohol/split sets, error handling |
 | 6 | [Extraction & Verification (Technical)](06-extraction-and-verification.md) | Developers | CHD extraction internals, verification, file moves, partial-extraction handling |
 | 7 | [Services Reference](07-services-reference.md) | Developers | ArchiveService, UpdateService, StatsService, FileWatcherService, AppHttpClient, more |
@@ -58,7 +58,7 @@ CSharp_BatchConvertToCHD/
 │   ├── Services/                   # Archive, BugReport, FileWatcher, Stats, Update, ...
 │   └── Utilities/                  # PathUtils, CueNormalizer, GameFileParser, ...
 │       └── Ecm/                    # in-process ECM decoding
-├── BatchConvertToCHD.Tests/        # xUnit test suite (1085 tests)
+├── BatchConvertToCHD.Tests/        # xUnit test suite (1111 tests)
 ├── CCDSharp/                       # CloneCD (.ccd/.img/.sub) parsing library
 ├── CSOSharp/                       # CSO/CISO decompression library (deflate + LZ4)
 ├── PBPSharp/                       # PlayStation PBP extraction + SFO parsing library
