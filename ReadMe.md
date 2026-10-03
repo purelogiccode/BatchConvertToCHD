@@ -96,8 +96,9 @@ A file's extension is the least reliable thing about it. Every input is identifi
 
 ### 📊 Performance & UI
 *   **Real-time Telemetry**: Monitor disk write/read speeds and elapsed time during operations.
-*   **Optimized Logging**: High-performance logging system with automatic truncation to keep the application responsive during long-running tasks.
-*   **AppData Storage**: Logs and F8 screenshots are stored under `%LocalAppData%\BatchConvertToCHD` (`logs` / `screenshots`); the title-bar **AppData** button opens the folder.
+*   **Optimized Logging**: Log lines are batched and the on-screen text is capped, so a very large log never freezes the window during long-running tasks.
+*   **AppData Storage**: Logs are stored under `%LocalAppData%\BatchConvertToCHD\logs`; F8 screenshots go into a `Screenshot` folder next to the app (falling back to AppData when the install folder is read-only). The title-bar **AppData** button opens the folder.
+*   **Donate Button**: The title bar links straight to the project's donation page, left of the About button.
 *   **Avalonia Theming**: Modern dark-themed UI powered by [Avalonia](https://avaloniaui.net/) 12.1 with its Fluent theme, a static dark background, rounded corners, and a custom title bar.
 
 ### 🔄 Updates & Stability

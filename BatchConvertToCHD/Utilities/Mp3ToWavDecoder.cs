@@ -36,7 +36,7 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
     )
     {
         return Task.Run(
-            () =>
+            async () =>
             {
                 token.ThrowIfCancellationRequested();
                 onLog?.Invoke(
@@ -105,7 +105,7 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
                     else
 #endif
                     {
-                        DecodeWithFfmpeg(mp3Path, wavPath);
+                        await DecodeWithFfmpegAsync(mp3Path, wavPath, token).ConfigureAwait(false);
                     }
 
                     if (WavHasAudioData(wavPath))
@@ -215,7 +215,13 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
     /// </summary>
     /// <param name="mp3Path">Path of the MP3 file to decode.</param>
     /// <param name="wavPath">Destination path for the decoded 44100 Hz stereo 16-bit PCM WAV file.</param>
-    private static void DecodeWithFfmpeg(string mp3Path, string wavPath)
+    /// <param name="token">Cancellation token; the ffmpeg child is killed when it fires.</param>
+    /// <returns>A task that completes when ffmpeg has finished.</returns>
+    private static async Task DecodeWithFfmpegAsync(
+        string mp3Path,
+        string wavPath,
+        CancellationToken token
+    )
     {
         var ffmpegPath =
             FindExecutableOnPath("ffmpeg")
@@ -223,11 +229,11 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
                 "ffmpeg was not found on PATH; install it to decode MP3 tracks on this platform."
             );
 
-        using var process = Process.Start(
-            new ProcessStartInfo(ffmpegPath)
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo(ffmpegPath)
             {
                 RedirectStandardError = true,
-                RedirectStandardOutput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 ArgumentList =
@@ -247,19 +253,39 @@ internal sealed class Mp3ToWavDecoder : IMp3Decoder
                     wavPath
                 }
             }
-        ) ?? throw new InvalidOperationException("Failed to start ffmpeg.");
+        };
 
-        using (process)
+        process.Start();
+
+        // stderr is drained while the process runs, and the wait is cancellable: a blocking
+        // WaitForExit() ignored cancellation and could deadlock on a full stderr pipe.
+        var errorTask = process.StandardError.ReadToEndAsync(token);
+        try
         {
-            var errorOutput = process.StandardError.ReadToEnd();
-            process.WaitForExit();
-
-            if (process.ExitCode != 0)
+            await process.WaitForExitAsync(token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            try
             {
-                throw new InvalidDataException(
-                    $"ffmpeg failed with exit code {process.ExitCode}: {errorOutput}"
-                );
+                if (!process.HasExited)
+                    process.Kill(true);
             }
+            catch
+            {
+                // Process already exited or access denied.
+            }
+
+            throw;
+        }
+
+        var errorOutput = await errorTask.ConfigureAwait(false);
+
+        if (process.ExitCode != 0)
+        {
+            throw new InvalidDataException(
+                $"ffmpeg failed with exit code {process.ExitCode}: {errorOutput}"
+            );
         }
     }
 

@@ -194,7 +194,12 @@ public sealed class CsoFile : IDisposable
     {
         indexTable = [];
 
-        var totalEntries = header.TotalBlocks + 1;
+        var totalEntries = (long)header.TotalBlocks + 1;
+
+        // The index has to fit in the file; a header claiming a huge block count must not drive a
+        // multi-gigabyte allocation (or overflow) before the first read fails.
+        if (totalEntries > (stream.Length - CsoHeader.ExpectedHeaderSize) / sizeof(uint))
+            return CsoError.CorruptIndex;
 
         indexTable = new uint[totalEntries];
 
@@ -257,7 +262,6 @@ public sealed class CsoFile : IDisposable
             var currentEntry = _indexTable[blockIndex];
             var nextEntry = _indexTable[blockIndex + 1];
 
-            var isUncompressed = (currentEntry & 0x80000000) != 0;
             var rawOffset = (long)(currentEntry & 0x7FFFFFFF) << Header.IndexOffsetShift;
             var nextRawOffset = (long)(nextEntry & 0x7FFFFFFF) << Header.IndexOffsetShift;
             var compressedSize = (int)(nextRawOffset - rawOffset);
@@ -265,25 +269,38 @@ public sealed class CsoFile : IDisposable
             if (compressedSize < 0)
                 return CsoError.CorruptIndex;
 
+            var blockSize = (int)Header.BlockSize;
+
             if (compressedSize == 0)
             {
-                Array.Clear(buffer, offset, (int)Header.BlockSize);
-                bytesRead = (int)Header.BlockSize;
+                Array.Clear(buffer, offset, blockSize);
+                bytesRead = blockSize;
                 return CsoError.None;
             }
 
             _stream.Seek(rawOffset, SeekOrigin.Begin);
 
-            if (isUncompressed)
+            // CSO v1 marks a stored block with the high index bit. CSO v2 (ZSO) has no stored flag:
+            // a block is compressed only when it is smaller than a full block, and the high bit
+            // selects LZ4 over deflate. Using v1 semantics for v2 read compressed bytes as data
+            // (silent corruption) or pushed stored blocks through the LZ4 decoder (failure).
+            var isStored = Header.IsV1
+                ? (currentEntry & 0x80000000) != 0
+                : compressedSize >= blockSize;
+
+            if (isStored)
             {
-                _stream.ReadExactly(buffer, offset, (int)Header.BlockSize);
-                bytesRead = (int)Header.BlockSize;
+                var toRead = Math.Min(blockSize, compressedSize);
+                _stream.ReadExactly(buffer, offset, toRead);
+                if (toRead < blockSize) Array.Clear(buffer, offset + toRead, blockSize - toRead);
+
+                bytesRead = blockSize;
                 return CsoError.None;
             }
 
-            if (Header.IsV2) return DecompressLz4Block(compressedSize, buffer, offset, out bytesRead);
-
-            return DecompressDeflateBlock(compressedSize, buffer, offset, out bytesRead);
+            return Header.IsV2 && (currentEntry & 0x80000000) != 0
+                ? DecompressLz4Block(compressedSize, buffer, offset, out bytesRead)
+                : DecompressDeflateBlock(compressedSize, buffer, offset, out bytesRead);
         }
         catch (IOException)
         {

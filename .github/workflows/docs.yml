@@ -4,10 +4,12 @@
 #
 # docs/ is the single source of truth. Do not edit the wiki by hand; the wiki
 # job copies docs/*.md over (index.md becomes Home.md, Jekyll front matter is
-# stripped), adds WhatsNew.md, and pushes. _Sidebar.md is wiki-only and is left
-# alone. Requires a repository secret named WIKI_TOKEN (classic PAT with the
-# "repo" scope, or a fine-grained PAT with Contents: Read and write) because
-# GITHUB_TOKEN cannot push to the wiki repository.
+# stripped), adds WhatsNew.md, and pushes. docs/_Sidebar.md becomes the wiki
+# side menu; Jekyll ignores the underscore-prefixed file. WhatsNew.md is staged
+# into docs/ before the Jekyll build so the Pages site renders it too. Requires
+# a repository secret named WIKI_TOKEN (classic PAT with the "repo" scope, or a
+# fine-grained PAT with Contents: Read and write) because GITHUB_TOKEN cannot
+# push to the wiki repository.
 #
 # Before the Pages deployment can run, enable Pages in the repository:
 #   Settings -> Pages -> Source: "GitHub Actions" -> Save
@@ -38,6 +40,8 @@ jobs:
         uses: actions/checkout@v7
       - name: Configure Pages
         uses: actions/configure-pages@v6
+      - name: Stage WhatsNew.md for the site
+        run: cp WhatsNew.md docs/WhatsNew.md
       - name: Build with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:

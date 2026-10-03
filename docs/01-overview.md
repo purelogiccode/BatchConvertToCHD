@@ -54,13 +54,13 @@ A file's extension is the least reliable thing about it. Every input's leading b
 
 ### Integrity, Safety & Verification
 - **A good CHD is never destroyed** — conversions are written to a `.chdtmp` staging file and moved into place only on success. chdman runs with `-f` and truncates its output before it can fail, so without staging a second input mapping to the same output name could wipe out a working CHD produced by the first.
-- **Output collision warnings** — the output name comes from the input's base name, so `Game.cue`, `Game.zip` and `Game.ccd` in one folder all target `Game.chd`. Colliding inputs are reported at the start of the batch, before time is spent on them.
-- **In-place conversion and extraction** — the output folder may be the same as the source folder, or inside it. Conversion is inherently safe there (the output is always `<base>.chd`, which is never an input, and it is staged before replacing anything). Extraction takes the CHD's base name, so when its output would land on existing files the whole disc is diverted into a subfolder named after it instead. Nothing is overwritten, nothing is asked, and the layout only changes for the discs that actually clash.
+- **Output collision warnings** — the output name comes from the input's base name, so `Game.cue`, `Game.zip` and `Game.ccd` in one folder all target `Game.chd`. Colliding inputs are reported at the start of the batch, before time is spent on them; archives are judged by what they actually contain, and any duplicate output produced later in the batch is reported and skipped instead of silently replacing the first.
+- **In-place conversion and extraction** — the output folder may be the same as the source folder, or inside it. Conversion is inherently safe there (the output is always `<base>.chd`, which is never an input, and it is staged before replacing anything). Extraction takes the CHD's base name, so when its output would land on existing files (a cue/bin or gdi/bin set included) the whole disc is diverted into a subfolder named after it instead. Nothing is overwritten, nothing is asked, and the layout only changes for the discs that actually clash.
 - **Disk-space preflight** — free space on the output drive is checked immediately before chdman starts; clearly insufficient space skips the file with both figures named instead of failing an hour in.
 - **Output-folder preflight** — the destination is probed for write access before a batch starts; an unwritable folder (e.g. inside `Program Files` without elevation) produces one clear message instead of a run of per-file "Permission denied" failures.
 - **chdman-safe path handling** — non-ASCII characters anywhere along a path (`C:\Users\Kauê Chacon\...`, `D:\Emulátory\...`) and paths at or beyond MAX_PATH are routed through short ASCII staging directories, because older chdman builds mangle or cannot open such paths. Cue work directories avoid a non-ASCII system temp folder the same way.
 - **Crash-aware error reporting** — when Windows kills chdman outright (e.g. exit code `0xC000001D` on a CPU lacking the build's instruction sets), the built-in CHDSharp encoder takes over automatically and the crash is decoded into plain language with guidance; a startup check warns when the bundled chdman cannot run. Startup logs record the process and OS architectures and which tool binary was selected.
-- **Safe deletion** — source files (and dependencies such as `.bin`, `.sub`) are only deleted after confirmed success.
+- **Safe deletion** — source files (and dependencies such as `.bin`, `.sub`) are only deleted after confirmed success, and a dependency a descriptor points at outside the selected input folder is kept and reported rather than deleted.
 - **Batch verification** — checksums and structural integrity of existing CHD files via CHDSharp.
 - **Automated organization** — optionally move verified/failed files into `Success`/`Failed` subfolders; these folders are excluded from subsequent scans.
 - **Empty-folder cleanup** — empty subdirectories are removed after files are moved or deleted.
@@ -71,7 +71,7 @@ A file's extension is the least reliable thing about it. Every input's leading b
 
 ### Performance & UI
 - **Real-time telemetry** — disk write/read speeds and elapsed time during operations.
-- **High-performance logging** — Serilog with UI log truncation at 100,000 characters.
+- **High-performance logging** — Serilog with a batched UI log capped at 50,000 characters, so a large log cannot freeze the window.
 - **Avalonia Fluent theming** — dark theme with a static dark background and rounded corners on Windows, Linux and macOS.
 
 ### Updates & Stability

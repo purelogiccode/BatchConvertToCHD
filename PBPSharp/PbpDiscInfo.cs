@@ -369,7 +369,10 @@ public sealed class PbpDiscInfo
 
                 ReadBlock(i, outBuffer, out var bufferSize);
 
-                if (totalWritten + bufferSize > IsoSize) bufferSize = (int)(IsoSize - totalWritten);
+                // IsoSize 0 means the size is unknown, so every entry is written in full; capping
+                // against it would write nothing at all and silently produce an empty BIN.
+                if (IsoSize > 0 && totalWritten + bufferSize > IsoSize)
+                    bufferSize = (int)(IsoSize - totalWritten);
 
                 outputStream.Write(outBuffer, 0, bufferSize);
                 totalWritten += (uint)bufferSize;

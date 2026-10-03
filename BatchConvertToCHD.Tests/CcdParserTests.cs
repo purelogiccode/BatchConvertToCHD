@@ -303,6 +303,47 @@ public class CcdParserTests : IDisposable
     }
 
     [Fact]
+    public void ParseWithHugeTocEntriesDoesNotAllocateUnboundedTracks()
+    {
+        // Regression: the declared TOC entry count was trusted as the track-number bound, so a
+        // descriptor claiming billions of entries made the parser allocate a Track for every
+        // number up to the track it saw (OOM). The bound is now clamped to 99.
+        var disc = Parse(
+            """
+            [Disc]
+            TocEntries=2000000000
+
+            [TRACK 2000000000]
+            MODE=1
+            INDEX 1=0
+            """
+        );
+
+        Assert.Empty(disc.Tracks);
+    }
+
+    [Fact]
+    public void ParseWithOverflowingFieldValuesDoesNotThrow()
+    {
+        var disc = Parse(
+            """
+            [CloneCD]
+            Version=99999999999
+
+            [Disc]
+            TocEntries=99999999999
+            Sessions=99999999999
+
+            [TRACK 99999999999]
+            MODE=1
+            """
+        );
+
+        Assert.Equal(0, disc.Version);
+        Assert.Empty(disc.Tracks);
+    }
+
+    [Fact]
     public void ParseFileThrowsFileNotFoundExceptionWhenMissing()
     {
         var missing = Path.Combine(_tempDir, "missing.ccd");

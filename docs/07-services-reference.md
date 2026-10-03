@@ -108,8 +108,10 @@ The watcher is started when the user picks the conversion input folder and is co
 
 Runs once at startup on a background thread and deletes leftovers from older versions next to the executable:
 
-- Folders: `logs`, `Resources`, `Screenshot`
+- Folders: `logs`, `Resources`
 - Files: `maxcso.exe`, `psxpackager.exe`
+
+The `Screenshot` folder is deliberately not cleaned: it is where F8 screenshots are saved.
 
 All failures are silently ignored (files may be in use).
 
@@ -117,11 +119,11 @@ All failures are silently ignored (files may be in use).
 
 ## 7.7 ScreenshotService
 
-`internal sealed class ScreenshotService` (`ScreenshotService.cs:14`)
+`internal static class ScreenshotService` (`ScreenshotService.cs:15`)
 
 Captures the focused application window and saves it as a PNG. **F8** is handled by the window itself (`MainWindow_KeyDown` in `MainWindow.axaml.cs`), so the hotkey only fires while the app window is focused; the capture is rendered with Avalonia's `RenderTargetBitmap` (sized from the window bounds and `RenderScaling`), so it works the same on every platform:
 
-- Location: `%LocalAppData%\BatchConvertToCHD\screenshots` (created on demand; the platform equivalent elsewhere).
+- Location: the `Screenshot` folder next to the application executable (created on demand). When that folder is not writable (for example a read-only install location), the capture falls back to `%LocalAppData%\BatchConvertToCHD` (the platform equivalent elsewhere).
 - Filename: `screenshot_yyyy-MM-dd_HH-mm-ss-fff.png`.
 - `TakeScreenshot(Window)` (static) returns the saved path, or `null` on failure (the error is logged).
 - Triggered by the F8 hotkey (see [User Guide](04-user-guide.md#44-screenshot-hotkey-f8)).

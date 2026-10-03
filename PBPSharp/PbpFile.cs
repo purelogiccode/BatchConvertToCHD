@@ -306,7 +306,12 @@ public sealed class PbpFile : IDisposable
                 switch (entry.Format)
                 {
                     case 0x0204:
-                        entry.Value = ReadNullTerminatedString(stream, (int)entry.Length);
+                        // The declared length is untrusted; it cannot exceed what is left in the
+                        // file, so a corrupt entry cannot drive a multi-gigabyte allocation.
+                        var remaining = stream.Length - stream.Position;
+                        if (remaining > 0 && entry.Length <= (ulong)remaining)
+                            entry.Value = ReadNullTerminatedString(stream, (int)entry.Length);
+
                         break;
                     case 0x0404:
                         entry.Value = ReadUInt32(stream, new byte[4]);

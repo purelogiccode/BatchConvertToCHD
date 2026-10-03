@@ -41,7 +41,12 @@
             </Button>
         </Grid>
 
-        <Grid Grid.Row="1" Margin="20" RowDefinitions="Auto,Auto,Auto,*,Auto" ToolTip.Tip="About information sections">
+        <ScrollViewer
+            Grid.Row="1"
+            VerticalScrollBarVisibility="Auto"
+            HorizontalScrollBarVisibility="Disabled"
+            ToolTip.Tip="Scroll through the about information">
+            <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ToolTip.Tip="About information sections">
             <!--  Logo Section  -->
             <Border Grid.Row="0" Classes="statCard" Margin="0,0,0,15" Padding="15" ToolTip.Tip="Application logo">
                 <StackPanel HorizontalAlignment="Center" ToolTip.Tip="Application logo section">
@@ -170,7 +175,8 @@
                 Classes="primary"
                 HorizontalAlignment="Center"
                 ToolTip.Tip="Close the About window" />
-        </Grid>
+            </Grid>
+        </ScrollViewer>
     </Grid>
 </Window>
 

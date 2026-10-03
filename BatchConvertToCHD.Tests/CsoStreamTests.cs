@@ -290,9 +290,15 @@ public class CsoStreamTests : IDisposable
         // Data starts right after index
         var dataStart = 24 + indexEntries * 4;
 
-        // For simplicity, store all blocks as uncompressed
+        // For simplicity, store all blocks as uncompressed. v1 marks stored blocks with the high
+        // bit; v2 identifies them by their full-block size instead.
         for (var i = 0; i < indexEntries; i++)
-            ms.Write(BitConverter.GetBytes((dataStart + (uint)(i * blockSize)) | 0x80000000u));
+        {
+            var entry = dataStart + (uint)(i * blockSize);
+            if (version == 1) entry |= 0x80000000u;
+
+            ms.Write(BitConverter.GetBytes(entry));
+        }
 
         // Write the actual data
         ms.Write(uncompressedData);

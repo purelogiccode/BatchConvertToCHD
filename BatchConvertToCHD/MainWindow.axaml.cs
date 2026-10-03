@@ -47,8 +47,10 @@ internal partial class MainWindow : Window, IDisposable
     // the verification and extraction tabs.
     private const string StagingExtension = ".chdtmp";
 
-    // Performance counter for write speed monitoring
-    private const int MaxLogLength = 100000; // Maximum characters before log truncation
+    // Maximum characters kept in the on-screen log before the oldest half is dropped, and the
+    // most lines buffered while the UI thread is busy (a longer burst drops the oldest lines).
+    private const int MaxLogLength = 50000;
+    private const int MaxPendingLogLines = 2000;
 
     /// <summary>
     ///     Free space below this on the output drive means no conversion can succeed.
@@ -80,7 +82,10 @@ internal partial class MainWindow : Window, IDisposable
     private readonly bool _isChdmanAvailable;
     private readonly Stopwatch _operationTimer = new();
     private readonly DispatcherTimer _elapsedTimeTimer;
+    private readonly DispatcherTimer _logFlushTimer;
+    private readonly Lock _logQueueLock = new();
     private readonly Lock _performanceCounterLock = new();
+    private readonly Queue<string> _pendingLogLines = new();
     private readonly string _sevenZipExePath;
 
     // Services
@@ -92,6 +97,11 @@ internal partial class MainWindow : Window, IDisposable
 
     // Operation state tracking (0 = idle, >0 = running) - using Interlocked for thread safety
     private int _operationRunningState;
+
+    // CHD paths already produced by the running batch, so a second input resolving to the same
+    // output cannot silently replace the first product.
+    private readonly Lock _batchOutputPathsLock = new();
+    private readonly HashSet<string> _batchOutputPaths = new(StringComparer.OrdinalIgnoreCase);
 
     // Tracks whether a close was requested while an operation was running
     private bool _pendingClose;
@@ -123,6 +133,13 @@ internal partial class MainWindow : Window, IDisposable
             Interval = TimeSpan.FromSeconds(1)
         };
         _elapsedTimeTimer.Tick += (_, _) => UpdateProcessingTimeDisplay();
+
+        // Batches bursty log output (chdman prints per file) into one UI update per tick instead
+        // of one dispatcher call per line, and the flush caps the on-screen text length, so a large
+        // log cannot freeze the window.
+        _logFlushTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        _logFlushTimer.Tick += (_, _) => FlushPendingLogLines();
+        _logFlushTimer.Start();
 
         ConversionFilesDataGrid.ItemsSource = _conversionFiles;
         VerificationFilesDataGrid.ItemsSource = _verificationFiles;
@@ -203,6 +220,7 @@ internal partial class MainWindow : Window, IDisposable
         _fileWatcher.Dispose();
         _operationTimer.Stop();
         _elapsedTimeTimer.Stop();
+        _logFlushTimer.Stop();
 
         KillOrphanedProcesses();
     }
@@ -834,7 +852,7 @@ internal partial class MainWindow : Window, IDisposable
 
         if (!StartConversionButton.IsEnabled && !StartVerificationButton.IsEnabled) return;
 
-        _ = Dispatcher.UIThread.InvokeAsync((Action)(() => LogViewer.Clear()));
+        _ = Dispatcher.UIThread.InvokeAsync((Action)ClearUiLog);
         if (control.SelectedItem is TabItem selectedTab)
         {
             switch (selectedTab.Name)
@@ -893,7 +911,11 @@ internal partial class MainWindow : Window, IDisposable
 
         Dispose();
 
-        App.ShutdownApp();
+        // Shutting down re-entrantly from inside Closing calls Close() on this window again,
+        // which raises Closing again in a loop and the window never closes. Post the shutdown so
+        // it runs after the close has completed (the desktop lifetime also shuts down on the
+        // main window close, so this is the explicit, ordered path).
+        Dispatcher.UIThread.Post(App.ShutdownApp, DispatcherPriority.Background);
     }
 
     /// <summary>Writes an informational message to the Serilog log and the on-screen activity log.</summary>
@@ -923,34 +945,68 @@ internal partial class MainWindow : Window, IDisposable
     }
 
     /// <summary>
-    ///     Appends a timestamped line to the UI log, truncating its oldest half when it grows too large.
+    ///     Queues a timestamped line for the UI log. The line is written to the control by the
+    ///     flush timer, which batches bursts and caps the on-screen text length.
     /// </summary>
     /// <param name="message">The message to append.</param>
     private void AppendToUiLog(string message)
     {
         var timestampedMessage = $"[{DateTime.Now:HH:mm:ss.fff}] {message}";
 
-        _ = Dispatcher.UIThread.InvokeAsync(() =>
+        lock (_logQueueLock)
         {
-            try
-            {
-                if (LogViewer.Text.Length > MaxLogLength)
-                {
-                    var excess = LogViewer.Text.Length - MaxLogLength / 2;
-                    LogViewer.SelectionStart = 0;
-                    LogViewer.SelectionLength = excess;
-                    LogViewer.SelectedText =
-                        $"[{DateTime.Now:HH:mm:ss.fff}] --- Log truncated to keep app responsive ---{Environment.NewLine}";
-                }
+            if (_pendingLogLines.Count >= MaxPendingLogLines) _pendingLogLines.Dequeue();
 
-                LogViewer.AppendText($"{timestampedMessage}{Environment.NewLine}");
-                LogViewer.ScrollToEnd();
-            }
-            catch
+            _pendingLogLines.Enqueue(timestampedMessage);
+        }
+    }
+
+    /// <summary>
+    ///     Writes the queued log lines to the control, dropping the oldest half of the on-screen
+    ///     text when it exceeds the cap. Runs on the UI thread from the flush timer.
+    /// </summary>
+    private void FlushPendingLogLines()
+    {
+        string[] lines;
+        lock (_logQueueLock)
+        {
+            if (_pendingLogLines.Count == 0) return;
+
+            lines = [.. _pendingLogLines];
+            _pendingLogLines.Clear();
+        }
+
+        try
+        {
+            if (LogViewer.Text.Length > MaxLogLength)
             {
-                /* ignore logging errors */
+                var excess = LogViewer.Text.Length - MaxLogLength / 2;
+                LogViewer.SelectionStart = 0;
+                LogViewer.SelectionLength = excess;
+                LogViewer.SelectedText =
+                    $"[{DateTime.Now:HH:mm:ss.fff}] --- Log truncated to keep app responsive ---{Environment.NewLine}";
             }
-        });
+
+            LogViewer.AppendText(
+                $"{string.Join(Environment.NewLine, lines)}{Environment.NewLine}"
+            );
+            LogViewer.ScrollToEnd();
+        }
+        catch
+        {
+            /* ignore logging errors */
+        }
+    }
+
+    /// <summary>Clears the on-screen log and discards any lines queued for it.</summary>
+    private void ClearUiLog()
+    {
+        lock (_logQueueLock)
+        {
+            _pendingLogLines.Clear();
+        }
+
+        LogViewer.Clear();
     }
 
     /// <summary>
@@ -1046,7 +1102,7 @@ internal partial class MainWindow : Window, IDisposable
     {
         try
         {
-            await Dispatcher.UIThread.InvokeAsync((Action)(() => LogViewer.Clear()));
+            await Dispatcher.UIThread.InvokeAsync((Action)ClearUiLog);
             DisplayExtractionInstructionsInLog();
 
             var inputFolder = PathUtils.ValidateAndNormalizePath(
@@ -1273,7 +1329,7 @@ internal partial class MainWindow : Window, IDisposable
                                 );
                             },
                             DispatcherPriority.Background,
-                            _cts.Token
+                            token
                         );
                     }
                 }
@@ -1282,7 +1338,7 @@ internal partial class MainWindow : Window, IDisposable
                     // Cancellation during chunked load is expected; partial results remain visible
                 }
             },
-            _cts.Token
+            token
         );
     }
 
@@ -1294,6 +1350,12 @@ internal partial class MainWindow : Window, IDisposable
         if (string.IsNullOrEmpty(inputFolder) || !Directory.Exists(inputFolder)) return Task.CompletedTask;
 
         var includeSub = SearchSubfoldersVerificationCheckBox.IsChecked ?? false;
+
+        CancellationToken token;
+        lock (_ctsLock)
+        {
+            token = _cts.Token;
+        }
 
         return Task.Run(
             async () =>
@@ -1344,7 +1406,7 @@ internal partial class MainWindow : Window, IDisposable
                                 );
                             },
                             DispatcherPriority.Background,
-                            _cts.Token
+                            token
                         );
                     }
                 }
@@ -1353,7 +1415,7 @@ internal partial class MainWindow : Window, IDisposable
                     // Cancellation during chunked load is expected; partial results remain visible
                 }
             },
-            _cts.Token
+            token
         );
     }
 
@@ -1365,6 +1427,12 @@ internal partial class MainWindow : Window, IDisposable
         if (string.IsNullOrEmpty(inputFolder) || !Directory.Exists(inputFolder)) return Task.CompletedTask;
 
         var includeSub = SearchSubfoldersExtractionCheckBox.IsChecked ?? false;
+
+        CancellationToken token;
+        lock (_ctsLock)
+        {
+            token = _cts.Token;
+        }
 
         return Task.Run(
             async () =>
@@ -1415,7 +1483,7 @@ internal partial class MainWindow : Window, IDisposable
                                 );
                             },
                             DispatcherPriority.Background,
-                            _cts.Token
+                            token
                         );
                     }
                 }
@@ -1424,7 +1492,7 @@ internal partial class MainWindow : Window, IDisposable
                     // Cancellation during chunked load is expected; partial results remain visible
                 }
             },
-            _cts.Token
+            token
         );
     }
 
@@ -1469,7 +1537,7 @@ internal partial class MainWindow : Window, IDisposable
     {
         try
         {
-            await Dispatcher.UIThread.InvokeAsync((Action)(() => LogViewer.Clear()));
+            await Dispatcher.UIThread.InvokeAsync((Action)ClearUiLog);
             DisplayConversionInstructionsInLog();
 
             var inputFolder = PathUtils.ValidateAndNormalizePath(
@@ -1582,7 +1650,7 @@ internal partial class MainWindow : Window, IDisposable
     {
         try
         {
-            await Dispatcher.UIThread.InvokeAsync((Action)(() => LogViewer.Clear()));
+            await Dispatcher.UIThread.InvokeAsync((Action)ClearUiLog);
             DisplayVerificationInstructionsInLog();
 
             var inputFolder = PathUtils.ValidateAndNormalizePath(
@@ -1884,6 +1952,11 @@ internal partial class MainWindow : Window, IDisposable
         filesToConvert = [.. InputFileFilter.RemoveRarVolumeParts(filesToConvert, LogMessage)];
 
         filesToConvert = ResolveOutputCollisions(filesToConvert, inputFolder, outputFolder);
+
+        lock (_batchOutputPathsLock)
+        {
+            _batchOutputPaths.Clear();
+        }
 
         _totalFilesProcessed = filesToConvert.Length;
         UpdateStatsDisplay();
@@ -3144,10 +3217,25 @@ internal partial class MainWindow : Window, IDisposable
     }
 
     /// <summary>
-    ///     Drops inputs whose output CHD path is already produced by another input in the batch,
-    ///     keeping the first non-archive input of each colliding group. Converting both would only
-    ///     overwrite one product with the other, so the redundant conversion (and, for archives,
-    ///     the redundant extraction) is skipped up front and the resolution is logged.
+    ///     True when the input is an archive (including split .001 and RAR volume sets), whose output
+    ///     name is derived from its contents rather than the input's own base name.
+    /// </summary>
+    /// <param name="path">Full path of the input file.</param>
+    /// <returns>True when the input is an archive.</returns>
+    private static bool IsArchiveInput(string path)
+    {
+        return FileExtensions.ArchiveExtensionsSet.Contains(Path.GetExtension(path))
+            || path.EndsWith(".zip.001", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith(".7z.001", StringComparison.OrdinalIgnoreCase)
+            || RarVolumeSet.TryGetPartInfo(path, out _, out _);
+    }
+
+    /// <summary>
+    ///     Drops inputs whose output CHD path is already produced by another input in the batch.
+    ///     Converting both would only overwrite one product with the other, so the redundant
+    ///     conversion is skipped up front and the resolution is logged. Archives are left out of
+    ///     the prediction: their product is named after a file inside them, which cannot be known
+    ///     without extracting, so real archive collisions are caught when the output is moved.
     /// </summary>
     /// <param name="filesToConvert">The inputs about to be processed.</param>
     /// <param name="inputFolder">Root of the conversion input folder.</param>
@@ -3160,7 +3248,7 @@ internal partial class MainWindow : Window, IDisposable
     {
         var (kept, skipped) = InputFileFilter.ResolveOutputCollisions(
             filesToConvert,
-            f => ComputeOutputChdPath(f, inputFolder, outputFolder)
+            f => IsArchiveInput(f) ? f : ComputeOutputChdPath(f, inputFolder, outputFolder)
         );
 
         foreach (var duplicate in skipped)
@@ -3175,25 +3263,44 @@ internal partial class MainWindow : Window, IDisposable
 
     /// <summary>
     ///     Computes the output CHD path for a file extracted from an archive, mirroring the original
-    ///     input's folder structure.
+    ///     input's folder structure plus the extracted file's own directory inside the archive.
     /// </summary>
     /// <param name="extractedFilePath">Full path of the extracted file.</param>
+    /// <param name="extractionRoot">Directory the archive was extracted into.</param>
     /// <param name="originalInputFile">Full path of the archive the file came from.</param>
     /// <param name="inputFolder">Root of the conversion input folder.</param>
     /// <param name="outputFolder">Root of the conversion output folder.</param>
     /// <returns>The full output CHD path.</returns>
     private static string ComputeOutputChdPathForExtractedFile(
         string extractedFilePath,
+        string extractionRoot,
         string originalInputFile,
         string inputFolder,
         string outputFolder
     )
     {
         // Use the original input file (e.g. the archive) to determine the relative path
-        var relativePath = PathUtils.GetSafeRelativePath(
+        var archiveRelative = PathUtils.GetSafeRelativePath(
             inputFolder,
             Path.GetDirectoryName(originalInputFile) ?? inputFolder
         );
+
+        // Discs with the same name in different archive subfolders (Disc1/game.cue and
+        // Disc2/game.cue) must not both land on output/game.chd, where the second would overwrite
+        // the first, so the archive's internal structure is preserved too.
+        var innerRelative = PathUtils.GetSafeRelativePath(
+            extractionRoot,
+            Path.GetDirectoryName(extractedFilePath) ?? extractionRoot
+        );
+
+        var relativePath = (archiveRelative, innerRelative) switch
+        {
+            (".", ".") => ".",
+            (".", _) => innerRelative,
+            (_, ".") => archiveRelative,
+            _ => Path.Combine(archiveRelative, innerRelative)
+        };
+
         var targetDir = string.Equals(relativePath, ".", StringComparison.Ordinal)
             ? outputFolder
             : Path.Combine(outputFolder, relativePath);
@@ -3364,6 +3471,7 @@ internal partial class MainWindow : Window, IDisposable
             token.ThrowIfCancellationRequested();
             var extractedFileOutputChd = ComputeOutputChdPathForExtractedFile(
                 extractedFile,
+                tempDir,
                 inputFile,
                 inputFolder,
                 outputFolder
@@ -3643,6 +3751,7 @@ internal partial class MainWindow : Window, IDisposable
             token.ThrowIfCancellationRequested();
             var cueFileOutputChd = ComputeOutputChdPathForExtractedFile(
                 cueFile,
+                tempDir,
                 inputFile,
                 inputFolder,
                 outputFolder
@@ -3899,13 +4008,23 @@ internal partial class MainWindow : Window, IDisposable
                 await TryDeleteFileAsync(inputFile, "original CCD", token);
 
                 if (parsedDisc.ImgFilePath != null)
-                    await TryDeleteFileAsync(parsedDisc.ImgFilePath, "original IMG", token);
+                    await TryDeleteReferencedFileAsync(
+                        parsedDisc.ImgFilePath,
+                        "original IMG",
+                        inputFolder,
+                        token
+                    );
                 if (parsedDisc.SubFilePath != null)
-                    await TryDeleteFileAsync(parsedDisc.SubFilePath, "original SUB", token);
+                    await TryDeleteReferencedFileAsync(
+                        parsedDisc.SubFilePath,
+                        "original SUB",
+                        inputFolder,
+                        token
+                    );
 
                 var cdtPath = Path.ChangeExtension(inputFile, ".cdt");
                 if (File.Exists(cdtPath))
-                    await TryDeleteFileAsync(cdtPath, "original CDT", token);
+                    await TryDeleteReferencedFileAsync(cdtPath, "original CDT", inputFolder, token);
             }
 
             return true;
@@ -4125,7 +4244,7 @@ internal partial class MainWindow : Window, IDisposable
             }
 
             foreach (var source in sources.Distinct(StringComparer.OrdinalIgnoreCase))
-                await TryDeleteFileAsync(source, "original MDF", token);
+                await TryDeleteReferencedFileAsync(source, "original MDF", inputFolder, token);
 
             var subfolder = Path.GetDirectoryName(inputFile);
             if (!string.IsNullOrEmpty(subfolder))
@@ -4841,7 +4960,7 @@ internal partial class MainWindow : Window, IDisposable
                     or FileExtensions.Ccd
                 )
                 {
-                    await DeleteOriginalGameFilesAsync(inputFile, token);
+                    await DeleteOriginalGameFilesAsync(inputFile, inputFolder, token);
                 }
                 else
                 {
@@ -5111,12 +5230,14 @@ internal partial class MainWindow : Window, IDisposable
 
         // An extracted file takes the CHD's own base name, so extracting into a folder that already
         // holds a set of that name - most often the folder the CHD was made in - would replace it.
-        // Rather than overwrite, or ask, the disc goes into a subfolder of its own name. Nothing is
-        // lost and no decision is required; the log says where it went.
-        if (extractCommand is "extractdvd" or "extracthd" && File.Exists(outputFile))
+        // Rather than overwrite, or ask, the disc goes into a subfolder of its own name. This covers
+        // cue/gdi sets (their BIN is checked too) as well as single files, and targetDir is moved
+        // with the output so the chdman fallback cannot replace the existing set either.
+        if (ExtractionOutputExists(targetDir, fileName, outputExt))
         {
             var isolatedDir = PathUtils.ReserveFreeSubdirectory(targetDir, fileName);
             Directory.CreateDirectory(isolatedDir);
+            targetDir = isolatedDir;
             outputFile = Path.Combine(isolatedDir, fileName + outputExt);
 
             LogMessage(
@@ -5266,6 +5387,22 @@ internal partial class MainWindow : Window, IDisposable
         if (success && deleteOriginal) await TryDeleteFileAsync(chdFile, "original CHD file", token);
 
         return success;
+    }
+
+    /// <summary>
+    ///     True when extracting into <paramref name="targetDir" /> would replace an existing file of
+    ///     the same name: the descriptor itself for any format, or the BIN of a cue/gdi set.
+    /// </summary>
+    /// <param name="targetDir">Directory the extraction would write to.</param>
+    /// <param name="fileName">Base name of the extraction.</param>
+    /// <param name="outputExt">Extension of the descriptor being written.</param>
+    /// <returns>True when a same-named extraction output already exists.</returns>
+    private static bool ExtractionOutputExists(string targetDir, string fileName, string outputExt)
+    {
+        if (File.Exists(Path.Combine(targetDir, fileName + outputExt))) return true;
+
+        return outputExt is FileExtensions.Cue or FileExtensions.Gdi
+            && File.Exists(Path.Combine(targetDir, fileName + FileExtensions.Bin));
     }
 
     /// <summary>Writes the whole CHD content to a single output file in chunks.</summary>
@@ -5698,13 +5835,17 @@ internal partial class MainWindow : Window, IDisposable
         int recursionDepth = 0
     )
     {
-        // An .img sitting next to a .cue of the same name is the data half of a cue/bin pair. The cue
-        // is the only file that carries the track layout, so hand chdman the cue: passing the raw
-        // image instead selects createhd and reports "Data size ... is not divisible by sector size
-        // 512". This also routes the input through the cue work-directory preparation below.
+        // An .img or .bin sitting next to a .cue of the same name is the data half of a cue/bin
+        // pair. The cue is the only file that carries the track layout, so hand chdman the cue:
+        // passing the raw image instead selects createhd or a bare createcd and fails ("Data size
+        // ... is not divisible by sector size 512" / "couldn't find bin file"). This also routes
+        // the input through the cue work-directory preparation below.
         var companionCue = Path.ChangeExtension(inputFile, FileExtensions.Cue);
         if (
-            inputFile.EndsWith(FileExtensions.Img, StringComparison.OrdinalIgnoreCase)
+            (
+                inputFile.EndsWith(FileExtensions.Img, StringComparison.OrdinalIgnoreCase)
+                || inputFile.EndsWith(FileExtensions.Bin, StringComparison.OrdinalIgnoreCase)
+            )
             && File.Exists(companionCue)
         )
         {
@@ -6102,24 +6243,52 @@ internal partial class MainWindow : Window, IDisposable
                 {
                     try
                     {
-                        var outputSize = new FileInfo(outputFile).Length;
-                        if (outputSize > 0)
+                        // A nonzero exit with a non-empty file is not proof of success: a disk that
+                        // fills mid-compression leaves a truncated CHD behind. The output is only
+                        // accepted when it actually validates, otherwise it is deleted with the
+                        // rest of the failed staging output and the source is kept.
+                        using var outputStream = File.OpenRead(outputFile);
+                        var check = Chd.CheckFile(outputStream, Path.GetFileName(outputFile), true);
+                        if (check.IsSuccess)
                         {
                             LogMessage(
-                                $" chdman exited with code {exitCode} but produced a valid output file ({outputSize} bytes). Treating as success."
+                                $" chdman exited with code {exitCode} but produced a valid CHD ({new FileInfo(outputFile).Length} bytes). Treating as success."
                             );
                             success = true;
                         }
+                        else
+                        {
+                            LogError(
+                                $" chdman exited with code {exitCode} and its output is not a valid CHD ({check.Error.GetMessage()}); discarding it."
+                            );
+                        }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // ignored
+                        LogError(
+                            $" chdman exited with code {exitCode} and its output could not be validated: {ex.Message}; discarding it."
+                        );
                     }
                 }
             }
 
             if (success)
             {
+                // Two inputs in one batch can still resolve to the same CHD (an archive's contents
+                // are not known when the collision preflight runs). Keep the first product and
+                // report the duplicate instead of silently replacing it.
+                lock (_batchOutputPathsLock)
+                {
+                    if (!_batchOutputPaths.Add(Path.GetFullPath(originalOutputFile)))
+                    {
+                        LogWarning(
+                            $" {Path.GetFileName(originalOutputFile)} was already produced earlier in this batch; keeping the first one."
+                        );
+                        TryBestEffortDelete(outputFile);
+                        return false;
+                    }
+                }
+
                 if (asciiOutputFile != null)
                 {
                     try
@@ -6797,9 +6966,9 @@ internal partial class MainWindow : Window, IDisposable
         CancellationToken token
     )
     {
+        using var process = new Process();
         try
         {
-            using var process = new Process();
             process.StartInfo = new ProcessStartInfo
             {
                 FileName = chdmanPath,
@@ -6846,6 +7015,21 @@ internal partial class MainWindow : Window, IDisposable
         }
         catch (OperationCanceledException)
         {
+            // Disposing the Process wrapper does not stop the child; without a kill it keeps
+            // writing (and holding the output file) after the user cancelled or closed the app.
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(true);
+                    process.WaitForExit(3000);
+                }
+            }
+            catch
+            {
+                // Process already exited or access denied.
+            }
+
             throw;
         }
         catch (Exception ex)
@@ -7240,12 +7424,17 @@ internal partial class MainWindow : Window, IDisposable
     ///     descriptor.
     /// </summary>
     /// <param name="inputFile">Full path of the descriptor or image.</param>
+    /// <param name="inputFolder">Root of the conversion input folder; referenced files outside it are kept.</param>
     /// <param name="token">Cancellation token.</param>
-    private async Task DeleteOriginalGameFilesAsync(string inputFile, CancellationToken token)
+    private async Task DeleteOriginalGameFilesAsync(
+        string inputFile,
+        string inputFolder,
+        CancellationToken token
+    )
     {
         try
         {
-            var files = new List<string> { inputFile };
+            var files = new List<string>();
             var ext = Path.GetExtension(inputFile);
             if (ext.Equals(FileExtensions.Cue, StringComparison.OrdinalIgnoreCase))
             {
@@ -7297,8 +7486,10 @@ internal partial class MainWindow : Window, IDisposable
                     files.Add(cdtPath);
             }
 
+            await TryDeleteReferencedFileAsync(inputFile, "game file", inputFolder, token);
+
             foreach (var f in files.Distinct(StringComparer.Ordinal))
-                await TryDeleteFileAsync(f, "game file", token);
+                await TryDeleteReferencedFileAsync(f, "game file", inputFolder, token);
         }
         catch (Exception ex)
         {
@@ -7644,6 +7835,34 @@ internal partial class MainWindow : Window, IDisposable
             LogMessage($"Deleted {desc}: {Path.GetFileName(path)}");
         else
             LogError($"Failed to delete {desc}: {Path.GetFileName(path)}");
+    }
+
+    /// <summary>
+    ///     Deletes a file referenced by a descriptor only when it lives inside the batch's input
+    ///     folder. A descriptor can name a path anywhere ("..\..\other\game.bin", an absolute path),
+    ///     and deleting outside the folder the user chose would destroy files the batch never owned.
+    /// </summary>
+    /// <param name="path">Full path of the referenced file.</param>
+    /// <param name="desc">Description used in log messages.</param>
+    /// <param name="inputFolder">Root of the conversion input folder.</param>
+    /// <param name="token">Cancellation token.</param>
+    /// <returns>A task that completes when the delete attempt has finished.</returns>
+    private async Task TryDeleteReferencedFileAsync(
+        string path,
+        string desc,
+        string inputFolder,
+        CancellationToken token
+    )
+    {
+        if (!PathUtils.IsSameOrInsideDirectory(inputFolder, path))
+        {
+            LogMessage(
+                $" Skipping delete of {Path.GetFileName(path)} ({desc}) - it is outside the input folder."
+            );
+            return;
+        }
+
+        await TryDeleteFileAsync(path, desc, token);
     }
 
     /// <summary>Process names (without extension) of the bundled chdman builds.</summary>
@@ -8039,6 +8258,21 @@ internal partial class MainWindow : Window, IDisposable
         // Ensure the window close process is initiated
         // The Window_Closing event will handle proper cleanup and shutdown
         Close();
+    }
+
+    /// <summary>Opens the project's donation page in the default browser.</summary>
+    private void DonateMenuItem_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(
+                new ProcessStartInfo { FileName = AppConfig.DonationUrl, UseShellExecute = true }
+            );
+        }
+        catch (Exception ex)
+        {
+            LogError("Failed to open the donation page", ex);
+        }
     }
 
     /// <summary>Opens the About window.</summary>

@@ -350,7 +350,17 @@ public static class IszDecoder
         CancellationToken token
     )
     {
-        var tableBytes = checked((int)(header.ChunkCount * (uint)header.PointerLength));
+        // The table is stored in the file, so a declared size larger than the file (or one that
+        // overflows) is rejected before allocating.
+        var tableBytesLong = (long)header.ChunkCount * header.PointerLength;
+        if (tableBytesLong <= 0 || tableBytesLong > stream.Length)
+        {
+            throw new InvalidDataException(
+                "the chunk table size does not fit the file, so it is corrupt or truncated"
+            );
+        }
+
+        var tableBytes = (int)tableBytesLong;
         var table = new byte[tableBytes];
 
         stream.Position = header.ChunkTableOffset;

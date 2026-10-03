@@ -821,13 +821,18 @@ internal class ArchiveService
             process.StartInfo = new ProcessStartInfo
             {
                 FileName = _sevenZipExePath,
-                Arguments = $"x \"{archivePath}\" -o\"{outputDirectory}\" -y",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 ErrorDialog = false
             };
+            // ArgumentList quotes each argument, so a file name containing a quote cannot break out
+            // of its argument and inject switches into the 7-Zip command line.
+            process.StartInfo.ArgumentList.Add("x");
+            process.StartInfo.ArgumentList.Add(archivePath);
+            process.StartInfo.ArgumentList.Add($"-o{outputDirectory}");
+            process.StartInfo.ArgumentList.Add("-y");
             process.OutputDataReceived += (_, args) =>
             {
                 if (args.Data != null)

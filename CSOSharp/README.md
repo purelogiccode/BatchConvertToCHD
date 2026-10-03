@@ -148,7 +148,7 @@ using (cso)
 }
 ```
 
-> The high bit of an index entry marks a block that is stored uncompressed; the remaining 31 bits are the file offset, left-shifted by `IndexOffsetShift`. CSOSharp handles this for you.
+> The high bit of an index entry is a version-dependent flag: in CSO v1 it marks a block stored uncompressed, while in CSO v2 it marks an LZ4-compressed block. The remaining 31 bits are the file offset, left-shifted by `IndexOffsetShift`. CSOSharp handles this for you.
 
 ### Read individual blocks
 
@@ -417,9 +417,9 @@ A read-only `Stream` over the decompressed ISO inside a CSO file.
 
 CSO files come from several compressors, and CSOSharp reads all the common layouts:
 
-- **CSO v1** — deflate blocks, either zlib-wrapped (recognized by the `0x78` header and skipped) or raw deflate.
-- **CSO v2 / ZSO** — LZ4 blocks, decoded with [K4os.Compression.LZ4](https://www.nuget.org/packages/K4os.Compression.LZ4).
-- **Stored blocks** — index entries with bit 31 set point at uncompressed data and are copied verbatim.
+- **CSO v1** — deflate blocks, either zlib-wrapped (recognized by the `0x78` header and skipped) or raw deflate. Bit 31 of an index entry marks a stored (uncompressed) block.
+- **CSO v2 / ZSO** — a block is compressed only when its stored length is smaller than a full block; bit 31 then selects LZ4 (set) or deflate (clear). Full-size blocks are stored verbatim. LZ4 is decoded with [K4os.Compression.LZ4](https://www.nuget.org/packages/K4os.Compression.LZ4).
+- **Stored blocks** — copied verbatim, zero-padded when a short final block is stored.
 - **Shifted index tables** — entries are left-shifted by the header's `IndexOffsetShift`, which is common in large images to address offsets beyond 4 GB.
 - **Truncated files** — a short header or index table is reported as `InvalidHeader` or `CorruptIndex` rather than crashing.
 
@@ -439,9 +439,11 @@ A CSO file starts with a 24-byte header:
 
 The header is followed by a `TotalBlocks + 1` entry index table of 32-bit little-endian values. For a block at index `i`:
 
-1. `entry[i] & 0x80000000` marks the block as stored/uncompressed.
-2. The file offset is `(entry[i] & 0x7FFFFFFF) << IndexOffsetShift`.
-3. The compressed length is the difference between the offsets of entries `i + 1` and `i`.
+1. The file offset is `(entry[i] & 0x7FFFFFFF) << IndexOffsetShift`.
+2. The stored length is the difference between the offsets of entries `i + 1` and `i`.
+3. How the block is read depends on the version:
+   - **v1**: bit 31 set means the block is stored and copied verbatim; otherwise it is deflate.
+   - **v2**: a stored length smaller than `BlockSize` means the block is compressed — bit 31 set means LZ4, bit 31 clear means deflate; a length of at least `BlockSize` means the block is stored.
 4. An empty span (`next == current`) represents a block of zeroes.
 
 CSOSharp validates the magic, block size and version, reads the whole index table up front, then decompresses blocks on demand by seeking to the computed offset.

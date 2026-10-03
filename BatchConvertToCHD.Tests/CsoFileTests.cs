@@ -203,6 +203,152 @@ public class CsoFileTests : IDisposable
         cso.Dispose();
     }
 
+    [Fact]
+    public void ReadBlockV2StoredBlockReturnsData()
+    {
+        var raw = new byte[2048];
+        for (var i = 0; i < raw.Length; i++) raw[i] = (byte)(i % 251);
+
+        var path = CreateSingleBlockCsoFile(2, (ulong)raw.Length, raw, compressed: false, lz4: false);
+        CsoFile.Open(path, out var cso);
+        Assert.NotNull(cso);
+
+        var buffer = new byte[2048];
+        var error = cso.ReadBlock(0, buffer, out var bytesRead);
+
+        Assert.Equal(CsoError.None, error);
+        Assert.Equal(2048, bytesRead);
+        Assert.Equal(raw, buffer);
+        cso.Dispose();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ReadBlockV2CompressedBlockDecodes(bool lz4)
+    {
+        var raw = new byte[2048];
+        for (var i = 0; i < raw.Length; i++) raw[i] = (byte)(i % 7);
+
+        var path = CreateSingleBlockCsoFile(2, (ulong)raw.Length, raw, compressed: true, lz4: lz4);
+        CsoFile.Open(path, out var cso);
+        Assert.NotNull(cso);
+
+        var buffer = new byte[2048];
+        var error = cso.ReadBlock(0, buffer, out var bytesRead);
+
+        Assert.Equal(CsoError.None, error);
+        Assert.Equal(2048, bytesRead);
+        Assert.Equal(raw, buffer);
+        cso.Dispose();
+    }
+
+    [Fact]
+    public void ReadBlockV1ShortFinalStoredBlockZeroPads()
+    {
+        var raw = new byte[100];
+        for (var i = 0; i < raw.Length; i++) raw[i] = (byte)(i + 1);
+
+        var path = CreateSingleBlockCsoFile(1, (ulong)raw.Length, raw, compressed: false, lz4: false);
+        CsoFile.Open(path, out var cso);
+        Assert.NotNull(cso);
+
+        var buffer = new byte[2048];
+        var error = cso.ReadBlock(0, buffer, out var bytesRead);
+
+        Assert.Equal(CsoError.None, error);
+        Assert.Equal(2048, bytesRead);
+        Assert.Equal(raw, buffer[..raw.Length]);
+        Assert.All(buffer[raw.Length..], static b => Assert.Equal(0, b));
+
+        var outputPath = Path.Combine(_tempDir, "short.iso");
+        Assert.Equal(CsoError.None, cso.ExtractToIso(outputPath));
+        Assert.Equal(raw.Length, new FileInfo(outputPath).Length);
+        cso.Dispose();
+    }
+
+    /// <summary>
+    ///     Builds a one-block CSO. <paramref name="compressed" /> writes the block through LZ4 or
+    ///     deflate; otherwise it is stored. v2 marks LZ4 blocks with the high index bit and uses the
+    ///     block size to tell stored blocks apart, so the fixture follows that convention.
+    /// </summary>
+    /// <param name="version">CSO format version.</param>
+    /// <param name="uncompressedSize">Declared uncompressed size.</param>
+    /// <param name="raw">The block's uncompressed bytes.</param>
+    /// <param name="compressed">Whether the block is compressed.</param>
+    /// <param name="lz4">Whether a compressed block uses LZ4 (otherwise deflate).</param>
+    /// <returns>Path of the written CSO file.</returns>
+    private string CreateSingleBlockCsoFile(
+        byte version,
+        ulong uncompressedSize,
+        byte[] raw,
+        bool compressed,
+        bool lz4
+    )
+    {
+        const uint blockSize = 2048u;
+        const uint dataOffset = 24 + 2 * 4;
+
+        var data = raw;
+        var firstEntry = dataOffset;
+        if (compressed)
+        {
+            data = lz4 ? Lz4Compress(raw) : Deflate(raw);
+            if (version == 2 && lz4) firstEntry |= 0x80000000u;
+        }
+        else if (version == 1)
+        {
+            firstEntry |= 0x80000000u;
+        }
+
+        var path = Path.Combine(_tempDir, $"single_{Guid.NewGuid():N}.cso");
+        using var ms = new MemoryStream();
+        ms.Write(BitConverter.GetBytes(CsoHeader.MagicValue));
+        ms.Write(BitConverter.GetBytes(24u));
+        ms.Write(BitConverter.GetBytes(uncompressedSize));
+        ms.Write(BitConverter.GetBytes(blockSize));
+        ms.WriteByte(version);
+        ms.WriteByte(0);
+        ms.Write(new byte[2]);
+        ms.Write(BitConverter.GetBytes(firstEntry));
+        ms.Write(BitConverter.GetBytes(dataOffset + (uint)data.Length));
+        ms.Write(data);
+        File.WriteAllBytes(path, ms.ToArray());
+        return path;
+    }
+
+    /// <summary>Compresses <paramref name="raw" /> as an LZ4 block.</summary>
+    /// <param name="raw">Bytes to compress.</param>
+    /// <returns>The compressed bytes.</returns>
+    private static byte[] Lz4Compress(byte[] raw)
+    {
+        var target = new byte[K4os.Compression.LZ4.LZ4Codec.MaximumOutputSize(raw.Length)];
+        var size = K4os.Compression.LZ4.LZ4Codec.Encode(
+            raw,
+            target.AsSpan(),
+            K4os.Compression.LZ4.LZ4Level.L00_FAST
+        );
+        return target[..size];
+    }
+
+    /// <summary>Compresses <paramref name="raw" /> as a raw deflate stream.</summary>
+    /// <param name="raw">Bytes to compress.</param>
+    /// <returns>The compressed bytes.</returns>
+    private static byte[] Deflate(byte[] raw)
+    {
+        using var output = new MemoryStream();
+        using (var deflate = new System.IO.Compression.DeflateStream(
+            output,
+            System.IO.Compression.CompressionMode.Compress,
+            true
+        ))
+        {
+            deflate.Write(raw, 0, raw.Length);
+        }
+
+        return output.ToArray();
+    }
+
     private string CreateMinimalCsoFile(byte version, string extension = ".cso")
     {
         var path = Path.Combine(_tempDir, $"test_{Guid.NewGuid():N}{extension}");
@@ -226,8 +372,10 @@ public class CsoFileTests : IDisposable
         const uint dataOffset = 24 + indexEntries * 4;
         for (var i = 0; i < indexEntries; i++)
         {
-            // Set high bit to indicate uncompressed
-            ms.Write(BitConverter.GetBytes(dataOffset | 0x80000000u));
+            // v1 marks a stored block with the high bit; v2 stores a block when its size is a full
+            // block, so no flag is used there.
+            var entry = version == 1 ? dataOffset | 0x80000000u : dataOffset;
+            ms.Write(BitConverter.GetBytes(entry));
         }
 
         // Data: one block of zeros

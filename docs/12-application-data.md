@@ -11,22 +11,22 @@ Everything the application persists lives under the per-user AppData folder:
 %LocalAppData%\BatchConvertToCHD\
 ├── logs\                          # Serilog rolling log files
 │   └── BatchConvertToCHD-YYYYMMDD.log   (daily roll, 7 files retained)
-└── screenshots\                   # F8 screenshots
-    └── screenshot_yyyy-MM-dd_HH-mm-ss-fff.png
+└── screenshot_yyyy-MM-dd_HH-mm-ss-fff.png   # only when the app folder is read-only
 ```
 
-`%LocalAppData%` resolves to `C:\Users\<user>\AppData\Local` on a standard install.
+`%LocalAppData%` resolves to `C:\Users\<user>\AppData\Local` on a standard install. F8 screenshots normally live in a `Screenshot` folder next to the executable; the AppData location above is the fallback used when that folder cannot be written.
 
 ## 12.1 Logs
 
 - Configured in `App.axaml.cs` `ConfigureSerilog`.
 - **File sink**: `%LocalAppData%\BatchConvertToCHD\logs\BatchConvertToCHD-.log`, daily rolling (`RollingInterval.Day`), **7 files retained**, minimum level **Debug**, invariant-culture timestamps `{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}`.
 - **Debug sink** (visible in the Visual Studio debugger output) and the **BugReportApiSink** (warning+, see [Bug Reporting System](09-bug-reporting.md)).
-- The in-app **LogViewer** shows the same messages (truncated at 100,000 characters, `MaxLogLength`); the **AppData** title-bar button opens `%LocalAppData%\BatchConvertToCHD` in Explorer.
+- The in-app **LogViewer** shows the same messages. Lines are queued and flushed in batches (100 ms), and the text is capped at 50,000 characters (`MaxLogLength`), so a large log cannot freeze the window; the **AppData** title-bar button opens `%LocalAppData%\BatchConvertToCHD` in Explorer.
 
 ## 12.2 Screenshots
 
-- While the application window is focused, **F8** captures that window with Avalonia's `RenderTargetBitmap` and saves it as `screenshot_yyyy-MM-dd_HH-mm-ss-fff.png` under `%LocalAppData%\BatchConvertToCHD\screenshots` (folder created on demand).
+- While the application window is focused, **F8** captures that window with Avalonia's `RenderTargetBitmap` and saves it as `screenshot_yyyy-MM-dd_HH-mm-ss-fff.png` in the `Screenshot` folder next to the executable (folder created on demand).
+- When that folder cannot be written, the capture falls back to `%LocalAppData%\BatchConvertToCHD` instead.
 - The saved path is logged in the app ("Screenshot saved: ...").
 
 ## 12.3 Temporary Directories
@@ -48,7 +48,7 @@ Temp directories are **not** under AppData — they live on the drive with the m
 | `CHDSharp.dll`, `Avalonia` assemblies, etc. | Managed dependencies (copy-local); CHDSharp powers the built-in in-process encoder |
 | `CCDSharp.dll`, `CSOSharp.dll`, `PBPSharp.dll`, `MDSSharp.dll`, `ISZSharp.dll` | In-house libraries |
 
-Legacy leftovers (`logs`, `Resources`, `Screenshot` folders; `maxcso.exe`, `psxpackager.exe`) are deleted automatically at startup by `LegacyCleanupService` (see [Services Reference](07-services-reference.md#76-legacycleanupservice)).
+Legacy leftovers (`logs` and `Resources` folders; `maxcso.exe`, `psxpackager.exe`) are deleted automatically at startup by `LegacyCleanupService` (see [Services Reference](07-services-reference.md#76-legacycleanupservice)). The `Screenshot` folder is left alone because F8 screenshots are saved there.
 
 ## 12.5 Network Endpoints
 

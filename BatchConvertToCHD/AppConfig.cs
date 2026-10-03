@@ -93,6 +93,11 @@ internal static class AppConfig
     internal const string ApplicationName = "BatchConvertToCHD";
 
     /// <summary>
+    ///     The donation page opened by the main window's Donate button.
+    /// </summary>
+    internal const string DonationUrl = "https://www.purelogiccode.com/donate";
+
+    /// <summary>
     ///     The environment identifier sent with bug reports ("Production" or "Development").
     /// </summary>
 #if DEBUG

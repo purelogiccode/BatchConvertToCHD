@@ -174,8 +174,11 @@ the runner's Node 24 runtime is used.
 - `docs/` is the single source of truth for both. Never edit the wiki in the
   GitHub UI.
 - `scripts/ci/sync-wiki.mjs` copies `docs/*.md` to the wiki (`index.md` becomes
-  `Home.md`, Jekyll front matter is stripped), adds `WhatsNew.md`, and leaves
-  the wiki-only `_Sidebar.md` alone.
+  `Home.md`, Jekyll front matter is stripped), adds `WhatsNew.md` (front matter
+  stripped too), and syncs `docs/_Sidebar.md` as the wiki side menu.
+- `WhatsNew.md` lives at the repository root and carries Jekyll front matter for
+  the Pages site; the docs workflow stages a copy into `docs/` before the
+  Jekyll build (Jekyll ignores the underscore-prefixed `_Sidebar.md`).
 - The wiki push needs a repository secret named `WIKI_TOKEN` (classic PAT with
   the `repo` scope, or fine-grained PAT with `Contents: Read and write`) because
   `GITHUB_TOKEN` cannot push to the wiki repository. Without the secret the sync

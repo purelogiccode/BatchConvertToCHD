@@ -18,6 +18,7 @@ internal sealed class FileWatcherService : IDisposable
         StringComparer.OrdinalIgnoreCase
     );
 
+    private readonly Lock _historyLock = new();
     private readonly ConcurrentQueue<string> _trackedKeys = new();
 
     private FileSystemWatcher? _watcher;
@@ -217,9 +218,12 @@ internal sealed class FileWatcherService : IDisposable
         // clearing history so stale data is not presented as accurate.
         if (ex is InternalBufferOverflowException)
         {
-            _lastEventByFile.Clear();
-            while (_trackedKeys.TryDequeue(out _))
+            lock (_historyLock)
             {
+                _lastEventByFile.Clear();
+                while (_trackedKeys.TryDequeue(out _))
+                {
+                }
             }
         }
     }
@@ -251,19 +255,25 @@ internal sealed class FileWatcherService : IDisposable
     {
         var record = new FileEventRecord(DateTime.Now, eventType, relatedName);
 
-        if (_lastEventByFile.TryAdd(fullPath, record))
+        // The add/update and the eviction bookkeeping must be atomic together; otherwise a
+        // concurrent history clear can leave a re-added key that is never enqueued (and so never
+        // evicted) or evict a newer record.
+        lock (_historyLock)
         {
-            _trackedKeys.Enqueue(fullPath);
-        }
-        else
-        {
-            _lastEventByFile[fullPath] = record;
-        }
+            if (_lastEventByFile.TryAdd(fullPath, record))
+            {
+                _trackedKeys.Enqueue(fullPath);
+            }
+            else
+            {
+                _lastEventByFile[fullPath] = record;
+            }
 
-        while (_trackedKeys.Count > MaxFileHistory)
-        {
-            if (_trackedKeys.TryDequeue(out var key))
-                _lastEventByFile.TryRemove(key, out _);
+            while (_trackedKeys.Count > MaxFileHistory)
+            {
+                if (_trackedKeys.TryDequeue(out var key))
+                    _lastEventByFile.TryRemove(key, out _);
+            }
         }
     }
 }

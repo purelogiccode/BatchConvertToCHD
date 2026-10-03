@@ -47,6 +47,21 @@
                 ToolTip.Tip="Information and application commands">
                 <Button
                     Classes="info"
+                    Click="DonateMenuItem_Click"
+                    ToolTip.Tip="Support the project with a donation">
+                    <StackPanel Orientation="Horizontal" Spacing="7" ToolTip.Tip="Donate button contents">
+                        <Path
+                            Width="16"
+                            Height="16"
+                            Fill="White"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Heart icon"
+                            Data="M8,14 C8,14 1,9.5 1,5.2 C1,3 2.8,1.5 4.8,1.5 C6.1,1.5 7.3,2.2 8,3.3 C8.7,2.2 9.9,1.5 11.2,1.5 C13.2,1.5 15,3 15,5.2 C15,9.5 8,14 8,14 Z" />
+                        <TextBlock Text="Donate" VerticalAlignment="Center" ToolTip.Tip="Open the donation page" />
+                    </StackPanel>
+                </Button>
+                <Button
+                    Classes="info"
                     Click="AboutMenuItem_Click"
                     ToolTip.Tip="View application information and acknowledgements">
                     <StackPanel Orientation="Horizontal" Spacing="7" ToolTip.Tip="About button contents">

@@ -209,12 +209,24 @@ public static partial class CcdParser
             {
                 inCcd = false;
                 inDisc = false;
-                var trackNumber = int.Parse(
-                    trackMatch.Groups[1].Value,
-                    CultureInfo.InvariantCulture
-                );
+                if (
+                    !int.TryParse(
+                        trackMatch.Groups[1].Value,
+                        CultureInfo.InvariantCulture,
+                        out var trackNumber
+                    )
+                )
+                {
+                    currentTrack = -1;
+                    continue;
+                }
 
-                var maxTrack = disc.TocEntries > 0 ? disc.TocEntries : MaxTrackNumber;
+                // The declared TOC entry count is untrusted; a corrupt descriptor claiming billions
+                // of entries must not make the parser allocate a Track for every number up to it.
+                var maxTrack = Math.Min(
+                    disc.TocEntries > 0 ? disc.TocEntries : MaxTrackNumber,
+                    MaxTrackNumber
+                );
                 if (trackNumber < 1 || trackNumber > maxTrack)
                 {
                     currentTrack = -1;
@@ -250,7 +262,17 @@ public static partial class CcdParser
     private static void ParseCcdSection(string line, DiscImage disc)
     {
         var versionMatch = VersionRegex().Match(line);
-        if (versionMatch.Success) disc.Version = int.Parse(versionMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+        if (
+            versionMatch.Success
+            && int.TryParse(
+                versionMatch.Groups[1].Value,
+                CultureInfo.InvariantCulture,
+                out var version
+            )
+        )
+        {
+            disc.Version = version;
+        }
     }
 
     /// <summary>
@@ -263,29 +285,32 @@ public static partial class CcdParser
         var match = TocEntriesRegex().Match(line);
         if (match.Success)
         {
-            disc.TocEntries = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+            if (TryParseInt(match, out var tocEntries)) disc.TocEntries = tocEntries;
+
             return;
         }
 
         match = SessionsRegex().Match(line);
         if (match.Success)
         {
-            disc.Sessions = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+            if (TryParseInt(match, out var sessions)) disc.Sessions = sessions;
+
             return;
         }
 
         match = DataTracksScrambledRegex().Match(line);
         if (match.Success)
         {
-            disc.DataTracksScrambled =
-                int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) != 0;
+            if (TryParseInt(match, out var scrambled)) disc.DataTracksScrambled = scrambled != 0;
+
             return;
         }
 
         match = CdTextLengthRegex().Match(line);
         if (match.Success)
         {
-            disc.CdTextLength = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+            if (TryParseInt(match, out var cdTextLength)) disc.CdTextLength = cdTextLength;
+
             return;
         }
 
@@ -303,7 +328,9 @@ public static partial class CcdParser
         var modeMatch = TrackModeRegex().Match(line);
         if (modeMatch.Success)
         {
-            track.Mode = int.Parse(modeMatch.Groups[1].Value, CultureInfo.InvariantCulture) switch
+            if (!TryParseInt(modeMatch, out var mode)) return;
+
+            track.Mode = mode switch
             {
                 0 => TrackMode.Audio,
                 1 => TrackMode.Mode1,
@@ -316,8 +343,16 @@ public static partial class CcdParser
         var indexMatch = TrackIndexRegex().Match(line);
         if (indexMatch.Success)
         {
-            var indexNum = int.Parse(indexMatch.Groups[1].Value, CultureInfo.InvariantCulture);
-            var lbaValue = int.Parse(indexMatch.Groups[2].Value, CultureInfo.InvariantCulture);
+            if (!TryParseInt(indexMatch, out var indexNum)) return;
+            if (
+                !int.TryParse(
+                    indexMatch.Groups[2].Value,
+                    CultureInfo.InvariantCulture,
+                    out var lbaValue
+                )
+            )
+                return;
+
             track.Indexes[indexNum] = lbaValue;
             return;
         }
@@ -331,6 +366,18 @@ public static partial class CcdParser
 
         var isrcMatch = TrackIsrcRegex().Match(line);
         if (isrcMatch.Success) track.Isrc = isrcMatch.Groups[1].Value.Trim();
+    }
+
+    /// <summary>
+    ///     Parses the first capture group of <paramref name="match" /> as an int. Returns false when
+    ///     the value overflows, so a malformed descriptor cannot throw out of the parser.
+    /// </summary>
+    /// <param name="match">The regex match whose first group holds the value.</param>
+    /// <param name="value">When this method returns, contains the parsed value.</param>
+    /// <returns>True when the value parsed.</returns>
+    private static bool TryParseInt(Match match, out int value)
+    {
+        return int.TryParse(match.Groups[1].Value, CultureInfo.InvariantCulture, out value);
     }
 
     /// <summary>

@@ -149,6 +149,15 @@ internal static class MdxCrypto
             );
         }
 
+        // The declared decompressed size drives an allocation; a descriptor cannot be larger than
+        // the file that stores it, so an impossible value is rejected before allocating.
+        if (decompressedSize > (uint)fileBytes.Length)
+        {
+            throw new InvalidDataException(
+                "the MDS v2 descriptor declares an impossible decompressed size; the file is corrupt."
+            );
+        }
+
         var descriptorLength = (int)((compressedSize + 15L) / 16L * 16);
         if (descriptorLength <= 0)
         {

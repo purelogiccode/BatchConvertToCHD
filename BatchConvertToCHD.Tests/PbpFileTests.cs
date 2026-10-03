@@ -608,6 +608,32 @@ public class PbpFileTests : IDisposable
     }
 
     [Fact]
+    public void ExtractToBinCueWithZeroIsoSizeWritesEveryBlock()
+    {
+        // Regression: a PBP whose volume descriptor sector count is zero declares an unknown ISO
+        // size. Capping each block against that zero wrote an empty BIN and still reported success.
+        var path = Path.Combine(_tempDir, $"zeroiso_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithBlockCount(2)
+            .WithCustomIsoBlock1Data(new byte[2048])
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        using (pbp)
+        {
+            var binPath = Path.Combine(_tempDir, $"zeroiso_{Guid.NewGuid():N}.bin");
+            var cuePath = Path.ChangeExtension(binPath, ".cue");
+            var result = pbp.Discs[0].ExtractToBinCue(binPath, cuePath);
+            Assert.Equal(PbpError.None, result);
+            Assert.True(File.Exists(binPath));
+            Assert.Equal(2 * 16 * 0x930, new FileInfo(binPath).Length);
+        }
+    }
+
+    [Fact]
     public void ExtractToBinCueWithZlibWrappedBlocksSucceeds()
     {
         // Regression: some PBP authoring tools compress PSAR blocks with zlib.compress,

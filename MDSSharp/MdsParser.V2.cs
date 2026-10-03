@@ -144,7 +144,10 @@ public static partial class MdsParser
                     bytes.AsSpan((int)(trackBase + V2TrackLength64Offset))
                 );
 
-                var (pregap, length) = medium == MdsMedium.Cd
+                // The whole CD family (CD, CD-R, CD-RW) and an unrecognised medium keep their track
+                // length in the extra block; only DVD uses the 64-bit track length. Restricting this
+                // to plain CD read CD-R/CD-RW descriptors as zero-length tracks.
+                var (pregap, length) = medium is not (MdsMedium.Dvd or MdsMedium.DvdMinusR)
                     ? ReadExtraBlock(bytes, medium, extraOffset)
                     : (0, (long)trackLength64);
 

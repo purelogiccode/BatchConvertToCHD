@@ -66,7 +66,9 @@ try {
         }
     }
 
-    const whatsNew = readFileSync(join(repoRoot, 'WhatsNew.md'), 'utf8').replace(/\r\n/g, '\n');
+    const whatsNew = stripFrontMatter(
+        readFileSync(join(repoRoot, 'WhatsNew.md'), 'utf8')
+    ).replace(/\r\n/g, '\n');
     const whatsNewTarget = join(wikiDir, 'WhatsNew.md');
     let previousWhatsNew = '';
     try {

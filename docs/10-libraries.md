@@ -33,7 +33,7 @@ The solution ships five in-house libraries that replace external tools (maxcso, 
 **Purpose**: read and decompress **CISO** (Compressed ISO, `.cso`) images.
 
 - Main type: `CsoFile` — `Open(path/stream, out CsoFile)` returns a `CsoError`; exposes `UncompressedSize`, block metadata, `ReadBlock`, `ExtractToIso(path, progress?, token)`, and a seekable `CsoStream` implementing the stream contract.
-- Supports **v1 and v2** headers, **deflate/zlib** and **LZ4** compression (`K4os.Compression.LZ4` dependency).
+- Supports **v1 and v2** headers, **deflate/zlib** and **LZ4** compression (`K4os.Compression.LZ4` dependency). Block flags are version-dependent: v1 marks stored blocks with index bit 31; v2 decides by stored length (smaller than a full block = compressed) and uses bit 31 to select LZ4 over deflate. A short final stored block is zero-padded.
 - Integration: `ArchiveService.ExtractCsoAsync` (`Services/ArchiveService.cs:52`) decompresses to a temp ISO for the conversion pipeline.
 - Error enum: `CsoError { None, FileNotFound, InvalidHeader, UnsupportedVersion, InvalidBlockSize, ... }`.
 - Tests: `CsoFileTests`, `CsoStreamTests`, `CsoHeaderTests`, plus byte-for-byte integration tests against real `.cso`/`.iso` pairs (`CsoFileIntegrationTests`).

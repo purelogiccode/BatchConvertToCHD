@@ -94,14 +94,17 @@ internal partial class MainWindow
             columns[1].Width = new GridLength(0);
             columns[2].Width = new GridLength(0);
             LogSplitter.IsVisible = false;
-            LogPanelBorder.MinWidth = 0;
+
+            // A zero-width column alone still lets the unclipped log control draw over the tab at
+            // the window edge, so the panel itself is hidden while the Explorer tab is active.
+            LogPanelBorder.IsVisible = false;
         }
         else
         {
             columns[1].Width = _explorerSavedSplitterWidth;
             columns[2].Width = _explorerSavedLogWidth;
             LogSplitter.IsVisible = true;
-            LogPanelBorder.MinWidth = 300;
+            LogPanelBorder.IsVisible = true;
         }
 
         _explorerLayoutActive = explorerActive;

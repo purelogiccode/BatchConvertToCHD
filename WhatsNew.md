@@ -1,13 +1,22 @@
+---
+title: What's New
+nav_order: 15
+---
+
 # What's New
 
-## 3.9.0 (2026-10-02)
+## 3.9.0 (2026-10-03)
 
 ### Avalonia becomes the application front end
 
 *   **The Windows-only WPF front end is gone**; the cross-platform Avalonia app is now the base project and builds `BatchConvertToCHD.exe`. It runs on Windows, Linux and macOS; official release zips remain the two Windows architectures.
+*   **The application project was renamed `BatchConvertToCHD.Avalonia` → `BatchConvertToCHD`**, so the folder, project and executable all carry the product name.
 *   **Shared code and the bundled tools moved into `BatchConvertToCHD/`**, so the project no longer links files from another folder. Windows keeps the bundled `chdman`/`7za`/`CHDSharp`; Linux and macOS discover them (plus `ffmpeg` for MP3 tracks) on `PATH`.
 *   **UI parity with the old WPF build** was restored: Alt+letter button mnemonics, click-to-sort grid columns with the original header tooltips, and accessibility names on the main controls.
-*   **F8 screenshots are now window-scoped**: while the app window is focused, F8 captures it with `RenderTargetBitmap` on every platform (previously a system-wide hotkey captured the foreground window on Windows only).
+*   **F8 screenshots are now window-scoped**: while the app window is focused, F8 captures it with `RenderTargetBitmap` on every platform (previously a system-wide hotkey captured the foreground window on Windows only). Screenshots are saved into a `Screenshot` folder next to the app, with the AppData folder as fallback when the install location is read-only.
+*   **The main window has a Donate button** (left of About) that opens the project's donation page, and the About window now scrolls so every acknowledgement is reachable on short screens.
+*   **The Close button always closes the app again**: shutting down from inside the window's Closing event re-entered the close in a loop, so the window never actually closed while an operation was idle.
+*   **The activity log is batched and capped**: log lines are flushed in batches instead of one dispatcher call per line, and the on-screen text is capped, so a very large log can no longer freeze the window. The Explorer tab now hides the log panel entirely instead of leaving a clipped strip of it over the window edge.
 
 ### New CHD Explorer tab
 
@@ -20,11 +29,24 @@
 *   **Conversion can no longer fail for a missing encoder**; a missing Windows `chdman.exe` only logs that the built-in encoder will be used. The status bar shows CHDSharp as always available.
 *   **Official 7-Zip 26.03 console binaries for Linux and macOS are now bundled** (`7zz`, static builds on Linux and a universal binary on macOS) and copied next to the app for the matching runtime; `7-Zip-License.txt` is included. Windows keeps `7za.exe`.
 
+### Reliability fixes
+
+*   **CSO v2 / ZSO images decode correctly.** The reader applied CSO v1 index semantics to version 2: LZ4 blocks (high bit set) were returned as raw compressed bytes and stored or deflate blocks were pushed through the LZ4 decoder. Blocks are now classified the way the format defines them — compressed only when smaller than a full block, with the high bit selecting LZ4 over deflate — and a short final stored block is zero-padded instead of failing.
+*   **A truncated CHD is never accepted as a success.** When `chdman` exited nonzero but left a non-empty file (the classic disk-full case), the app treated it as success and could delete the source. The output is now validated with the built-in reader first, and a partial file is discarded.
+*   **Deleting originals never reaches outside the input folder.** A descriptor naming `..\..\other\game.bin` (or an absolute path) could make the batch delete files it never converted; referenced files outside the selected input folder are now kept and reported.
+*   **Archived discs keep their folder structure.** Two same-named discs in different archive subfolders (`Disc1/game.cue`, `Disc2/game.cue`) both produced `game.chd`, and the second silently replaced the first; the archive's internal path is now preserved. The same-batch duplicate guard keeps the first product and reports any remaining collision.
+*   **Extracting next to an existing disc set no longer replaces it.** The "extract into a subfolder instead of overwriting" rule now also covers cue/gdi sets (checking their BIN too) and applies to the `chdman` fallback, not just the built-in reader. Cancelling a fallback extraction now kills the `chdman` child instead of leaving it running.
+*   **A PBP whose volume descriptor declares zero sectors** no longer extracts an empty BIN and reports success; every index entry is written when the size is unknown.
+*   **CD-R/CD-RW MDS v2 descriptors** read their track lengths from the extra block like pressed CDs, and a `.ccd` claiming a huge `TocEntries` value can no longer make the parser allocate unbounded tracks.
+*   **MP3 decoding on Linux/macOS is cancellable**: `ffmpeg` is awaited with the operation token and killed on cancel instead of blocking the window in an uncancellable `WaitForExit()`.
+*   **Smaller fixes**: a bare `.bin` with a companion cue now converts through the cue; 7-Zip arguments are passed via `ArgumentList` so quotes in paths cannot inject switches; the bug-report throttle's safety-net timer can no longer clear the flag of a newer send; a corrupt CSO index, MDX descriptor or ISZ chunk table is rejected before a huge allocation.
+
 ### Housekeeping
 
 *   Version bumps: application 3.9.0, Meziantou.Analyzer 3.0.292.
 *   Release script strips native `.pdb` debug symbols from the zip and verifies the Avalonia native libraries are present.
 *   Docs, AGENTS.md and CI updated for the new base project; tests now reference the Avalonia assembly.
+*   Test suite grew to **1076 tests** (1048 unit + 28 integration), including new CSO v2 stored/LZ4/deflate, PBP zero-size, corrupt-CCD and IoThroughputCounter regression tests.
 
 ## 3.8.0 (2026-09-19)
 

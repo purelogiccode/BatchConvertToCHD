@@ -22,6 +22,7 @@ internal class BugReportApiSink : ILogEventSink
     private static string? _lastSentMessage;
     private static DateTimeOffset _lastSentAt;
     private static int _isSending;
+    private static int _sendGeneration;
     private readonly BugReportService _bugReportService;
 
     /// <summary>
@@ -66,31 +67,46 @@ internal class BugReportApiSink : ILogEventSink
 
         var ex = logEvent.Exception;
 
-        if (Interlocked.CompareExchange(ref _isSending, 1, 0) == 0)
+        int generation;
+        lock (DedupeLock)
         {
-            lock (DedupeLock)
-            {
-                _lastSentMessage = message;
-                _lastSentAt = DateTimeOffset.UtcNow;
-            }
+            if (_isSending != 0) return;
 
-            // Use a 10-second timeout so a hung HTTP call doesn't permanently block
-            // subsequent bug reports. The flag is always reset in the continuation.
-            _ = _bugReportService
-                .SendBugReportAsync(message, ex)
-                .ContinueWith(
-                    static _ => Interlocked.Exchange(ref _isSending, 0),
-                    TaskContinuationOptions.ExecuteSynchronously
-                );
+            _isSending = 1;
+            generation = ++_sendGeneration;
+            _lastSentMessage = message;
+            _lastSentAt = DateTimeOffset.UtcNow;
+        }
 
-            // Safety net: clear the flag after 12 seconds even if SendBugReportAsync
-            // never completes (e.g. TCP connection hang). Task.Delay is deliberately
-            // not awaited — it runs as an independent fire-and-forget timer.
-            _ = Task.Delay(TimeSpan.FromSeconds(12))
-                .ContinueWith(
-                    static _ => Volatile.Write(ref _isSending, 0),
-                    TaskContinuationOptions.ExecuteSynchronously
-                );
+        // Use a 10-second timeout so a hung HTTP call doesn't permanently block
+        // subsequent bug reports. The flag is always reset in the continuation.
+        _ = _bugReportService
+            .SendBugReportAsync(message, ex)
+            .ContinueWith(
+                _ => ClearSendingFlag(generation),
+                TaskContinuationOptions.ExecuteSynchronously
+            );
+
+        // Safety net: clear the flag after 12 seconds even if SendBugReportAsync
+        // never completes (e.g. TCP connection hang). Task.Delay is deliberately
+        // not awaited — it runs as an independent fire-and-forget timer.
+        _ = Task.Delay(TimeSpan.FromSeconds(12))
+            .ContinueWith(
+                _ => ClearSendingFlag(generation),
+                TaskContinuationOptions.ExecuteSynchronously
+            );
+    }
+
+    /// <summary>
+    ///     Clears the in-flight flag when <paramref name="generation" /> is still the newest send,
+    ///     so a late safety-net timer cannot clear the flag for a newer report that is still running.
+    /// </summary>
+    /// <param name="generation">Generation of the send that scheduled the clear.</param>
+    private static void ClearSendingFlag(int generation)
+    {
+        lock (DedupeLock)
+        {
+            if (_sendGeneration == generation) _isSending = 0;
         }
     }
 }
