@@ -1,7 +1,13 @@
 [![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-0078d7.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
 [![.NET 10.0](https://img.shields.io/badge/.NET-10.0-512bd4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![CI](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/ci.yml?label=CI)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE.txt)
 [![GitHub release](https://img.shields.io/github/v/release/purelogiccode/BatchConvertToCHD)](https://github.com/purelogiccode/BatchConvertToCHD/releases)
+[![Downloads](https://img.shields.io/github/downloads/purelogiccode/BatchConvertToCHD/total.svg)](https://github.com/purelogiccode/BatchConvertToCHD/releases)
+[![GitHub last commit](https://img.shields.io/github/last-commit/purelogiccode/BatchConvertToCHD)](https://github.com/purelogiccode/BatchConvertToCHD/commits/master)
+[![GitHub stars](https://img.shields.io/github/stars/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/issues)
+[![UI: Avalonia 12](https://img.shields.io/badge/UI-Avalonia%2012-8b44ac.svg)](https://avaloniaui.net)
 
 # Batch Convert to CHD
 

@@ -2,8 +2,13 @@
 
 [![NuGet](https://img.shields.io/nuget/v/CSOSharp.svg)](https://www.nuget.org/packages/CSOSharp)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/CSOSharp.svg)](https://www.nuget.org/packages/CSOSharp)
+[![CI](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/ci.yml?label=CI)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
 [![.NET 8 | 9 | 10](https://img.shields.io/badge/.NET-8.0%20%7C%209.0%20%7C%2010.0-512bd4.svg)](https://dotnet.microsoft.com/download)
+[![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-0078d7.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![GitHub last commit](https://img.shields.io/github/last-commit/purelogiccode/BatchConvertToCHD)](https://github.com/purelogiccode/BatchConvertToCHD/commits/master)
+[![GitHub stars](https://img.shields.io/github/stars/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/issues)
 
 **CSOSharp** is a managed C# library for reading and extracting **CSO/CISO** (Compressed ISO) files. It supports both the classic CSO v1 (deflate/zlib) format and CSO v2, also known as **ZSO** (LZ4), and can decode individual blocks, expose the decompressed image as a seekable `Stream`, or extract the whole ISO to disk.
 

@@ -2,8 +2,13 @@
 
 [![NuGet](https://img.shields.io/nuget/v/MDSSharp.svg)](https://www.nuget.org/packages/MDSSharp)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/MDSSharp.svg)](https://www.nuget.org/packages/MDSSharp)
+[![CI](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/ci.yml?label=CI)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
 [![.NET 8 | 9 | 10](https://img.shields.io/badge/.NET-8.0%20%7C%209.0%20%7C%2010.0-512bd4.svg)](https://dotnet.microsoft.com/download)
+[![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-0078d7.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![GitHub last commit](https://img.shields.io/github/last-commit/purelogiccode/BatchConvertToCHD)](https://github.com/purelogiccode/BatchConvertToCHD/commits/master)
+[![GitHub stars](https://img.shields.io/github/stars/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/issues)
 
 **MDSSharp** is a managed C# library for reading **Alcohol 120%** disc images (`.mds` descriptor + `.mdf` data) and **Daemon Tools MDS v2 / MDX** descriptors. It parses the MDS session and track tables, locates and reassembles the data file (including `.i00`/`.i01` and `.001`/`.002` split sets), strips CD subchannel tails from oversized sectors, and writes CUE sheets so the image can be converted by `chdman` or other tools.
 

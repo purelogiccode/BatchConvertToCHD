@@ -2,8 +2,13 @@
 
 [![NuGet](https://img.shields.io/nuget/v/CCDSharp.svg)](https://www.nuget.org/packages/CCDSharp)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/CCDSharp.svg)](https://www.nuget.org/packages/CCDSharp)
+[![CI](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/ci.yml?label=CI)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
 [![.NET 8 | 9 | 10](https://img.shields.io/badge/.NET-8.0%20%7C%209.0%20%7C%2010.0-512bd4.svg)](https://dotnet.microsoft.com/download)
+[![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-0078d7.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![GitHub last commit](https://img.shields.io/github/last-commit/purelogiccode/BatchConvertToCHD)](https://github.com/purelogiccode/BatchConvertToCHD/commits/master)
+[![GitHub stars](https://img.shields.io/github/stars/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/issues)
 
 **CCDSharp** is a managed C# library for parsing and converting **CloneCD** disc images (`.ccd` + `.img` + `.sub`). It reads the CloneCD descriptor, resolves the associated raw image and subchannel files, and converts the image to a standard **ISO** (2048-byte user data sectors) or **CUE/BIN** pair.
 
