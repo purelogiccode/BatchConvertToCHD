@@ -340,6 +340,9 @@ public class BugReportServiceTests
     [InlineData("CCDSharp: Conversion error")]
     [InlineData("File not found, skipping:")]
     [InlineData(
+        "Explorer: Could not parse 'AH3 - Thunderstrike (USA).chd' as Xbox (the file system could not be parsed). Try another file system parser."
+    )]
+    [InlineData(
         "chdman.exe terminated abnormally during the startup check (exit code -1073741511; 0xC0000139, STATUS_ENTRYPOINT_NOT_FOUND - a required DLL entry point is missing (the build is incompatible with this Windows version; install Windows updates / the latest Visual C++ redistributable or use a chdman build for your OS))."
     )]
     [InlineData(" The output folder is not available: F:\\compressed iso")]

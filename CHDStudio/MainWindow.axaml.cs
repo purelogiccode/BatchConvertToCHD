@@ -3808,7 +3808,7 @@ internal partial class MainWindow : Window, IDisposable
                         break;
                     case PbpError.IoError:
                         LogMessage(
-                            "       The file could not be read - close any program using it and check the drive for errors."
+                            "       The file could not be read or written - close any program using it, check the drive for errors, and make sure it has enough free space."
                         );
                         break;
                 }
@@ -7304,10 +7304,14 @@ internal partial class MainWindow : Window, IDisposable
                     var error = PbpFile.Open(inputFile, out var pbpFile);
                     if (error != PbpError.None || pbpFile == null)
                     {
+                        var openError = $"Failed to open PBP file: {error} (code {(int)error})";
+                        var detail = PbpDiagnostics.TakeDetail();
+                        if (!string.IsNullOrWhiteSpace(detail)) openError += $"; {detail}";
+
                         return (
                             Success: false,
                             CuePaths: new List<string>(),
-                            Error: $"Failed to open PBP file: {error} (code {(int)error})",
+                            Error: openError,
                             ErrorCode: error
                         );
                     }

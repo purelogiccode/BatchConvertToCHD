@@ -414,8 +414,11 @@ public sealed class PbpDiscInfo
             // The index points past the end of the file: the download is truncated or incomplete.
             extractError = PbpError.TruncatedPsar;
         }
-        catch (IOException)
+        catch (IOException ex)
         {
+            PbpDiagnostics.SetDetail(
+                $"I/O error while extracting disc {Index} to '{binPath}': {ex.Message}"
+            );
             extractError = PbpError.IoError;
         }
         catch (InvalidDataException)
@@ -459,8 +462,9 @@ public sealed class PbpDiscInfo
         {
             File.WriteAllText(cuePath, cueContent);
         }
-        catch (IOException)
+        catch (IOException ex)
         {
+            PbpDiagnostics.SetDetail($"Failed to write the cue sheet '{cuePath}': {ex.Message}");
             return PbpError.IoError;
         }
 

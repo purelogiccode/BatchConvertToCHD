@@ -106,6 +106,9 @@ internal class BugReportService
         "the split archive cannot be extracted",
         "CCDSharp: Conversion error",
         "File not found, skipping:",
+        // Choosing the wrong file-system parser in the CHD Explorer is a user action; the
+        // message already tells the user to try another parser.
+        "Try another file system parser",
         // CHD open/read failures during extraction are user-data problems (corrupt CHD files).
         "Failed to open '",
         // File move failures after conversion are environment issues (locked files, permissions).

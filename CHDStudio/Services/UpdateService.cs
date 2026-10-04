@@ -17,6 +17,13 @@ internal class UpdateService
         PropertyNameCaseInsensitive = true
     };
 
+    /// <summary>
+    ///     Upper bound for the GitHub update check. The shared client's default timeout is 100
+    ///     seconds, which leaves the status bar looking hung on a blocked connection; a slow or
+    ///     filtered network is a routine environment condition and must never become a bug report.
+    /// </summary>
+    private static readonly TimeSpan UpdateCheckTimeout = TimeSpan.FromSeconds(30);
+
     internal UpdateService(string applicationName)
         : this(applicationName, AppHttpClient.Client)
     {
@@ -116,7 +123,10 @@ internal class UpdateService
             using var request = new HttpRequestMessage(HttpMethod.Get, releaseUrl);
             request.Headers.UserAgent.ParseAdd(ApplicationName);
 
-            using var response = await httpClient.SendAsync(request).ConfigureAwait(false);
+            using var timeoutCts = new CancellationTokenSource(UpdateCheckTimeout);
+            using var response = await httpClient
+                .SendAsync(request, timeoutCts.Token)
+                .ConfigureAwait(false);
 
             if (
                 response.StatusCode
@@ -192,6 +202,13 @@ internal class UpdateService
                 onLog("Application is up to date.");
                 onStatusUpdate("Application is up to date");
             }
+        }
+        catch (Exception ex) when (ex is TaskCanceledException or TimeoutException)
+        {
+            // The update check timing out is the user's network blocking or slowing GitHub,
+            // not an application defect; log it and leave the bug tracker alone.
+            onLog($"Update check failed (network timeout): {ex.Message}");
+            onStatusUpdate("Update check failed (network)");
         }
         catch (HttpRequestException ex) when (ex.StatusCode == null)
         {

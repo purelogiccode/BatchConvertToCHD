@@ -437,7 +437,7 @@ Notes:
 - `ExtractToBinCue` writes the BIN first and deletes the partial file when extraction fails or is cancelled, so a returned error never leaves a short BIN behind.
 - A disc whose volume descriptor declares zero sectors (size unknown) has every index entry written in full instead of producing an empty BIN; a declared size stops extraction once it has been reached, so index-area data appended by an authoring tool is not read as image data.
 - `NoIsoIndexException` is what the PSAR parser throws internally when a valid disc container carries no ISO index. `PbpFile.Open` catches it and reports `PbpError.TruncatedPsar`.
-- When a block fails to decompress, `PbpDiagnostics.TakeDetail()` returns a one-line description of the failing block - its index and count, absolute file offset, index-entry length, stored flag, ISO size, disc id and a hex preview of the first bytes, plus the raw-deflate and zlib error messages. The detail is per-thread and cleared when read, so it is never reported twice. Attach it to logs or bug reports; the `PbpError` code alone cannot identify the block.
+- When a block fails to decompress, `PbpDiagnostics.TakeDetail()` returns a one-line description of the failing block - its index and count, absolute file offset, index-entry length, stored flag, ISO size, disc id and a hex preview of the first bytes, plus the raw-deflate and zlib error messages. When a file or stream operation fails with `PbpError.IoError`, it returns the path and the underlying OS error text instead. The detail is per-thread and cleared when read, so it is never reported twice. Attach it to logs or bug reports; the `PbpError` code alone cannot identify the cause.
 
 ## API reference
 
@@ -541,6 +541,11 @@ dotnet test CHDStudio.Tests/CHDStudio.Tests.csproj -c Release --filter "FullyQua
 ```
 
 ## Version history
+
+### 1.1.3
+
+- `PbpDiagnostics` now records the underlying OS error text when an open or extraction fails with `PbpError.IoError` (locked file, failing disk, no free space), so the bare error code can be diagnosed from logs and bug reports.
+- Cue-sheet write failures record the failing path and OS error too.
 
 ### 1.1.2
 

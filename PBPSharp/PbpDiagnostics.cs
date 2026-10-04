@@ -3,11 +3,12 @@ namespace PBPSharp;
 using Models;
 
 /// <summary>
-///     Captures a human-readable description of the most recent PSAR decompression failure on the
-///     current thread. The <see cref="PbpError" /> codes returned by extraction carry no block
-///     identity, so this side channel attaches the failing block index, its location, the index
-///     entry and the raw bytes' preview for logs and bug reports, mirroring CHDSharp's diagnostics
-///     channel. The detail is cleared when read, so a stale failure is never reported twice.
+///     Captures a human-readable description of the most recent PBP I/O or PSAR decompression
+///     failure on the current thread. The <see cref="PbpError" /> codes returned by open and
+///     extraction carry no underlying exception message, so this side channel attaches the failing
+///     file, the OS error text, the block index and the raw bytes' preview for logs and bug
+///     reports, mirroring CHDSharp's diagnostics channel. The detail is cleared when read, so a
+///     stale failure is never reported twice.
 /// </summary>
 public static class PbpDiagnostics
 {

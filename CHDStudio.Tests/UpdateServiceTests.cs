@@ -508,6 +508,42 @@ public class UpdateServiceTests
     }
 
     [Fact]
+    public async Task CheckForNewVersionAsync_RequestTimeout_LogsNetworkFailureWithoutBugReport()
+    {
+        var handler = new FakeHttpMessageHandler(static _ =>
+            throw new TaskCanceledException(
+                "The request was canceled due to the configured HttpClient.Timeout elapsing.",
+                new TimeoutException("The operation was canceled.")
+            )
+        );
+        using var httpClient = new HttpClient(handler);
+        var service = new UpdateService("TestApp", httpClient);
+        var logMessages = new List<string>();
+        var statusMessages = new List<string>();
+        var bugReportCalled = false;
+
+        await service.CheckForNewVersionAsync(
+            httpClient,
+            new Version(2, 7, 0),
+            logMessages.Add, statusMessages.Add, (_, _) =>
+            {
+                bugReportCalled = true;
+                return Task.CompletedTask;
+            }
+        );
+
+        Assert.Contains(
+            logMessages,
+            static m => m.Contains("timeout", StringComparison.OrdinalIgnoreCase)
+        );
+        Assert.Contains(
+            statusMessages,
+            static m => m.Contains("network", StringComparison.Ordinal)
+        );
+        Assert.False(bugReportCalled, "A request timeout is a network condition, not an app bug.");
+    }
+
+    [Fact]
     public async Task CheckForNewVersionAsync_GenericException_ReportsBug()
     {
         var handler = new FakeHttpMessageHandler(static _ =>

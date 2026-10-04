@@ -119,8 +119,9 @@ public sealed class PbpFile : IDisposable
                 stream.Dispose();
             return error;
         }
-        catch (IOException)
+        catch (IOException ex)
         {
+            PbpDiagnostics.SetDetail($"Failed to open '{path}': {ex.Message}");
             return PbpError.IoError;
         }
     }
@@ -167,8 +168,9 @@ public sealed class PbpFile : IDisposable
             // incomplete, which is a different condition from a failing device or permission.
             return PbpError.TruncatedPsar;
         }
-        catch (IOException)
+        catch (IOException ex)
         {
+            PbpDiagnostics.SetDetail($"Failed to read the PBP stream: {ex.Message}");
             return PbpError.IoError;
         }
         catch (NoIsoIndexException)
