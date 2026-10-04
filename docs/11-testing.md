@@ -12,7 +12,7 @@ The solution contains a single test project, `CHDStudio.Tests` (xUnit, `net10.0-
 ## 11.1 Running the Tests
 
 ```bash
-dotnet test CHDStudio.sln -c Release
+dotnet test CSharp_CHDStudio.sln -c Release
 # or, faster, without rebuilding:
 dotnet test CHDStudio.Tests/CHDStudio.Tests.csproj --no-build
 ```

@@ -65,7 +65,7 @@ CHDStudio/
 ├── ISZSharp/                       # UltraISO ISZ decompression library
 ├── docs/                           # This wiki
 ├── References/                     # Third-party reference sources (not part of the build)
-└── CHDStudio.sln    # Solution
+└── CSharp_CHDStudio.sln    # Solution
 ```
 
 ## 🚀 Where to Start

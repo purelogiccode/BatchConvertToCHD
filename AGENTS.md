@@ -45,8 +45,8 @@ project.
 ## Commands
 
 ```powershell
-dotnet restore CHDStudio.sln
-dotnet build CHDStudio.sln -c Release
+dotnet restore CSharp_CHDStudio.sln
+dotnet build CSharp_CHDStudio.sln -c Release
 dotnet test CHDStudio.Tests/CHDStudio.Tests.csproj -c Release
 
 # CI runs the unit tests only: the [Trait("Category", "Integration")] classes

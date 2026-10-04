@@ -40,10 +40,10 @@ git clone https://github.com/purelogiccode/CHDStudio.git
 cd CHDStudio
 
 # Build the whole solution
-dotnet build CHDStudio.sln -c Release
+dotnet build CSharp_CHDStudio.sln -c Release
 
 # Run the tests
-dotnet test CHDStudio.sln -c Release
+dotnet test CSharp_CHDStudio.sln -c Release
 
 # Or just the application
 dotnet build CHDStudio/CHDStudio.csproj -c Release

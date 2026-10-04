@@ -35,10 +35,10 @@ jobs:
           node-version: 24
 
       - name: Restore
-        run: dotnet restore CHDStudio.sln
+        run: dotnet restore CSharp_CHDStudio.sln
 
       - name: Build
-        run: dotnet build CHDStudio.sln -c Release --no-restore
+        run: dotnet build CSharp_CHDStudio.sln -c Release --no-restore
 
       - name: Test
         run: >

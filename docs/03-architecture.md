@@ -12,7 +12,7 @@ This page describes the solution structure, the runtime startup sequence, and th
 ## 3.1 Solution Structure
 
 ```
-CHDStudio.sln
+CSharp_CHDStudio.sln
 ├── CHDStudio/                     (Avalonia app, net10.0;net10.0-windows)
 │   ├── App.axaml(.cs)                     → startup, Serilog, exception handlers
 │   ├── AppConfig.cs                       → central configuration
