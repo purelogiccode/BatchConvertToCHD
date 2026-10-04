@@ -112,7 +112,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 4. For chdman-dependent tests, early-return when `chdman.exe` is absent from `AppContext.BaseDirectory`.
 5. Prefer building binary fixtures in code (see `IszImageBuilder`) over committing them. Commit one only when the format cannot be generated trustworthily in-repo, as with `ecm-sample.ecm` (the reference encoder's own output) or the WinRAR-produced RAR volume set (there is no RAR writer in the repository).
 6. When a fixture asserts agreement with an outside implementation, add a **guard test** that the fixture still covers the cases it is meant to. A fixture can be regenerated more simply and silently stop testing anything.
-7. Run the full suite before pushing. On the maintainer's machine a full run is **1111 passed / 0 failed**; CI runs the unit tests only, via `--filter "Category!=Integration"` (1083 tests). The integration classes' behaviour without samples is described in §11.5.
+7. Run the full suite before pushing. On the maintainer's machine a full run is **1116 passed / 0 failed**; CI runs the unit tests only, via `--filter "Category!=Integration"` (1088 tests). The integration classes' behaviour without samples is described in §11.5.
 
 ### Analyzer constraints worth knowing
 
