@@ -1,11 +1,13 @@
-# Builds the two Windows release zips and attaches them to a GitHub release.
+# Builds the release zips and attaches them to a GitHub release.
 #
 # Cut a release by pushing a tag that matches the version in
 # CHDStudio/CHDStudio.csproj, e.g.:
 #   git tag release_3.9.0 && git push origin release_3.9.0
 #
-# Artifacts: release_<version>_win-x64.zip and release_<version>_win-arm64.zip.
-# The app is framework-dependent (users install the .NET 10 Desktop Runtime)
+# Artifacts: one release_<version>_<rid>.zip per runtime identifier, for
+# Windows (win-x64, win-arm64), Linux (linux-x64, linux-arm64) and macOS
+# (osx-x64, osx-arm64). The app is framework-dependent (users install the
+# .NET 10 Desktop Runtime on Windows, the .NET 10 runtime on Linux/macOS)
 # and published as a single file; see scripts/ci/package-release.ps1.
 name: Release
 
@@ -91,7 +93,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rid: [win-x64, win-arm64]
+        include:
+          - rid: win-x64
+            tfm: net10.0-windows
+          - rid: win-arm64
+            tfm: net10.0-windows
+          - rid: linux-x64
+            tfm: net10.0
+          - rid: linux-arm64
+            tfm: net10.0
+          - rid: osx-x64
+            tfm: net10.0
+          - rid: osx-arm64
+            tfm: net10.0
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -107,7 +121,7 @@ jobs:
         run: >
           dotnet publish CHDStudio/CHDStudio.csproj
           -c Release
-          -f net10.0-windows
+          -f ${{ matrix.tfm }}
           -r ${{ matrix.rid }}
           --self-contained false
           -p:PublishSingleFile=true

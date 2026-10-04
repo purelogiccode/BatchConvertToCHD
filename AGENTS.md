@@ -64,28 +64,32 @@ dotnet publish CHDStudio/CHDStudio.csproj -c Release -f net10.0-windows -r win-a
 # Run on Windows (multi-targeted, so pick the Windows TFM)
 dotnet run --project CHDStudio/CHDStudio.csproj -f net10.0-windows
 
-# Framework-dependent publishes for Linux/macOS (neutral TFM)
-dotnet publish CHDStudio/CHDStudio.csproj -c Release -f net10.0 -r linux-x64 --self-contained false -o publish/linux-x64
-dotnet publish CHDStudio/CHDStudio.csproj -c Release -f net10.0 -r osx-arm64 --self-contained false -o publish/osx-arm64
+# Framework-dependent single-file publishes for Linux/macOS (neutral TFM)
+dotnet publish CHDStudio/CHDStudio.csproj -c Release -f net10.0 -r linux-x64 --self-contained false -p:PublishSingleFile=true -o publish/linux-x64
+dotnet publish CHDStudio/CHDStudio.csproj -c Release -f net10.0 -r osx-arm64 --self-contained false -p:PublishSingleFile=true -o publish/osx-arm64
 ```
 
 ## Release engineering (do not break)
 
 - **The app is framework-dependent. It must NOT embed the .NET runtime.** Users
-  install the .NET 10 Desktop Runtime. Always publish with
+  install the .NET 10 Desktop Runtime on Windows and the .NET 10 runtime on
+  Linux/macOS. Always publish with
   `--self-contained false -p:PublishSingleFile=true`. The output is a single
-  `CHDStudio.exe` (plus the bundled tool exes, which are content files
-  and stay outside the bundle).
+  `CHDStudio.exe` (Windows) or `CHDStudio` (Linux/macOS) plus the platform's
+  native Avalonia libraries and bundled tools, which are content files and stay
+  outside the bundle.
 - **Release zips contain exactly one architecture's tools.** For `win-x64`:
-  `7za.exe`, `chdman.exe`. For `win-arm64`: the `*_arm64.exe` variants.
-  `scripts/ci/package-release.ps1` removes the other architecture, the library
-  `.xml` IntelliSense files and the native `.pdb` debug symbols (never used at
-  runtime), and adds `LICENSE.txt` and `ReadMe.md`. Do not put both
-  architectures in one zip. CHD creation works without any bundled tool thanks
-  to the built-in CHDSharp encoder.
-- **Zip naming is fixed:** `release_<version>_win-<rid>.zip`, e.g.
-  `release_3.7.0_win-x64.zip`. One zip per architecture, both attached to the
-  GitHub release.
+  `7za.exe`, `chdman.exe`. For `win-arm64`: the `*_arm64.exe` variants. Linux
+  and macOS get the official `7zz` console build plus `7-Zip-License.txt`.
+  `scripts/ci/package-release.ps1` removes the other architecture's tools, the
+  library `.xml` IntelliSense files and the native `.pdb` debug symbols (never
+  used at runtime), and adds `LICENSE.txt`, `ReadMe.md` and `WhatsNew.md`. Do
+  not put both architectures in one zip. CHD creation works without any bundled
+  tool thanks to the built-in CHDSharp encoder.
+- **Zip naming is fixed:** `release_<version>_<rid>.zip`, e.g.
+  `release_3.9.0_win-x64.zip`. One zip per runtime identifier - `win-x64`,
+  `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64` - and all
+  of them are attached to the GitHub release.
 - **Version lives in two csproj files** (`CHDStudio` and
   `CHDStudio.Tests`, `AssemblyVersion`/`FileVersion`) plus a matching
   section in `WhatsNew.md`. A release tag is `release_<version>` and must match
@@ -93,7 +97,7 @@ dotnet publish CHDStudio/CHDStudio.csproj -c Release -f net10.0 -r osx-arm64 --s
 - **Cutting a release:** bump both csproj versions, add the `## <version>`
   section to the top of `WhatsNew.md`, commit to `master`, then
   `git tag release_<version> && git push origin release_<version>`. The
-  `Release` workflow tests, publishes both RIDs, zips them, and creates the
+  `Release` workflow tests, publishes all six RIDs, zips them, and creates the
   GitHub release (title = version, body = the `WhatsNew.md` section).
   Re-running the workflow uploads assets with `--clobber`.
 
@@ -162,7 +166,7 @@ a real file on each runtime).
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `.github/workflows/ci.yml` | push/PR to `master`, manual | Restore, build, test; uploads trx results |
-| `.github/workflows/release.yml` | tag `release_*`, manual with tag | Validate version, test, package x64+arm64 zips, publish GitHub release |
+| `.github/workflows/release.yml` | tag `release_*`, manual with tag | Validate version, test, package zips for all six RIDs (Windows/Linux/macOS, x64+arm64), publish GitHub release |
 | `.github/workflows/docs.yml` | push to `master`, manual | Build/deploy Jekyll Pages site and sync `docs/` to the GitHub wiki |
 
 All workflows set up Node 24 where scripts run. Use the latest action majors
