@@ -7,7 +7,7 @@ nav_order: 5
 
 The main window has four tabs: **Convert to CHD**, **Verify CHD Files**, **Extract CHD Files**, and **Explorer**. A terminal-style log view sits on the right, stat cards and the progress bar at the bottom, and a status bar with the CHDSharp and CHDMAN encoder indicators at the very bottom.
 
-Title-bar buttons: **Donate** (opens the project's donation page), **About** (info dialog, scrollable), **AppData** (opens `%LocalAppData%\BatchConvertToCHD`), **Exit**.
+Title-bar buttons: **Donate** (opens the project's donation page), **About** (info dialog, scrollable), **AppData** (opens `%LocalAppData%\CHDStudio`), **Exit**.
 
 ---
 
@@ -124,7 +124,7 @@ Auto-detection reads the CHD flags (via CHDSharp): DVD → `.iso`, hard disk →
 
 ## 4.5 Screenshot Hotkey (F8)
 
-While the application window is focused, pressing **F8** captures that window and saves it as `screenshot_yyyy-MM-dd_HH-mm-ss-fff.png` in `%LocalAppData%\BatchConvertToCHD\screenshots`. When AppData is not writable, the capture falls back to a `screenshots` folder next to the executable.
+While the application window is focused, pressing **F8** captures that window and saves it as `screenshot_yyyy-MM-dd_HH-mm-ss-fff.png` in `%LocalAppData%\CHDStudio\screenshots`. When AppData is not writable, the capture falls back to a `screenshots` folder next to the executable.
 
 The path is shown in the log ("Screenshot saved: ..."). Capture uses Avalonia's `RenderTargetBitmap`; if the capture fails, a message is logged instead.
 

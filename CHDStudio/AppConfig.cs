@@ -1,0 +1,131 @@
+using System.Runtime.InteropServices;
+using System.Text;
+
+namespace CHDStudio;
+
+/// <summary>
+///     Provides centralized application-wide configuration constants.
+/// </summary>
+internal static class AppConfig
+{
+    private static readonly byte[] KeySalt = "CHDStudio_v1"u8.ToArray();
+    private static readonly Lazy<string> DecryptedApiKey = new(DecryptApiKey);
+
+    /// <summary>
+    ///     Gets a value indicating whether the current process architecture is ARM64.
+    /// </summary>
+    internal static bool IsArm64 => RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
+
+    /// <summary>
+    ///     Gets a value indicating whether the operating system itself is ARM64. An x64 process runs
+    ///     emulated on Windows-on-Arm, so this can differ from <see cref="IsArm64" />; there, both the
+    ///     x64 and the ARM64 builds of the bundled tools execute (natively or under emulation), while
+    ///     a pure x64 system cannot run the ARM64 binaries at all.
+    /// </summary>
+    internal static bool IsArm64Os => RuntimeInformation.OSArchitecture == Architecture.Arm64;
+
+    /// <summary>
+    ///     Gets the appropriate chdman executable name based on the current architecture.
+    ///     Returns "chdman_arm64.exe" for ARM64 or "chdman.exe" for other architectures.
+    /// </summary>
+    internal static string ChdmanExeName => IsArm64 ? "chdman_arm64.exe" : "chdman.exe";
+
+    /// <summary>
+    ///     Gets the appropriate 7-Zip executable name based on the current architecture.
+    ///     Returns "7za_arm64.exe" for ARM64 or "7za.exe" for other architectures.
+    /// </summary>
+    internal static string SevenZipExeName => IsArm64 ? "7za_arm64.exe" : "7za.exe";
+
+    /// <summary>
+    ///     Gets the chdman executable names to probe, best first. On an ARM64 operating system both
+    ///     builds run, so the native ARM64 binary comes first even when this app itself runs emulated
+    ///     as x64; on a pure x64 system only the x64 build can execute, so it is the sole candidate.
+    /// </summary>
+    internal static IReadOnlyList<string> ChdmanExeCandidates =>
+        IsArm64Os ? ["chdman_arm64.exe", "chdman.exe"] : ["chdman.exe"];
+
+    /// <summary>
+    ///     Gets the 7-Zip executable names to probe, best first, following the same rules as
+    ///     <see cref="ChdmanExeCandidates" />.
+    /// </summary>
+    internal static IReadOnlyList<string> SevenZipExeCandidates =>
+        IsArm64Os ? ["7za_arm64.exe", "7za.exe"] : ["7za.exe"];
+
+    /// <summary>
+    ///     The API endpoint URL for submitting bug reports.
+    /// </summary>
+    internal const string BugReportApiUrl =
+        "https://www.purelogiccode.com/bugreport/api/send-bug-report";
+
+    /// <summary>
+    ///     The encrypted API key shared by both endpoints.
+    /// </summary>
+    private const string EncryptedApiKey =
+        "KyIsZA0AUh1aaQJIMX1wYxtMEVFYaUEHdH42ZkJCUFxca0IEcHp3ZkZDUApYahQHN38jNBMdAw5YaQJDJX1yZxE=";
+
+    /// <summary>
+    ///     Gets the API key used to authenticate bug report submissions.
+    /// </summary>
+    internal static string BugReportApiKey => GetApiKey();
+
+    /// <summary>
+    ///     The API endpoint URL for recording application usage statistics.
+    /// </summary>
+    internal const string ApplicationStatsApiUrl =
+        "https://www.purelogiccode.com/ApplicationStats/stats";
+
+    /// <summary>
+    ///     Gets the API key used to authenticate application stats submissions.
+    /// </summary>
+    internal static string ApplicationStatsApiKey => GetApiKey();
+
+    /// <summary>
+    ///     The GitHub API URL for checking the latest application release. The repository was
+    ///     transferred to the purelogiccode organization; the previous owner's URL now redirects
+    ///     here as well.
+    /// </summary>
+    internal const string PrimaryGitHubApiLatestReleaseUrl =
+        "https://api.github.com/repos/purelogiccode/CHDStudio/releases/latest";
+
+    /// <summary>
+    ///     The canonical name of this application, used for API calls, window titles, and mutex naming.
+    /// </summary>
+    internal const string ApplicationName = "CHDStudio";
+
+    /// <summary>
+    ///     The donation page opened by the main window's Donate button.
+    /// </summary>
+    internal const string DonationUrl = "https://www.purelogiccode.com/donate";
+
+    /// <summary>
+    ///     The environment identifier sent with bug reports ("Production" or "Development").
+    /// </summary>
+#if DEBUG
+    internal const string BugReportEnvironment = "Development";
+#else
+    internal const string BugReportEnvironment = "Production";
+#endif
+
+    /// <summary>
+    ///     The interval in milliseconds between write speed performance counter updates.
+    /// </summary>
+    internal const int WriteSpeedUpdateIntervalMs = 1000;
+
+    /// <summary>
+    ///     The maximum allowed conversion timeout in hours to prevent unreasonably long timeouts.
+    /// </summary>
+    internal const int MaxConversionTimeoutHours = 4;
+
+    private static string GetApiKey()
+    {
+        return DecryptedApiKey.Value;
+    }
+
+    private static string DecryptApiKey()
+    {
+        var data = Convert.FromBase64String(EncryptedApiKey);
+        for (var i = 0; i < data.Length; i++) data[i] ^= KeySalt[i % KeySalt.Length];
+
+        return Encoding.UTF8.GetString(data);
+    }
+}

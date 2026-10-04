@@ -1,36 +1,36 @@
-[![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-0078d7.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-0078d7.svg)](https://github.com/purelogiccode/CHDStudio)
 [![.NET 10.0](https://img.shields.io/badge/.NET-10.0-512bd4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
-[![CI](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/ci.yml?label=CI)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/purelogiccode/CHDStudio/ci.yml?label=CI)](https://github.com/purelogiccode/CHDStudio/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE.txt)
-[![GitHub release](https://img.shields.io/github/v/release/purelogiccode/BatchConvertToCHD)](https://github.com/purelogiccode/BatchConvertToCHD/releases)
-[![Downloads](https://img.shields.io/github/downloads/purelogiccode/BatchConvertToCHD/total.svg)](https://github.com/purelogiccode/BatchConvertToCHD/releases)
-[![GitHub last commit](https://img.shields.io/github/last-commit/purelogiccode/BatchConvertToCHD)](https://github.com/purelogiccode/BatchConvertToCHD/commits/master)
-[![GitHub stars](https://img.shields.io/github/stars/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/stargazers)
-[![GitHub issues](https://img.shields.io/github/issues/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/issues)
+[![GitHub release](https://img.shields.io/github/v/release/purelogiccode/CHDStudio)](https://github.com/purelogiccode/CHDStudio/releases)
+[![Downloads](https://img.shields.io/github/downloads/purelogiccode/CHDStudio/total.svg)](https://github.com/purelogiccode/CHDStudio/releases)
+[![GitHub last commit](https://img.shields.io/github/last-commit/purelogiccode/CHDStudio)](https://github.com/purelogiccode/CHDStudio/commits/master)
+[![GitHub stars](https://img.shields.io/github/stars/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/issues)
 [![UI: Avalonia 12](https://img.shields.io/badge/UI-Avalonia%2012-8b44ac.svg)](https://avaloniaui.net)
-[![Release](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/release.yml?label=Release)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/release.yml)
-[![Docs](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/docs.yml?label=Docs)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/docs.yml)
-[![GitHub release date](https://img.shields.io/github/release-date/purelogiccode/BatchConvertToCHD)](https://github.com/purelogiccode/BatchConvertToCHD/releases)
-[![GitHub contributors](https://img.shields.io/github/contributors/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/graphs/contributors)
-[![GitHub forks](https://img.shields.io/github/forks/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/network/members)
-[![GitHub watchers](https://img.shields.io/github/watchers/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/watchers)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/pulls)
-[![GitHub repo size](https://img.shields.io/github/repo-size/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
-[![GitHub code size](https://img.shields.io/github/languages/code-size/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
-[![Top language](https://img.shields.io/github/languages/top/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/graphs/commit-activity)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/purelogiccode/BatchConvertToCHD/pulls)
-[![Maintained](https://img.shields.io/badge/Maintained-yes-green.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![Release](https://img.shields.io/github/actions/workflow/status/purelogiccode/CHDStudio/release.yml?label=Release)](https://github.com/purelogiccode/CHDStudio/actions/workflows/release.yml)
+[![Docs](https://img.shields.io/github/actions/workflow/status/purelogiccode/CHDStudio/docs.yml?label=Docs)](https://github.com/purelogiccode/CHDStudio/actions/workflows/docs.yml)
+[![GitHub release date](https://img.shields.io/github/release-date/purelogiccode/CHDStudio)](https://github.com/purelogiccode/CHDStudio/releases)
+[![GitHub contributors](https://img.shields.io/github/contributors/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/graphs/contributors)
+[![GitHub forks](https://img.shields.io/github/forks/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/network/members)
+[![GitHub watchers](https://img.shields.io/github/watchers/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/watchers)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/pulls)
+[![GitHub repo size](https://img.shields.io/github/repo-size/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio)
+[![GitHub code size](https://img.shields.io/github/languages/code-size/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio)
+[![Top language](https://img.shields.io/github/languages/top/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/graphs/commit-activity)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/purelogiccode/CHDStudio/pulls)
+[![Maintained](https://img.shields.io/badge/Maintained-yes-green.svg)](https://github.com/purelogiccode/CHDStudio)
 [![Donate](https://img.shields.io/badge/Donate-purelogiccode.com-ff69b4.svg)](https://www.purelogiccode.com/donate)
 
-# Batch Convert to CHD
+# CHD Studio
 
-**Batch Convert to CHD** is a high-performance cross-platform desktop utility designed to streamline the conversion of various disk image formats into the **Compressed Hunks of Data (CHD)** format.
+**CHD Studio** is a high-performance cross-platform desktop utility designed to streamline the conversion of various disk image formats into the **Compressed Hunks of Data (CHD)** format.
 
-![Batch Convert to CHD Screenshot](screenshot.png)
-![Batch Convert to CHD Screenshot](screenshot2.png)
-![Batch Convert to CHD Screenshot](screenshot3.png)
-![Batch Convert to CHD Screenshot](screenshot4.png)
+![CHD Studio Screenshot](screenshot.png)
+![CHD Studio Screenshot](screenshot2.png)
+![CHD Studio Screenshot](screenshot3.png)
+![CHD Studio Screenshot](screenshot4.png)
 
 ## 🚀 Key Features
 
@@ -103,7 +103,7 @@ A file's extension is the least reliable thing about it. Every input is identifi
 *   **Live Tool Output**: Every `chdman` output line reaches the activity log, progress included, with completion lines marked with a check; the built-in CHDSharp encoder/reader logs progress every 10% for conversion, verification, extraction and hashing.
 *   **Optimized Logging**: Log lines are batched, each line is capped at 2,000 characters, at most 200 lines are appended per UI flush, and the on-screen text is capped — so a very large log never freezes the window during long-running tasks. The rolling file sink rotates at 10 MB.
 *   **Read-ahead Extraction**: CHDSharp pre-decompresses the next 16 hunks in the background while extracting, overlapping decompression with the disk writes.
-*   **AppData Storage**: Logs are stored under `%LocalAppData%\BatchConvertToCHD\logs` and F8 screenshots under `%LocalAppData%\BatchConvertToCHD\screenshots` (a `screenshots` folder next to the app is the fallback when AppData is not writable). The title-bar **AppData** button opens the folder. Temporary work folders prefer the system temp directory and only fall back to a `BatchConvertToCHD_Temp` folder on a drive root when the system temp path is unusable for chdman; empty fallback folders are cleaned up automatically.
+*   **AppData Storage**: Logs are stored under `%LocalAppData%\CHDStudio\logs` and F8 screenshots under `%LocalAppData%\CHDStudio\screenshots` (a `screenshots` folder next to the app is the fallback when AppData is not writable). The title-bar **AppData** button opens the folder. Temporary work folders prefer the system temp directory and only fall back to a `CHDStudio_Temp` folder on a drive root when the system temp path is unusable for chdman; empty fallback folders are cleaned up automatically.
 *   **Donate Button**: The title bar links straight to the project's donation page, left of the About button.
 *   **Avalonia Theming**: Modern dark-themed UI powered by [Avalonia](https://avaloniaui.net/) 12.1 with its Fluent theme, a static dark background, rounded corners, and a custom title bar.
 
@@ -174,9 +174,9 @@ Generated cue sheets reference the disc image where it already lies rather than 
 
 ## 📥 Installation
 
-1.  Download the latest binary from the [Releases](https://github.com/purelogiccode/BatchConvertToCHD/releases) page.
+1.  Download the latest binary from the [Releases](https://github.com/purelogiccode/CHDStudio/releases) page.
 2.  Extract the contents to a permanent folder.
-3.  **Important** (Windows): ensure the tool `.exe` files (including ARM64 variants) remain in the same directory as `BatchConvertToCHD.exe`. On Linux and macOS, keep `7zz` next to the app; nothing else is required because the CHDSharp encoder is built in.
+3.  **Important** (Windows): ensure the tool `.exe` files (including ARM64 variants) remain in the same directory as `CHDStudio.exe`. On Linux and macOS, keep `7zz` next to the app; nothing else is required because the CHDSharp encoder is built in.
 4.  Launch the application.
 
 ---
@@ -185,7 +185,7 @@ Generated cue sheets reference the disc image where it already lies rather than 
 
 The application also accepts a folder path as a command-line argument to quickly populate the source directory:
 ```sh
-BatchConvertToCHD.exe "C:\ROMs\MyGames"
+CHDStudio.exe "C:\ROMs\MyGames"
 ```
 
 ### Conversion Workflow
@@ -240,7 +240,7 @@ The changelog for each release lives in [WhatsNew.md](WhatsNew.md).
 
 ## 🤝 Contributing & Support
 
-If you encounter issues or have feature requests, please use the [GitHub Issues](https://github.com/purelogiccode/BatchConvertToCHD/issues) tracker.
+If you encounter issues or have feature requests, please use the [GitHub Issues](https://github.com/purelogiccode/CHDStudio/issues) tracker.
 
 **Support the Project:**
 If this tool saves you time, consider supporting further development:

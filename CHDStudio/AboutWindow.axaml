@@ -1,0 +1,182 @@
+<Window
+    x:Class="CHDStudio.AboutWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="About CHD Studio"
+    Width="700"
+    MinWidth="450"
+    Height="700"
+    MinHeight="500"
+    WindowStartupLocation="CenterOwner"
+    Background="#202020"
+    Icon="/Assets/chd.png"
+    ExtendClientAreaToDecorationsHint="True"
+    ExtendClientAreaTitleBarHeightHint="-1"
+    WindowDecorations="BorderOnly"
+    ToolTip.Tip="About CHD Studio">
+    <Grid RowDefinitions="Auto,*" ToolTip.Tip="About window layout">
+        <Grid
+            Grid.Row="0"
+            Height="42"
+            Background="#202020"
+            ColumnDefinitions="Auto,*,Auto"
+            PointerPressed="TitleBar_PointerPressed"
+            ToolTip.Tip="About window title bar. Drag to move the window.">
+            <StackPanel
+                Grid.Column="0"
+                Orientation="Horizontal"
+                Spacing="10"
+                Margin="15,0,0,0"
+                VerticalAlignment="Center"
+                ToolTip.Tip="Application identity">
+                <Image Source="/Assets/logo.png" Width="20" Height="20" ToolTip.Tip="CHD Studio logo" />
+                <TextBlock Text="About CHD Studio" Classes="headerTitle" ToolTip.Tip="Window title" />
+            </StackPanel>
+            <Button
+                Grid.Column="2"
+                Classes="caption captionClose"
+                Click="CloseButton_Click"
+                ToolTip.Tip="Close">
+                <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="White" StrokeThickness="1.2" ToolTip.Tip="Close icon" />
+            </Button>
+        </Grid>
+
+        <ScrollViewer
+            Grid.Row="1"
+            VerticalScrollBarVisibility="Auto"
+            HorizontalScrollBarVisibility="Disabled"
+            ToolTip.Tip="Scroll through the about information">
+            <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ToolTip.Tip="About information sections">
+            <!--  Logo Section  -->
+            <Border Grid.Row="0" Classes="statCard" Margin="0,0,0,15" Padding="15" ToolTip.Tip="Application logo">
+                <StackPanel HorizontalAlignment="Center" ToolTip.Tip="Application logo section">
+                    <Image Width="130" Height="130" Source="/Assets/logo.png" ToolTip.Tip="CHD Studio application icon" />
+                </StackPanel>
+            </Border>
+
+            <!--  Title & Version Section  -->
+            <Border Grid.Row="1" Classes="statCard" Margin="0,0,0,15" Padding="15" ToolTip.Tip="Application name and version">
+                <StackPanel ToolTip.Tip="Application name and version section">
+                    <TextBlock
+                        Text="CHD Studio"
+                        FontWeight="Bold"
+                        FontSize="20"
+                        Foreground="#FFFFFF"
+                        HorizontalAlignment="Center"
+                        ToolTip.Tip="Application name" />
+                    <TextBlock
+                        x:Name="AppVersionTextBlock"
+                        Margin="0,8,0,0"
+                        FontWeight="SemiBold"
+                        FontSize="14"
+                        Foreground="#73C2FF"
+                        HorizontalAlignment="Center"
+                        ToolTip.Tip="Current application version" />
+                </StackPanel>
+            </Border>
+
+            <!--  Description Section  -->
+            <Border Grid.Row="2" Classes="statCard" Margin="0,0,0,15" Padding="15" ToolTip.Tip="Brief overview of the application purpose">
+                <StackPanel ToolTip.Tip="Description and links section">
+                    <TextBlock
+                        Text="Description"
+                        FontWeight="Bold"
+                        FontSize="14"
+                        Foreground="#e6edf3"
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Application description heading" />
+                    <TextBlock
+                        x:Name="DescriptionTextBlock"
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        LineHeight="20"
+                        ToolTip.Tip="What this application does" />
+                    <Button
+                        Classes="link"
+                        Content="https://github.com/purelogiccode/CHDStudio"
+                        Tag="https://github.com/purelogiccode/CHDStudio"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,10,0,0"
+                        ToolTip.Tip="Visit the project repository" />
+                    <Button
+                        Classes="link"
+                        Content="https://www.purelogiccode.com"
+                        Tag="https://www.purelogiccode.com"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,15,0,0"
+                        ToolTip.Tip="Visit the official website" />
+                </StackPanel>
+            </Border>
+
+            <!--  Acknowledgements Section  -->
+            <Border Grid.Row="3" Classes="statCard" Margin="0,0,0,15" Padding="15" ToolTip.Tip="Credits and third-party tools used">
+                <StackPanel ToolTip.Tip="Acknowledgements section">
+                    <TextBlock
+                        Text="Acknowledgements"
+                        FontWeight="Bold"
+                        FontSize="14"
+                        Foreground="#e6edf3"
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Credits and attributions for third-party tools used in this project" />
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,8"
+                        ToolTip.Tip="Uses the CHDMAN tool from the MAME project for disc image conversion and verification">
+                        <Run Text="Uses " /><Run Text="CHDMAN" FontWeight="Bold" /><Run Text=" from the MAME project for conversions and verifications." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://github.com/mamedev/mame/"
+                        Tag="https://github.com/mamedev/mame/"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,8"
+                        ToolTip.Tip="Visit the MAME/CHDMAN project on GitHub" />
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,8"
+                        ToolTip.Tip="Uses CSOSharp for CSO/CISO file decompression">
+                        <Run Text="Uses " /><Run Text="CSOSharp" FontWeight="Bold" /><Run Text=" for .cso/.ciso decompression during conversion." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://github.com/PureLogicCode/CSOSharp"
+                        Tag="https://github.com/PureLogicCode/CSOSharp"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,8"
+                        ToolTip.Tip="Visit the CSOSharp project on GitHub" />
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,8"
+                        ToolTip.Tip="Uses PBPSharp for PlayStation PBP file handling">
+                        <Run Text="Uses " /><Run Text="PBPSharp" FontWeight="Bold" /><Run Text=" for PlayStation .pbp file handling." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://github.com/PureLogicCode/PBPSharp"
+                        Tag="https://github.com/PureLogicCode/PBPSharp"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        ToolTip.Tip="Visit the PBPSharp project on GitHub" />
+                </StackPanel>
+            </Border>
+
+            <!--  Close Button  -->
+            <Button
+                Grid.Row="4"
+                Click="CloseButton_Click"
+                Content="Close"
+                Classes="primary"
+                HorizontalAlignment="Center"
+                ToolTip.Tip="Close the About window" />
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Window>
+

@@ -5,7 +5,7 @@ nav_order: 7
 
 # 6. Extraction & Verification (Technical)
 
-This page covers the internals of the two CHD-consuming workflows. References are to `BatchConvertToCHD/MainWindow.axaml.cs` unless noted.
+This page covers the internals of the two CHD-consuming workflows. References are to `CHDStudio/MainWindow.axaml.cs` unless noted.
 
 ---
 
@@ -117,6 +117,6 @@ The verification and extraction file lists exclude anything under a first-level 
 
 ## 6.3 Startup & Shutdown Housekeeping
 
-- **Leftover temp directories** from crashed sessions are deleted at startup: `CleanupLeftoverTempDirectories` (`:304`) scans `PathUtils.GetPossibleTempBasePaths()` (system temp + any existing `X:\BatchConvertToCHD_Temp` folders on fixed drives) for `BatchConvertToCHD_Temp_*` entries.
+- **Leftover temp directories** from crashed sessions are deleted at startup: `CleanupLeftoverTempDirectories` (`:304`) scans `PathUtils.GetPossibleTempBasePaths()` (system temp + any existing `X:\CHDStudio_Temp` folders on fixed drives) for `CHDStudio_Temp_*` entries.
 - **Legacy files** next to the exe are removed by `LegacyCleanupService` (`logs` and `Resources` folders; `maxcso.exe`, `psxpackager.exe`). A `Screenshot` folder next to the exe is not touched — it is the fallback location for F8 screenshots.
 - On `Dispose` (`:3552`) the app unregisters the F8 hotkey, cancels the operation token, disposes services, and calls `KillOrphanedProcesses` (`:3579`) to kill leftover `chdman`/`7za` processes before exiting.

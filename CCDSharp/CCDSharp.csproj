@@ -25,10 +25,10 @@
         <Description>A managed C# library for parsing and converting CloneCD disc images (.ccd/.img/.sub) to standard formats. Supports conversion to .iso (2048-byte cooked data) and .cue/.bin (raw 2352-byte sectors). Ideal for disc image preservation and emulation workflows.</Description>
         <PackageTags>ccd;clonecd;img;sub;iso;cue;bin;disc-image;conversion;emulation</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageProjectUrl>https://github.com/purelogiccode/BatchConvertToCHD</PackageProjectUrl>
+        <PackageProjectUrl>https://github.com/purelogiccode/CHDStudio</PackageProjectUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageIcon>icon.png</PackageIcon>
-        <RepositoryUrl>https://github.com/purelogiccode/BatchConvertToCHD</RepositoryUrl>
+        <RepositoryUrl>https://github.com/purelogiccode/CHDStudio</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <Copyright>PureLogicCode.com</Copyright>
     </PropertyGroup>
@@ -51,7 +51,7 @@
 
     <ItemGroup>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-            <_Parameter1>BatchConvertToCHD.Tests</_Parameter1>
+            <_Parameter1>CHDStudio.Tests</_Parameter1>
         </AssemblyAttribute>
     </ItemGroup>
 </Project>

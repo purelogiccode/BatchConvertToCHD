@@ -22,7 +22,7 @@ if (!repo) {
 
 const remote = process.env.WIKI_GIT_URL ?? `https://x-access-token:${token}@github.com/${repo}.wiki.git`;
 const sha = process.env.GITHUB_SHA ?? '';
-const workDir = mkdtempSync(join(tmpdir(), 'bctchd-wiki-'));
+const workDir = mkdtempSync(join(tmpdir(), 'chdstudio-wiki-'));
 const wikiDir = join(workDir, 'wiki');
 const gitEnv = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
 

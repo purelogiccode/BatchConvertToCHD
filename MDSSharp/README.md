@@ -2,32 +2,32 @@
 
 [![NuGet](https://img.shields.io/nuget/v/MDSSharp.svg)](https://www.nuget.org/packages/MDSSharp)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/MDSSharp.svg)](https://www.nuget.org/packages/MDSSharp)
-[![CI](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/ci.yml?label=CI)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![CI](https://img.shields.io/github/actions/workflow/status/purelogiccode/CHDStudio/ci.yml?label=CI)](https://github.com/purelogiccode/CHDStudio/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/purelogiccode/CHDStudio)
 [![.NET 8 | 9 | 10](https://img.shields.io/badge/.NET-8.0%20%7C%209.0%20%7C%2010.0-512bd4.svg)](https://dotnet.microsoft.com/download)
-[![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-0078d7.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
-[![GitHub last commit](https://img.shields.io/github/last-commit/purelogiccode/BatchConvertToCHD)](https://github.com/purelogiccode/BatchConvertToCHD/commits/master)
-[![GitHub stars](https://img.shields.io/github/stars/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/stargazers)
-[![GitHub issues](https://img.shields.io/github/issues/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/issues)
-[![Release](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/release.yml?label=Release)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/release.yml)
-[![Docs](https://img.shields.io/github/actions/workflow/status/purelogiccode/BatchConvertToCHD/docs.yml?label=Docs)](https://github.com/purelogiccode/BatchConvertToCHD/actions/workflows/docs.yml)
-[![Part of Batch Convert to CHD](https://img.shields.io/badge/Part%20of-Batch%20Convert%20to%20CHD-blue.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
-[![GitHub contributors](https://img.shields.io/github/contributors/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/graphs/contributors)
-[![GitHub forks](https://img.shields.io/github/forks/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/network/members)
-[![GitHub watchers](https://img.shields.io/github/watchers/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/watchers)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/pulls)
-[![GitHub repo size](https://img.shields.io/github/repo-size/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
-[![GitHub code size](https://img.shields.io/github/languages/code-size/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
-[![Top language](https://img.shields.io/github/languages/top/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/purelogiccode/BatchConvertToCHD.svg)](https://github.com/purelogiccode/BatchConvertToCHD/graphs/commit-activity)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/purelogiccode/BatchConvertToCHD/pulls)
-[![Maintained](https://img.shields.io/badge/Maintained-yes-green.svg)](https://github.com/purelogiccode/BatchConvertToCHD)
+[![Platform: Windows | Linux | macOS](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-0078d7.svg)](https://github.com/purelogiccode/CHDStudio)
+[![GitHub last commit](https://img.shields.io/github/last-commit/purelogiccode/CHDStudio)](https://github.com/purelogiccode/CHDStudio/commits/master)
+[![GitHub stars](https://img.shields.io/github/stars/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/issues)
+[![Release](https://img.shields.io/github/actions/workflow/status/purelogiccode/CHDStudio/release.yml?label=Release)](https://github.com/purelogiccode/CHDStudio/actions/workflows/release.yml)
+[![Docs](https://img.shields.io/github/actions/workflow/status/purelogiccode/CHDStudio/docs.yml?label=Docs)](https://github.com/purelogiccode/CHDStudio/actions/workflows/docs.yml)
+[![Part of CHD Studio](https://img.shields.io/badge/Part%20of-Batch%20Convert%20to%20CHD-blue.svg)](https://github.com/purelogiccode/CHDStudio)
+[![GitHub contributors](https://img.shields.io/github/contributors/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/graphs/contributors)
+[![GitHub forks](https://img.shields.io/github/forks/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/network/members)
+[![GitHub watchers](https://img.shields.io/github/watchers/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/watchers)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/pulls)
+[![GitHub repo size](https://img.shields.io/github/repo-size/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio)
+[![GitHub code size](https://img.shields.io/github/languages/code-size/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio)
+[![Top language](https://img.shields.io/github/languages/top/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/purelogiccode/CHDStudio.svg)](https://github.com/purelogiccode/CHDStudio/graphs/commit-activity)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/purelogiccode/CHDStudio/pulls)
+[![Maintained](https://img.shields.io/badge/Maintained-yes-green.svg)](https://github.com/purelogiccode/CHDStudio)
 
 **MDSSharp** is a managed C# library for reading **Alcohol 120%** disc images (`.mds` descriptor + `.mdf` data) and **Daemon Tools MDS v2 / MDX** descriptors. It parses the MDS session and track tables, locates and reassembles the data file (including `.i00`/`.i01` and `.001`/`.002` split sets), strips CD subchannel tails from oversized sectors, and writes CUE sheets so the image can be converted by `chdman` or other tools.
 
-The library is the Alcohol 120% conversion engine used by [Batch Convert to CHD](https://github.com/purelogiccode/BatchConvertToCHD), where it prepares `.mds` images for conversion to CHD with `chdman` or [CHDSharp](https://www.nuget.org/packages/CHDSharp).
+The library is the Alcohol 120% conversion engine used by [CHD Studio](https://github.com/purelogiccode/CHDStudio), where it prepares `.mds` images for conversion to CHD with `chdman` or [CHDSharp](https://www.nuget.org/packages/CHDSharp).
 
-- Repository: <https://github.com/purelogiccode/BatchConvertToCHD>
+- Repository: <https://github.com/purelogiccode/CHDStudio>
 - Package: <https://www.nuget.org/packages/MDSSharp>
 
 ## Table of contents
@@ -326,19 +326,19 @@ CUE index values are derived from the descriptor's start LBA with `FormatMsf` (7
 
 ## Building from source
 
-The library lives in the [Batch Convert to CHD repository](https://github.com/purelogiccode/BatchConvertToCHD) under `MDSSharp/`.
+The library lives in the [CHD Studio repository](https://github.com/purelogiccode/CHDStudio) under `MDSSharp/`.
 
 ```powershell
-git clone https://github.com/purelogiccode/BatchConvertToCHD.git
-cd BatchConvertToCHD
+git clone https://github.com/purelogiccode/CHDStudio.git
+cd CHDStudio
 dotnet build MDSSharp/MDSSharp.csproj -c Release
 dotnet pack MDSSharp/MDSSharp.csproj -c Release -o artifacts
 ```
 
-The repository's xUnit suite lives in `BatchConvertToCHD.Tests/`:
+The repository's xUnit suite lives in `CHDStudio.Tests/`:
 
 ```powershell
-dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release
+dotnet test CHDStudio.Tests/CHDStudio.Tests.csproj -c Release
 ```
 
 ## Version history
@@ -358,4 +358,4 @@ dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release
 
 ## License
 
-MDSSharp is released under the [MIT license](https://github.com/purelogiccode/BatchConvertToCHD).
+MDSSharp is released under the [MIT license](https://github.com/purelogiccode/CHDStudio).

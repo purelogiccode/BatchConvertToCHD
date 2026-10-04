@@ -4,7 +4,7 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 .idea/
-[Bb]atch[Cc]onvertTo[Cc][Hh][Dd]/[Rr]eferences/
+CHDStudio/References/
 *.DotSettings.user
 *.user
 /publish/

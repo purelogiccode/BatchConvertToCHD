@@ -3,7 +3,7 @@
     Builds a release zip for one Windows runtime identifier.
 
 .DESCRIPTION
-    Stages a published BatchConvertToCHD output folder, drops the binaries that
+    Stages a published CHDStudio output folder, drops the binaries that
     belong to the other architecture, the library .xml IntelliSense files and the
     native .pdb debug symbols, adds LICENSE.txt and ReadMe.md, and zips the result
     as release_<version>_<rid>.zip. The app itself is published framework-dependent
@@ -55,7 +55,7 @@ else {
     $otherArchFiles = @('7za.exe', 'chdman.exe')
 }
 
-$stage = Join-Path ([IO.Path]::GetTempPath()) ("bctchd-stage-" + [Guid]::NewGuid().ToString('N'))
+$stage = Join-Path ([IO.Path]::GetTempPath()) ("chdstudio-stage-" + [Guid]::NewGuid().ToString('N'))
 try {
     New-Item -ItemType Directory -Path $stage -Force | Out-Null
     Copy-Item -Path (Join-Path $publishDir '*') -Destination $stage -Recurse -Force
@@ -80,7 +80,7 @@ try {
 
     # The single-file exe still loads Avalonia's native rendering/text libraries from
     # beside it, so those must survive pruning.
-    $expected = @('BatchConvertToCHD.exe', 'LICENSE.txt', 'ReadMe.md', 'av_libglesv2.dll', 'libHarfBuzzSharp.dll', 'libSkiaSharp.dll') + $toolFiles
+    $expected = @('CHDStudio.exe', 'LICENSE.txt', 'ReadMe.md', 'av_libglesv2.dll', 'libHarfBuzzSharp.dll', 'libSkiaSharp.dll') + $toolFiles
     $missing = @($expected | Where-Object { -not (Test-Path -LiteralPath (Join-Path $stage $_)) })
     if ($missing.Count -gt 0) {
         throw "Release stage is missing required file(s): $($missing -join ', ')"

@@ -17,7 +17,7 @@ LogMessage / LogWarning / LogError        (MainWindow.axaml.cs:606–622)
         ▼
 Serilog Logger                             (App.axaml.cs:56–78)
         ├── Debug sink
-        ├── File sink  → %LocalAppData%\BatchConvertToCHD\logs\BatchConvertToCHD-YYYYMMDD.log
+        ├── File sink  → %LocalAppData%\CHDStudio\logs\CHDStudio-YYYYMMDD.log
         └── BugReportApiSink.Emit           (Services/BugReportApiSink.cs:33)
              ├─ ignore events below Warning
              ├─ ignore messages matching exclusion patterns
@@ -33,7 +33,7 @@ Serilog Logger                             (App.axaml.cs:56–78)
 Additionally, **unhandled exceptions** are reported directly (not via the sink):
 
 - `AppDomain.CurrentDomain.UnhandledException` → `Log.Fatal` + synchronous `ReportException` (the process is about to terminate, so the report must complete inline — `App.axaml.cs:236–250`). For dispatcher and task-scheduler exceptions the report is fire-and-forget to avoid blocking the UI thread.
-- `Dispatcher.UIThread.UnhandledException` → `Log.Error` + `ReportException`, then `e.Handled = true` so the application survives the exception (`BatchConvertToCHD/App.axaml.cs`). There is no framework-specific suppression allowlist: every dispatcher exception is logged and reported, and known-noise filtering happens downstream in the Serilog sink's exclusion patterns (see §9.4).
+- `Dispatcher.UIThread.UnhandledException` → `Log.Error` + `ReportException`, then `e.Handled = true` so the application survives the exception (`CHDStudio/App.axaml.cs`). There is no framework-specific suppression allowlist: every dispatcher exception is logged and reported, and known-noise filtering happens downstream in the Serilog sink's exclusion patterns (see §9.4).
 - `TaskScheduler.UnobservedTaskException` → `Log.Error` + `ReportException`, then `SetObserved()`.
 - **Stats-rate-limit handling**: `StatsService.RecordUsageAsync` returns early on HTTP 429 (Too Many Requests) and logs at Debug level, so these transient conditions never reach the warning-level sink.
 
@@ -44,7 +44,7 @@ Additionally, **unhandled exceptions** are reported directly (not via the sink):
 | Field | Source |
 |-------|--------|
 | `message` | `BuildFormattedReport` — three sections: `=== Environment Details ===` (includes both the **process** and the **OS** architecture, so a crash report from an emulated build is instantly classifiable), `=== Error Details ===` (the raw message), `=== Exception Details ===` (inner-exception chain, max depth 5) |
-| `applicationName` | `AppConfig.ApplicationName` = `"BatchConvertToCHD"` |
+| `applicationName` | `AppConfig.ApplicationName` = `"CHDStudio"` |
 | `version` | Assembly version (e.g. `3.4.0.0`) |
 | `userInfo` | `Environment.UserName` |
 | `environment` | `"Production"` (release) / `"Development"` (DEBUG build) |

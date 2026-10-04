@@ -54,7 +54,7 @@ Common messages, their meaning, and what to do.
 | `<name>.mds cannot be converted: the image's track data is encrypted (password-protected or TAGES)...` | The Daemon Tools MDS v2 descriptor was decrypted, but the track data itself is encrypted. | Re-save the image without a password in Daemon Tools/Alcohol, or convert it to ISO first. |
 | `<name>.mds cannot be converted: the track data is encrypted and no password was supplied...` | The MDS v2/MDX image's track data needs a password, and the app cannot prompt for one. | Re-save the image without a password, or convert it with a tool that accepts the password. Images encrypted without a user password (TAGES-style) decode automatically. |
 | MDS v2 / MDX images | Daemon Tools MDS v2 descriptors are decrypted and decompressed transparently; compressed and encrypted track data and single-file `.mdx` containers (of any size) are decoded automatically. | Nothing to do — conversion proceeds like any other image. |
-| A `BatchConvertToCHD_Temp` folder appeared at a drive root | The system temp path was not usable for chdman (non-ASCII or near MAX_PATH) or its volume lacked the space, so the app staged work on that drive. The folder is removed once it is empty, after the batch and at the next startup. | Nothing to do; the folder is cleaned automatically. Free space on the system drive or an ASCII-safe `%TEMP%` keeps the fallback from being used at all. |
+| A `CHDStudio_Temp` folder appeared at a drive root | The system temp path was not usable for chdman (non-ASCII or near MAX_PATH) or its volume lacked the space, so the app staged work on that drive. The folder is removed once it is empty, after the batch and at the next startup. | Nothing to do; the folder is cleaned automatically. Free space on the system drive or an ASCII-safe `%TEMP%` keeps the fallback from being used at all. |
 | `Skipping <name>.partNN.rar - part N of a multi-part RAR set; <name>.part01.rar extracts the whole set.` | Informational. The folder scan found every volume of a multi-part RAR; only the first is kept because it decodes the whole set. | Nothing to do. |
 | `... Archive is encrypted ...` | The archive is password-protected. | Password-protected archives are not supported; extract manually first. |
 | `... compression method that is not supported ...` | The ZIP uses Deflate64/LZMA/PPMd, which the extractor can't read. | Re-zip with standard Deflate, or extract manually first. |
@@ -82,7 +82,7 @@ Common messages, their meaning, and what to do.
 | Startup log `Process Architecture:` / `OS Architecture:` / `chdman executable:` / `CHDSharp encoder: built-in (always available)` lines | Informational: which build is running, what the machine is, which chdman binary was resolved, and that the in-process CHDSharp encoder is always present. On ARM64 machines the native chdman build is preferred even when the app itself runs emulated as x64. | Include these when reporting a crash — they make the report instantly classifiable. |
 | Status bar CHDMAN indicator red (Windows) / gray (Linux/macOS) | Red: chdman is missing on Windows, so conversions run on the built-in CHDSharp encoder. Gray: chdman is optional on Linux/macOS and is never used for encoding. The CHDSharp indicator is always green because the encoder is built in. | No action needed — an encoder is always available. |
 | `Selected temp root "X:\" is not writable, falling back to system temp` | The preferred temp drive can't be written (e.g. `E:\` is a card reader / locked). | Informational; the app uses the system temp instead. Free space on `C:` matters then. |
-| `Another instance of BatchConvertToCHD is already running.` | Single-instance mutex. | The first instance is still running; close it first. |
+| `Another instance of CHDStudio is already running.` | Single-instance mutex. | The first instance is still running; close it first. |
 | `Update check skipped: GitHub API rate limit exceeded.` | GitHub API 403/429 (shared IP). | Wait and restart; no action needed. |
 | `Failed to record usage statistics: HTTP 429` | Stats endpoint rate-limited. | Expected; silently ignored (Debug log only). |
 
@@ -90,9 +90,9 @@ Common messages, their meaning, and what to do.
 
 **Are my originals deleted automatically?** Only when **"Delete originals after a successful conversion"** is enabled, and only after the CHD was produced successfully. Cue-set deletions also remove referenced `.bin`/`.sub` files; CCD deletions remove `.img`/`.sub`/`.cdt`.
 
-**What happens to temp files on crash?** Leftover `BatchConvertToCHD_Temp_*` folders are deleted at next startup.
+**What happens to temp files on crash?** Leftover `CHDStudio_Temp_*` folders are deleted at next startup.
 
-**Where are the logs?** `%LocalAppData%\BatchConvertToCHD\logs` (daily files, 7 days retained). Click the **AppData** button in the title bar.
+**Where are the logs?** `%LocalAppData%\CHDStudio\logs` (daily files, 7 days retained). Click the **AppData** button in the title bar.
 
 **Does the app phone home?** It sends: anonymous usage stats (application name + version, once per launch), bug reports for warning-level events (see [Bug Reporting System](09-bug-reporting.md)), and GitHub update checks. No personal data is collected (the bug report includes the Windows user name as `userInfo`).
 

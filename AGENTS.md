@@ -6,7 +6,7 @@ GitHub wiki and GitHub Pages).
 
 ## What this is
 
-`Batch Convert to CHD` - a cross-platform (Windows/Linux/macOS) Avalonia desktop
+`CHD Studio` - a cross-platform (Windows/Linux/macOS) Avalonia desktop
 app that batch converts disc images (cue/iso/img/ccd/mds/pbp/cso/isz/ecm/split
 sets/archives) to CHD using a bundled `chdman.exe` with a managed CHDSharp
 fallback. The solution also contains six library projects and an xUnit test
@@ -14,9 +14,9 @@ project.
 
 ### The application project
 
-- `BatchConvertToCHD` is the base app project: it multi-targets
+- `CHDStudio` is the base app project: it multi-targets
   `net10.0` (Linux/macOS) and `net10.0-windows` (Windows), builds
-  `BatchConvertToCHD.exe`, and links no files from outside its folder. The
+  `CHDStudio.exe`, and links no files from outside its folder. The
   Windows TFM adds NAudio (Media Foundation/ACM MP3 decoding); the neutral TFM
   decodes MP3 via `ffmpeg` on PATH.
 - UI-free code (`AppConfig.cs`, `Models`, `Utilities`, `Services`) lives in the
@@ -45,28 +45,28 @@ project.
 ## Commands
 
 ```powershell
-dotnet restore CSharp_BatchConvertToCHD.sln
-dotnet build CSharp_BatchConvertToCHD.sln -c Release
-dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release
+dotnet restore CHDStudio.sln
+dotnet build CHDStudio.sln -c Release
+dotnet test CHDStudio.Tests/CHDStudio.Tests.csproj -c Release
 
 # CI runs the unit tests only: the [Trait("Category", "Integration")] classes
 # read sample folders that exist on this machine (e.g. D:\Emulators\...) but
 # not on GitHub runners. Run the full command above before a release.
-dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release --filter "Category!=Integration"
+dotnet test CHDStudio.Tests/CHDStudio.Tests.csproj -c Release --filter "Category!=Integration"
 
 # Framework-dependent single-file publish (one per architecture)
-dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -f net10.0-windows -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish/win-x64
-dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -f net10.0-windows -r win-arm64 --self-contained false -p:PublishSingleFile=true -o publish/win-arm64
+dotnet publish CHDStudio/CHDStudio.csproj -c Release -f net10.0-windows -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish/win-x64
+dotnet publish CHDStudio/CHDStudio.csproj -c Release -f net10.0-windows -r win-arm64 --self-contained false -p:PublishSingleFile=true -o publish/win-arm64
 
 # Release zip (same command CI runs)
 ./scripts/ci/package-release.ps1 -Rid win-x64 -Version 3.7.0 -PublishDir publish/win-x64 -OutputDir dist
 
 # Run on Windows (multi-targeted, so pick the Windows TFM)
-dotnet run --project BatchConvertToCHD/BatchConvertToCHD.csproj -f net10.0-windows
+dotnet run --project CHDStudio/CHDStudio.csproj -f net10.0-windows
 
 # Framework-dependent publishes for Linux/macOS (neutral TFM)
-dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -f net10.0 -r linux-x64 --self-contained false -o publish/linux-x64
-dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -f net10.0 -r osx-arm64 --self-contained false -o publish/osx-arm64
+dotnet publish CHDStudio/CHDStudio.csproj -c Release -f net10.0 -r linux-x64 --self-contained false -o publish/linux-x64
+dotnet publish CHDStudio/CHDStudio.csproj -c Release -f net10.0 -r osx-arm64 --self-contained false -o publish/osx-arm64
 ```
 
 ## Release engineering (do not break)
@@ -74,7 +74,7 @@ dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -f net10.0 
 - **The app is framework-dependent. It must NOT embed the .NET runtime.** Users
   install the .NET 10 Desktop Runtime. Always publish with
   `--self-contained false -p:PublishSingleFile=true`. The output is a single
-  `BatchConvertToCHD.exe` (plus the bundled tool exes, which are content files
+  `CHDStudio.exe` (plus the bundled tool exes, which are content files
   and stay outside the bundle).
 - **Release zips contain exactly one architecture's tools.** For `win-x64`:
   `7za.exe`, `chdman.exe`. For `win-arm64`: the `*_arm64.exe` variants.
@@ -86,8 +86,8 @@ dotnet publish BatchConvertToCHD/BatchConvertToCHD.csproj -c Release -f net10.0 
 - **Zip naming is fixed:** `release_<version>_win-<rid>.zip`, e.g.
   `release_3.7.0_win-x64.zip`. One zip per architecture, both attached to the
   GitHub release.
-- **Version lives in two csproj files** (`BatchConvertToCHD` and
-  `BatchConvertToCHD.Tests`, `AssemblyVersion`/`FileVersion`) plus a matching
+- **Version lives in two csproj files** (`CHDStudio` and
+  `CHDStudio.Tests`, `AssemblyVersion`/`FileVersion`) plus a matching
   section in `WhatsNew.md`. A release tag is `release_<version>` and must match
   the csproj version - `scripts/ci/version.mjs` enforces this in CI.
 - **Cutting a release:** bump both csproj versions, add the `## <version>`
@@ -117,7 +117,7 @@ workflows, and never commit or echo the API key. It is read from the
   .NET 8, 9 and 10 consumers. `GenerateDocumentationFile` must stay on so each
   TFM ships its `.xml` next to the assembly.
 - **Metadata** must keep `PackageProjectUrl` and `RepositoryUrl` pointed at
-  <https://github.com/purelogiccode/BatchConvertToCHD>.
+  <https://github.com/purelogiccode/CHDStudio>.
 - **README**: `<Project>/README.md` is the package readme (packed at the package
   root as `README.md`). Keep it descriptive with usage examples and an API
   reference, and update it whenever the public surface changes.
@@ -137,7 +137,7 @@ name for the library being published):
 dotnet build PBPSharp/PBPSharp.csproj -c Release        # or CSOSharp/CSOSharp.csproj, CCDSharp/CCDSharp.csproj
 
 # library tests plus real-file integration tests (needs the local sample folder)
-dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj -c Release --filter "FullyQualifiedName~Pbp"   # or ~Cso
+dotnet test CHDStudio.Tests/CHDStudio.Tests.csproj -c Release --filter "FullyQualifiedName~Pbp"   # or ~Cso
 # (CCDSharp has no dedicated test class yet; run the full suite when it changes)
 
 # 2. pack with package validation enabled
@@ -194,16 +194,16 @@ the runner's Node 24 runtime is used.
 - Match existing code style; `DebugType` is `embedded` and analyzers
   (Meziantou, Roslynator) run on every build. Do not add code comments unless
   asked.
-- Bundled binaries are committed in `BatchConvertToCHD/`: Windows
+- Bundled binaries are committed in `CHDStudio/`: Windows
   `7za*.exe` and `chdman*.exe`, and `tools/7zz_*` (official 7-Zip console builds
   for Linux/macOS, copied next to the app as `7zz` for the matching RID). They
   are copied to the output with `CopyToOutputDirectory=Always`; only replace
   them deliberately and keep `tools/7-Zip-License.txt`.
-- `BatchConvertToCHD/bin/Release/` is the local release archive: every
+- `CHDStudio/bin/Release/` is the local release archive: every
   version's `release_<version>_win-<rid>.zip` lives there, beside the per-TFM
   build output. Copy new zips in, **never delete files inside that path**
   (also avoid commands that would clean it).
 - Tests are xUnit; add regression tests next to the existing ones in
-  `BatchConvertToCHD.Tests/`. The suite must pass before a release.
+  `CHDStudio.Tests/`. The suite must pass before a release.
   `[Trait("Category", "Integration")]` classes depend on local sample folders
   and are excluded from CI with `--filter "Category!=Integration"`.

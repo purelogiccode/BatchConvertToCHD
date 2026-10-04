@@ -5,16 +5,16 @@ nav_order: 12
 
 # 11. Testing
 
-The solution contains a single test project, `BatchConvertToCHD.Tests` (xUnit, `net10.0-windows`), with **1111 tests across 57 test classes**: 1083 unit tests plus 28 integration tests that need a local sample folder (see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
+The solution contains a single test project, `CHDStudio.Tests` (xUnit, `net10.0-windows`), with **1111 tests across 57 test classes**: 1083 unit tests plus 28 integration tests that need a local sample folder (see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
 
 > **Expected result on a machine without the local sample folders:** the 1083 unit tests pass, while the 28 integration tests fail on the missing sample data. CI excludes them with `--filter "Category!=Integration"`; a change that leaves exactly those 28 failing has broken nothing.
 
 ## 11.1 Running the Tests
 
 ```bash
-dotnet test CSharp_BatchConvertToCHD.sln -c Release
+dotnet test CHDStudio.sln -c Release
 # or, faster, without rebuilding:
-dotnet test BatchConvertToCHD.Tests/BatchConvertToCHD.Tests.csproj --no-build
+dotnet test CHDStudio.Tests/CHDStudio.Tests.csproj --no-build
 ```
 
 Requirements: the tests are run on Windows (the app project is `net10.0-windows`). Some tests need the app's output directory to contain `chdman.exe` (it is copied by the build).
@@ -24,9 +24,9 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 - Plain xUnit `[Fact]` / `[Theory]` + `[InlineData]`.
 - Filesystem-dependent tests create a GUID temp directory per test class (`Path.GetTempPath() + $"{ClassName}_{Guid:N}"`) and clean it up in `Dispose`.
 - HTTP-dependent tests inject an `HttpClient` backed by `FakeHttpMessageHandler` (the only shared helper): a `Func<HttpRequestMessage, HttpResponseMessage>` or a convenience `(HttpStatusCode, string content, string contentType)` constructor, plus a static `WithAsyncHandler` helper.
-- Internals are tested because the Avalonia project (`BatchConvertToCHD.csproj`) grants `InternalsVisibleTo("BatchConvertToCHD.Tests")`.
+- Internals are tested because the Avalonia project (`CHDStudio.csproj`) grants `InternalsVisibleTo("CHDStudio.Tests")`.
 - **Integration tests** are tagged `[Trait("Category", "Integration")]` and read real sample files from fixed absolute directories (`D:\Emulators\...`). Most **early-return when the samples are absent**, so on machines without the sample folders they are effectively skipped (reported as passed). `PbpFileIntegrationTests` is the exception — see [§11.5](#115-the-15-expected-failures).
-- **Committed fixtures** live in `BatchConvertToCHD.Tests/Fixtures/` and are copied to the output directory by the csproj. There are four groups: `ecm-sample.ecm`, so the ECM decoder can be verified against the reference implementation's own output without that tool being installed; `rar-multipart/set.part1.rar`…`set.part5.rar`, a real WinRAR store-mode volume set holding a known 3500-byte payload, so multi-volume RAR extraction can be tested without WinRAR at test time; `MdsV2/` (the MIT-licensed mdsx test images: plain, compressed, single-file `.mdx`, and password-encrypted), so the v2/MDX decryption pipeline is pinned to real files; and `laserdisc-small.avi`, a 4-frame YUY2 + PCM AVI written with CHDSharp's own test writer, so the `createld` path is exercised without needing a real laserdisc dump.
+- **Committed fixtures** live in `CHDStudio.Tests/Fixtures/` and are copied to the output directory by the csproj. There are four groups: `ecm-sample.ecm`, so the ECM decoder can be verified against the reference implementation's own output without that tool being installed; `rar-multipart/set.part1.rar`…`set.part5.rar`, a real WinRAR store-mode volume set holding a known 3500-byte payload, so multi-volume RAR extraction can be tested without WinRAR at test time; `MdsV2/` (the MIT-licensed mdsx test images: plain, compressed, single-file `.mdx`, and password-encrypted), so the v2/MDX decryption pipeline is pinned to real files; and `laserdisc-small.avi`, a 4-frame YUY2 + PCM AVI written with CHDSharp's own test writer, so the `createld` path is exercised without needing a real laserdisc dump.
 - **Format fixtures are built in code** rather than committed where the format allows it: `IszImageBuilder` writes ISZ files the way real UltraISO files are laid out (spec-conformant headers, obfuscated tables, stripped bzip2 headers, optional UltraISO checksums), and `MdsTests`/`RawCdImageDetectorTests`/`SplitImageJoinerTests` synthesise their descriptors and sector data. This keeps the repository free of disc-sized binaries.
 
 ## 11.3 Coverage by File
@@ -72,7 +72,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 | `InputFileFilterTests.cs` | A raw image is dropped when a sibling descriptor covers it (by base name and by cue text), kept when nothing covers it, matching is directory-scoped and case-insensitive; `RemoveRarVolumeParts` keeps only the first `partNN` volume per set (the lowest when the first is missing) and leaves lone parts and plain archives alone — and `ResolveOutputCollisions` keeps the first non-archive input of each colliding output group, order-independently, including three-way collisions and all-archive groups |
 | `IoThroughputCounterTests.cs` | Throughput sampling math (bytes/delta, zero/negative deltas), counter reset, the platform availability probe, and child-process sampling (the chdman speed fix) |
 | `LegacyCleanupServiceTests.cs` | Removal of the legacy `logs`/`Resources` folders and `maxcso.exe`/`psxpackager.exe`, missing paths, in-use files, and never throwing |
-| `ScreenshotServiceTests.cs` | Preferred/fallback directory layout (`%LocalAppData%\BatchConvertToCHD\screenshots` first), timestamped file names, directory creation, fallback on unwritable folders, and null when both fail |
+| `ScreenshotServiceTests.cs` | Preferred/fallback directory layout (`%LocalAppData%\CHDStudio\screenshots` first), timestamped file names, directory creation, fallback on unwritable folders, and null when both fail |
 | `SplitImageJoinerTests.cs` | `.001`/`.002` and `.i00`/`.i01` set discovery and ordering, gaps, single-file non-sets, byte totals, and join output equality |
 | `RarVolumeSetTests.cs` | `partNN.rar` name parsing (padding, case, rejects), first-volume resolution from a later part, sets kept apart within a folder, ordered `.partNN` / `.001` / old-style `.rNN` volume enumeration, total sizes, and first-volume name reconstruction |
 | `TrackBinCueBuilderTests.cs` | `(Track N)` set recognition and ordering, multi-FILE cue content, data track mode vs. AUDIO tracks, non-track-set rejection |
@@ -106,7 +106,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 
 ## 11.4 Writing New Tests — Quick Conventions
 
-1. File-scoped namespace `BatchConvertToCHD.Tests`; `using Xunit` is global.
+1. File-scoped namespace `CHDStudio.Tests`; `using Xunit` is global.
 2. For filesystem tests, mirror the GUID-temp-dir + `IDisposable` pattern.
 3. For HTTP tests, use `FakeHttpMessageHandler` and pass the `HttpClient` to the internal constructor overloads (`StatsService`, `BugReportService`, `UpdateService`, `AppHttpClient`).
 4. For chdman-dependent tests, early-return when `chdman.exe` is absent from `AppContext.BaseDirectory`.

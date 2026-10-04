@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const csprojPath = join(repoRoot, 'BatchConvertToCHD', 'BatchConvertToCHD.csproj');
+const csprojPath = join(repoRoot, 'CHDStudio', 'CHDStudio.csproj');
 
 const args = process.argv.slice(2);
 const getArg = (name) => {
@@ -24,10 +24,10 @@ const tag = getArg('tag');
 if (tag !== undefined) {
     const expected = `release_${version}`;
     if (tag !== expected) {
-        console.error(`Tag "${tag}" does not match the project version. Expected "${expected}" (update BatchConvertToCHD.csproj or the tag).`);
+        console.error(`Tag "${tag}" does not match the project version. Expected "${expected}" (update CHDStudio.csproj or the tag).`);
         process.exit(1);
     }
-    console.log(`Tag "${tag}" matches BatchConvertToCHD ${version}.`);
+    console.log(`Tag "${tag}" matches CHDStudio ${version}.`);
 }
 
 if (args.includes('--github-output')) {

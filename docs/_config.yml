@@ -6,8 +6,8 @@
 # `theme:` entry fails the build with "The just-the-docs theme could not be
 # found". jekyll-remote-theme ships inside the github-pages gem and fetches
 # the theme from GitHub at build time.
-title: BatchConvertToCHD — Wiki
-description: Official documentation for Batch Convert to CHD — user guide, architecture, developer references, and troubleshooting.
+title: CHD Studio — Wiki
+description: Official documentation for CHD Studio — user guide, architecture, developer references, and troubleshooting.
 remote_theme: just-the-docs/just-the-docs
 
 # Apply the theme's default layout to every page. just-the-docs renders the left-hand
@@ -28,4 +28,4 @@ heading_anchors: true
 
 aux_links:
   "GitHub Repository":
-    - "https://github.com/purelogiccode/BatchConvertToCHD"
+    - "https://github.com/purelogiccode/CHDStudio"

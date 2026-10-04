@@ -1,4 +1,4 @@
-### Batch Convert to CHD
+### CHD Studio
 
 **Start here**
 

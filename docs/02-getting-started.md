@@ -10,7 +10,7 @@ nav_order: 3
 ### Runtime (end users)
 - **OS**: Windows 10 / 11, x64 or ARM64
 - **Runtime**: [.NET 10.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)
-- **Bundled executables** (shipped with the app, must stay next to `BatchConvertToCHD.exe`):
+- **Bundled executables** (shipped with the app, must stay next to `CHDStudio.exe`):
   - Windows: `chdman.exe` / `chdman_arm64.exe` (0.289) — MAME CHD tool (primary encoder and extraction fallback); `7za.exe` / `7za_arm64.exe` — 7-Zip fallback extractor
   - Linux/macOS: `7zz` (official 7-Zip 26.03 console build, copied from `tools/` at publish time) — 7-Zip fallback extractor
 - **Built-in encoder**: [CHDSharp](https://www.nuget.org/packages/CHDSharp) (CHDSharpLib 1.4.3) runs in-process on every platform — the automatic fallback behind chdman on Windows and the only encoder on Linux/macOS. Its output is byte-identical to chdman 0.289, and being a managed assembly there is no encoder executable to ship.
@@ -25,10 +25,10 @@ nav_order: 3
 
 ## 2.2 Installation (End Users)
 
-1. Download the latest binary from the [Releases page](https://github.com/purelogiccode/BatchConvertToCHD/releases).
+1. Download the latest binary from the [Releases page](https://github.com/purelogiccode/CHDStudio/releases).
 2. Extract the contents to a permanent folder (do **not** run from a temp/Downloads folder if you want update/self-containment to behave).
-3. **Important** (Windows): keep all `.exe` files (including ARM64 variants) in the same directory as `BatchConvertToCHD.exe` — tool discovery probes the app's base directory first, then `PATH` (`MainWindow.axaml.cs`). On Linux and macOS, `7zz` ships next to the app and other tools are discovered on `PATH`; the built-in CHDSharp encoder needs nothing on disk.
-4. Launch `BatchConvertToCHD.exe`.
+3. **Important** (Windows): keep all `.exe` files (including ARM64 variants) in the same directory as `CHDStudio.exe` — tool discovery probes the app's base directory first, then `PATH` (`MainWindow.axaml.cs`). On Linux and macOS, `7zz` ships next to the app and other tools are discovered on `PATH`; the built-in CHDSharp encoder needs nothing on disk.
+4. Launch `CHDStudio.exe`.
 
 ---
 
@@ -36,32 +36,32 @@ nav_order: 3
 
 ```bash
 # Clone
-git clone https://github.com/purelogiccode/BatchConvertToCHD.git
-cd CSharp_BatchConvertToCHD
+git clone https://github.com/purelogiccode/CHDStudio.git
+cd CHDStudio
 
 # Build the whole solution
-dotnet build CSharp_BatchConvertToCHD.sln -c Release
+dotnet build CHDStudio.sln -c Release
 
 # Run the tests
-dotnet test CSharp_BatchConvertToCHD.sln -c Release
+dotnet test CHDStudio.sln -c Release
 
 # Or just the application
-dotnet build BatchConvertToCHD/BatchConvertToCHD.csproj -c Release
+dotnet build CHDStudio/CHDStudio.csproj -c Release
 ```
 
 The solution contains seven projects:
 
 | Project | Kind | Target framework |
 |---------|------|------------------|
-| `BatchConvertToCHD` | Avalonia application (WinExe) | `net10.0;net10.0-windows` |
-| `BatchConvertToCHD.Tests` | xUnit test suite | `net10.0-windows` |
+| `CHDStudio` | Avalonia application (WinExe) | `net10.0;net10.0-windows` |
+| `CHDStudio.Tests` | xUnit test suite | `net10.0-windows` |
 | `MDSSharp` | class library (Alcohol 120% .mds/.mdf parsing) | `net8.0;net9.0;net10.0` |
 | `CCDSharp` | class library (CloneCD parsing) | `net8.0;net9.0;net10.0` |
 | `CSOSharp` | class library (CSO decompression) | `net8.0;net9.0;net10.0` |
 | `PBPSharp` | class library (PBP/SFO parsing) | `net8.0;net9.0;net10.0` |
 | `ISZSharp` | class library (ISZ decompression) | `net8.0;net9.0;net10.0` |
 
-> **Note**: on Windows, `chdman.exe` and `7za.exe` are copied to the output directory by the build (`BatchConvertToCHD.csproj`); on Linux and macOS the matching `tools/7zz*` binary (official 7-Zip 26.03) is copied as `7zz`, while a `chdman` on `PATH` is only used for extraction fallback and never for encoding. The libraries are referenced as project references, not NuGet packages, except `CHDSharp` (NuGet 1.4.3) and other packages listed below.
+> **Note**: on Windows, `chdman.exe` and `7za.exe` are copied to the output directory by the build (`CHDStudio.csproj`); on Linux and macOS the matching `tools/7zz*` binary (official 7-Zip 26.03) is copied as `7zz`, while a `chdman` on `PATH` is only used for extraction fallback and never for encoding. The libraries are referenced as project references, not NuGet packages, except `CHDSharp` (NuGet 1.4.3) and other packages listed below.
 
 ### NuGet dependencies (application)
 
@@ -87,7 +87,7 @@ The solution contains seven projects:
 The application accepts an optional folder path argument to pre-populate the **Convert to CHD** source folder:
 
 ```sh
-BatchConvertToCHD.exe "C:\ROMs\MyGames"
+CHDStudio.exe "C:\ROMs\MyGames"
 ```
 
 The path is applied in `MainWindow_LoadedAsync` via `SetInputFolder` (`MainWindow.axaml.cs:148–153`).
@@ -101,7 +101,7 @@ The path is applied in `MainWindow_LoadedAsync` via `SetInputFolder` (`MainWindo
 
 ### Single-instance behavior
 
-Only one instance can run: a global mutex `Global\BatchConvertToCHD_SingleInstance` is acquired at startup; a second launch shows *"Another instance of BatchConvertToCHD is already running."* and exits (`App.axaml.cs:80–105`).
+Only one instance can run: a global mutex `Global\CHDStudio_SingleInstance` is acquired at startup; a second launch shows *"Another instance of CHDStudio is already running."* and exits (`App.axaml.cs:80–105`).
 
 ---
 

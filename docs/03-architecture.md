@@ -12,8 +12,8 @@ This page describes the solution structure, the runtime startup sequence, and th
 ## 3.1 Solution Structure
 
 ```
-CSharp_BatchConvertToCHD.sln
-├── BatchConvertToCHD/                     (Avalonia app, net10.0;net10.0-windows)
+CHDStudio.sln
+├── CHDStudio/                     (Avalonia app, net10.0;net10.0-windows)
 │   ├── App.axaml(.cs)                     → startup, Serilog, exception handlers
 │   ├── AppConfig.cs                       → central configuration
 │   ├── MainWindow.axaml(.cs)              → UI + all batch logic
@@ -58,7 +58,7 @@ CSharp_BatchConvertToCHD.sln
 │           ├── CdSectorEccEdc.cs          → regenerates sector EDC + Reed-Solomon parity
 │           ├── EcmImageDecoder.cs         → ECM block-stream decoder
 │           └── EcmDecodeResult.cs
-├── BatchConvertToCHD.Tests/               (xUnit; Fixtures/ holds ecm-sample.ecm, rar-multipart/, MdsV2/ and laserdisc-small.avi)
+├── CHDStudio.Tests/               (xUnit; Fixtures/ holds ecm-sample.ecm, rar-multipart/, MdsV2/ and laserdisc-small.avi)
 ├── MDSSharp/                                (Alcohol 120% .mds/.mdf parsing; net8.0;net9.0;net10.0)
 ├── CCDSharp/                                (CloneCD .ccd/.img/.sub parsing; net10.0;net8.0)
 ├── CSOSharp/                                (CSO/CISO decompression; net10.0;net8.0)
@@ -71,7 +71,7 @@ CSharp_BatchConvertToCHD.sln
 
 ```
                  ┌──────────────────────────────────┐
-                 │         BatchConvertToCHD        │  (Avalonia app)
+                 │         CHDStudio        │  (Avalonia app)
                  └───┬───────┬───────┬───────┬──────┘
       Project refs   │       │       │       │
          ┌───────────▼─┐ ┌───▼──────▼──┐ ┌──▼──────────┐
@@ -84,8 +84,8 @@ CSharp_BatchConvertToCHD.sln
 ```
 
 - The app references `MDSSharp`, `CCDSharp`, `CSOSharp`, `PBPSharp` and `ISZSharp` as project references.
-- All five libraries are packable and expose internals to `BatchConvertToCHD.Tests` via `InternalsVisibleTo`; `MDSSharp`, `CCDSharp`, `CSOSharp`, `PBPSharp` and `ISZSharp` all multi-target `net8.0;net9.0;net10.0`.
-- `BatchConvertToCHD.Tests` references the app (internals visible) plus `MDSSharp`, `CSOSharp`, `PBPSharp` and `ISZSharp` — but **not** `CCDSharp` (there are no CCDSharp unit tests today; see [Testing](11-testing.md)).
+- All five libraries are packable and expose internals to `CHDStudio.Tests` via `InternalsVisibleTo`; `MDSSharp`, `CCDSharp`, `CSOSharp`, `PBPSharp` and `ISZSharp` all multi-target `net8.0;net9.0;net10.0`.
+- `CHDStudio.Tests` references the app (internals visible) plus `MDSSharp`, `CSOSharp`, `PBPSharp` and `ISZSharp` — but **not** `CCDSharp` (there are no CCDSharp unit tests today; see [Testing](11-testing.md)).
 
 > **Why ISZ and Alcohol support moved into libraries.** `ISZSharp` and `MDSSharp` were split out of the app's utilities into standalone packable projects (they are self-contained formats with redistributable value), while ECM decoding remains in-app because it is tightly coupled to the cue staging flow. The test project references both new libraries directly.
 
@@ -99,14 +99,14 @@ App ctor
  ├─ new BugReportService(...)  → App.SharedBugReportService
  ├─ new StatsService(...)
  ├─ ConfigureSerilog()
- │    ├─ file sink: %LocalAppData%\BatchConvertToCHD\logs\BatchConvertToCHD-.log (daily, 7 retained)
+ │    ├─ file sink: %LocalAppData%\CHDStudio\logs\CHDStudio-.log (daily, 7 retained)
  │    ├─ debug sink
  │    └─ BugReportApiSink (forwards Warning+ to the bug API)
  └─ subscribe: AppDomain.UnhandledException, Dispatcher.UIThread.UnhandledException,
                 TaskScheduler.UnobservedTaskException, Exit
 
 OnStartup
- ├─ acquire global mutex "Global\BatchConvertToCHD_SingleInstance" (second instance → exit)
+ ├─ acquire global mutex "Global\CHDStudio_SingleInstance" (second instance → exit)
  ├─ ShutdownMode = OnMainWindowClose
  ├─ apply dark Fluent theme (Avalonia)
  ├─ delete legacy 7z_x64.dll / 7z_arm64.dll
@@ -208,7 +208,7 @@ Verification: StartVerificationButton_ClickAsync (:1413)
 LogMessage / LogWarning / LogError (MainWindow)
    └─ Serilog (Log.Information/Warning/Error)
         ├─ Debug sink
-        ├─ File sink   → %LocalAppData%\BatchConvertToCHD\logs\BatchConvertToCHD-YYYYMMDD.log
+        ├─ File sink   → %LocalAppData%\CHDStudio\logs\CHDStudio-YYYYMMDD.log
         └─ BugReportApiSink → BugReportService.SendBugReportAsync
              (Warning+ only; exclusion patterns drop known-noise; single in-flight send)
 ```

@@ -22,10 +22,10 @@
         <Description>A managed C# read-only library for reading and extracting PlayStation Portable PBP (EBOOT.PBP) files. Supports single-disc and multi-disc PBP, SFO metadata parsing, and ISO extraction with CUE sheet generation. Designed as an intermediate step for converting PBP discs to other formats (e.g. CHD). Read-only: it can open and extract, but cannot create or modify PBP files.</Description>
         <PackageTags>pbp;psp;playstation;ps1;psx;eboot;iso;disc-image;extract;read-only</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageProjectUrl>https://github.com/purelogiccode/BatchConvertToCHD</PackageProjectUrl>
+        <PackageProjectUrl>https://github.com/purelogiccode/CHDStudio</PackageProjectUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageIcon>icon.png</PackageIcon>
-        <RepositoryUrl>https://github.com/purelogiccode/BatchConvertToCHD</RepositoryUrl>
+        <RepositoryUrl>https://github.com/purelogiccode/CHDStudio</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <Copyright>PureLogicCode.com</Copyright>
     </PropertyGroup>
@@ -37,7 +37,7 @@
 
     <ItemGroup>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-            <_Parameter1>BatchConvertToCHD.Tests</_Parameter1>
+            <_Parameter1>CHDStudio.Tests</_Parameter1>
         </AssemblyAttribute>
     </ItemGroup>
 
