@@ -5,9 +5,9 @@ nav_order: 12
 
 # 11. Testing
 
-The solution contains a single test project, `CHDStudio.Tests` (xUnit, `net10.0-windows`), with **1111 tests across 57 test classes**: 1083 unit tests plus 28 integration tests that need a local sample folder (see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
+The solution contains a single test project, `CHDStudio.Tests` (xUnit, `net10.0-windows`), with **1116 tests across 57 test classes**: 1088 unit tests plus 28 integration tests that need a local sample folder (see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
 
-> **Expected result on a machine without the local sample folders:** the 1083 unit tests pass, while the 28 integration tests fail on the missing sample data. CI excludes them with `--filter "Category!=Integration"`; a change that leaves exactly those 28 failing has broken nothing.
+> **Expected result on a machine without the local sample folders:** the 1088 unit tests pass, while the 28 integration tests fail on the missing sample data. CI excludes them with `--filter "Category!=Integration"`; a change that leaves exactly those 28 failing has broken nothing.
 
 ## 11.1 Running the Tests
 

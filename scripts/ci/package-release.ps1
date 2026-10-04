@@ -1,19 +1,19 @@
 <#
 .SYNOPSIS
-    Builds a release zip for one Windows runtime identifier.
+    Builds a release zip for one runtime identifier.
 
 .DESCRIPTION
     Stages a published CHDStudio output folder, drops the binaries that
     belong to the other architecture, the library .xml IntelliSense files and the
-    native .pdb debug symbols, adds LICENSE.txt and ReadMe.md, and zips the result
-    as release_<version>_<rid>.zip. The app itself is published framework-dependent
-    and single-file, so the .NET runtime is never bundled.
+    native .pdb debug symbols, adds LICENSE.txt, ReadMe.md and WhatsNew.md, and
+    zips the result as release_<version>_<rid>.zip. The app itself is published
+    framework-dependent and single-file, so the .NET runtime is never bundled.
 
 .PARAMETER Rid
-    win-x64 or win-arm64.
+    win-x64, win-arm64, linux-x64, linux-arm64, osx-x64 or osx-arm64.
 
 .PARAMETER Version
-    Application version, e.g. 3.7.0.
+    Application version, e.g. 3.9.0.
 
 .PARAMETER PublishDir
     Output folder of dotnet publish for the given Rid.
@@ -24,7 +24,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('win-x64', 'win-arm64')]
+    [ValidateSet('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64')]
     [string]$Rid,
 
     [Parameter(Mandatory = $true)]
@@ -46,19 +46,49 @@ if (-not (Test-Path -LiteralPath $OutputDir)) {
 }
 $outputDir = (Resolve-Path -LiteralPath $OutputDir).Path
 
+$isWindowsRid = $Rid.StartsWith('win-')
+$isMacRid = $Rid.StartsWith('osx-')
+
 if ($Rid -eq 'win-x64') {
     $toolFiles = @('7za.exe', 'chdman.exe')
     $otherArchFiles = @('7za_arm64.exe', 'chdman_arm64.exe')
 }
-else {
+elseif ($Rid -eq 'win-arm64') {
     $toolFiles = @('7za_arm64.exe', 'chdman_arm64.exe')
     $otherArchFiles = @('7za.exe', 'chdman.exe')
+}
+else {
+    # Linux and macOS use the official 7-Zip console build copied as "7zz".
+    $toolFiles = @('7zz', '7-Zip-License.txt')
+    $otherArchFiles = @()
+}
+
+if ($isWindowsRid) {
+    $executable = 'CHDStudio.exe'
+    $nativeFiles = @('av_libglesv2.dll', 'libHarfBuzzSharp.dll', 'libSkiaSharp.dll')
+}
+elseif ($isMacRid) {
+    $executable = 'CHDStudio'
+    $nativeFiles = @(
+        'libAvaloniaNative.dylib',
+        'libHarfBuzzSharp.dylib',
+        'libSkiaSharp.dylib'
+    )
+}
+else {
+    $executable = 'CHDStudio'
+    $nativeFiles = @('libHarfBuzzSharp.so', 'libSkiaSharp.so')
 }
 
 $stage = Join-Path ([IO.Path]::GetTempPath()) ("chdstudio-stage-" + [Guid]::NewGuid().ToString('N'))
 try {
     New-Item -ItemType Directory -Path $stage -Force | Out-Null
     Copy-Item -Path (Join-Path $publishDir '*') -Destination $stage -Recurse -Force
+
+    # The release bundle is flat: any subdirectory in the publish output is either a
+    # stale artifact of a reused output folder or an unintended payload, so drop it.
+    Get-ChildItem -LiteralPath $stage -Directory -ErrorAction SilentlyContinue |
+        Remove-Item -Recurse -Force
 
     foreach ($name in $otherArchFiles) {
         $path = Join-Path $stage $name
@@ -74,13 +104,14 @@ try {
     Get-ChildItem -LiteralPath $stage -Filter '*.pdb' -File -ErrorAction SilentlyContinue |
         Remove-Item -Force
 
-    foreach ($extra in @('LICENSE.txt', 'ReadMe.md')) {
+    foreach ($extra in @('LICENSE.txt', 'ReadMe.md', 'WhatsNew.md')) {
         Copy-Item -LiteralPath (Join-Path $repoRoot $extra) -Destination $stage -Force
     }
 
-    # The single-file exe still loads Avalonia's native rendering/text libraries from
-    # beside it, so those must survive pruning.
-    $expected = @('CHDStudio.exe', 'LICENSE.txt', 'ReadMe.md', 'av_libglesv2.dll', 'libHarfBuzzSharp.dll', 'libSkiaSharp.dll') + $toolFiles
+    # The single-file executable still loads the platform's native rendering/text
+    # libraries from beside it, so those must survive pruning.
+    $expected =
+        @($executable, 'LICENSE.txt', 'ReadMe.md', 'WhatsNew.md') + $nativeFiles + $toolFiles
     $missing = @($expected | Where-Object { -not (Test-Path -LiteralPath (Join-Path $stage $_)) })
     if ($missing.Count -gt 0) {
         throw "Release stage is missing required file(s): $($missing -join ', ')"

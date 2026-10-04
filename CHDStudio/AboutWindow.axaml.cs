@@ -20,7 +20,7 @@ internal partial class AboutWindow : Window
 
         AppVersionTextBlock.Text = $"Version: {GetApplicationVersion()}";
         DescriptionTextBlock.Text =
-            "A utility for batch converting various disc image formats to CHD and for verifying the integrity of CHD files.";
+            "A cross-platform utility for batch converting disc images (cue, iso, img, ccd, mds, pbp, cso, isz, ecm, split sets and archives) to CHD, and for verifying, exploring and extracting existing CHD files. Runs on Windows, Linux and macOS, with x64 and ARM64 builds.";
 
         KeyDown += AboutWindow_KeyDown;
     }

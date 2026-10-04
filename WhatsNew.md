@@ -22,6 +22,7 @@ nav_order: 15
 *   **The main window has a Donate button** (left of About) that opens the project's donation page, and the About window now scrolls so every acknowledgement is reachable on short screens.
 *   **The Close button always closes the app again**: shutting down from inside the window's Closing event re-entered the close in a loop, so the window never actually closed while an operation was idle.
 *   **The activity log is batched and capped**: log lines are flushed in batches instead of one dispatcher call per line, and the on-screen text is capped, so a very large log can no longer freeze the window. The Explorer tab now hides the log panel entirely instead of leaving a clipped strip of it over the window edge.
+*   **The About window is complete**: it now carries the full third-party acknowledgements (CHDSharp, CHDMAN, Avalonia, the in-house image libraries, VideoGameFileSystemParser, SharpCompress, NAudio, Serilog and 7-Zip), a License section (GPL-3.0 with a link), the copyright line, and donate/release links.
 
 ### New CHD Explorer tab
 
@@ -58,6 +59,8 @@ nav_order: 15
 *   **Archived discs keep their folder structure.** Two same-named discs in different archive subfolders (`Disc1/game.cue`, `Disc2/game.cue`) both produced `game.chd`, and the second silently replaced the first; the archive's internal path is now preserved. The same-batch duplicate guard keeps the first product and reports any remaining collision.
 *   **Extracting next to an existing disc set no longer replaces it.** The "extract into a subfolder instead of overwriting" rule now also covers cue/gdi sets (checking their BIN too) and applies to the `chdman` fallback, not just the built-in reader. Cancelling a fallback extraction now kills the `chdman` child instead of leaving it running.
 *   **A PBP whose volume descriptor declares zero sectors** no longer extracts an empty BIN and reports success; every index entry is written when the size is unknown.
+*   **Expected network and user conditions no longer file bug reports**: an update check that times out (now bounded to 30 seconds instead of the shared client's 100) and a CHD Explorer parse failure caused by choosing the wrong file-system parser are logged as network/user conditions instead of being sent to the bug tracker.
+*   **PBP I/O failures carry the underlying OS error** (PBPSharp 1.1.3): an open or extraction that fails with `IoError` records the file, the OS message and whether it was a read or a write, so a locked file, a failing disk or a full drive is identifiable from the log and the bug report.
 *   **CD-R/CD-RW MDS v2 descriptors** read their track lengths from the extra block like pressed CDs, and a `.ccd` claiming a huge `TocEntries` value can no longer make the parser allocate unbounded tracks.
 *   **MP3 decoding on Linux/macOS is cancellable**: `ffmpeg` is awaited with the operation token and killed on cancel instead of blocking the window in an uncancellable `WaitForExit()`.
 *   **Real `.mdx` containers are read**: the MDS v2 parser applied the 1 MB v1 descriptor cap before checking the version, so every genuine single-file MDX (which embeds the whole image) was rejected, and the whole file was loaded into memory. The header is now read first, the descriptor is decrypted/decompressed from a stream, and track data is decoded per footer: the footer's `track_data_length` (the sectors actually stored) is used instead of the extra block's logical length, so a pregap kept in the data file is no longer truncated, and a track split across several data files decodes every footer in order. The decoder also streams groups instead of buffering whole tracks, and a compressed descriptor that legitimately expands beyond the file size is no longer rejected.
@@ -78,10 +81,10 @@ nav_order: 15
 
 ### Housekeeping
 
-*   Version bumps: application 3.9.0; libraries CCDSharp 1.0.1, CSOSharp 1.0.1, ISZSharp 1.0.2, MDSSharp 1.2.0 (MDS v2/MDX), PBPSharp 1.1.2; Meziantou.Analyzer 3.0.294.
+*   Version bumps: application 3.9.0; libraries CCDSharp 1.0.1, CSOSharp 1.0.1, ISZSharp 1.0.2, MDSSharp 1.2.0 (MDS v2/MDX), PBPSharp 1.1.3; Meziantou.Analyzer 3.0.294.
 *   Release script strips native `.pdb` debug symbols from the zip and verifies the Avalonia native libraries are present.
 *   Docs, AGENTS.md and CI updated for the new base project; tests now reference the Avalonia assembly.
-*   Test suite grew to **1111 tests** (1083 unit + 28 integration), including new CSO v2 stored/LZ4/deflate, PBP zero-size, corrupt-CCD, MDX container, encoder divisibility, IoThroughputCounter, checksum-report, Image Info, CHDSharp-progress, MDS v2 per-track pregap and `createld` regression tests (with a committed laserdisc AVI fixture).
+*   Test suite grew to **1116 tests** (1088 unit + 28 integration), including new CSO v2 stored/LZ4/deflate, PBP zero-size, corrupt-CCD, MDX container, encoder divisibility, IoThroughputCounter, checksum-report, Image Info, CHDSharp-progress, MDS v2 per-track pregap and `createld` regression tests (with a committed laserdisc AVI fixture).
 *   The `docs/` folder is the single source of truth for both documentation homes: GitHub Pages (Jekyll/just-the-docs navigation) and the GitHub wiki (`docs/_Sidebar.md` side menu, `index.md` → `Home.md`, `WhatsNew.md` synced from the repository root).
 
 ## 3.8.0 (2026-09-19)

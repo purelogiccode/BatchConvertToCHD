@@ -46,7 +46,7 @@
             VerticalScrollBarVisibility="Auto"
             HorizontalScrollBarVisibility="Disabled"
             ToolTip.Tip="Scroll through the about information">
-            <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ToolTip.Tip="About information sections">
+            <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ToolTip.Tip="About information sections">
             <!--  Logo Section  -->
             <Border Grid.Row="0" Classes="statCard" Margin="0,0,0,15" Padding="15" ToolTip.Tip="Application logo">
                 <StackPanel HorizontalAlignment="Center" ToolTip.Tip="Application logo section">
@@ -72,6 +72,13 @@
                         Foreground="#73C2FF"
                         HorizontalAlignment="Center"
                         ToolTip.Tip="Current application version" />
+                    <TextBlock
+                        Text="© 2026 Pure Logic Code. All rights reserved."
+                        Margin="0,6,0,0"
+                        FontSize="12"
+                        Foreground="#8b949e"
+                        HorizontalAlignment="Center"
+                        ToolTip.Tip="Copyright notice" />
                 </StackPanel>
             </Border>
 
@@ -101,12 +108,28 @@
                         ToolTip.Tip="Visit the project repository" />
                     <Button
                         Classes="link"
+                        Content="https://github.com/purelogiccode/CHDStudio/releases"
+                        Tag="https://github.com/purelogiccode/CHDStudio/releases"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,8,0,0"
+                        ToolTip.Tip="Download the latest release" />
+                    <Button
+                        Classes="link"
                         Content="https://www.purelogiccode.com"
                         Tag="https://www.purelogiccode.com"
                         Click="OpenUrl_Click"
                         HorizontalAlignment="Left"
-                        Margin="0,15,0,0"
+                        Margin="0,8,0,0"
                         ToolTip.Tip="Visit the official website" />
+                    <Button
+                        Classes="link"
+                        Content="https://www.purelogiccode.com/donate"
+                        Tag="https://www.purelogiccode.com/donate"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,8,0,0"
+                        ToolTip.Tip="Support the project with a donation" />
                 </StackPanel>
             </Border>
 
@@ -119,11 +142,28 @@
                         FontSize="14"
                         Foreground="#e6edf3"
                         Margin="0,0,0,10"
-                        ToolTip.Tip="Credits and attributions for third-party tools used in this project" />
+                        ToolTip.Tip="Credits and attributions for third-party tools and libraries used in this project" />
+
                     <TextBlock
                         TextWrapping="Wrap"
                         Foreground="#8b949e"
-                        Margin="0,0,0,8"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Uses the CHDSharp library for in-process CHD reading, verification, extraction and creation">
+                        <Run Text="Uses " /><Run Text="CHDSharp" FontWeight="Bold" /><Run Text=" (v1.4.3) by Peterson Fernandes for in-process CHD reading, verification, extraction and creation (chdman byte-identical output)." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://www.nuget.org/packages/CHDSharp"
+                        Tag="https://www.nuget.org/packages/CHDSharp"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Visit CHDSharp on NuGet" />
+
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,4"
                         ToolTip.Tip="Uses the CHDMAN tool from the MAME project for disc image conversion and verification">
                         <Run Text="Uses " /><Run Text="CHDMAN" FontWeight="Bold" /><Run Text=" from the MAME project for conversions and verifications." />
                     </TextBlock>
@@ -133,43 +173,249 @@
                         Tag="https://github.com/mamedev/mame/"
                         Click="OpenUrl_Click"
                         HorizontalAlignment="Left"
-                        Margin="0,0,0,8"
+                        Margin="0,0,0,10"
                         ToolTip.Tip="Visit the MAME/CHDMAN project on GitHub" />
+
                     <TextBlock
                         TextWrapping="Wrap"
                         Foreground="#8b949e"
-                        Margin="0,0,0,8"
-                        ToolTip.Tip="Uses CSOSharp for CSO/CISO file decompression">
-                        <Run Text="Uses " /><Run Text="CSOSharp" FontWeight="Bold" /><Run Text=" for .cso/.ciso decompression during conversion." />
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Uses the Avalonia UI framework for the cross-platform front end">
+                        <Run Text="Uses " /><Run Text="Avalonia" FontWeight="Bold" /><Run Text=" (v12.1.3) for the cross-platform Fluent Design user interface." />
                     </TextBlock>
                     <Button
                         Classes="link"
-                        Content="https://github.com/PureLogicCode/CSOSharp"
-                        Tag="https://github.com/PureLogicCode/CSOSharp"
+                        Content="https://avaloniaui.net/"
+                        Tag="https://avaloniaui.net/"
                         Click="OpenUrl_Click"
                         HorizontalAlignment="Left"
-                        Margin="0,0,0,8"
-                        ToolTip.Tip="Visit the CSOSharp project on GitHub" />
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Visit the Avalonia project website" />
+
                     <TextBlock
                         TextWrapping="Wrap"
                         Foreground="#8b949e"
-                        Margin="0,0,0,8"
-                        ToolTip.Tip="Uses PBPSharp for PlayStation PBP file handling">
-                        <Run Text="Uses " /><Run Text="PBPSharp" FontWeight="Bold" /><Run Text=" for PlayStation .pbp file handling." />
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Uses the project's own CSOSharp library for CSO/CISO decompression">
+                        <Run Text="Uses " /><Run Text="CSOSharp" FontWeight="Bold" /><Run Text=" (v1.0.1) for .cso/.ciso decompression." />
                     </TextBlock>
                     <Button
                         Classes="link"
-                        Content="https://github.com/PureLogicCode/PBPSharp"
-                        Tag="https://github.com/PureLogicCode/PBPSharp"
+                        Content="https://www.nuget.org/packages/CSOSharp"
+                        Tag="https://www.nuget.org/packages/CSOSharp"
                         Click="OpenUrl_Click"
                         HorizontalAlignment="Left"
-                        ToolTip.Tip="Visit the PBPSharp project on GitHub" />
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Visit CSOSharp on NuGet" />
+
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Uses the project's own PBPSharp library for PlayStation PBP handling">
+                        <Run Text="Uses " /><Run Text="PBPSharp" FontWeight="Bold" /><Run Text=" (v1.1.3) for PlayStation .pbp extraction and SFO metadata parsing." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://www.nuget.org/packages/PBPSharp"
+                        Tag="https://www.nuget.org/packages/PBPSharp"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Visit PBPSharp on NuGet" />
+
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Uses the project's own CCDSharp library for CloneCD image parsing">
+                        <Run Text="Uses " /><Run Text="CCDSharp" FontWeight="Bold" /><Run Text=" (v1.0.1) for CloneCD (.ccd/.img/.sub) parsing." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://www.nuget.org/packages/CCDSharp"
+                        Tag="https://www.nuget.org/packages/CCDSharp"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Visit CCDSharp on NuGet" />
+
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Uses the project's own MDSSharp library for Alcohol 120% and Daemon Tools images">
+                        <Run Text="Uses " /><Run Text="MDSSharp" FontWeight="Bold" /><Run Text=" (v1.2.0) for Alcohol 120% / Daemon Tools (.mds/.mdf/.mdx) parsing and decryption." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://www.nuget.org/packages/MDSSharp"
+                        Tag="https://www.nuget.org/packages/MDSSharp"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Visit MDSSharp on NuGet" />
+
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Uses the project's own ISZSharp library for UltraISO images">
+                        <Run Text="Uses " /><Run Text="ISZSharp" FontWeight="Bold" /><Run Text=" (v1.0.2) for UltraISO .isz decompression." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://www.nuget.org/packages/ISZSharp"
+                        Tag="https://www.nuget.org/packages/ISZSharp"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Visit ISZSharp on NuGet" />
+
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Uses VideoGameFileSystemParser to browse the file systems inside CHD images in the CHD Explorer">
+                        <Run Text="Uses " /><Run Text="VideoGameFileSystemParser" FontWeight="Bold" /><Run Text=" (v1.3.0) for the CHD Explorer's console file-system parsers." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://www.nuget.org/packages/VideoGameFileSystemParser"
+                        Tag="https://www.nuget.org/packages/VideoGameFileSystemParser"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Visit VideoGameFileSystemParser on NuGet" />
+
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Uses SharpCompress for archive extraction and bzip2 decompression">
+                        <Run Text="Uses " /><Run Text="SharpCompress" FontWeight="Bold" /><Run Text=" (v0.50.4) for archive extraction and bzip2 decompression." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://github.com/adamhathcock/sharpcompress"
+                        Tag="https://github.com/adamhathcock/sharpcompress"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Visit SharpCompress on GitHub" />
+
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Uses NAudio for MP3 audio track decoding on Windows">
+                        <Run Text="Uses " /><Run Text="NAudio" FontWeight="Bold" /><Run Text=" (v3.1.0) for MP3 audio track decoding on Windows (Media Foundation)." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://github.com/naudio/NAudio"
+                        Tag="https://github.com/naudio/NAudio"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Visit NAudio on GitHub" />
+
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Uses Serilog for structured diagnostic logging">
+                        <Run Text="Uses " /><Run Text="Serilog" FontWeight="Bold" /><Run Text=" (v4.4.0) for structured diagnostic logging." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://serilog.net/"
+                        Tag="https://serilog.net/"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Visit the Serilog website" />
+
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Uses the 7-Zip command-line tools by Igor Pavlov as the bundled archive fallback">
+                        <Run Text="Uses the " /><Run Text="7-Zip" FontWeight="Bold" /><Run Text=" command-line tools (26.03) by Igor Pavlov as the bundled archive fallback." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://www.7-zip.org/"
+                        Tag="https://www.7-zip.org/"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="Visit the 7-Zip website" />
+
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Thanks to the authors of the format specifications and reference readers the in-house decoders were checked against">
+                        <Run Text="Thanks to " /><Run Text="EZB Systems" FontWeight="Bold" /><Run Text=" for the ISZ specification, " /><Run Text="libMirage" FontWeight="Bold" /><Run Text=" and " /><Run Text="isz-tool" FontWeight="Bold" /><Run Text=" for their independent ISZ readers, and " /><Run Text="Neill Corlett" FontWeight="Bold" /><Run Text=" for the ECM format." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://www.ezbsystems.com/isz/iszspec.txt"
+                        Tag="https://www.ezbsystems.com/isz/iszspec.txt"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Read the ISZ file format specification" />
+                    <Button
+                        Classes="link"
+                        Content="https://github.com/cdemu/cdemu"
+                        Tag="https://github.com/cdemu/cdemu"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,0,0,4"
+                        ToolTip.Tip="Visit libMirage on GitHub" />
+                    <Button
+                        Classes="link"
+                        Content="https://github.com/oserres/isz-tool"
+                        Tag="https://github.com/oserres/isz-tool"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        ToolTip.Tip="Visit isz-tool on GitHub" />
+                </StackPanel>
+            </Border>
+
+            <!--  License Section  -->
+            <Border Grid.Row="4" Classes="statCard" Margin="0,0,0,15" Padding="15" ToolTip.Tip="License information">
+                <StackPanel ToolTip.Tip="License section">
+                    <TextBlock
+                        Text="License"
+                        FontWeight="Bold"
+                        FontSize="14"
+                        Foreground="#e6edf3"
+                        Margin="0,0,0,10"
+                        ToolTip.Tip="License heading" />
+                    <TextBlock
+                        TextWrapping="Wrap"
+                        Foreground="#8b949e"
+                        LineHeight="20"
+                        ToolTip.Tip="The application is free software under the GNU General Public License v3.0">
+                        <Run Text="CHD Studio is free software released under the " /><Run Text="GNU General Public License v3.0" FontWeight="Bold" /><Run Text=". The bundled third-party tools keep their own licenses (see 7-Zip-License.txt)." />
+                    </TextBlock>
+                    <Button
+                        Classes="link"
+                        Content="https://github.com/purelogiccode/CHDStudio/blob/master/LICENSE.txt"
+                        Tag="https://github.com/purelogiccode/CHDStudio/blob/master/LICENSE.txt"
+                        Click="OpenUrl_Click"
+                        HorizontalAlignment="Left"
+                        Margin="0,10,0,0"
+                        ToolTip.Tip="Read the full license text" />
                 </StackPanel>
             </Border>
 
             <!--  Close Button  -->
             <Button
-                Grid.Row="4"
+                Grid.Row="5"
                 Click="CloseButton_Click"
                 Content="Close"
                 Classes="primary"
@@ -179,4 +425,3 @@
         </ScrollViewer>
     </Grid>
 </Window>
-
