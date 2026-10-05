@@ -290,6 +290,10 @@ public class BugReportServiceTests
     [InlineData("chdman.exe was not found, so conversions will run on the built-in CHDSharp encoder.")]
     [InlineData("chdman failed for 'game.cue'. Falling back to the built-in CHDSharp encoder...")]
     [InlineData(
+        "Kensei - Sacred Fist [SLUS-00600] [U] [ccd+cue+img+sub].chd was already produced earlier in this batch; keeping the first one.")]
+    [InlineData(
+        "CHDSharp could not read or write the image: The semaphore timeout period has expired. : 'D:\\ROMs\\ps2\\Devil May Cry (USA).iso'.")]
+    [InlineData(
         "Conversion of 'game.cue' failed due to an I/O error. The source file may be on a failing disk, a disconnected network drive, or the file may be corrupt.")]
     [InlineData(@"Failed to convert 'game.cue': Error parsing input file (C:\temp\game.cue: Unsupported format)")]
     [InlineData(

@@ -507,6 +507,7 @@ PBP files are produced by several authoring tools, and PBPSharp reads the layout
 
 - **popstation / PSX2PSP / iPoPS** — 32-bit ISO index size field, raw deflate blocks.
 - **pop-fe** — official 16-bit index size field with a stored/uncompressed flag byte, uncompressed (stored) blocks when compression is disabled, zlib-wrapped deflate blocks, and multi-disc `PSTITLEIMG` headers with zeroed template fields.
+- **Unfinished deflate streams** — a raw stream whose final block never sets BFINAL (a writer that flushed with `Z_SYNC_FLUSH` instead of finishing the stream) is inflated through the runtime's zlib-backed `DeflateStream` after SharpZipLib rejects it.
 - **Incompressible blocks** — deflate streams a few bytes larger than the raw 16-sector block are accepted.
 - **Truncated PBPs** — a valid disc container with no ISO index, an index that points past the end of the file, or a block whose data runs past end-of-stream is reported as `PbpError.TruncatedPsar` rather than a generic corruption or I/O error.
 - **Trailing index-area data** — entries listed after the ISO size the disc declares (for example the subchannel blob pop-fe can append to the index area) are not image data and are not read, so a complete image still extracts.
@@ -518,7 +519,7 @@ A PBP file starts with a 40-byte header whose magic is `0x50425000` ("`\0PBP`") 
 
 1. `PSISOIMG0000` marks a single-disc image; `PSTITLEIMG000000` marks a multi-disc container whose disc positions are read from the table at PSAR+`0x200`.
 2. Each disc has a game ID at PSAR+`0x400`, a TOC at PSAR+`0x800`, an ISO block index at PSAR+`0x4000`, and the ISO data at PSAR+`0x100000`.
-3. Each 32-byte index entry gives the block offset, stored length and (in the pop-fe layout) a stored/uncompressed flag. Blocks are either copied verbatim or inflated from raw deflate, with a zlib-wrapped retry for tools that use zlib.
+3. Each 32-byte index entry gives the block offset, stored length and (in the pop-fe layout) a stored/uncompressed flag. Blocks are either copied verbatim or inflated from raw deflate, with zlib-wrapped and .NET zlib-compatible retries for the variants tools actually write.
 4. The total ISO size is derived from the sector count stored at bytes 104-107 of the second ISO block, matching the popstation reference implementation.
 
 All offsets are computed with 64-bit math, so multi-gigabyte images cannot overflow.
@@ -541,6 +542,11 @@ dotnet test CHDStudio.Tests/CHDStudio.Tests.csproj -c Release --filter "FullyQua
 ```
 
 ## Version history
+
+### 1.1.4
+
+- Blocks whose raw deflate stream never sets BFINAL (a writer that flushed with `Z_SYNC_FLUSH` instead of finishing the stream) now extract: SharpZipLib rejects them with "Unexpected EOF", so the runtime's zlib-backed `DeflateStream`/`ZLibStream` are tried before a block is reported as corrupt.
+- The decompressed block buffer is bounded to exactly one 16-sector block, so a stream that expands past it is rejected instead of shifting every later block in the extracted image.
 
 ### 1.1.3
 

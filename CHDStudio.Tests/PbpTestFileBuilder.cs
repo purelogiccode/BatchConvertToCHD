@@ -1,6 +1,8 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Text;
+using ICSharpCode.SharpZipLib.Zip.Compression;
+using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 using PBPSharp.Models;
 
 namespace CHDStudio.Tests;
@@ -22,6 +24,7 @@ internal sealed class PbpTestFileBuilder
     private bool _compressBlocks = true;
     private bool _incompressibleBlocks;
     private bool _zlibWrappedBlocks;
+    private bool _unfinishedDeflateBlocks;
     private bool _popFeStyleIndexes;
     private bool _popFeStyleTitleHeader;
     private byte[]? _customIsoBlock1Data;
@@ -80,6 +83,18 @@ internal sealed class PbpTestFileBuilder
     public PbpTestFileBuilder WithZlibWrappedBlocks()
     {
         _zlibWrappedBlocks = true;
+        return this;
+    }
+
+    /// <summary>
+    ///     Leaves each block's raw deflate stream unfinished (the final block never sets BFINAL),
+    ///     the shape a writer that flushed with Z_SYNC_FLUSH instead of finishing the stream leaves
+    ///     behind. SharpZipLib's managed inflater rejects it with "Unexpected EOF"; extraction must
+    ///     succeed through the .NET zlib-compatible fallback.
+    /// </summary>
+    public PbpTestFileBuilder WithUnfinishedDeflateBlocks()
+    {
+        _unfinishedDeflateBlocks = true;
         return this;
     }
 
@@ -458,13 +473,26 @@ internal sealed class PbpTestFileBuilder
 
     private byte[] CompressBlock(byte[] data)
     {
-        using var ms = new MemoryStream();
-        using (var deflate = new DeflateStream(ms, CompressionLevel.Fastest, true))
+        byte[] raw;
+        if (_unfinishedDeflateBlocks)
         {
-            deflate.Write(data, 0, data.Length);
+            var ms = new MemoryStream();
+            var outStream = new DeflaterOutputStream(ms, new Deflater(6, true));
+            outStream.Write(data, 0, data.Length);
+            outStream.Flush();
+            raw = ms.ToArray();
+        }
+        else
+        {
+            using var ms = new MemoryStream();
+            using (var deflate = new DeflateStream(ms, CompressionLevel.Fastest, true))
+            {
+                deflate.Write(data, 0, data.Length);
+            }
+
+            raw = ms.ToArray();
         }
 
-        var raw = ms.ToArray();
         return _zlibWrappedBlocks ? WrapZlib(raw, data) : raw;
     }
 

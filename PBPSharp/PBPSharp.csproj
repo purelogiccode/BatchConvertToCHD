@@ -6,8 +6,8 @@
         <LangVersion>latest</LangVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <Company>PureLogicCode.com</Company>
-        <AssemblyVersion>1.1.3</AssemblyVersion>
-        <FileVersion>1.1.3</FileVersion>
+        <AssemblyVersion>1.1.4</AssemblyVersion>
+        <FileVersion>1.1.4</FileVersion>
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -16,7 +16,7 @@
         <!-- NuGet Package Metadata -->
         <IsPackable>true</IsPackable>
         <PackageId>PBPSharp</PackageId>
-        <Version>1.1.3</Version>
+        <Version>1.1.4</Version>
         <Authors>PureLogicCode.com</Authors>
         <Title>PBPSharp</Title>
         <Description>A managed C# read-only library for reading and extracting PlayStation Portable PBP (EBOOT.PBP) files. Supports single-disc and multi-disc PBP, SFO metadata parsing, and ISO extraction with CUE sheet generation. Designed as an intermediate step for converting PBP discs to other formats (e.g. CHD). Read-only: it can open and extract, but cannot create or modify PBP files.</Description>

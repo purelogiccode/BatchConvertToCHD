@@ -114,6 +114,13 @@ internal class BugReportService
         // File move failures after conversion are environment issues (locked files, permissions).
         "Failed to move temp output to destination",
         "Failed to move CHDSharp output to destination",
+        // Two inputs in one batch can resolve to the same CHD when an archive's contents are not
+        // known at the collision preflight. The batch keeps the first product and warns about the
+        // duplicate, which is the intended behaviour, not an app bug.
+        "was already produced earlier in this batch",
+        // CHDSharp hitting a device or permission error (drive unplugged, disk failing, full disk,
+        // denied access) is an environment condition, not an encoder defect.
+        "CHDSharp could not read or write",
         // Encoder start failures depend on the user's installation.
         "Failed to start chdman",
         "Failed to start CHDSharp",

@@ -6694,6 +6694,14 @@ internal partial class MainWindow : Window, IDisposable
 
                 return false;
             }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // A device or permission error (drive unplugged, disk failing, full disk, denied
+                // access) is an environment condition, not an encoder defect; report the OS error
+                // without raising a bug report.
+                LogError($" CHDSharp could not read or write the image: {ex.Message}");
+                return false;
+            }
             catch (Exception ex)
             {
                 LogError($" CHDSharp encoding failed: {ex.Message}");

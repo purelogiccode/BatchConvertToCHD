@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Buffers.Binary;
+using System.IO.Compression;
 using System.Text;
 using ICSharpCode.SharpZipLib;
 using ICSharpCode.SharpZipLib.Zip.Compression;
@@ -489,9 +490,13 @@ public sealed class PbpDiscInfo
 
     /// <summary>
     ///     Decompresses one PSAR ISO block into the caller's buffer. Raw deflate (the layout used by
-    ///     popstation, PSX2PSP and iPoPS) is attempted first; a stream that fails raw inflation is
-    ///     retried as a zlib-wrapped stream (2-byte header plus Adler-32 trailer), as written by
-    ///     authoring tools that use zlib rather than raw deflate.
+    ///     popstation, PSX2PSP and iPoPS) is attempted first through SharpZipLib and then through the
+    ///     runtime's zlib-backed <see cref="DeflateStream" />; a stream that fails both is retried as
+    ///     a zlib-wrapped stream (2-byte header plus Adler-32 trailer) through SharpZipLib and
+    ///     <see cref="ZLibStream" />, as written by authoring tools that use zlib rather than raw
+    ///     deflate. The .NET retry is what rescues a raw stream whose final block never sets BFINAL
+    ///     (a writer that flushed with <c>Z_SYNC_FLUSH</c> instead of finishing the stream), which
+    ///     SharpZipLib rejects with "Unexpected EOF".
     /// </summary>
     /// <param name="compressed">The buffer holding the compressed block.</param>
     /// <param name="compressedLength">The number of valid bytes in <paramref name="compressed" />.</param>
@@ -502,79 +507,158 @@ public sealed class PbpDiscInfo
     /// </exception>
     private static int DecompressBlock(byte[] compressed, int compressedLength, byte[] output)
     {
-        // The popstation reference tools (popstation, PSX2PSP, iPoPS) compress PSAR blocks as
-        // RAW deflate (zlib deflateInit2 with windowBits -15), so raw inflation first keeps
-        // behaviour identical to the reference. A few other PBP authoring tools instead wrap
-        // the deflate stream in a zlib container (2-byte header + Adler-32 trailer); those
-        // streams always fail raw inflation, so retry the same bytes as a zlib-wrapped stream
-        // before giving up. Both failure messages are kept so the caller can report why the
-        // block was rejected either way.
-        Exception? rawFailure = null;
+        if (
+            TryInflate(
+                compressed,
+                compressedLength,
+                output,
+                InflateKind.SharpZipRaw,
+                out var size,
+                out var rawFailure
+            )
+        )
+            return size;
+
+        if (
+            TryInflate(
+                compressed,
+                compressedLength,
+                output,
+                InflateKind.DotNetRaw,
+                out size,
+                out var dotNetRawFailure
+            )
+        )
+            return size;
+
+        string zlibFailure = "not attempted (stream too short)";
+        if (
+            compressedLength > 2
+            && TryInflate(
+                compressed,
+                compressedLength,
+                output,
+                InflateKind.SharpZipZlib,
+                out size,
+                out zlibFailure
+            )
+        )
+            return size;
+
+        string dotNetZlibFailure = "not attempted (stream too short)";
+        if (
+            compressedLength > 2
+            && TryInflate(
+                compressed,
+                compressedLength,
+                output,
+                InflateKind.DotNetZlib,
+                out size,
+                out dotNetZlibFailure
+            )
+        )
+            return size;
+
+        throw new InvalidDataException(
+            $"the PSAR block did not inflate as raw deflate (SharpZipLib: {rawFailure}; .NET: {dotNetRawFailure}) "
+                + $"or as a zlib stream (SharpZipLib: {zlibFailure}; .NET: {dotNetZlibFailure})."
+        );
+    }
+
+    /// <summary>
+    ///     Runs one decompressor over a block, converting malformed-data failures into a result so
+    ///     the caller can try the next layout. An output that grows past one full block is not
+    ///     caught: the bounded output stream throws and callers classify that as corrupt data.
+    /// </summary>
+    /// <param name="compressed">The buffer holding the compressed block.</param>
+    /// <param name="compressedLength">The number of valid bytes in <paramref name="compressed" />.</param>
+    /// <param name="output">The buffer that receives the decompressed data.</param>
+    /// <param name="kind">Which decompressor to run.</param>
+    /// <param name="size">The number of bytes written when inflation succeeds.</param>
+    /// <param name="error">The failure message when inflation fails.</param>
+    /// <returns><see langword="true" /> when the block inflated.</returns>
+    private static bool TryInflate(
+        byte[] compressed,
+        int compressedLength,
+        byte[] output,
+        InflateKind kind,
+        out int size,
+        out string error
+    )
+    {
         try
         {
-            return Inflate(compressed, compressedLength, output, noHeader: true);
+            size = Inflate(compressed, compressedLength, output, kind);
+            error = string.Empty;
+            return true;
         }
-        catch (Exception ex)
-            when (ex
-                      is SharpZipBaseException
-                      or InvalidDataException
-                  && compressedLength > 2
-                 )
+        catch (Exception ex) when (ex is SharpZipBaseException or InvalidDataException or IOException)
         {
-            rawFailure = ex;
+            size = 0;
+            error = ex.Message;
+            return false;
         }
+    }
+
+    /// <summary>
+    ///     Inflates one block with the requested decompressor. The output is bounded to exactly one
+    ///     full block, so a stream that expands past it is rejected instead of shifting every later
+    ///     block in the extracted image.
+    /// </summary>
+    /// <param name="compressed">The buffer holding the compressed block.</param>
+    /// <param name="compressedLength">The number of valid bytes in <paramref name="compressed" />.</param>
+    /// <param name="output">The buffer that receives the decompressed data.</param>
+    /// <param name="kind">Which decompressor to run.</param>
+    /// <returns>The number of bytes written to <paramref name="output" />.</returns>
+    private static int Inflate(
+        byte[] compressed,
+        int compressedLength,
+        byte[] output,
+        InflateKind kind
+    )
+    {
+        using var compressedStream = new MemoryStream(compressed, 0, compressedLength, false);
+        using var outputStream = new MemoryStream(output, 0, 16 * IsoBlockSize, true);
+
+        if (kind is InflateKind.DotNetRaw or InflateKind.DotNetZlib)
+        {
+            using Stream decompressor =
+                kind == InflateKind.DotNetZlib
+                    ? new ZLibStream(compressedStream, CompressionMode.Decompress)
+                    : new DeflateStream(compressedStream, CompressionMode.Decompress);
+            decompressor.CopyTo(outputStream);
+            return (int)outputStream.Position;
+        }
+
+        using var inflaterStream = new InflaterInputStream(
+            compressedStream,
+            new Inflater(kind == InflateKind.SharpZipRaw)
+        );
 
         try
         {
-            return Inflate(compressed, compressedLength, output, noHeader: false);
+            var writeBuffer = new byte[4096];
+            while (true)
+            {
+                var totalRead = inflaterStream.Read(writeBuffer, 0, writeBuffer.Length);
+                if (totalRead <= 0)
+                    break;
+
+                outputStream.Write(writeBuffer, 0, totalRead);
+            }
         }
-        catch (Exception ex)
+        catch (IndexOutOfRangeException ex)
         {
+            // A malformed deflate stream can drive SharpZipLib's Inflater into a raw
+            // IndexOutOfRangeException instead of its own exception type. Normalize it so
+            // callers classify the failure as decompression data rather than an app bug.
             throw new InvalidDataException(
-                $"the PSAR block did not inflate as raw deflate ({rawFailure.Message ?? "no error"}) or as a zlib stream ({ex.Message}).",
+                $"the deflate stream is malformed ({ex.Message}).",
                 ex
             );
         }
 
-        static int Inflate(
-            byte[] compressed,
-            int compressedLength,
-            byte[] output,
-            bool noHeader
-        )
-        {
-            using var compressedStream = new MemoryStream(compressed, 0, compressedLength);
-            using var inflaterStream = new InflaterInputStream(
-                compressedStream,
-                new Inflater(noHeader)
-            );
-            using var outputMs = new MemoryStream(output);
-
-            try
-            {
-                var writeBuffer = new byte[4096];
-                while (true)
-                {
-                    var totalRead = inflaterStream.Read(writeBuffer, 0, writeBuffer.Length);
-                    if (totalRead <= 0)
-                        break;
-
-                    outputMs.Write(writeBuffer, 0, totalRead);
-                }
-            }
-            catch (IndexOutOfRangeException ex)
-            {
-                // A malformed deflate stream can drive SharpZipLib's Inflater into a raw
-                // IndexOutOfRangeException instead of its own exception type. Normalize it so
-                // callers classify the failure as decompression data rather than an app bug.
-                throw new InvalidDataException(
-                    $"the deflate stream is malformed ({ex.Message}).",
-                    ex
-                );
-            }
-
-            return (int)outputMs.Position;
-        }
+        return (int)outputStream.Position;
     }
 
     /// <summary>
@@ -588,6 +672,24 @@ public sealed class PbpDiscInfo
         var ones = value % 16;
         var tens = value / 16;
         return tens * 10 + ones;
+    }
+
+    /// <summary>
+    ///     Which decompressor one block inflation attempt uses.
+    /// </summary>
+    private enum InflateKind
+    {
+        /// <summary>SharpZipLib's raw-deflate inflater, matching the popstation reference tools.</summary>
+        SharpZipRaw,
+
+        /// <summary>SharpZipLib's zlib-wrapped inflater.</summary>
+        SharpZipZlib,
+
+        /// <summary>The runtime's zlib-backed raw-deflate decompressor.</summary>
+        DotNetRaw,
+
+        /// <summary>The runtime's zlib-backed zlib-wrapped decompressor.</summary>
+        DotNetZlib
     }
 
     /// <summary>

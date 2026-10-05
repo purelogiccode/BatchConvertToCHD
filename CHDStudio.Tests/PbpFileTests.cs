@@ -724,6 +724,36 @@ public class PbpFileTests : IDisposable
     }
 
     [Fact]
+    public void ExtractToBinCueWithUnfinishedDeflateBlocksSucceeds()
+    {
+        // Regression: a writer that flushes each PSAR block with Z_SYNC_FLUSH instead of
+        // finishing the deflate stream leaves a raw stream whose final block never sets
+        // BFINAL. SharpZipLib's managed inflater rejects that with "Unexpected EOF" (the
+        // error reported for several real PBPs), while the runtime's zlib-backed
+        // DeflateStream inflates it, so extraction must retry through it.
+        var path = Path.Combine(_tempDir, $"unfinished_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithBlockCount(2)
+            .WithCompressedBlocks(true)
+            .WithUnfinishedDeflateBlocks()
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        using (pbp)
+        {
+            var binPath = Path.Combine(_tempDir, $"unfinished_{Guid.NewGuid():N}.bin");
+            var cuePath = Path.ChangeExtension(binPath, ".cue");
+            var result = pbp.Discs[0].ExtractToBinCue(binPath, cuePath);
+            Assert.Equal(PbpError.None, result);
+            Assert.True(File.Exists(binPath));
+            Assert.Equal(2 * 16 * 0x930, new FileInfo(binPath).Length);
+        }
+    }
+
+    [Fact]
     public void OpenSyntheticSingleDiscCompressedReturnsSuccess()
     {
         var path = Path.Combine(_tempDir, $"synth_compressed_{Guid.NewGuid():N}.pbp");
