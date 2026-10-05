@@ -5990,6 +5990,19 @@ internal partial class MainWindow : Window, IDisposable
         var originalInputFile = inputFile;
         var originalOutputFile = outputFile;
 
+        // Skip a duplicate before any encoding work: an earlier input in this batch already
+        // produced this CHD (typically an archive and the loose files it contains were both
+        // queued; archive contents cannot be compared at the collision preflight). The first
+        // product is kept. The recursive DVD retry runs with recursionDepth > 0 and must not
+        // re-check the path it already reserved.
+        if (recursionDepth == 0 && IsBatchOutputPathReserved(originalOutputFile))
+        {
+            LogMessage(
+                $" {Path.GetFileName(originalOutputFile)} was already produced earlier in this batch; keeping the first one."
+            );
+            return false;
+        }
+
         // Warn early about likely-corrupt disc images, but still let chdman try: some
         // legitimate images use non-standard sector layouts (e.g. 2448-byte sectors with
         // subchannel data) that chdman can convert. The post-failure check remains the hard gate.
@@ -6345,7 +6358,7 @@ internal partial class MainWindow : Window, IDisposable
                 // report the duplicate instead of silently replacing it.
                 if (!TryReserveBatchOutputPath(originalOutputFile))
                 {
-                    LogWarning(
+                    LogMessage(
                         $" {Path.GetFileName(originalOutputFile)} was already produced earlier in this batch; keeping the first one."
                     );
                     TryBestEffortDelete(outputFile);
@@ -6717,7 +6730,7 @@ internal partial class MainWindow : Window, IDisposable
             // guard as the chdman path applies: keep the first product produced in this batch.
             if (!TryReserveBatchOutputPath(originalOutputFile))
             {
-                LogWarning(
+                LogMessage(
                     $" {Path.GetFileName(originalOutputFile)} was already produced earlier in this batch; keeping the first one."
                 );
                 TryBestEffortDelete(outputFile);
@@ -7046,6 +7059,20 @@ internal partial class MainWindow : Window, IDisposable
         lock (_batchOutputPathsLock)
         {
             return _batchOutputPaths.Add(Path.GetFullPath(outputPath));
+        }
+    }
+
+    /// <summary>
+    ///     Returns whether an earlier input in this batch already produced the given output path,
+    ///     without reserving it.
+    /// </summary>
+    /// <param name="outputPath">The destination CHD path.</param>
+    /// <returns><see langword="true" /> when the path is already reserved.</returns>
+    private bool IsBatchOutputPathReserved(string outputPath)
+    {
+        lock (_batchOutputPathsLock)
+        {
+            return _batchOutputPaths.Contains(Path.GetFullPath(outputPath));
         }
     }
 

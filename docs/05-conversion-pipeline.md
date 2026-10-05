@@ -67,7 +67,7 @@ The source and output folders may be the same, and the output may sit inside the
 
 ### Batch preflight
 
-Before the per-file loop, `ResolveOutputCollisions` drops inputs that would map to the same output `.chd` (the name comes from the input's base name alone, so `Game.cue`, `Game.zip` and `Game.ccd` in one folder all target `Game.chd`). The first non-archive input of each colliding group is kept — the original image beats an archived copy of the same disc — and every dropped input is logged with the reason. Combined with the staging file in §5.3 this means a duplicate can neither destroy a finished CHD nor waste an extraction.
+Before the per-file loop, `ResolveOutputCollisions` drops inputs that would map to the same output `.chd` (the name comes from the input's base name alone, so `Game.cue`, `Game.zip` and `Game.ccd` in one folder all target `Game.chd`). The first non-archive input of each colliding group is kept — the original image beats an archived copy of the same disc — and every dropped input is logged with the reason. Combined with the staging file in §5.3 this means a duplicate can neither destroy a finished CHD nor waste an extraction. A collision that only becomes visible once an archive is extracted (its product is named after a file inside the archive) is detected at conversion time and the duplicate is skipped *before* it is encoded, so it no longer wastes a second conversion either.
 
 ### Retry-via-temp-copy fallback
 

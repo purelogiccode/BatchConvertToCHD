@@ -62,7 +62,7 @@ Environment Details includes: date/time, app name + version, OS version, archite
 
 ## 9.4 Exclusion Patterns
 
-`IsExcludedFromBugReport` (`BugReportService.cs:116`) performs a case-insensitive substring match against `ExcludedMessagePatterns` (`:17–91`). Any match → the report is **dropped entirely** (no HTTP call). The categories:
+`IsExcludedFromBugReport` (`BugReportService.cs:187`) performs a case-insensitive substring match against `ExcludedMessagePatterns` (`:17–142`). Any match → the report is **dropped entirely** (no HTTP call). The categories:
 
 | Category | Example patterns |
 |----------|------------------|
@@ -75,7 +75,7 @@ Environment Details includes: date/time, app name + version, OS version, archite
 | **chdman output (user data)** | `"Fatal error occurred"` (chdman exit summary), `"cannot create std::vector"` (chdman C++ crash on user input), `"Error during compression"`, `"Error parsing input file"`, `"failed due to an I/O error"` |
 | **Encoder fallback (routine)** | `"chdman failed for"`, `"Falling back to the built-in CHDSharp"` — when both encoders fail, the classified error reported afterwards still reaches the API |
 | **File moves (environment)** | `"Failed to move temp output to destination"`, `"Failed to move CHDSharp output to destination"` |
-| **Duplicate batch products (by design)** | `"was already produced earlier in this batch"` — two inputs resolved to the same CHD (typically an archive whose contents were not known at the collision preflight); the first product is kept, as intended |
+| **Duplicate batch products (by design)** | `"was already produced earlier in this batch"` — two inputs resolved to the same CHD (typically an archive whose contents were not known at the collision preflight); the duplicate is skipped before conversion, the first product is kept, and the notice is logged at Information level; the pattern remains as a safety net should it ever be logged as a warning |
 | **CHDSharp device/permission errors** | `"CHDSharp could not read or write"` — the drive vanished, the disk failed, the destination is full or access was denied; an environment condition, not an encoder defect |
 | **Cue/dependency validation** | `"referenced files are missing"`, `"could not be resolved"`, `"the .mdf data file was not found"` (Alcohol descriptor without its data file), `"could not validate referenced files"`, `"MP3 audio track could not be decoded"`, `"is not divisible by"`, `"The file or directory is corrupted and unreadable"`, `"Retry via temp failed"` |
 | **Archive errors** | `"archive file may be corrupted"`, `"archive is invalid or corrupt"`, `"archive file appears to be incomplete"`, `"multi-part RAR with a missing volume"`, `"unavailable network location"`, `"Archive is encrypted"`, `"compression method that is not supported"`, `"CCDSharp: Conversion error"` |

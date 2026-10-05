@@ -105,6 +105,29 @@ internal static class ScreenshotService
     }
 
     /// <summary>
+    ///     Saves a rendered bitmap into the preferred directory and falls back to the alternate
+    ///     directory when the preferred save fails. The bitmap stays owned by the caller, which
+    ///     keeps the save work inside a single method call instead of a delegate that could
+    ///     outlive the disposed bitmap.
+    /// </summary>
+    /// <param name="bitmap">The rendered bitmap to save.</param>
+    /// <param name="preferredDirectory">Directory tried first.</param>
+    /// <param name="fallbackDirectory">Directory tried when the preferred one fails.</param>
+    /// <returns>The saved file path, or <see langword="null" /> when both attempts failed.</returns>
+    internal static string? SaveScreenshot(
+        RenderTargetBitmap bitmap,
+        string preferredDirectory,
+        string fallbackDirectory
+    )
+    {
+        return SaveScreenshot(
+            filePath => bitmap.Save(filePath, PngBitmapEncoderOptions.Default),
+            preferredDirectory,
+            fallbackDirectory
+        );
+    }
+
+    /// <summary>
     ///     Captures the given window and saves it as a PNG.
     /// </summary>
     /// <param name="window">The window to capture.</param>
@@ -127,7 +150,7 @@ internal static class ScreenshotService
             bitmap.Render(window);
 
             return SaveScreenshot(
-                filePath => bitmap.Save(filePath, PngBitmapEncoderOptions.Default),
+                bitmap,
                 GetPreferredDirectory(),
                 GetFallbackDirectory(AppDomain.CurrentDomain.BaseDirectory)
             );
