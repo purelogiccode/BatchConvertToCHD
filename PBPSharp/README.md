@@ -507,7 +507,7 @@ PBP files are produced by several authoring tools, and PBPSharp reads the layout
 
 - **popstation / PSX2PSP / iPoPS** — 32-bit ISO index size field, raw deflate blocks.
 - **pop-fe** — official 16-bit index size field with a stored/uncompressed flag byte, uncompressed (stored) blocks when compression is disabled, zlib-wrapped deflate blocks, and multi-disc `PSTITLEIMG` headers with zeroed template fields.
-- **Unfinished deflate streams** — a raw stream whose final block never sets BFINAL (a writer that flushed with `Z_SYNC_FLUSH` instead of finishing the stream) is inflated through the runtime's zlib-backed `DeflateStream` after SharpZipLib rejects it.
+- **Unfinished deflate streams** — a raw stream whose final block never sets BFINAL (a writer that flushed with `Z_SYNC_FLUSH` instead of finishing the stream) is accepted once a full 16-sector block has been decoded; SharpZipLib's stream wrapper would report it as "Unexpected EOF" even though every byte is present.
 - **Incompressible blocks** — deflate streams a few bytes larger than the raw 16-sector block are accepted.
 - **Truncated PBPs** — a valid disc container with no ISO index, an index that points past the end of the file, or a block whose data runs past end-of-stream is reported as `PbpError.TruncatedPsar` rather than a generic corruption or I/O error.
 - **Trailing index-area data** — entries listed after the ISO size the disc declares (for example the subchannel blob pop-fe can append to the index area) are not image data and are not read, so a complete image still extracts.
@@ -545,8 +545,9 @@ dotnet test CHDStudio.Tests/CHDStudio.Tests.csproj -c Release --filter "FullyQua
 
 ### 1.1.4
 
-- Blocks whose raw deflate stream never sets BFINAL (a writer that flushed with `Z_SYNC_FLUSH` instead of finishing the stream) now extract: SharpZipLib rejects them with "Unexpected EOF", so the runtime's zlib-backed `DeflateStream`/`ZLibStream` are tried before a block is reported as corrupt.
+- Blocks whose raw deflate stream never sets BFINAL (a writer that flushed with `Z_SYNC_FLUSH` instead of finishing the stream) now extract: the raw inflater is driven directly so a full block is accepted even though the stream never reports finished, while a block cut short still fails instead of yielding partial data.
 - The decompressed block buffer is bounded to exactly one 16-sector block, so a stream that expands past it is rejected instead of shifting every later block in the extracted image.
+- A stored index entry that declares zero bytes is rejected as a corrupt index instead of silently writing no data for that block.
 
 ### 1.1.3
 

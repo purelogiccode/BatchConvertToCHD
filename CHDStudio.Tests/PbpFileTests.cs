@@ -754,6 +754,57 @@ public class PbpFileTests : IDisposable
     }
 
     [Fact]
+    public void ExtractToBinCueWithTruncatedDeflateBlockReturnsDecompressionError()
+    {
+        // A block cut in half must fail, never be accepted as a short block: silently writing
+        // the partial output would shift every later block and produce a corrupt image that
+        // still reports success.
+        var path = Path.Combine(_tempDir, $"truncated_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithBlockCount(3)
+            .WithCompressedBlocks(true)
+            .WithTruncatedBlock(2)
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        using (pbp)
+        {
+            var binPath = Path.Combine(_tempDir, $"truncated_{Guid.NewGuid():N}.bin");
+            var cuePath = Path.ChangeExtension(binPath, ".cue");
+            var result = pbp.Discs[0].ExtractToBinCue(binPath, cuePath);
+            Assert.Equal(PbpError.DecompressionError, result);
+        }
+    }
+
+    [Fact]
+    public void ExtractToBinCueWithZeroLengthStoredBlockReturnsDecompressionError()
+    {
+        // A stored index entry (flag bit 0) that declares zero bytes is a corrupt index;
+        // accepting it would write no data for the block and shift every later block.
+        var path = Path.Combine(_tempDir, $"zerolen_{Guid.NewGuid():N}.pbp");
+        new PbpTestFileBuilder()
+            .WithBlockCount(3)
+            .WithPopFeStyleIndexes()
+            .WithZeroLengthStoredBlock(2)
+            .BuildTo(path);
+
+        var error = PbpFile.Open(path, out var pbp);
+        Assert.Equal(PbpError.None, error);
+        Assert.NotNull(pbp);
+
+        using (pbp)
+        {
+            var binPath = Path.Combine(_tempDir, $"zerolen_{Guid.NewGuid():N}.bin");
+            var cuePath = Path.ChangeExtension(binPath, ".cue");
+            var result = pbp.Discs[0].ExtractToBinCue(binPath, cuePath);
+            Assert.Equal(PbpError.DecompressionError, result);
+        }
+    }
+
+    [Fact]
     public void OpenSyntheticSingleDiscCompressedReturnsSuccess()
     {
         var path = Path.Combine(_tempDir, $"synth_compressed_{Guid.NewGuid():N}.pbp");

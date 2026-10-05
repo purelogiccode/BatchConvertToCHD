@@ -32,6 +32,8 @@ internal sealed class PbpTestFileBuilder
     private bool _multiDisc;
     private List<int>? _multiDiscPositions;
     private int _corruptBlockIndex = -1;
+    private int _truncatedBlockIndex = -1;
+    private int _zeroLengthStoredBlockIndex = -1;
 
     private string _title = "Test Game";
 
@@ -89,8 +91,8 @@ internal sealed class PbpTestFileBuilder
     /// <summary>
     ///     Leaves each block's raw deflate stream unfinished (the final block never sets BFINAL),
     ///     the shape a writer that flushed with Z_SYNC_FLUSH instead of finishing the stream leaves
-    ///     behind. SharpZipLib's managed inflater rejects it with "Unexpected EOF"; extraction must
-    ///     succeed through the .NET zlib-compatible fallback.
+    ///     behind. SharpZipLib's stream wrapper reports it as "Unexpected EOF"; extraction must
+    ///     accept the complete block through the tolerant raw-inflater path.
     /// </summary>
     public PbpTestFileBuilder WithUnfinishedDeflateBlocks()
     {
@@ -141,6 +143,30 @@ internal sealed class PbpTestFileBuilder
     public PbpTestFileBuilder WithCorruptBlock(int blockIndex)
     {
         _corruptBlockIndex = blockIndex;
+        return this;
+    }
+
+    /// <summary>
+    ///     Cuts one ISO data block's deflate stream in half while keeping its index entry consistent,
+    ///     the shape of a download that ended mid-block. Extraction must report a decompression
+    ///     error, never silently accept the partial output as a short block.
+    /// </summary>
+    /// <param name="blockIndex">Zero-based block index to truncate.</param>
+    public PbpTestFileBuilder WithTruncatedBlock(int blockIndex)
+    {
+        _truncatedBlockIndex = blockIndex;
+        return this;
+    }
+
+    /// <summary>
+    ///     Writes one index entry as a stored block (flag bit 0) that declares zero bytes of data,
+    ///     a corrupt index. Extraction must reject it instead of writing no data and shifting every
+    ///     later block. Pick an index above 0 so the entry's offset is non-zero and is not skipped.
+    /// </summary>
+    /// <param name="blockIndex">Zero-based block index to replace.</param>
+    public PbpTestFileBuilder WithZeroLengthStoredBlock(int blockIndex)
+    {
+        _zeroLengthStoredBlockIndex = blockIndex;
         return this;
     }
 
@@ -352,7 +378,18 @@ internal sealed class PbpTestFileBuilder
             offsets.Add(currentOffset);
 
             var blockData = GetBlockData(i);
-            var compressedLength = _compressBlocks ? CompressBlock(blockData).Length : BlockSize;
+
+            if (i == _zeroLengthStoredBlockIndex)
+            {
+                // A stored (flag bit 0) entry that declares no data at all: a corrupt index.
+                entry.Clear();
+                BinaryPrimitives.WriteUInt32LittleEndian(entry[..4], currentOffset);
+                entry[6] = 0x01;
+                stream.Write(entry);
+                continue;
+            }
+
+            var storedLength = _compressBlocks ? GetStoredBlock(blockData, i).Length : BlockSize;
 
             // Write index entry (32 bytes)
             entry.Clear();
@@ -363,7 +400,7 @@ internal sealed class PbpTestFileBuilder
                 // uncompressed block, set by pop-fe with compression disabled), SHA-1 at 8.
                 BinaryPrimitives.WriteUInt16LittleEndian(
                     entry.Slice(4, 2),
-                    (ushort)(_compressBlocks ? compressedLength : BlockSize)
+                    (ushort)(_compressBlocks ? storedLength : BlockSize)
                 );
                 if (!_compressBlocks)
                     entry[6] = 0x01;
@@ -372,13 +409,13 @@ internal sealed class PbpTestFileBuilder
             {
                 BinaryPrimitives.WriteInt32LittleEndian(
                     entry[4..8],
-                    _compressBlocks ? compressedLength : BlockSize
+                    _compressBlocks ? storedLength : BlockSize
                 );
             }
 
             stream.Write(entry);
 
-            currentOffset += (uint)(_compressBlocks ? compressedLength : BlockSize);
+            currentOffset += (uint)(_compressBlocks ? storedLength : BlockSize);
         }
 
         return offsets;
@@ -389,12 +426,15 @@ internal sealed class PbpTestFileBuilder
     {
         for (var i = 0; i < blockCount; i++)
         {
+            if (i == _zeroLengthStoredBlockIndex)
+                continue;
+
             var blockData = GetBlockData(i);
 
             if (i == _corruptBlockIndex)
             {
                 // Same stored length as the valid block, but not a deflate stream at all.
-                var length = _compressBlocks ? CompressBlock(blockData).Length : BlockSize;
+                var length = _compressBlocks ? GetStoredBlock(blockData, i).Length : BlockSize;
                 var garbage = new byte[length];
                 Array.Fill(garbage, (byte)0xFF);
                 stream.Write(garbage);
@@ -403,14 +443,30 @@ internal sealed class PbpTestFileBuilder
 
             if (_compressBlocks)
             {
-                var compressed = CompressBlock(blockData);
-                stream.Write(compressed);
+                stream.Write(GetStoredBlock(blockData, i));
             }
             else
             {
                 stream.Write(blockData);
             }
         }
+    }
+
+    /// <summary>
+    ///     Returns the bytes stored for one block, applying the requested per-block damage: a
+    ///     truncated block keeps only the first half of its deflate stream so the index length and
+    ///     the stored bytes still agree.
+    /// </summary>
+    /// <param name="blockData">The uncompressed block.</param>
+    /// <param name="blockIndex">Zero-based block index.</param>
+    /// <returns>The bytes to write into the ISO data area.</returns>
+    private byte[] GetStoredBlock(byte[] blockData, int blockIndex)
+    {
+        var compressed = CompressBlock(blockData);
+        if (blockIndex == _truncatedBlockIndex && compressed.Length > 4)
+            return compressed[..(compressed.Length / 2)];
+
+        return compressed;
     }
 
     private byte[] GetBlockData(int blockIndex)
