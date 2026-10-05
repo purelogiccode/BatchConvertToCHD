@@ -54,7 +54,7 @@
 *   **Archive Integration**: Transparently handles `.zip`, `.7z`, and `.rar` archives, extracting and processing contents automatically while respecting cancellation tokens. Includes a bundled 7-Zip fallback (`7za.exe` on Windows, `7zz` on Linux/macOS) for archives the built-in extractor cannot read, including unsupported ZIP compression methods and `.7z` files. Split 7-Zip and ZIP volume sets (`.7z.001`/`.zip.001` with later parts beside them) are extracted with that bundled 7-Zip and converted like any other input; multi-part RAR sets (`.partNN.rar`, sets renamed to `.001`, and old-style `.rar` + `.rNN`) are decoded from their first volume, whichever part the batch offers, and only the first volume stays in the list so a set is converted once.
 *   **CloneCD Support**: Convert CloneCD `.ccd` disc images to CHD format via the [CCDSharp](https://www.nuget.org/packages/CCDSharp) library. Automatically generates CUE/BIN from `.ccd`/`.img` sets.
 *   **CSO Decompression**: Built-in support for `.cso` and `.ciso` (Compressed ISO) files via the [CSOSharp](https://www.nuget.org/packages/CSOSharp) library (supports deflate/zlib and LZ4).
-*   **PBP Extraction**: Convert PlayStation `.pbp` files to CHD format via the [PBPSharp](https://www.nuget.org/packages/PBPSharp) library. Single- and multi-disc images authored by popstation, PSX2PSP, iPoPS and pop-fe all extract — including pop-fe's multi-disc containers and uncompressed/stored blocks — and a missing or corrupt PARAM.SFO leaves the disc convertible with empty metadata. Files without a PlayStation disc image (PSP homebrew applications, unsupported or corrupt variants) are detected and skipped with a clear message instead of a generic failure.
+*   **PBP Extraction**: Convert PlayStation `.pbp` files to CHD format via the [PBPSharp](https://www.nuget.org/packages/PBPSharp) library. Single- and multi-disc images authored by popstation, PSX2PSP, iPoPS and pop-fe all extract — including pop-fe's multi-disc containers, uncompressed/stored blocks and raw streams left unfinished by a writer that flushed with `Z_SYNC_FLUSH` — and a missing or corrupt PARAM.SFO leaves the disc convertible with empty metadata. Files without a PlayStation disc image (PSP homebrew applications, unsupported or corrupt variants) are detected and skipped with a clear message instead of a generic failure.
 *   **Smart CUE Normalization**: Detects the actual encoding of `.cue`/`.toc` files (UTF-8, Shift-JIS, Korean CP949, Cyrillic CP1251, Latin-1 and more), strips UTF-8 BOMs (which chdman's parser cannot handle — they produced the "couldn't find bin file []" error), resolves referenced files case-insensitively and zero-padding-tolerantly (`(Track 2)` vs `(Track 02)`), and hands chdman a self-contained, canonicalized cue set — eliminating the common "couldn't find bin file" failures on non-ASCII and BOM-prefixed cues. Bins are referenced in place via relative paths when possible, so no multi-hundred-MB copies are needed for BOM-only cues.
 *   **Raw Audio Track Handling**: Cue files referencing `.raw` audio tracks (common in multi-track CD audio rips) are detected via `GameFileParser`; chdman derives the 2352-byte unit size from the cue's track types, and the `-us 2352` unit-size flag is passed only to `createraw` (which requires it).
 *   **Archive Dependency Validation**: Cues, GDI and TOC files extracted from archives are validated before conversion — if the referenced data files are missing from the archive (incomplete download, separate bin archive), the entry is skipped with a clear warning instead of failing inside chdman.
@@ -151,7 +151,7 @@ Generated cue sheets reference the disc image where it already lies rather than 
 
 ## 💻 Requirements
 
-*   **Operating System**: Windows 10 / 11 (x64 or ARM64); Linux and macOS are supported from source
+*   **Operating System**: Windows 10 / 11 (x64 or ARM64), Linux (x64 or ARM64) and macOS (Intel or Apple silicon); release zips are published for all six runtime identifiers
 *   **Runtime**: [.NET 10.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) on Windows; the .NET 10.0 runtime on Linux and macOS
 *   **Bundled Dependencies**:
     *   `chdman.exe` / `chdman_arm64.exe` (MAME Project — primary encoder on Windows, extraction fallback)
@@ -161,11 +161,11 @@ Generated cue sheets reference the disc image where it already lies rather than 
 *   **Library Dependencies**:
     * [Avalonia](https://avaloniaui.net/) (v12.1.3) — Cross-platform Fluent Design UI framework and controls
     * [CHDSharp](https://www.nuget.org/packages/CHDSharp) (v1.4.3) — Pure C# CHD reading, verification, extraction, and in-process creation (chdman byte-identical output)
-    * [CSOSharp](https://www.nuget.org/packages/CSOSharp) (v1.0.0) — Pure C# CSO/CISO decompression (deflate + LZ4)
+    * [CSOSharp](https://www.nuget.org/packages/CSOSharp) (v1.0.1) — Pure C# CSO/CISO decompression (deflate + LZ4)
     * [PBPSharp](https://www.nuget.org/packages/PBPSharp) (v1.1.4) — Pure C# PBP extraction and SFO parsing
-    * [CCDSharp](https://www.nuget.org/packages/CCDSharp) (v1.0.0) — Pure C# CloneCD (.ccd/.img/.sub) parsing and conversion
+    * [CCDSharp](https://www.nuget.org/packages/CCDSharp) (v1.0.1) — Pure C# CloneCD (.ccd/.img/.sub) parsing and conversion
     * [MDSSharp](https://www.nuget.org/packages/MDSSharp) (v1.2.0) — Pure C# Alcohol 120% / Daemon Tools (.mds/.mdf/.mdx) parsing, v2 decryption and cue preparation
-    * [ISZSharp](https://www.nuget.org/packages/ISZSharp) (v1.0.1) — Pure C# UltraISO ISZ decompression
+    * [ISZSharp](https://www.nuget.org/packages/ISZSharp) (v1.0.2) — Pure C# UltraISO ISZ decompression
     * [SharpCompress](https://github.com/adamhathcock/sharpcompress) (v0.50.4) — Archive extraction, and bzip2 decompression for ISZ images
     * [NAudio](https://github.com/naudio/NAudio) (v3.1.0) — MP3 audio track decoding on Windows (Media Foundation); Linux and macOS use `ffmpeg` from `PATH`
     * [Serilog](https://serilog.net/) (v4.4.0) — Structured diagnostic logging
@@ -174,7 +174,7 @@ Generated cue sheets reference the disc image where it already lies rather than 
 
 ## 📥 Installation
 
-1.  Download the latest binary from the [Releases](https://github.com/purelogiccode/CHDStudio/releases) page.
+1.  Download the latest binary from the [Releases](https://github.com/purelogiccode/CHDStudio/releases) page, picking the zip for your platform: `win-x64` or `win-arm64` on Windows, `linux-x64` or `linux-arm64` on Linux, `osx-x64` or `osx-arm64` on macOS.
 2.  Extract the contents to a permanent folder.
 3.  **Important** (Windows): ensure the tool `.exe` files (including ARM64 variants) remain in the same directory as `CHDStudio.exe`. On Linux and macOS, keep `7zz` next to the app; nothing else is required because the CHDSharp encoder is built in.
 4.  Launch the application.
@@ -257,9 +257,9 @@ This project is licensed under the **GNU General Public License v3.0**. See the 
 *   [MAME Team](https://www.mamedev.org/) for `chdman`.
 *   [CHDSharp](https://www.nuget.org/packages/CHDSharp) by Peterson Fernandes — Pure C# CHD library supporting V1-V5, all 10 codecs, parent/child chaining, parallel verification, and CHD creation that is byte-identical to `chdman` (verified across a 56-disc battle corpus).
 *   [Avalonia](https://avaloniaui.net/) by the Avalonia community — Cross-platform .NET UI framework powering the application front end.
-*   [CSOSharp](https://) by Peterson Fernandes — Pure C# CSO/CISO decompression library.
-*   [PBPSharp](https://) by Peterson Fernandes — Pure C# PlayStation PBP extraction library.
-*   [CCDSharp](https://) by Peterson Fernandes — Pure C# CloneCD disc image parsing and conversion library.
+*   [CSOSharp](https://www.nuget.org/packages/CSOSharp) by Peterson Fernandes — Pure C# CSO/CISO decompression library.
+*   [PBPSharp](https://www.nuget.org/packages/PBPSharp) by Peterson Fernandes — Pure C# PlayStation PBP extraction library.
+*   [CCDSharp](https://www.nuget.org/packages/CCDSharp) by Peterson Fernandes — Pure C# CloneCD disc image parsing and conversion library.
 *   [SharpCompress](https://github.com/adamhathcock/sharpcompress) for archive handling and bzip2 decompression.
 *   [EZB Systems](https://www.ezbsystems.com/) for publishing the [ISZ File Format Specification](https://www.ezbsystems.com/isz/iszspec.txt), which the ISZ decompressor is written against.
 *   [libMirage](https://github.com/cdemu/cdemu) by Henrik Stokseth and [isz-tool](https://github.com/oserres/isz-tool) by Olivier Serres, whose independent ISZ readers the decoder was checked against for the behaviours the specification omits (obfuscated tables, stripped bzip2 headers, the checksum calculation).

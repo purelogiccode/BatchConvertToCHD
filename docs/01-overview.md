@@ -5,7 +5,7 @@ nav_order: 2
 
 # 1. Project Overview
 
-**CHD Studio** is a high-performance Windows desktop utility designed to streamline the conversion of various disk image formats into the **Compressed Hunks of Data (CHD)** format — the format used by MAME, and increasingly by emulation frontends for PlayStation, Dreamcast, and other systems.
+**CHD Studio** is a high-performance cross-platform desktop utility designed to streamline the conversion of various disk image formats into the **Compressed Hunks of Data (CHD)** format — the format used by MAME, and increasingly by emulation frontends for PlayStation, Dreamcast, and other systems.
 
 Developed by [Pure Logic Code](https://www.purelogiccode.com), the application combines a modern cross-platform Avalonia dashboard with battle-tested MAME tooling (`chdman`) and pure-C# libraries (CHDSharp, CCDSharp, CSOSharp, PBPSharp, MDSSharp, ISZSharp) for a fully local, offline-capable conversion experience.
 
@@ -33,7 +33,7 @@ Developed by [Pure Logic Code](https://www.purelogiccode.com), the application c
 - **Archive integration** — `.zip`, `.7z`, `.rar` are extracted and processed transparently (SharpCompress, with a bundled 7-Zip fallback — `7za` on Windows, `7zz` on Linux/macOS — for archives the built-in extractor cannot read); multi-part RAR sets (`.partNN.rar`, renamed `.001` volumes) are decoded from their first volume.
 - **CloneCD support** — `.ccd` sets are parsed by CCDSharp and converted via an auto-generated CUE/BIN.
 - **CSO decompression** — `.cso`/`.ciso` via CSOSharp (deflate/zlib and LZ4).
-- **PBP extraction** — PlayStation `.pbp` via PBPSharp; PSP-homebrew-style files (no PlayStation disc image) are detected and skipped with a clear message.
+- **PBP extraction** — PlayStation `.pbp` via PBPSharp, including blocks written without a final deflate block and pop-fe's 16-bit index layout; PSP-homebrew-style files (no PlayStation disc image) are detected and skipped with a clear message.
 - **Smart CUE normalization** — encoding detection (UTF-8, Shift-JIS, Korean CP949, Cyrillic CP1251, Latin-1, …), UTF-8 BOM stripping, case-insensitive and zero-padding-tolerant reference resolution, canonicalization into a self-contained work directory.
 - **Archive dependency validation** — cue/GDI/TOC entries extracted from archives are validated up front; entries with missing referenced files are skipped with a warning instead of failing inside chdman.
 - **MP3 audio track support** — cue/MP3 sets are decoded to chdman-compatible WAV (44.1 kHz, 16-bit, stereo) automatically, with a built-in decoder fallback.

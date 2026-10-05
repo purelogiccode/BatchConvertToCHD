@@ -5,6 +5,29 @@ nav_order: 15
 
 # What's New
 
+## 3.9.1 (2026-10-05)
+
+### PBP extraction — PBPSharp 1.1.4
+
+*   **PBPs whose compressed blocks were written without a final deflate block now extract.** Some authoring tools flush each PSAR block with `Z_SYNC_FLUSH` instead of finishing the stream, so the last deflate block never sets BFINAL. SharpZipLib's stream wrapper reported that as "Unexpected EOF" and the whole file failed with `DecompressionError`; the raw inflater is now driven directly and accepts a complete 16-sector block, while a block cut short still fails. Verified byte-identical against real *Brave Fencer Musashi* and *Ridge Racer* PBPs across compression levels (stored, default and maximum).
+*   **A block cut short can no longer be accepted as a short block.** The decompressed output is bounded to exactly one 16-sector block, so a stream that ends before a full block, or expands past one, is rejected with `DecompressionError` instead of silently shifting every later block in the extracted image.
+
+### Fewer false bug reports
+
+*   **The by-design duplicate-product notice is no longer reported.** `<name>.chd was already produced earlier in this batch; keeping the first one.` appears when two inputs resolve to the same CHD (typically an archive whose contents were not known at the collision preflight); the first product is kept, as intended.
+*   **CHDSharp device and permission errors are classified as environment conditions.** A drive that was unplugged, a failing disk, a full destination or denied access now logs `CHDSharp could not read or write the image: ...` and is excluded from bug reports; only genuine encoder defects still report.
+
+### Release bundles for all six platforms
+
+*   **The Release workflow now publishes and attaches one zip per runtime identifier**: `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64` — all framework-dependent single-file builds, so users install the .NET 10 Desktop Runtime on Windows and the .NET 10 runtime on Linux/macOS. Each zip carries only its own platform's tools (`7za`/`chdman` on Windows, `7zz` plus `7-Zip-License.txt` on Linux/macOS) and the platform's native Avalonia libraries, and the packaging script verifies every required file before zipping.
+*   **Linux and macOS are no longer source-only.** They now get the same release downloads as Windows, matching the already cross-platform application.
+
+### Housekeeping
+
+*   Roslynator.Analyzers bumped 5.0.0 → 5.0.1.
+*   Test suite grew to **1121 tests** (1093 unit + 28 integration), including regression coverage for unfinished deflate streams, truncated PBP blocks and a zero-length stored index entry.
+*   PBPSharp published as **1.1.4**; the README, library reference, bug-reporting guide and troubleshooting guide document the new block handling and exclusions.
+
 ## 3.9.0 (2026-10-03)
 
 ### Renamed to CHD Studio

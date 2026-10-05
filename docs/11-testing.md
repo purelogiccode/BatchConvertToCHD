@@ -5,9 +5,9 @@ nav_order: 12
 
 # 11. Testing
 
-The solution contains a single test project, `CHDStudio.Tests` (xUnit, `net10.0-windows`), with **1116 tests across 57 test classes**: 1088 unit tests plus 28 integration tests that need a local sample folder (see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
+The solution contains a single test project, `CHDStudio.Tests` (xUnit, `net10.0-windows`), with **1121 tests across 57 test classes**: 1093 unit tests plus 28 integration tests that need a local sample folder (see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
 
-> **Expected result on a machine without the local sample folders:** the 1088 unit tests pass, while the 28 integration tests fail on the missing sample data. CI excludes them with `--filter "Category!=Integration"`; a change that leaves exactly those 28 failing has broken nothing.
+> **Expected result on a machine without the local sample folders:** the 1093 unit tests pass, while the 28 integration tests fail on the missing sample data. CI excludes them with `--filter "Category!=Integration"`; a change that leaves exactly those 28 failing has broken nothing.
 
 ## 11.1 Running the Tests
 
@@ -112,7 +112,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 4. For chdman-dependent tests, early-return when `chdman.exe` is absent from `AppContext.BaseDirectory`.
 5. Prefer building binary fixtures in code (see `IszImageBuilder`) over committing them. Commit one only when the format cannot be generated trustworthily in-repo, as with `ecm-sample.ecm` (the reference encoder's own output) or the WinRAR-produced RAR volume set (there is no RAR writer in the repository).
 6. When a fixture asserts agreement with an outside implementation, add a **guard test** that the fixture still covers the cases it is meant to. A fixture can be regenerated more simply and silently stop testing anything.
-7. Run the full suite before pushing. On the maintainer's machine a full run is **1116 passed / 0 failed**; CI runs the unit tests only, via `--filter "Category!=Integration"` (1088 tests). The integration classes' behaviour without samples is described in §11.5.
+7. Run the full suite before pushing. On the maintainer's machine a full run is **1121 passed / 0 failed**; CI runs the unit tests only, via `--filter "Category!=Integration"` (1093 tests). The integration classes' behaviour without samples is described in §11.5.
 
 ### Analyzer constraints worth knowing
 

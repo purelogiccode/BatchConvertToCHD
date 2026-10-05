@@ -8,8 +8,8 @@ nav_order: 3
 ## 2.1 Requirements
 
 ### Runtime (end users)
-- **OS**: Windows 10 / 11, x64 or ARM64
-- **Runtime**: [.NET 10.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)
+- **OS**: Windows 10 / 11, Linux and macOS (x64 or ARM64); release zips are published for `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64`
+- **Runtime**: [.NET 10.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) on Windows; the .NET 10.0 runtime on Linux and macOS
 - **Bundled executables** (shipped with the app, must stay next to `CHDStudio.exe`):
   - Windows: `chdman.exe` / `chdman_arm64.exe` (0.289) — MAME CHD tool (primary encoder and extraction fallback); `7za.exe` / `7za_arm64.exe` — 7-Zip fallback extractor
   - Linux/macOS: `7zz` (official 7-Zip 26.03 console build, copied from `tools/` at publish time) — 7-Zip fallback extractor
@@ -25,10 +25,10 @@ nav_order: 3
 
 ## 2.2 Installation (End Users)
 
-1. Download the latest binary from the [Releases page](https://github.com/purelogiccode/CHDStudio/releases).
+1. Download the latest binary from the [Releases page](https://github.com/purelogiccode/CHDStudio/releases), picking the zip for your platform and architecture (`win-x64`/`win-arm64`, `linux-x64`/`linux-arm64`, `osx-x64`/`osx-arm64`).
 2. Extract the contents to a permanent folder (do **not** run from a temp/Downloads folder if you want update/self-containment to behave).
 3. **Important** (Windows): keep all `.exe` files (including ARM64 variants) in the same directory as `CHDStudio.exe` — tool discovery probes the app's base directory first, then `PATH` (`MainWindow.axaml.cs`). On Linux and macOS, `7zz` ships next to the app and other tools are discovered on `PATH`; the built-in CHDSharp encoder needs nothing on disk.
-4. Launch `CHDStudio.exe`.
+4. Launch `CHDStudio.exe` on Windows or `CHDStudio` on Linux/macOS.
 
 ---
 

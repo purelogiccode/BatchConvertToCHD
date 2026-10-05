@@ -33,9 +33,9 @@ This documentation covers the project from both a user and a developer perspecti
 | Fact | Value |
 |------|-------|
 | **Application name** | `CHDStudio` |
-| **Latest version** | 3.9.0 |
+| **Latest version** | 3.9.1 |
 | **Target framework** | .NET 10.0 (`net10.0;net10.0-windows`), Avalonia |
-| **Platform** | Windows 10 / 11 (x64 and ARM64); Linux and macOS from source |
+| **Platform** | Windows 10 / 11, Linux and macOS (x64 and ARM64; release zips for all six runtime identifiers) |
 | **License** | GPL v3.0 |
 | **Primary encoder** | `chdman` (MAME Project, 0.289), bundled as `chdman.exe` / `chdman_arm64.exe` on Windows; built-in CHDSharp on Linux/macOS |
 | **Fallback encoder** | Built-in `CHDSharp` encoder (CHDSharpLib NuGet 1.4.3, in-process) — always available, chdman byte-identical output |
@@ -58,7 +58,7 @@ CHDStudio/
 │   ├── Services/                   # Archive, BugReport, FileWatcher, Stats, Update, ...
 │   └── Utilities/                  # PathUtils, CueNormalizer, GameFileParser, ...
 │       └── Ecm/                    # in-process ECM decoding
-├── CHDStudio.Tests/        # xUnit test suite (1116 tests)
+├── CHDStudio.Tests/        # xUnit test suite (1121 tests)
 ├── CCDSharp/                       # CloneCD (.ccd/.img/.sub) parsing library
 ├── CSOSharp/                       # CSO/CISO decompression library (deflate + LZ4)
 ├── PBPSharp/                       # PlayStation PBP extraction + SFO parsing library
