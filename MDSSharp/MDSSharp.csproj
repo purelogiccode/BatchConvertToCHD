@@ -6,8 +6,8 @@
         <LangVersion>latest</LangVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <Company>PureLogicCode.com</Company>
-        <AssemblyVersion>1.2.0</AssemblyVersion>
-        <FileVersion>1.2.0</FileVersion>
+        <AssemblyVersion>1.2.1</AssemblyVersion>
+        <FileVersion>1.2.1</FileVersion>
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -16,7 +16,7 @@
         <!-- NuGet Package Metadata -->
         <IsPackable>true</IsPackable>
         <PackageId>MDSSharp</PackageId>
-        <Version>1.2.0</Version>
+        <Version>1.2.1</Version>
         <Authors>PureLogicCode.com</Authors>
         <Title>MDSSharp</Title>
         <Description>A managed C# library for parsing Alcohol 120% disc image descriptors (.mds) and preparing their .mdf data files for conversion. Reads the MDS session and track tables, joins split volumes, strips subchannel tails and writes cue sheets. Ideal for disc image preservation and emulation workflows.</Description>

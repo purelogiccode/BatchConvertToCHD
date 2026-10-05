@@ -343,6 +343,10 @@ dotnet test CHDStudio.Tests/CHDStudio.Tests.csproj -c Release
 
 ## Version history
 
+### 1.2.1
+
+- Package metadata and README now reference the renamed CHD Studio repository (<https://github.com/purelogiccode/CHDStudio>, previously `BatchConvertToCHD`); no functional changes.
+
 ### 1.2.0
 
 - MDS v2 and single-file `.mdx` support: the descriptor is decrypted and decompressed, compressed tracks are decoded from their compression tables and encrypted tracks use AES-256 LRW (password-less/TAGES or a supplied password).
