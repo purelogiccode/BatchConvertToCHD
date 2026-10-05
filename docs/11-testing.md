@@ -7,7 +7,7 @@ nav_order: 12
 
 The solution contains a single test project, `CHDStudio.Tests` (xUnit, `net10.0-windows`), with **1121 tests across 57 test classes**: 1093 unit tests plus 28 integration tests that need a local sample folder (see §11.5), plus the shared `FakeHttpMessageHandler` and `IszImageBuilder` helpers.
 
-> **Expected result on a machine without the local sample folders:** the 1093 unit tests pass, while the 28 integration tests fail on the missing sample data. CI excludes them with `--filter "Category!=Integration"`; a change that leaves exactly those 28 failing has broken nothing.
+> **Expected result on a machine without the local sample folders:** the 1093 unit tests pass and the 28 integration tests early-return (reported as passed) because their sample folders are absent. CI excludes them with `--filter "Category!=Integration"`.
 
 ## 11.1 Running the Tests
 
@@ -25,7 +25,7 @@ Requirements: the tests are run on Windows (the app project is `net10.0-windows`
 - Filesystem-dependent tests create a GUID temp directory per test class (`Path.GetTempPath() + $"{ClassName}_{Guid:N}"`) and clean it up in `Dispose`.
 - HTTP-dependent tests inject an `HttpClient` backed by `FakeHttpMessageHandler` (the only shared helper): a `Func<HttpRequestMessage, HttpResponseMessage>` or a convenience `(HttpStatusCode, string content, string contentType)` constructor, plus a static `WithAsyncHandler` helper.
 - Internals are tested because the Avalonia project (`CHDStudio.csproj`) grants `InternalsVisibleTo("CHDStudio.Tests")`.
-- **Integration tests** are tagged `[Trait("Category", "Integration")]` and read real sample files from fixed absolute directories (`D:\Emulators\...`). Most **early-return when the samples are absent**, so on machines without the sample folders they are effectively skipped (reported as passed). `PbpFileIntegrationTests` is the exception — see [§11.5](#115-the-15-expected-failures).
+- **Integration tests** are tagged `[Trait("Category", "Integration")]` and read real sample files from fixed absolute directories (`D:\Emulators\...`). They **early-return when the samples are absent**, so on machines without the sample folders they are effectively skipped (reported as passed) — see [§11.5](#115-integration-sample-folders).
 - **Committed fixtures** live in `CHDStudio.Tests/Fixtures/` and are copied to the output directory by the csproj. There are four groups: `ecm-sample.ecm`, so the ECM decoder can be verified against the reference implementation's own output without that tool being installed; `rar-multipart/set.part1.rar`…`set.part5.rar`, a real WinRAR store-mode volume set holding a known 3500-byte payload, so multi-volume RAR extraction can be tested without WinRAR at test time; `MdsV2/` (the MIT-licensed mdsx test images: plain, compressed, single-file `.mdx`, and password-encrypted), so the v2/MDX decryption pipeline is pinned to real files; and `laserdisc-small.avi`, a 4-frame YUY2 + PCM AVI written with CHDSharp's own test writer, so the `createld` path is exercised without needing a real laserdisc dump.
 - **Format fixtures are built in code** rather than committed where the format allows it: `IszImageBuilder` writes ISZ files the way real UltraISO files are laid out (spec-conformant headers, obfuscated tables, stripped bzip2 headers, optional UltraISO checksums), and `MdsTests`/`RawCdImageDetectorTests`/`SplitImageJoinerTests` synthesise their descriptors and sector data. This keeps the repository free of disc-sized binaries.
 
@@ -125,9 +125,9 @@ The test project runs `Meziantou.Analyzer` too, and a few rules bite:
 
 ---
 
-## 11.5 The PBP Integration Sample Folder
+## 11.5 Integration Sample Folders
 
-`PbpFileIntegrationTests` reads real `.pbp` files from a local sample folder (`D:\Emulators\...\PsxPackager` on the maintainer's machine). When that folder is absent the group fails rather than skips — the tests assert on the discovered-sample collection before checking whether it is empty, so an absent sample surfaces as `Assert.NotEmpty() Failure: Collection was empty` instead of an early return. These failures do not indicate a defect in the application; adopting the CSO tests' early-return pattern would fix the ergonomics.
+The integration groups read real files from fixed local folders and **early-return when the folder or its samples are absent**, so a full run on a machine without them reports every test as passed instead of failing. `PbpFileIntegrationTests` reads `.pbp` files from `D:\Emulators\...\PsxPackager` and `CsoFileIntegrationTests` reads `.cso`/`.iso` pairs from `D:\Emulators\...\maxcso`; the PBP group previously asserted on its discovered-sample collection first, so an absent folder surfaced as `Assert.NotEmpty() Failure: Collection was empty` — it now uses the same early-return guard as the CSO group. The `chdman`-dependent `CueWorkDirectoryTests` integration cases return early when the bundled `chdman.exe` is not in the test output. To exercise the sample-dependent groups, copy the real sample files into those folders; without them the tests pass without validating anything, so run the full suite on a machine that has them before a release.
 
 ---
 
