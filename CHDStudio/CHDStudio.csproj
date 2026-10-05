@@ -10,8 +10,8 @@
         <AssemblyName>CHDStudio</AssemblyName>
         <RootNamespace>CHDStudio</RootNamespace>
         <ApplicationIcon>icon\chd.ico</ApplicationIcon>
-        <AssemblyVersion>3.9.1</AssemblyVersion>
-        <FileVersion>3.9.1</FileVersion>
+        <AssemblyVersion>3.9.2</AssemblyVersion>
+        <FileVersion>3.9.2</FileVersion>
         <IsPackable>false</IsPackable>
         <NeutralLanguage>en</NeutralLanguage>
         <DebugType>embedded</DebugType>

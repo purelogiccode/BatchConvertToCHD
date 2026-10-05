@@ -5,6 +5,22 @@ nav_order: 15
 
 # What's New
 
+## 3.9.2 (2026-10-05)
+
+### Duplicate outputs are skipped before conversion
+
+*   **A duplicate input is stopped before any encoding starts.** When two inputs in one batch resolve to the same output CHD and the collision only becomes visible once an archive is extracted (its product is named after a file inside the archive), the duplicate is now skipped immediately; previously it was converted in full and the finished product discarded. The first product is kept exactly as before — the only difference is that no time is spent encoding something that will not be used.
+*   **The duplicate notice can no longer become a bug report.** `"<name>.chd was already produced earlier in this batch; keeping the first one."` is now logged at information level instead of warning. Combined with the 3.9.1 exclusion pattern (kept as a safety net), this ends the false reports that 3.9.0 clients sent for every duplicated game in a batch.
+
+### Reliability
+
+*   **Screenshot capture no longer risks a disposed bitmap.** The F8 capture now hands the `RenderTargetBitmap` to a dedicated `SaveScreenshot` overload owned by `ScreenshotService`, instead of capturing it in a delegate that escaped the `using` block that disposes it.
+
+### Housekeeping
+
+*   MDSSharp cleanups: the `index00Tracks` null check is expressed as `index00Tracks?.Contains(track.Number) ?? pregapsInFile`, and `long` locals use `var` where the type is apparent.
+*   PBPSharp and test-project cleanups of the same kind; the throughput test documents its deliberate captured-counter lambda with a `SuppressMessage`.
+
 ## 3.9.1 (2026-10-05)
 
 ### PBP extraction — PBPSharp 1.1.4
