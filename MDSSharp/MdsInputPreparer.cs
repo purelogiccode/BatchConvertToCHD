@@ -637,7 +637,7 @@ public static class MdsInputPreparer
 
             var writeIndex00 =
                 track.PregapSectors > 0
-                && (index00Tracks is null ? pregapsInFile : index00Tracks.Contains(track.Number));
+                && (index00Tracks?.Contains(track.Number) ?? pregapsInFile);
             if (writeIndex00)
             {
                 var pregapLba = track.StartLba - track.PregapSectors;

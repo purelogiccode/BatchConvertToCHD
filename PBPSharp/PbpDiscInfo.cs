@@ -403,7 +403,7 @@ public sealed class PbpDiscInfo
     {
         cuePath ??= Path.ChangeExtension(binPath, ".cue");
 
-        PbpError extractError = PbpError.None;
+        var extractError = PbpError.None;
         try
         {
             using var binStream = File.Create(binPath);
@@ -508,7 +508,7 @@ public sealed class PbpDiscInfo
         if (TryInflate(compressed, compressedLength, output, noHeader: true, out var size, out var rawFailure))
             return size;
 
-        string zlibFailure = "not attempted (stream too short)";
+        var zlibFailure = "not attempted (stream too short)";
         if (
             compressedLength > 2
             && TryInflate(compressed, compressedLength, output, noHeader: false, out size, out zlibFailure)

@@ -170,14 +170,19 @@ public class PbpDiagnosticsTests : IDisposable
         /// <param name="count">Byte count (unused).</param>
         /// <returns>Never returns.</returns>
         /// <exception cref="IOException">Always thrown.</exception>
-        public override int Read(byte[] buffer, int offset, int count) =>
+        public override int Read(byte[] buffer, int offset, int count)
+        {
             throw new IOException("Simulated disk error.");
+        }
 
         /// <summary>Accepts any seek and reports position zero.</summary>
         /// <param name="offset">Seek offset (unused).</param>
         /// <param name="origin">Seek origin (unused).</param>
         /// <returns>Always zero.</returns>
-        public override long Seek(long offset, SeekOrigin origin) => 0;
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            return 0;
+        }
 
         /// <summary>No-op: the test stream has no real length.</summary>
         /// <param name="value">Requested length (unused).</param>

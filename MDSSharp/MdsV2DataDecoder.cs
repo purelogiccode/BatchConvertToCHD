@@ -279,8 +279,8 @@ internal static class MdsV2DataDecoder
         var sectorsPerBuffer = Math.Max(1, DecodeBufferBytes / sectorSize);
         var buffer = new byte[sectorsPerBuffer * sectorSize];
 
-        long remaining = fragment.DataLengthSectors;
-        long position = (long)fragment.StartOffset;
+        var remaining = fragment.DataLengthSectors;
+        var position = (long)fragment.StartOffset;
         long sectorIndex = 0;
 
         while (remaining > 0)

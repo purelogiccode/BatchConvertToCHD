@@ -117,6 +117,7 @@ public class IoThroughputCounterTests
     }
 
     [Fact]
+    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     public void RealCounterNeverThrows()
     {
         using var counter = IoThroughputCounter.CreateForWrites();
